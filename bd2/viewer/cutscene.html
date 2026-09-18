@@ -416,7 +416,14 @@
   const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg');
   const floatPanel = $('#floatPanel'), gridView = $('#gridView');
   const rail = $('#rail'), topPill = $('#topPill'), toolStrip = $('#toolStrip');
-  const routeSource = location.pathname.split('/').filter(Boolean)[0] || 'bd2';
+  // GitHub Pages 使用 /项目名/游戏名/viewer/ 的路径；本地服务则是 /游戏名/viewer/。
+  // 不能直接取 pathname 的第一个片段，否则项目名会被误认为资源来源。
+  const routeSource = (() => {
+    const parts = location.pathname.split('/').filter(Boolean);
+    const viewerAt = parts.lastIndexOf('viewer');
+    const candidate = viewerAt > 0 ? parts[viewerAt - 1] : parts[0];
+    return ['bd2', 'nikki', 'bd2mod'].includes(candidate) ? candidate : 'bd2';
+  })();
   if (routeSource === 'nikki') document.title = '妮姬 · Spine 动态查看器';
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
