@@ -27,7 +27,7 @@ COS 中需要保持以下远程目录，目录名和层级不能改变：
 | 远程目录 | 用途 |
 | --- | --- |
 | `bd2/spine/` | 棕色尘埃2动态资源 |
-| `nikki/spine/` | NIKKE普通版动态资源 |
+| `nikki/spine_carved/` | NIKKE普通版动态资源 |
 | `majsoul/assets_raw/` | 雀魂动态资源 |
 | `majsoul/web_illustrations/` | 雀魂网页插图 |
 | `gallery/bd2/` | 棕色尘埃2图库 |

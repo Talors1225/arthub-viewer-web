@@ -6,12 +6,21 @@
   if (!root) return;
 
   const ASSET_MARKERS = [
-    '/bd2/spine/', '/nikki/spine/',
+    '/bd2/spine/', '/nikki/spine/', '/nikki/spine_carved/',
     '/majsoul/assets_raw/', '/majsoul/web_illustrations/',
     '/gallery/bd2/', '/gallery/nikke/', '/gallery/majsoul/',
   ];
 
+  const PATH_REWRITES = {
+    // 页面索引沿用本地的 spine/ 相对路径；COS 里已上传的妮姬目录名是 spine_carved。
+    '/nikki/spine/': '/nikki/spine_carved/',
+  };
+
   function markerPath(pathname) {
+    for (const [marker, remote] of Object.entries(PATH_REWRITES)) {
+      const at = pathname.indexOf(marker);
+      if (at >= 0) return remote + pathname.slice(at + marker.length);
+    }
     for (const marker of ASSET_MARKERS) {
       const at = pathname.indexOf(marker);
       if (at >= 0) return pathname.slice(at);
