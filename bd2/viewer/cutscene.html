@@ -330,7 +330,7 @@
       <span class="grid-sub" id="gridSub"></span>
       <div id="filterChips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
       <input id="gridSearch" class="text-input" placeholder="搜索名称 / 编号 / 路径...">
-      <button id="btnTheme" class="edit-btn" title="切换主题">◐</button>
+      <button id="btnTheme" class="edit-btn" title="打开主题调色板">◐</button>
       <button id="gridClose" class="ctl">返回舞台</button>
     </div>
     <div class="thumb-grid" id="thumbGrid"></div>
@@ -530,14 +530,7 @@
 
   // ---------- 主题 ----------
   K.initTheme(store);
-  $('#btnTheme').addEventListener('click', (e) => {
-    e.stopPropagation();
-    const order = [['deep', '深空'], ['obsidian', '曜石'], ['pine', '墨绿'], ['dusk', '紫昏']];
-    const curT = document.documentElement.dataset.theme || 'deep';
-    const next = order[(order.findIndex(t => t[0] === curT) + 1) % order.length];
-    K.setTheme(next[0], store);
-    K.toast('主题: ' + next[1], 'ok');
-  });
+  K.bindThemePalette($('#btnTheme'), store);
 
   // ---------- 背景 ----------
   const getBg = () => store.get('bg', '#0f1218');

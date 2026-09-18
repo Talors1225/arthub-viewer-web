@@ -355,6 +355,43 @@ input[type="color"] {
 .stage-popup label { font-size: 12px; color: var(--text); display: flex; align-items: center; gap: 5px; cursor: pointer; }
 .stage-popup input[type="checkbox"] { accent-color: var(--accent); }
 
+/* ---------- 主题调色板 ---------- */
+.theme-palette {
+  position: fixed; z-index: 1200; width: 254px;
+  padding: 12px; border: 1px solid var(--border2); border-radius: 14px;
+  background: var(--glass); color: var(--text);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
+}
+.theme-palette-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.theme-palette-head strong { font-size: 13px; color: var(--accent-hi); }
+.theme-palette-close {
+  width: 24px; height: 24px; padding: 0; border: 1px solid var(--border2); border-radius: 7px;
+  background: var(--panel2); color: var(--text-dim); font: 17px/1 inherit; cursor: pointer;
+}
+.theme-palette-close:hover { color: var(--text); border-color: var(--accent); }
+.theme-palette-title { margin: 9px 0 6px; color: var(--text-faint); font-size: 11px; }
+.theme-palette-themes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.theme-palette-theme {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
+  padding: 6px 3px; border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--panel2); color: var(--text-dim); font-size: 11px; line-height: 1.1; font-family: inherit; cursor: pointer;
+}
+.theme-palette-theme i { width: 22px; height: 14px; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; }
+.theme-palette-theme:hover, .theme-palette-theme.on { border-color: var(--accent); color: var(--text); background: var(--accent-dim-bg); }
+.theme-palette-picker {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px;
+  padding: 7px 8px; border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--panel2); color: var(--text-dim); font-size: 12px; cursor: pointer;
+}
+.theme-palette-picker input[type="color"] { width: 34px; height: 23px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.theme-palette-reset {
+  width: 100%; margin-top: 9px; padding: 6px 8px; border: 1px solid var(--border2); border-radius: 8px;
+  background: transparent; color: var(--text-dim); font-size: 11px; font-family: inherit; cursor: pointer;
+}
+.theme-palette-reset:hover { border-color: var(--accent); color: var(--accent-hi); }
+
 /* ---------- 右侧面板 ---------- */
 .right-panel {
   width: 316px; min-width: 316px; height: 100%;

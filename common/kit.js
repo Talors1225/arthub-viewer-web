@@ -1363,7 +1363,158 @@
   K.initTheme = (store) => {
     const t = store && store.get('theme', 'deep');
     if (t && t !== 'deep') K.setTheme(t);
+    const background = store && store.get('backgroundColor', null);
+    if (background) K.setBackground(background);
     return t || 'deep';
+  };
+
+  // ---------- 主题调色板 ----------
+  // 主题负责背景层；自定义颜色会派生出面板、边框和文字对比度。
+  const THEME_PALETTE = [
+    ['deep', '深空', '#0b0d12'],
+    ['obsidian', '曜石', '#0c0b09'],
+    ['pine', '墨绿', '#080f0c'],
+    ['dusk', '紫昏', '#0d0b13'],
+  ];
+  const BACKGROUND_STYLE_KEYS = [
+    '--bg', '--bg-glow', '--panel', '--panel-grad', '--panel2', '--panel3', '--glass', '--glass-hi',
+    '--border', '--border2', '--text', '--text-dim', '--text-faint', '--shadow-1', '--shadow-2',
+  ];
+  const normalizeHex = (value) => {
+    const raw = String(value || '').trim().replace(/^#/, '');
+    if (!/^[0-9a-f]{6}$/i.test(raw)) return null;
+    return '#' + raw.toLowerCase();
+  };
+  const hexRgb = (hex) => {
+    const value = normalizeHex(hex);
+    if (!value) return null;
+    return [parseInt(value.slice(1, 3), 16), parseInt(value.slice(3, 5), 16), parseInt(value.slice(5, 7), 16)];
+  };
+  const mixRgb = (rgb, target, amount) => rgb.map((channel, index) => Math.round(channel + (target[index] - channel) * amount));
+  const rgbHex = (rgb) => '#' + rgb.map(channel => Math.max(0, Math.min(255, channel)).toString(16).padStart(2, '0')).join('');
+
+  K.setBackground = (value, store) => {
+    const root = document.documentElement;
+    const hex = normalizeHex(value);
+    if (!hex) {
+      BACKGROUND_STYLE_KEYS.forEach(key => root.style.removeProperty(key));
+      root.removeAttribute('data-user-background');
+      if (store) store.del('backgroundColor');
+      return null;
+    }
+    const rgb = hexRgb(hex);
+    const luminance = ((rgb[0] * 299) + (rgb[1] * 587) + (rgb[2] * 114)) / 1000;
+    const light = luminance > 156;
+    const surfaceTarget = light ? [0, 0, 0] : [255, 255, 255];
+    const panel = rgbHex(mixRgb(rgb, surfaceTarget, light ? .06 : .10));
+    const panel2 = rgbHex(mixRgb(rgb, surfaceTarget, light ? .11 : .16));
+    const panel3 = rgbHex(mixRgb(rgb, surfaceTarget, light ? .18 : .24));
+    const gradA = rgbHex(mixRgb(rgb, surfaceTarget, light ? .08 : .13));
+    const gradB = rgbHex(mixRgb(rgb, surfaceTarget, light ? .04 : .07));
+    const cssRgb = rgb.join(', ');
+    root.style.setProperty('--bg', hex);
+    root.style.setProperty('--bg-glow', `radial-gradient(1200px 800px at 70% -10%, rgba(${cssRgb}, ${light ? '.16' : '.10'}), transparent 60%)`);
+    root.style.setProperty('--panel', panel);
+    root.style.setProperty('--panel-grad', `linear-gradient(180deg, ${gradA}, ${gradB})`);
+    root.style.setProperty('--panel2', panel2);
+    root.style.setProperty('--panel3', panel3);
+    root.style.setProperty('--glass', `rgba(${cssRgb}, ${light ? '.82' : '.74'})`);
+    root.style.setProperty('--glass-hi', light ? 'rgba(255, 255, 255, .42)' : 'rgba(255, 255, 255, .06)');
+    root.style.setProperty('--border', light ? 'rgba(20, 30, 45, .12)' : 'rgba(255, 255, 255, .06)');
+    root.style.setProperty('--border2', light ? 'rgba(20, 30, 45, .22)' : 'rgba(255, 255, 255, .12)');
+    root.style.setProperty('--text', light ? '#20252e' : '#e4e9f2');
+    root.style.setProperty('--text-dim', light ? '#596273' : '#99a4b8');
+    root.style.setProperty('--text-faint', light ? '#7c8797' : '#657082');
+    root.style.setProperty('--shadow-1', `0 2px 10px rgba(0, 0, 0, ${light ? '.15' : '.40'})`);
+    root.style.setProperty('--shadow-2', `0 12px 32px rgba(0, 0, 0, ${light ? '.22' : '.55'})`);
+    root.dataset.userBackground = '1';
+    if (store) store.set('backgroundColor', hex);
+    return hex;
+  };
+
+  K.closeThemePalette = () => {
+    const panel = document.querySelector('.theme-palette');
+    if (!panel) return;
+    const owner = panel.dataset.owner && document.getElementById(panel.dataset.owner);
+    if (owner) owner.setAttribute('aria-expanded', 'false');
+    if (panel._outsideHandler) document.removeEventListener('pointerdown', panel._outsideHandler, true);
+    if (panel._escapeHandler) document.removeEventListener('keydown', panel._escapeHandler, true);
+    panel.remove();
+  };
+
+  K.bindThemePalette = (button, store) => {
+    if (!button || button.dataset.themePaletteBound === '1') return;
+    button.dataset.themePaletteBound = '1';
+    button.title = '打开主题调色板';
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('aria-expanded', 'false');
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const existing = document.querySelector('.theme-palette');
+      if (existing && existing.dataset.owner === button.id) {
+        K.closeThemePalette();
+        return;
+      }
+      K.closeThemePalette();
+      const root = document.documentElement;
+      const panel = document.createElement('div');
+      panel.className = 'theme-palette';
+      panel.dataset.owner = button.id;
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-label', '主题调色板');
+      panel.innerHTML = `
+        <div class="theme-palette-head"><strong>主题调色板</strong><button type="button" class="theme-palette-close" aria-label="关闭调色板">×</button></div>
+        <div class="theme-palette-title">背景主题</div>
+        <div class="theme-palette-themes"></div>
+        <label class="theme-palette-picker"><span>自定义背景颜色</span><input type="color" aria-label="选择自定义背景颜色"></label>
+        <button type="button" class="theme-palette-reset">恢复当前游戏默认背景</button>`;
+      document.body.appendChild(panel);
+      button.setAttribute('aria-expanded', 'true');
+
+      const themeRow = panel.querySelector('.theme-palette-themes');
+      THEME_PALETTE.forEach(([value, label, color]) => {
+        const choice = document.createElement('button');
+        choice.type = 'button';
+        choice.className = 'theme-palette-theme';
+        choice.dataset.theme = value;
+        choice.innerHTML = `<i style="background:${color}"></i><span>${label}</span>`;
+        choice.addEventListener('click', () => {
+          K.setBackground(null, store);
+          K.setTheme(value, store);
+          updateState();
+        });
+        themeRow.appendChild(choice);
+      });
+
+      const picker = panel.querySelector('input[type="color"]');
+      const fallbackBackground = () => (THEME_PALETTE.find(item => item[0] === (root.dataset.theme || 'deep')) || THEME_PALETTE[0])[2];
+      const updateState = () => {
+        const activeTheme = root.dataset.theme || 'deep';
+        themeRow.querySelectorAll('[data-theme]').forEach(choice => choice.classList.toggle('on', choice.dataset.theme === activeTheme));
+        picker.value = (store && normalizeHex(store.get('backgroundColor', null))) || fallbackBackground();
+      };
+      const applyPicker = () => { K.setBackground(picker.value, store); updateState(); };
+      picker.addEventListener('input', applyPicker);
+      picker.addEventListener('change', applyPicker);
+      panel.querySelector('.theme-palette-reset').addEventListener('click', () => { K.setBackground(null, store); updateState(); });
+      panel.querySelector('.theme-palette-close').addEventListener('click', () => K.closeThemePalette());
+      updateState();
+
+      const rect = button.getBoundingClientRect();
+      const margin = 10;
+      const left = Math.min(Math.max(margin, rect.right - panel.offsetWidth), window.innerWidth - panel.offsetWidth - margin);
+      const below = rect.bottom + 8;
+      const top = below + panel.offsetHeight <= window.innerHeight - margin ? below : Math.max(margin, rect.top - panel.offsetHeight - 8);
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+      const outsideHandler = (event) => { if (!panel.contains(event.target) && event.target !== button) K.closeThemePalette(); };
+      const escapeHandler = (event) => { if (event.key === 'Escape') K.closeThemePalette(); };
+      panel._outsideHandler = outsideHandler;
+      panel._escapeHandler = escapeHandler;
+      document.addEventListener('pointerdown', outsideHandler, true);
+      document.addEventListener('keydown', escapeHandler, true);
+    });
   };
 
   // ---------- 快捷键速查浮层 ----------
