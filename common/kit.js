@@ -1640,11 +1640,17 @@
     if (actionHost && !actionHost.querySelector('.kit-actions')) {
       const actions = document.createElement('div');
       actions.className = 'kit-actions';
+      const homePath = (() => {
+        const routeNames = new Set(['bd2', 'nikki', 'majsoul', 'gallery']);
+        const parts = location.pathname.split('/').filter(Boolean);
+        const routeIndex = parts.findIndex((part) => routeNames.has(part));
+        return routeIndex > 0 ? '/' + parts.slice(0, routeIndex).join('/') + '/' : '/';
+      })();
       const home = document.createElement('a');
       home.className = 'kit-action';
-      home.href = '/';
-      home.textContent = '⌂ 首页';
-      home.title = '返回统一资源首页';
+      home.href = homePath;
+      home.textContent = '⌂ 主界面';
+      home.title = '返回 ArtHub 主界面';
       const copy = document.createElement('button');
       copy.type = 'button';
       copy.className = 'kit-action';
