@@ -1,0 +1,327 @@
+{
+  "version": 2,
+  "generatedAt": "2026-09-05T12:40:04.967Z",
+  "libraries": [
+    {
+      "id": "bd2",
+      "name": "棕色尘埃2 · 分类素材",
+      "mount": "/gallery/bd2/",
+      "root": "",
+      "total": 13643,
+      "categories": [
+        {
+          "path": "01_Characters",
+          "group": "角色与动画",
+          "name": "角色",
+          "count": 5672
+        },
+        {
+          "path": "03_Backgrounds",
+          "group": "场景与美术",
+          "name": "背景",
+          "count": 1776
+        },
+        {
+          "path": "10_NPC",
+          "group": "角色与动画",
+          "name": "NPC 角色",
+          "count": 1525
+        },
+        {
+          "path": "99_Uncategorized",
+          "group": "未归纳",
+          "name": "未分类",
+          "count": 1032
+        },
+        {
+          "path": "05_Illustrations",
+          "group": "场景与美术",
+          "name": "插画",
+          "count": 1020
+        },
+        {
+          "path": "02_Icons",
+          "group": "界面与物品",
+          "name": "图标",
+          "count": 950
+        },
+        {
+          "path": "07_Room",
+          "group": "场景与美术",
+          "name": "房间",
+          "count": 465
+        },
+        {
+          "path": "09_Effects",
+          "group": "角色与动画",
+          "name": "特效",
+          "count": 389
+        },
+        {
+          "path": "04_Maps",
+          "group": "场景与美术",
+          "name": "场景地图",
+          "count": 234
+        },
+        {
+          "path": "12_Other",
+          "group": "未归纳",
+          "name": "其他",
+          "count": 208
+        },
+        {
+          "path": "08_UI",
+          "group": "界面与物品",
+          "name": "界面",
+          "count": 133
+        },
+        {
+          "path": "06_Cutscenes",
+          "group": "场景与美术",
+          "name": "过场",
+          "count": 123
+        },
+        {
+          "path": "11_Pickup",
+          "group": "界面与物品",
+          "name": "拾取物",
+          "count": 116
+        }
+      ]
+    },
+    {
+      "id": "nikke",
+      "name": "妮姬 · 立绘与素材",
+      "mount": "/gallery/nikke/",
+      "root": "",
+      "total": 73580,
+      "categories": [
+        {
+          "path": "系统与杂项/其他",
+          "group": "系统与杂项",
+          "name": "其他",
+          "count": 5329
+        },
+        {
+          "path": "系统与杂项/图集整页",
+          "group": "系统与杂项",
+          "name": "图集整页",
+          "count": 638
+        },
+        {
+          "path": "活动与联动/各期活动",
+          "group": "活动与联动",
+          "name": "各期活动",
+          "count": 18294
+        },
+        {
+          "path": "小游戏与玩法/Ark 系列小游戏",
+          "group": "小游戏与玩法",
+          "name": "Ark 系列小游戏",
+          "count": 1142
+        },
+        {
+          "path": "小游戏与玩法/街机小游戏",
+          "group": "小游戏与玩法",
+          "name": "街机小游戏",
+          "count": 1026
+        },
+        {
+          "path": "小游戏与玩法/TTS 玩法",
+          "group": "小游戏与玩法",
+          "name": "TTS 玩法",
+          "count": 939
+        },
+        {
+          "path": "小游戏与玩法/副本奔跑",
+          "group": "小游戏与玩法",
+          "name": "副本奔跑",
+          "count": 726
+        },
+        {
+          "path": "小游戏与玩法/迷你游戏",
+          "group": "小游戏与玩法",
+          "name": "迷你游戏",
+          "count": 631
+        },
+        {
+          "path": "场景与背景/图块集",
+          "group": "场景与背景",
+          "name": "图块集",
+          "count": 8830
+        },
+        {
+          "path": "场景与背景/场景背景",
+          "group": "场景与背景",
+          "name": "场景背景",
+          "count": 2978
+        },
+        {
+          "path": "场景与背景/背景",
+          "group": "场景与背景",
+          "name": "背景",
+          "count": 405
+        },
+        {
+          "path": "界面/界面元素",
+          "group": "界面",
+          "name": "界面元素",
+          "count": 14820
+        },
+        {
+          "path": "界面/图标",
+          "group": "界面",
+          "name": "图标",
+          "count": 4083
+        },
+        {
+          "path": "界面/界面组件",
+          "group": "界面",
+          "name": "界面组件",
+          "count": 1632
+        },
+        {
+          "path": "界面/按钮",
+          "group": "界面",
+          "name": "按钮",
+          "count": 835
+        },
+        {
+          "path": "界面/主题界面套件",
+          "group": "界面",
+          "name": "主题界面套件",
+          "count": 724
+        },
+        {
+          "path": "界面/弹窗框体",
+          "group": "界面",
+          "name": "弹窗框体",
+          "count": 492
+        },
+        {
+          "path": "特效/特效贴图",
+          "group": "特效",
+          "name": "特效贴图",
+          "count": 8647
+        },
+        {
+          "path": "演出/动态图形",
+          "group": "演出",
+          "name": "动态图形",
+          "count": 748
+        },
+        {
+          "path": "演出/启动与奖励",
+          "group": "演出",
+          "name": "启动与奖励",
+          "count": 344
+        },
+        {
+          "path": "演出/技能演出图集",
+          "group": "演出",
+          "name": "技能演出图集",
+          "count": 218
+        },
+        {
+          "path": "演出/片头物件",
+          "group": "演出",
+          "name": "片头物件",
+          "count": 22
+        },
+        {
+          "path": "模型与材质/3D 材质",
+          "group": "模型与材质",
+          "name": "3D 材质",
+          "count": 44
+        },
+        {
+          "path": "视频/视频",
+          "group": "视频",
+          "name": "视频",
+          "count": 33
+        }
+      ]
+    },
+    {
+      "id": "majsoul",
+      "name": "雀魂 · 素材",
+      "mount": "/gallery/majsoul/",
+      "root": "",
+      "total": 16685,
+      "categories": [
+        {
+          "path": "系统与杂项/其他",
+          "group": "系统与杂项",
+          "name": "其他",
+          "count": 8526
+        },
+        {
+          "path": "系统与杂项/图集整页",
+          "group": "系统与杂项",
+          "name": "图集整页",
+          "count": 667
+        },
+        {
+          "path": "版本与活动/版本与活动",
+          "group": "版本与活动",
+          "name": "版本与活动",
+          "count": 1621
+        },
+        {
+          "path": "场景与背景/背景",
+          "group": "场景与背景",
+          "name": "背景",
+          "count": 447
+        },
+        {
+          "path": "界面/界面",
+          "group": "界面",
+          "name": "界面",
+          "count": 919
+        },
+        {
+          "path": "界面/弹窗",
+          "group": "界面",
+          "name": "弹窗",
+          "count": 342
+        },
+        {
+          "path": "界面/图标",
+          "group": "界面",
+          "name": "图标",
+          "count": 301
+        },
+        {
+          "path": "界面/按钮",
+          "group": "界面",
+          "name": "按钮",
+          "count": 222
+        },
+        {
+          "path": "演出/切入插画",
+          "group": "演出",
+          "name": "切入插画",
+          "count": 105
+        },
+        {
+          "path": "特效/特效",
+          "group": "特效",
+          "name": "特效",
+          "count": 2305
+        },
+        {
+          "path": "玩法与对局/对局与牌面",
+          "group": "玩法与对局",
+          "name": "对局与牌面",
+          "count": 942
+        },
+        {
+          "path": "道具与收集/道具",
+          "group": "道具与收集",
+          "name": "道具",
+          "count": 288
+        }
+      ]
+    }
+  ]
+}

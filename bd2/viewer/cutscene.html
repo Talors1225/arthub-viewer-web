@@ -1,0 +1,2318 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-accent="gold">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>棕色尘埃2 · Spine 资源库</title>
+<link rel="stylesheet" href="../../common/kit.css">
+<style>
+  html, body { height: 100%; }
+  .stage { position: fixed; inset: 0; z-index: 0; }
+
+  .rail {
+    position: fixed; left: 10px; top: 50%; transform: translateY(-50%);
+    z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--glass); border: 1px solid var(--border2);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border-radius: 999px; padding: 8px 6px;
+    box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
+    transition: opacity .2s, transform .2s;
+  }
+  .rail.hide { opacity: 0; pointer-events: none; transform: translateY(-50%) translateX(-12px); }
+  .rail button {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-family: inherit; line-height: 1;
+    transition: background .14s, color .14s;
+  }
+  .rail button:hover { background: var(--accent-dim-bg); color: var(--accent); }
+  .rail .rail-sep { width: 22px; height: 1px; background: var(--border2); margin: 3px 0; }
+  .rail .rail-thumb {
+    width: 38px; height: 38px; border-radius: 10px; overflow: hidden;
+    background: var(--panel2); border: 1px solid var(--border2);
+    cursor: pointer; flex: none;
+  }
+  .rail .rail-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+  .top-pill {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 20; display: flex; align-items: center; gap: 8px;
+    background: var(--glass); border: 1px solid var(--border2);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border-radius: 999px; padding: 6px 8px 6px 6px;
+    box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
+    max-width: min(860px, calc(100% - 32px));
+    transition: opacity .2s, transform .2s;
+  }
+  .top-pill.hide { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(-12px); }
+  .top-pill .tp-nav { display: flex; gap: 2px; }
+  .top-pill .tp-nav button {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background .13s, color .13s;
+  }
+  .top-pill .tp-nav button:hover { background: var(--accent-dim-bg); color: var(--accent); }
+  .top-pill .tp-name {
+    font-size: 13.5px; font-weight: 700; color: var(--accent);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 320px; padding: 0 2px; cursor: default;
+  }
+  .top-pill .tp-id { font-size: 10.5px; color: var(--text-faint); font-family: Consolas, monospace; }
+  .top-pill select.ctl {
+    background: rgba(255, 255, 255, .045); border: 1px solid var(--border2); border-radius: 999px;
+    padding: 5px 24px 5px 11px; font-size: 12px; max-width: 170px;
+  }
+
+  .tool-strip {
+    position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
+    z-index: 20; display: flex; flex-direction: column; gap: 3px;
+    background: var(--glass); border: 1px solid var(--border2);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border-radius: 999px; padding: 6px 5px;
+    box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
+    transition: opacity .2s, transform .2s;
+  }
+  .tool-strip.hide { opacity: 0; pointer-events: none; transform: translateY(-50%) translateX(12px); }
+  .tool-strip button {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: background .14s, color .14s;
+  }
+  .tool-strip button:hover { background: var(--accent-dim-bg); color: var(--accent); }
+  .tool-strip button.on { background: var(--accent-dim-bg); color: var(--accent); }
+  .tool-strip .strip-sep { width: 20px; height: 1px; background: var(--border2); margin: 3px auto; }
+
+  #floatPanel {
+    position: fixed; right: 60px; top: 50%; transform: translateY(-50%);
+    z-index: 19; width: 296px; height: min(560px, calc(100vh - 140px));
+    background: var(--glass); border: 1px solid var(--border2);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border-radius: 18px;
+    box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
+    display: none; flex-direction: column; overflow: hidden;
+  }
+  #floatPanel.open { display: flex; animation: panelIn .18s ease; }
+  @keyframes panelIn {
+    from { opacity: 0; transform: translateY(-50%) translateX(14px); }
+    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
+  #floatPanel .rp-page { flex: 1; overflow-y: auto; padding: 10px 12px 14px; display: none; }
+  #floatPanel .rp-page.on { display: block; }
+  #floatPanel .row { margin-bottom: 8px; }
+
+  .playbar {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px;
+    z-index: 20; display: flex; align-items: center; gap: 7px;
+    width: min(640px, calc(100% - 140px));
+    background: var(--glass); border: 1px solid var(--border2);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border-radius: 16px; padding: 8px 12px;
+    box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
+    transition: opacity .2s;
+  }
+  .playbar.hide { opacity: 0; pointer-events: none; }
+  .playbar input[type="range"] { flex: 1; width: auto; min-width: 80px; }
+  .playbar .pb-time {
+    flex: none; font-size: 11px; color: var(--text-dim);
+    font-variant-numeric: tabular-nums; min-width: 86px; text-align: center;
+  }
+  .playbar .pb-speed { flex: none; width: 62px; }
+  .playbar .pb-speed-val { flex: none; font-size: 11px; color: var(--text-dim); min-width: 26px; }
+
+  .zoom-bar {
+    position: fixed; right: 60px; top: 12px; z-index: 20;
+    display: flex; gap: 4px; align-items: center;
+    background: var(--glass); border: 1px solid var(--border2);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    padding: 4px 6px; border-radius: 999px;
+    box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-hi);
+  }
+  .zoom-bar button {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: background .13s, color .13s;
+  }
+  .zoom-bar button:hover { background: var(--accent-dim-bg); color: var(--accent); }
+  .zoom-bar button.active { background: var(--accent-dim-bg); color: var(--accent); }
+  .zoom-bar .zoom-pct { min-width: 40px; text-align: center; font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+  .status {
+    position: fixed; left: 14px; top: 12px; z-index: 20;
+    background: var(--glass); border: 1px solid var(--border2);
+    backdrop-filter: blur(14px) saturate(1.35);
+    -webkit-backdrop-filter: blur(14px) saturate(1.35);
+    color: #d5dbe8; padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; pointer-events: none; max-width: calc(100% - 130px);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-hi);
+  }
+  .status.hide { display: none; }
+
+  .hint {
+    position: fixed; right: 62px; bottom: 16px; z-index: 18;
+    color: var(--text-faint); font-size: 11px;
+    pointer-events: none; text-align: right;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+  }
+
+  #gridView {
+    position: fixed; inset: 0; z-index: 40;
+    background: var(--bg);
+    background-image: var(--bg-glow);
+    overflow-y: auto; display: none;
+  }
+  #gridView.open { display: block; animation: fadeIn .2s ease; }
+  .grid-head {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 14px 20px;
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
+  }
+  .grid-head .grid-title { font-size: 16px; font-weight: 800; color: var(--accent); letter-spacing: .3px; }
+  .grid-head .grid-sub { font-size: 11.5px; color: var(--text-faint); }
+  .grid-head input { flex: 0 1 300px; margin-left: auto; }
+  .thumb-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+    gap: 16px; padding: 20px;
+  }
+  .thumb-card {
+    position: relative;
+    background: var(--panel-grad); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; cursor: pointer;
+    transition: transform .16s, border-color .16s, box-shadow .16s;
+    animation: cardIn .3s both;
+    animation-delay: calc(var(--i, 0) * 16ms);
+  }
+  .thumb-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: var(--shadow-2), var(--accent-glow); }
+  .thumb-card.active { border-color: var(--accent); box-shadow: var(--accent-glow); }
+  .thumb-card .ph {
+    aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(170px 170px at 50% 40%, rgba(255, 255, 255, .028), transparent 70%),
+      var(--panel2);
+    color: var(--text-faint); font-size: 11px;
+  }
+  .thumb-card .ph img {
+    width: auto; height: auto; max-width: 100%; max-height: 100%;
+    object-fit: contain; display: block; flex: 0 0 auto;
+  }
+  .thumb-card .spin {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .thumb-card .tm { padding: 9px 11px 10px; }
+  .thumb-card .tn {
+    font-size: 12.5px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .thumb-card.active .tn { color: var(--accent); }
+  .thumb-card .ts {
+    font-size: 10.5px; color: var(--text-faint); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .thumb-card .tt {
+    position: absolute; top: 9px; left: 9px;
+    font-size: 10px; padding: 2.5px 9px; border-radius: 999px;
+    background: rgba(0, 0, 0, .55); color: #dfe5ef;
+    border: 1px solid rgba(255, 255, 255, .12);
+    backdrop-filter: blur(6px);
+  }
+  .thumb-card .tstar {
+    position: absolute; top: 7px; right: 7px;
+    background: none; border: none; cursor: pointer;
+    font-size: 15px; color: rgba(255, 255, 255, .45);
+    padding: 3px; line-height: 1; text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+    transition: transform .15s cubic-bezier(.34, 1.56, .64, 1), color .15s;
+  }
+  .thumb-card .tstar:hover { transform: scale(1.25); color: #fff; }
+  .thumb-card .tstar.on { color: var(--star); }
+
+  body.immersive .rail, body.immersive .top-pill, body.immersive .tool-strip,
+  body.immersive .playbar, body.immersive .status, body.immersive .hint,
+  body.immersive .zoom-bar, body.immersive #floatPanel { display: none !important; }
+  body.immersive .immersive-exit {
+    position: fixed; top: 12px; right: 12px; z-index: 90;
+    opacity: .22; transition: opacity .2s;
+  }
+  body.immersive .immersive-exit:hover { opacity: 1; }
+</style>
+  <script src="../../arthub-cos-config.js"></script>
+  <script src="../../arthub-cos.js"></script>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="status" id="status">加载中…</div>
+    <div class="hint">空格 播放/暂停 · 滚轮缩放 · 拖拽平移 · 点击部件隐藏 · G 资源库 · ⇋ 对比 · 🎞 GIF · Ctrl+K 搜索 · ? 快捷键</div>
+
+    <div class="rail" id="rail">
+      <button id="railGrid" title="资源库 (G)"></button>
+      <div class="rail-sep"></div>
+      <button id="btnPrev" title="上一个 (←)"></button>
+      <button id="btnNext" title="下一个 (→)"></button>
+      <div class="rail-thumb" id="railThumb" title="适应窗口 (F)"></div>
+      <div class="rail-sep"></div>
+      <button id="railCompare" title="原版对比 (↔)" style="display:none">⇋</button>
+      <button id="railStar" title="收藏 (S)">☆</button>
+    </div>
+
+    <div class="top-pill" id="topPill">
+      <select id="variantSel" class="ctl" style="display:none"></select>
+      <select id="animSel" class="ctl"><option>动作</option></select>
+      <span class="tp-name" id="mName">未选择</span>
+      <span class="tp-id" id="mId"></span>
+      <button class="edit-btn" id="btnEditName" title="重命名(仅本机)"></button>
+    </div>
+
+    <div class="zoom-bar">
+      <button id="zOut" title="缩小">−</button>
+      <span class="zoom-pct" id="zPct">适应</span>
+      <button id="zIn" title="放大">＋</button>
+      <button id="btnFit" title="适应窗口 (F)"></button>
+      <button id="btn100" title="原始比例">1:1</button>
+    </div>
+
+    <div class="playbar" id="playbar">
+      <button id="pbPlay" class="ctl active" title="播放/暂停 (空格)"></button>
+      <button id="pbStepB" class="ctl" title="后退 1 帧 (,)">«</button>
+      <input id="pbRange" type="range" min="0" max="1000" value="0">
+      <button id="pbStepF" class="ctl" title="前进 1帧 (.)">»</button>
+      <span class="pb-time" id="pbTime">0.00 / 0.00s</span>
+      <button id="pbLoop" class="ctl active" title="循环 (L)"></button>
+      <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="播放速度">
+      <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+    </div>
+
+    <div class="tool-strip" id="toolStrip">
+      <button id="btnParts" title="部件面板"></button>
+      <button id="btnAnimTab" title="动画面板"></button>
+      <button id="btnBoneEdit" title="骨骼编辑模式 (E)"></button>
+      <div class="strip-sep"></div>
+      <button id="btnDebug" title="骨骼 / 网格 / 包围盒 调试视图"></button>
+      <button id="btnPng" title="导出当前画面为 PNG"></button>
+      <button id="btnGif" title="导出当前动画为 GIF">🎞</button>
+      <button id="btnBg" title="背景颜色 / 预设">◐</button>
+      <div class="strip-sep"></div>
+      <button id="btnFs" title="全屏模式"></button>
+      <button id="btnPresetImmersive" title="沉浸模式 (I)"></button>
+    </div>
+
+    <div id="partPopup" class="stage-popup" style="display:none">
+      <span id="popupSlotName">部件</span>
+      <button id="popupHide" class="danger">隐藏</button>
+      <button id="popupCancel">取消</button>
+    </div>
+  </div>
+
+  <div id="gridView">
+    <div class="grid-head">
+      <span class="grid-title" id="brandTitle">资源库</span>
+      <span class="grid-sub" id="gridSub"></span>
+      <div id="filterChips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+      <input id="gridSearch" class="text-input" placeholder="搜索名称 / 编号 / 路径...">
+      <button id="btnTheme" class="edit-btn" title="切换主题">◐</button>
+      <button id="gridClose" class="ctl">返回舞台</button>
+    </div>
+    <div class="thumb-grid" id="thumbGrid"></div>
+  </div>
+
+  <aside id="floatPanel">
+    <div class="rp-tabs">
+      <button data-tab="parts" class="on">部件</button>
+      <button data-tab="anim">动画</button>
+      <button data-tab="pose">姿势</button>
+    </div>
+    <div class="rp-page on" data-page="parts">
+      <div class="row"><input id="partFilter" type="text" class="text-input" placeholder="过滤部件名,如 body / hand"></div>
+      <div class="parts-tools">
+        <button id="partAll">全显</button>
+        <button id="partNone">全隐</button>
+        <button id="partInv">反选</button>
+      </div>
+      <div id="slotList" class="slot-list"></div>
+    </div>
+    <div class="rp-page" data-page="anim">
+      <div class="row"><input id="animFilter" type="text" class="text-input" placeholder="过滤动画名"></div>
+      <div id="animList" class="anim-list"></div>
+    </div>
+    <div class="rp-page" data-page="pose">
+      <div class="lbl">骨骼编辑: 点击骨骼选中 · 拖拽本体平移 · 拖拽末端旋转</div>
+      <div class="row"><input id="poseName" type="text" class="text-input" placeholder="快照名称"><button id="poseSave" class="ctl">保存</button></div>
+      <div id="poseList" class="anim-list"></div>
+      <div class="parts-tools" style="margin-top:8px">
+        <button id="poseExport" title="导出全部快照为 JSON">导出</button>
+        <button id="poseImport" title="从 JSON 导入快照">导入</button>
+        <button id="poseLock" title="锁定后每帧覆盖动画, 姿势压在动画上">锁定</button>
+      </div>
+      <input id="poseFile" type="file" accept=".json" style="display:none">
+    </div>
+  </aside>
+
+<script src="vendor/spine-webgl.js"></script>
+<script src="../../common/kit.js"></script>
+<script>
+
+(() => {
+  window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
+  const K = window.SpineKit;
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  // ---------- 图标 ----------
+  const I = (name, size = 14) => {
+    const p = {
+      pause: '<rect x="6" y="4" width="4" height="16" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" rx="1.2" fill="currentColor" stroke="none"/>',
+      play: '<path d="M7 4.5v15a1 1 0 0 0 1.54.84l11.2-7.5a1 1 0 0 0 0-1.68L8.54 3.66A1 1 0 0 0 7 4.5z" fill="currentColor" stroke="none"/>',
+      loop: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+      bone: '<path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"/>',
+      camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+      layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+      minus: '<path d="M5 12h14"/>',
+      plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+      fit: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+      pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+      copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+      expand: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>',
+      chevL: '<path d="m15 18-6-6 6-6"/>',
+      chevR: '<path d="m9 18 6-6-6-6"/>',
+      grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+      anim: '<path d="M7 4.5v15a1 1 0 0 0 1.54.84l11.2-7.5a1 1 0 0 0 0-1.68L8.54 3.66A1 1 0 0 0 7 4.5z"/>',
+      move: '<path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>',
+    }[name] || '';
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+  };
+
+  const cv = $('#cv'), stage = $('#stage');
+  const statusEl = $('#status');
+  const variantSel = $('#variantSel'), animSel = $('#animSel');
+  const mName = $('#mName'), mId = $('#mId');
+  const btnFit = $('#btnFit'), btn100 = $('#btn100');
+  const pbPlay = $('#pbPlay'), pbLoop = $('#pbLoop'), pbRange = $('#pbRange'), pbTime = $('#pbTime');
+  const pbSpeed = $('#pbSpeed'), pbSpeedVal = $('#pbSpeedVal');
+  const btnParts = $('#btnParts'), btnAnimTab = $('#btnAnimTab');
+  const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg');
+  const floatPanel = $('#floatPanel'), gridView = $('#gridView');
+  const rail = $('#rail'), topPill = $('#topPill'), toolStrip = $('#toolStrip');
+  const routeSource = location.pathname.split('/').filter(Boolean)[0] || 'bd2';
+  if (routeSource === 'nikki') document.title = '妮姬 · Spine 动态查看器';
+  const isMod = routeSource !== 'bd2';
+  const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
+  const embedded = new URLSearchParams(location.search).get('embed') === '1';
+  const store = K.Store(routeSource);
+  const status = t => { statusEl.textContent = t; };
+
+  if (embedded) {
+    document.documentElement.classList.add('arthub-embedded');
+    const style = document.createElement('style');
+    style.textContent = `
+      html.arthub-embedded, html.arthub-embedded body { width: 100%; height: 100%; overflow: hidden; }
+      html.arthub-embedded #stage { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; min-width: 0 !important; }
+      html.arthub-embedded #cv { width: 100% !important; height: 100% !important; }
+      html.arthub-embedded #rail, html.arthub-embedded #topPill,
+      html.arthub-embedded #toolStrip, html.arthub-embedded #playbar,
+      html.arthub-embedded #status, html.arthub-embedded .hint,
+      html.arthub-embedded #floatPanel, html.arthub-embedded .zoom-bar { display: none !important; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  let chars = [];
+  let cur = null;
+  let mgl = null, renderer = null;
+  let cut = null;
+  let cutLoadSeq = 0;
+  let playing = true;
+  let loopAnim = true;
+  let fitMode = true;
+  let userScale = 1;
+  let panX = 0, panY = 0;
+  let lastT = 0;
+  let popupSlot = null;
+  let highlightSlot = null;
+  let debugFlags = store.get('debugView', {});
+  let partsCtl = null;
+  let animCtl = null;
+  let boneEditMode = false;
+  let editBoneName = null;
+  let boneDrag = null;
+  let poseLocked = null;
+  let editWasPlaying = false;
+  let hoverBoneName = null;
+  const editOrig = {};   // 编辑过的骨骼在动画暂停帧的原始姿态, 右键恢复用
+  let filterType = store.get('filterType', 'all');
+  let sortMode = store.get('sortMode', 'default');
+  let gridQuery = '';
+  let immersive = false;
+  let exportScale = 1;
+
+  // ---------- 弹窗基建 ----------
+  const allPopups = [];
+  const closePopups = () => allPopups.forEach(p => p.close());
+  function makeStagePopup(btn, onOpen) {
+    const pop = document.createElement('div');
+    pop.className = 'stage-popup';
+    pop.style.position = 'fixed';
+    pop.style.display = 'none';
+    document.body.appendChild(pop);
+    const api = { close() { pop.style.display = 'none'; } };
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const show = pop.style.display === 'none';
+      allPopups.forEach(p => p.close());
+      if (show) {
+        pop.innerHTML = '';
+        onOpen(pop);
+        pop.style.display = 'flex';
+        const r = btn.getBoundingClientRect();
+        const pw = pop.offsetWidth, ph = pop.offsetHeight;
+        let left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8));
+        let top = r.bottom + 6;
+        if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+        pop.style.left = left + 'px';
+        pop.style.top = top + 'px';
+      }
+    });
+    pop.addEventListener('click', e => e.stopPropagation());
+    pop.addEventListener('pointerdown', e => e.stopPropagation());
+    document.addEventListener('click', () => api.close());
+    allPopups.push(api);
+    return api;
+  }
+
+  // ---------- 图标初始化 ----------
+  const setPlayBtn = () => {
+    pbPlay.innerHTML = playing ? I('pause', 15) : I('play', 15);
+    pbPlay.classList.toggle('active', playing);
+  };
+  const setLoopBtn = () => {
+    pbLoop.innerHTML = I('loop', 14);
+    pbLoop.classList.toggle('active', loopAnim);
+  };
+  $('#railGrid').innerHTML = I('grid', 16);
+  $('#btnPrev').innerHTML = I('chevL', 13);
+  $('#btnNext').innerHTML = I('chevR', 13);
+  btnParts.innerHTML = I('layers', 15);
+  btnAnimTab.innerHTML = I('anim', 15);
+  $('#btnBoneEdit').innerHTML = I('move', 15);
+  btnDebug.innerHTML = I('bone', 15);
+  btnPng.innerHTML = I('camera', 15);
+  $('#btnFs').innerHTML = I('expand', 13);
+  $('#btnPresetImmersive').innerHTML = I('collapse', 13);
+  $('#zOut').innerHTML = I('minus', 12);
+  $('#zIn').innerHTML = I('plus', 12);
+  btnFit.innerHTML = I('fit', 13);
+  $('#btnEditName').innerHTML = I('pencil', 12);
+  setPlayBtn();
+  setLoopBtn();
+
+  // ---------- 主题 ----------
+  K.initTheme(store);
+  $('#btnTheme').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const order = [['deep', '深空'], ['obsidian', '曜石'], ['pine', '墨绿'], ['dusk', '紫昏']];
+    const curT = document.documentElement.dataset.theme || 'deep';
+    const next = order[(order.findIndex(t => t[0] === curT) + 1) % order.length];
+    K.setTheme(next[0], store);
+    K.toast('主题: ' + next[1], 'ok');
+  });
+
+  // ---------- 背景 ----------
+  const getBg = () => store.get('bg', '#0f1218');
+  const applyBgToUI = () => stage.classList.toggle('checker', getBg() === 'checker');
+  applyBgToUI();
+  makeStagePopup(btnBg, (pop) => {
+    const presets = [['深空', '#0f1218'], ['纯黑', '#000000'], ['石墨', '#1f242e'], ['浅灰', '#b9bec7'], ['棋盘(透明)', 'checker']];
+    pop.innerHTML = '<div class="col"><div class="col-title">背景</div><div class="opt-row" id="bgSwatches"></div></div>';
+    const row = pop.querySelector('#bgSwatches');
+    for (const [label, val] of presets) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      if (getBg() === val) b.style.color = 'var(--accent)';
+      b.onclick = () => { store.set('bg', val); applyBgToUI(); };
+      row.appendChild(b);
+    }
+  });
+
+  // ---------- 类型/排序/别名 ----------
+  const aliasMap = store.get('aliasMap', {});
+  const aliasOf = id => aliasMap[id] || '';
+  const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', unknown: '其他' };
+  const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, store: 8, unknown: 9 };
+
+  function buildFilterChips() {
+    const row = $('#filterChips');
+    const counts = {};
+    for (const c of chars) counts[c.type || 'unknown'] = (counts[c.type || 'unknown'] || 0) + 1;
+    const types = Object.keys(counts).sort((a, b) => (TYPE_ORDER[a] ?? 8) - (TYPE_ORDER[b] ?? 8));
+    const starred = new Set(store.get('stars', []));
+    const chips = [['all', '全部', chars.length], ['star', '★', starred.size],
+      ...types.map(t => [t, TYPE_LABEL[t] || t, counts[t]])];
+    if (!chips.some(c => c[0] === filterType)) filterType = 'all';
+    row.innerHTML = '';
+    for (const [val, label, n] of chips) {
+      const b = document.createElement('button');
+      b.className = 'filter-chip' + (filterType === val ? ' on' : '');
+      b.innerHTML = label + ' <span class="n">' + n + '</span>';
+      b.onclick = () => { filterType = val; store.set('filterType', filterType); buildFilterChips(); renderGrid(); };
+      row.appendChild(b);
+    }
+    const sel = document.createElement('select');
+    sel.className = 'sort-sel';
+    sel.innerHTML = '<option value="default">默认</option><option value="name">名称</option><option value="type">类型</option>';
+    sel.value = sortMode;
+    sel.onchange = () => { sortMode = sel.value; store.set('sortMode', sortMode); renderGrid(); };
+    row.appendChild(sel);
+  }
+
+  function getFilteredChars() {
+    const starred = new Set(store.get('stars', []));
+    let arr = chars.filter(c => {
+      if (filterType === 'all') return true;
+      if (filterType === 'star') return starred.has(c.id);
+      return (c.type || 'unknown') === filterType;
+    });
+    if (sortMode === 'name') arr = [...arr].sort((a, b) => String(aliasOf(a.id) || a.name).localeCompare(String(aliasOf(b.id) || b.name), 'zh'));
+    else if (sortMode === 'type') arr = [...arr].sort((a, b) => (TYPE_ORDER[a.type] ?? 8) - (TYPE_ORDER[b.type] ?? 8) || String(a.id).localeCompare(String(b.id)));
+    return arr;
+  }
+  function nav(delta) {
+    const arr = getFilteredChars();
+    if (!arr.length) return;
+    let i = cur ? arr.findIndex(c => c.id === cur.id) : -1;
+    i = i < 0 ? (delta > 0 ? 0 : arr.length - 1) : (i + delta + arr.length) % arr.length;
+    selectChar(arr[i]);
+  }
+  function toggleStarById(id) {
+    const starred = store.get('stars', []);
+    const i = starred.indexOf(id);
+    if (i >= 0) starred.splice(i, 1); else starred.push(id);
+    store.set('stars', starred);
+    // 同步到跨源收藏（首页聚合展示）
+    const c = chars.find(x => x.id === id);
+    K.favs.toggle({
+      k: routeSource + ':' + id, src: routeSource,
+      t: (aliasOf(id) || (c && c.name) || id),
+      s: (c && c.name && aliasOf(id)) ? c.name : ((c && c.source) || ''),
+      u: location.pathname + '?id=' + encodeURIComponent(id),
+    });
+    buildFilterChips();
+    renderGrid();
+    if (cur && cur.id === id) $('#railStar').textContent = starred.includes(id) ? '★' : '☆';
+    K.toast(starred.includes(id) ? '已收藏' : '已取消收藏', 'ok');
+  }
+
+  // ---------- 缩略图引擎 ----------
+    const THUMB_CACHE_VERSION = 'pose-space-v4';
+  const ThumbStore = (() => {
+    let dbp = null;
+    const keyOf = (id) => THUMB_CACHE_VERSION + ':' + id;
+    function open() {
+      if (dbp) return dbp;
+      dbp = new Promise((res, rej) => {
+        try {
+          const rq = indexedDB.open('spine-thumbs', 1);
+          rq.onupgradeneeded = () => rq.result.createObjectStore('thumbs');
+          rq.onsuccess = () => res(rq.result);
+          rq.onerror = () => rej(rq.error);
+        } catch (e) { rej(e); }
+      }).catch(() => null);
+      return dbp;
+    }
+    return {
+      async get(id) {
+        const db = await open();
+        if (!db) return null;
+        return new Promise(res => {
+          try {
+            const t = db.transaction('thumbs').objectStore('thumbs').get(keyOf(id));
+            t.onsuccess = () => res(t.result || null);
+            t.onerror = () => res(null);
+          } catch { res(null); }
+        });
+      },
+      async put(id, url) {
+        const db = await open();
+        if (!db) return;
+        return new Promise(res => {
+          try {
+            const t = db.transaction('thumbs', 'readwrite').objectStore('thumbs').put(url, keyOf(id));
+            t.onsuccess = () => res();
+            t.onerror = () => res();
+          } catch { res(); }
+        });
+      },
+    };
+  })();
+
+  const ThumbGen = (() => {
+    const THUMB_SIZE = 384;
+    // 离屏渲染上下文按 Spine 版本各持一份（4.0/4.1 各建一个）
+    const ctxs = {};
+    const mem = new Map();
+    const inflight = new Set();
+    let chain = Promise.resolve();
+    function ensureCtx(vkey, ns) {
+      if (ctxs[vkey]) return ctxs[vkey];
+      try {
+        const cv2 = document.createElement('canvas');
+        cv2.width = THUMB_SIZE; cv2.height = THUMB_SIZE;
+        const raw = cv2.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
+        if (!raw || !ns) return null;
+        if (ns.GLTexture) ns.GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = true;
+        const mgl2 = new ns.ManagedWebGLRenderingContext(raw);
+        const renderer2 = new ns.SceneRenderer(cv2, mgl2);
+        return (ctxs[vkey] = { cv2, mgl2, renderer2 });
+      } catch { return null; }
+    }
+    function pickPreviewAnimation(data) {
+      return data.animations && (
+        data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name)) ||
+        data.animations.find(a => /^loop/i.test(a.name)) || data.animations[0]
+      );
+    }
+    function applyPreviewPose(sk, data, SP, time, resourceId) {
+      sk.setToSetupPose();
+      const anim = pickPreviewAnimation(data);
+      if (!anim || !SP.AnimationStateData || !SP.AnimationState) {
+        K.updateWorldTransform(sk);
+        return null;
+      }
+      const stateData = new SP.AnimationStateData(data);
+      stateData.defaultMix = 0;
+      const state = new SP.AnimationState(stateData);
+      state.setAnimation(0, anim.name, false);
+      state.update(Math.max(0, Number(time) || 0));
+      state.apply(sk);
+      K.updateWorldTransform(sk);
+      return anim;
+    }
+    async function generate(entry) {
+      const vkey = (entry && entry.spineVersion && String(entry.spineVersion).match(/^4\.\d/)) ? entry.spineVersion.match(/^4\.\d/)[0] : '4.1';
+      const ctx = ensureCtx(vkey, K.getSpine(entry && entry.spineVersion));
+      if (!ctx) throw new Error('no gl');
+      const { mgl2, cv2, renderer2 } = ctx;
+      const SP = K.getSpine(entry && entry.spineVersion);
+      const v = entry.cutscenes[0];
+      const base = '../' + v.dir;
+      const am = new SP.AssetManager(mgl2, base);
+      {
+        const atlas = await new Promise((res, rej) => am.loadTextureAtlas(v.atlas, (p, a) => res(a), (p, e) => rej(new Error(e))));
+        const loader = new SP.AtlasAttachmentLoader(atlas);
+        const resp = await fetch(base + encodeURIComponent(v.skel));
+        if (!resp.ok) throw new Error('skel ' + resp.status);
+        const data = v.format === 'json'
+          ? new SP.SkeletonJson(loader).readSkeletonData(await resp.text())
+          : new SP.SkeletonBinary(loader).readSkeletonData(new Uint8Array(await resp.arrayBuffer()));
+        const sk = new SP.Skeleton(data);
+        const anim = pickPreviewAnimation(data);
+        const duration = anim && Number.isFinite(Number(anim.duration)) ? Math.max(0, Number(anim.duration)) : 0;
+        // 缩略图必须和舞台一样应用默认动画；同时取几个时间点的并集，避免动作伸展时被包围盒裁掉。
+        const sampleTimes = duration > 0 ? [0, duration * 0.25, duration * 0.5, duration * 0.75, duration] : [0];
+        let b = null;
+        for (const time of sampleTimes) {
+          applyPreviewPose(sk, data, SP, time, entry && entry.id);
+          const frame = K.measureBounds(sk, SP);
+          if (!frame || !(frame.maxX > frame.minX) || !(frame.maxY > frame.minY)) continue;
+          b = b ? {
+            minX: Math.min(b.minX, frame.minX), minY: Math.min(b.minY, frame.minY),
+            maxX: Math.max(b.maxX, frame.maxX), maxY: Math.max(b.maxY, frame.maxY),
+          } : frame;
+        }
+        // 最终仍显示中段姿势，避免缩略图停在入场帧；包围盒使用上面的全程采样结果。
+        applyPreviewPose(sk, data, SP, duration > 0 ? duration * 0.5 : 0, entry && entry.id);
+        b = b || K.measureBounds(sk, SP);
+        if (!b) throw new Error('empty');
+        const w = b.maxX - b.minX, h = b.maxY - b.minY;
+        if (!(w > 0) || !(h > 0)) throw new Error('invalid bounds');
+        const scale = Math.min(THUMB_SIZE * 0.92 / w, THUMB_SIZE * 0.92 / h);
+        sk.scaleX = scale; sk.scaleY = scale;
+        sk.x = -(b.minX + w / 2) * scale;
+        sk.y = -(b.minY + h / 2) * scale;
+        K.updateWorldTransform(sk);
+        const raw = mgl2.gl || mgl2;
+        raw.clearColor(0, 0, 0, 0);
+        raw.clear(raw.COLOR_BUFFER_BIT);
+        renderer2.begin();
+        renderer2.drawSkeleton(sk, !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma));
+        renderer2.end();
+        const url = cv2.toDataURL('image/png');
+        for (const p of atlas.pages) if (p.texture && p.texture.dispose) p.texture.dispose();
+        return url;
+      }
+    }
+    const pendingCbs = new Map(); // id -> { cbs: [cb], entry }
+    let active = 0;
+    function request(id, entry, cb) {
+      if (mem.has(id)) { cb(mem.get(id)); return; }
+      if (pendingCbs.has(id)) { pendingCbs.get(id).cbs.push(cb); return; }
+      pendingCbs.set(id, { cbs: [cb], entry });
+      pump();
+    }
+    function pump() {
+      while (active < 2) {
+        let found = null;
+        for (const [id, job] of pendingCbs) { if (!job.running) { found = id; break; } }
+        if (found === null) break;
+        const job = pendingCbs.get(found);
+        job.running = true;
+        active++;
+        run(found, job);
+      }
+    }
+    function run(id, job) {
+      Promise.race([
+        generate(job.entry),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 20000)),
+      ])
+      .then(url => ThumbStore.put('t:' + id, url).then(() => url).catch(() => url))
+      .catch(() => '')
+      .then(url => {
+        mem.set(id, url || '');
+        pendingCbs.delete(id);
+        active--;
+        for (const cb of job.cbs) { try { cb(url || ''); } catch {} }
+        pump();
+      });
+    }
+    return { request };
+  })();
+
+  // ---------- 网格视图 ----------
+  let gridObserver = null;
+  let stageMode = false;
+  function setChrome(onStage) {
+    rail.classList.toggle('hide', !onStage);
+    topPill.classList.toggle('hide', !onStage);
+    toolStrip.classList.toggle('hide', !onStage);
+    $('#playbar').classList.toggle('hide', !onStage);
+    statusEl.classList.toggle('hide', !onStage);
+    document.querySelector('.hint').style.display = onStage ? '' : 'none';
+  }
+  // 网格分页: 大列表(967+)滚动增量渲染, 避免一次性建 DOM
+  const GRID_PAGE = 120;
+  let gridArr = [];
+  let gridShown = 0;
+
+  function buildCard(grid, starred, c) {
+    const alias = aliasOf(c.id);
+    const card = document.createElement('div');
+    card.className = 'thumb-card' + (cur && cur.id === c.id ? ' active' : '');
+    card.dataset.id = c.id;
+    card.style.setProperty('--i', Math.min(gridShown % GRID_PAGE, 16));
+    card.innerHTML = '<div class="ph"><span class="spin"></span></div>'
+      + '<div class="tm"><div class="tn">' + K.esc(alias || c.name || c.id) + '</div>'
+      + '<div class="ts">' + K.esc(alias ? c.name || '' : (c.source || '')) + '</div></div>'
+      + '<span class="tt">' + (TYPE_LABEL[c.type || 'unknown'] || '其他') + '</span>'
+      + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '★' : '☆') + '</button>';
+    card.onclick = () => { selectChar(c); closeGrid(); };
+    card.querySelector('.tstar').onclick = (e) => {
+      e.stopPropagation();
+      toggleStarById(c.id);
+      const on = store.get('stars', []).includes(c.id);
+      e.target.classList.toggle('on', on);
+      e.target.textContent = on ? '★' : '☆';
+    };
+    grid.appendChild(card);
+    const ph = card.querySelector('.ph');
+    gridObserver.observe(ph);
+    ph.dataset.tid = c.id;
+  }
+
+  function renderMore(starred) {
+    if (starred === undefined) starred = new Set(store.get('stars', []));
+    const grid = $('#thumbGrid');
+    const end = Math.min(gridShown + GRID_PAGE, gridArr.length);
+    for (let i = gridShown; i < end; i++) buildCard(grid, starred, gridArr[i]);
+    gridShown = end;
+    $('#gridSub').textContent = gridShown >= gridArr.length
+      ? gridArr.length + ' 个资源 · 点击打开 · 缩略图自动生成'
+      : '已显示 ' + gridShown + ' / ' + gridArr.length + ' · 滚动继续加载';
+  }
+
+  function renderGrid() {
+    const grid = $('#thumbGrid');
+    const q = gridQuery.trim().toLowerCase();
+    let arr = getFilteredChars();
+    if (q) arr = arr.filter(c => {
+      const alias = aliasOf(c.id);
+      return (alias || c.name || '').toLowerCase().includes(q)
+        || (c.source || '').toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
+    });
+    grid.innerHTML = '';
+    const starred = new Set(store.get('stars', []));
+    gridArr = arr;
+    gridShown = 0;
+    renderMore(starred);
+  }
+  function setupGridObserver() {
+    gridObserver = new IntersectionObserver((entries) => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        const ph = en.target;
+        gridObserver.unobserve(ph);
+        const id = ph.dataset.tid;
+        const c = chars.find(x => x.id === id);
+        if (!c) continue;
+        ThumbGen.request(id, c, (url) => { ph.innerHTML = url ? '<img src="' + url + '" alt="">' : '无预览'; });
+      }
+    }, { root: gridView, rootMargin: '300px' });
+  }
+  setupGridObserver();
+
+  function openGrid() {
+    stageMode = false;
+    gridView.classList.add('open');
+    setChrome(false);
+    renderGrid();
+  }
+  function closeGrid() {
+    stageMode = true;
+    gridView.classList.remove('open');
+    setChrome(true);
+    requestAnimationFrame(() => { K.resizeCanvas(cv, renderer); if (cut && fitMode) refit(); else if (cut) applyView(); });
+  }
+  function toggleGrid() { stageMode ? openGrid() : closeGrid(); }
+  $('#railGrid').addEventListener('click', toggleGrid);
+  $('#gridClose').addEventListener('click', closeGrid);
+  $('#gridSearch').addEventListener('input', (e) => { gridQuery = e.target.value; renderGrid(); });
+  gridView.addEventListener('scroll', () => {
+    if (gridShown >= gridArr.length) return;
+    if (gridView.scrollTop + gridView.clientHeight > gridView.scrollHeight - 800) renderMore();
+  });
+
+  // ---------- 沉浸模式 ----------
+  function applyImmersive() {
+    document.body.classList.toggle('immersive', immersive);
+    rail.classList.toggle('hide', immersive);
+    topPill.classList.toggle('hide', immersive);
+    toolStrip.classList.toggle('hide', immersive);
+    $('#playbar').classList.toggle('hide', immersive);
+    statusEl.classList.toggle('hide', immersive);
+    $('#btnPresetImmersive').classList.toggle('on', immersive);
+  }
+  function toggleImmersive() {
+    immersive = !immersive;
+    store.set('immersive', immersive);
+    applyImmersive();
+    if (!immersive) { K.resizeCanvas(cv, renderer); if (cut && fitMode) refit(); }
+  }
+  $('#btnPresetImmersive').addEventListener('click', toggleImmersive);
+
+  // ---------- 部件/动画浮动面板 ----------
+  function setFloatPanel(tab) {
+    const isOpen = floatPanel.classList.contains('open') && floatPanel.dataset.tab === tab;
+    if (isOpen) { floatPanel.classList.remove('open'); btnParts.classList.remove('on'); btnAnimTab.classList.remove('on'); return; }
+    floatPanel.dataset.tab = tab;
+    floatPanel.classList.add('open');
+    $$('#floatPanel .rp-tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+    $$('#floatPanel .rp-page').forEach(p => p.classList.toggle('on', p.dataset.page === tab));
+    btnParts.classList.toggle('on', tab === 'parts');
+    btnAnimTab.classList.toggle('on', tab === 'anim');
+    if (tab === 'parts' && partsCtl) partsCtl.refresh();
+    if (tab === 'anim' && animCtl) animCtl.refresh();
+    if (tab === 'pose') refreshPoseList();
+  }
+  btnParts.addEventListener('click', () => setFloatPanel('parts'));
+  btnAnimTab.addEventListener('click', () => setFloatPanel('anim'));
+
+  partsCtl = K.buildPartsPanel({
+    listEl: $('#slotList'),
+    filterEl: $('#partFilter'),
+    allEl: $('#partAll'),
+    noneEl: $('#partNone'),
+    invEl: $('#partInv'),
+    getTargets: () => (cut ? [cut] : null),
+    onHover: (name) => { highlightSlot = name; },
+    onChange: () => { persistHidden(); updatePartsBadge(); },
+  });
+  function persistHidden() {
+    if (!cur || !cut) return;
+    const hm = store.get('hiddenMap', {});
+    const key = cur.id + '/' + cut.variant;
+    if (cut.hiddenSlots.size) hm[key] = [...cut.hiddenSlots];
+    else delete hm[key];
+    const keys = Object.keys(hm);
+    if (keys.length > 50) for (const k of keys.slice(0, keys.length - 50)) delete hm[k];
+    store.set('hiddenMap', hm);
+  }
+  function restoreHidden() {
+    if (!cur || !cut) return;
+    const saved = (store.get('hiddenMap', {}))[cur.id + '/' + cut.variant];
+    if (saved && saved.length) {
+      cut.hiddenSlots = new Set(saved);
+      K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots);
+    }
+  }
+  function updatePartsBadge() {
+    const n = cut ? cut.hiddenSlots.size : 0;
+    btnParts.innerHTML = I('layers', 15) + (n ? '<span class="badge" style="position:absolute;top:1px;right:1px">' + n + '</span>' : '');
+  }
+
+  // ---------- 点选隐藏部件 ----------
+  function hidePartPopup() { partPopup.style.display = 'none'; popupSlot = null; }
+  function showPartPopup(name, clientX, clientY) {
+    const rect = stage.getBoundingClientRect();
+    popupSlot = name;
+    popupSlotName.textContent = name;
+    partPopup.style.display = 'flex';
+    const pw = partPopup.offsetWidth || 180;
+    let left = clientX - rect.left + 12;
+    let top = clientY - rect.top + 12;
+    if (left + pw > rect.width - 8) left = Math.max(8, rect.width - pw - 8);
+    if (top + 42 > rect.height - 8) top = Math.max(8, rect.height - 50);
+    partPopup.style.left = left + 'px';
+    partPopup.style.top = top + 'px';
+  }
+  function hidePartFromPopup() {
+    if (!cut || !popupSlot) return;
+    cut.hiddenSlots.add(popupSlot);
+    K.hideSlot(cut.skeleton, popupSlot);
+    persistHidden();
+    if (partsCtl) partsCtl.refresh();
+    updatePartsBadge();
+    K.toast('已隐藏部件: ' + popupSlot, 'ok');
+    hidePartPopup();
+  }
+  popupHide.addEventListener('click', hidePartFromPopup);
+  popupCancel.addEventListener('click', hidePartPopup);
+  partPopup.addEventListener('pointerdown', e => e.stopPropagation());
+  partPopup.addEventListener('pointerup', e => e.stopPropagation());
+  partPopup.addEventListener('wheel', e => e.stopPropagation());
+
+  // ---------- 动画面板 ----------
+  animCtl = (() => {
+    const listEl = $('#animList'), filterEl = $('#animFilter');
+    const refresh = () => {
+      listEl.innerHTML = '';
+      if (!cut) { listEl.innerHTML = '<div class="empty-tip">未加载骨架</div>'; return; }
+      const q = filterEl.value.trim().toLowerCase();
+      const curTrack = cut.state.getCurrent(0);
+      const curName = curTrack ? curTrack.animation.name : '';
+      let shown = 0;
+      for (const a of cut.data.animations) {
+        if (q && !a.name.toLowerCase().includes(q)) continue;
+        const b = document.createElement('button');
+        b.className = 'anim-row' + (a.name === curName ? ' on' : '');
+        b.innerHTML = '<span class="an">' + K.esc(a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
+        b.onclick = () => {
+          animSel.value = a.name;
+          playAnimation(a.name);
+          const lc = store.get('lastChar', {});
+          lc.anim = a.name;
+          store.set('lastChar', lc);
+          refresh();
+        };
+        listEl.appendChild(b);
+        shown++;
+      }
+      if (!shown) listEl.innerHTML = '<div class="empty-tip">无匹配动画</div>';
+    };
+    filterEl.addEventListener('input', refresh);
+    refresh();
+    return { refresh };
+  })();
+
+  // ---------- 骨骼编辑模式 ----------
+  const btnBoneEdit = $('#btnBoneEdit');
+  let editWasPlaying2 = false;
+  btnBoneEdit.addEventListener('click', () => {
+    boneEditMode = !boneEditMode;
+    btnBoneEdit.classList.toggle('on', boneEditMode);
+    if (boneEditMode) {
+      setFloatPanel('pose');
+      // 暂停动画: 否则每帧 state.apply 会覆盖手动编辑
+      editWasPlaying2 = playing;
+      if (playing) { playing = false; setPlayBtn(); }
+      hoverBoneName = null;
+      K.toast('骨骼编辑: 点击骨骼选中 · 拖本体平移 · 拖末端旋转 · 右键恢复', 'ok', 4200);
+    } else {
+      editBoneName = null;
+      boneDrag = null;
+      hoverBoneName = null;
+      if (editWasPlaying2) { playing = true; setPlayBtn(); editWasPlaying2 = false; }
+      K.toast('骨骼编辑已关闭', 'ok');
+    }
+  });
+
+  // 画布坐标(与部件点选同一世界坐标系)
+  const wpt = (cx, cy) => {
+    const rect = cv.getBoundingClientRect();
+    const dpr = devicePixelRatio || 1;
+    return [(cx - rect.left) * dpr - cv.width / 2, cv.height / 2 - (cy - rect.top) * dpr];
+  };
+
+  function hitBoneAt(clientX, clientY) {
+    if (!cut) return null;
+    const [wx, wy] = wpt(clientX, clientY);
+    const scale = cut.skeleton.scaleX || 1;
+    const thresh = 26 / scale;
+    let best = null;
+    for (const bone of cut.skeleton.bones) {
+      let d = Math.hypot(bone.worldX - wx, bone.worldY - wy);
+      if (d < thresh && (!best || d < best.d)) best = { bone, d, mode: 'move' };
+      if (bone.data.length > 0) {
+        const tx = bone.worldX + bone.a * bone.data.length;
+        const ty = bone.worldY + bone.c * bone.data.length;
+        d = Math.hypot(tx - wx, ty - wy);
+        if (d < thresh && (!best || d < best.d)) best = { bone, d, mode: 'rotate' };
+      }
+    }
+    return best;
+  }
+
+  function drawEditSkeleton(renderer) {
+    if (!cut) return;
+    const selCol = { r: 1, g: 0.42, b: 0.13, a: 1 };
+    const hovCol = { r: 1, g: 0.78, b: 0.3, a: 0.95 };
+    const normCol = { r: 0.62, g: 0.7, b: 0.85, a: 0.4 };
+    for (const bone of cut.skeleton.bones) {
+      const len = bone.data.length;
+      const tx = bone.worldX + bone.a * len;
+      const ty = bone.worldY + bone.c * len;
+      const isSel = bone.data.name === editBoneName;
+      const isHov = bone.data.name === hoverBoneName;
+      const col = isSel ? selCol : (isHov ? hovCol : normCol);
+      renderer.line(bone.worldX, bone.worldY, tx, ty, col);
+      if (len > 0 && (isSel || isHov)) {
+        const s = 4 / (cut.skeleton.scaleX || 1);
+        renderer.quad(true, tx - s, ty - s, tx + s, ty - s, tx + s, ty + s, tx - s, ty + s, col);
+      }
+    }
+  }
+  function drawBoneMarker(renderer) {
+    if (!editBoneName || !cut) return;
+    const bone = cut.skeleton.findBone(editBoneName);
+    if (!bone) return;
+    const col = { r: 1, g: 0.42, b: 0.13, a: 1 };
+    const len = bone.data.length;
+    const tx = bone.worldX + bone.a * len;
+    const ty = bone.worldY + bone.c * len;
+    renderer.line(bone.worldX, bone.worldY, tx, ty, col);
+    const s = 6 / (cut.skeleton.scaleX || 1);
+    renderer.quad(true,
+      bone.worldX - s, bone.worldY - s,
+      bone.worldX + s, bone.worldY - s,
+      bone.worldX + s, bone.worldY + s,
+      bone.worldX - s, bone.worldY + s, col);
+  }
+
+  // ---------- 姿势快照 ----------
+  function poseStore() {
+    const m = store.get('poseSnaps', {});
+    if (!m[cur.id]) m[cur.id] = {};
+    return m;
+  }
+  function capturePose() {
+    const bones = {};
+    for (const b of cut.skeleton.bones) {
+      bones[b.data.name] = { rotation: b.rotation, x: b.x, y: b.y, scaleX: b.scaleX, scaleY: b.scaleY };
+    }
+    return bones;
+  }
+  function applyPoseToSkeleton(skeleton, bones) {
+    for (const b of skeleton.bones) {
+      const p = bones[b.data.name];
+      if (p) { b.rotation = p.rotation; b.x = p.x; b.y = p.y; b.scaleX = p.scaleX; b.scaleY = p.scaleY; }
+    }
+  }
+  function refreshPoseList() {
+    const listEl = $('#poseList');
+    if (!cur) { listEl.innerHTML = '<div class="empty-tip">未加载骨架</div>'; return; }
+    const snaps = poseStore()[cur.id] || {};
+    const names = Object.keys(snaps).sort();
+    listEl.innerHTML = '';
+    if (!names.length) { listEl.innerHTML = '<div class="empty-tip">暂无快照 · 摆好姿势后点「保存」</div>'; return; }
+    for (const name of names) {
+      const b = document.createElement('button');
+      b.className = 'anim-row' + (poseLocked === snaps[name].bones ? ' on' : '');
+      b.innerHTML = '<span class="an">' + K.esc(name) + '</span><span class="ad">应用</span>';
+      b.title = '点击应用该姿势';
+      b.onclick = () => {
+        if (!cut) return;
+        applyPoseToSkeleton(cut.skeleton, snaps[name].bones);
+        K.updateWorldTransform(cut.skeleton);
+        poseLocked = snaps[name].bones;
+        $('#poseLock').classList.add('on');
+        K.toast('已应用姿势: ' + name + ' (已锁定)', 'ok');
+        refreshPoseList();
+      };
+      const del = document.createElement('button');
+      del.className = 'edit-btn';
+      del.textContent = '✕';
+      del.title = '删除快照';
+      del.onclick = (e) => {
+        e.stopPropagation();
+        const m = poseStore();
+        if (poseLocked === m[cur.id][name].bones) poseLocked = null;
+        delete m[cur.id][name];
+        store.set('poseSnaps', m);
+        refreshPoseList();
+      };
+      b.appendChild(del);
+      listEl.appendChild(b);
+    }
+  }
+  $('#poseSave').addEventListener('click', () => {
+    if (!cut) { K.toast('没有可保存的骨架', 'err'); return; }
+    const name = $('#poseName').value.trim() || ('姿势 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }));
+    const m = poseStore();
+    m[cur.id][name] = { ts: Date.now(), bones: capturePose() };
+    store.set('poseSnaps', m);
+    $('#poseName').value = '';
+    refreshPoseList();
+    K.toast('姿势已保存: ' + name, 'ok');
+  });
+  $('#poseName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#poseSave').click(); e.stopPropagation(); });
+  $('#poseExport').addEventListener('click', () => {
+    const snaps = (store.get('poseSnaps', {})[cur.id]) || {};
+    if (!Object.keys(snaps).length) { K.toast('没有可导出的快照', 'err'); return; }
+    const blob = new Blob([JSON.stringify({ resource: cur.id, snapshots: snaps }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = routeSource + '-' + (cur.name || cur.id) + '-poses.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    K.toast('快照已导出', 'ok');
+  });
+  $('#poseImport').addEventListener('click', () => $('#poseFile').click());
+  $('#poseFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const snaps = data.snapshots || data;
+        const m = poseStore();
+        for (const [name, val] of Object.entries(snaps)) {
+          if (val && val.bones) m[cur.id][name] = val;
+        }
+        store.set('poseSnaps', m);
+        refreshPoseList();
+        K.toast('快照已导入', 'ok');
+      } catch (err) { K.toast('导入失败: ' + err.message, 'err'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+  $('#poseLock').addEventListener('click', () => {
+    if (poseLocked) {
+      poseLocked = null;
+      $('#poseLock').classList.remove('on');
+      K.toast('姿势锁定已解除', 'ok');
+    } else if (cut) {
+      poseLocked = capturePose();
+      $('#poseLock').classList.add('on');
+      refreshPoseList();
+      K.toast('已锁定当前姿势(压在动画之上)', 'ok');
+    }
+  });
+
+  // ---------- 播放条 ----------
+  const getTrack = () => { const t = cut && cut.state.getCurrent(0); return t && t.animation ? t : null; };
+  function seekTo(ratio) {
+    const track = getTrack();
+    if (!track) return;
+    track.trackTime = ratio * (track.animation.duration || 0.0001);
+    if (!playing) { cut.state.apply(cut.skeleton); }
+    syncTimeline();
+  }
+  function stepFrame(dir) {
+    const track = getTrack();
+    if (!track) return;
+    const dur = track.animation.duration || 0.0001;
+    let t = track.trackTime + dir * (1 / 30);
+    if (t < 0) t = loopAnim ? dur + t : 0;
+    if (t > dur) t = loopAnim ? t - dur : dur;
+    track.trackTime = t;
+    if (!playing) { cut.state.apply(cut.skeleton); }
+    syncTimeline();
+  }
+  function syncTimeline() {
+    const track = getTrack();
+    if (!track) { pbTime.textContent = '0.00 / 0.00s'; return; }
+    const dur = track.animation.duration || 0.0001;
+    const t = ((track.trackTime % dur) + dur) % dur;
+    pbRange.value = String(Math.round(t / dur * 1000));
+    pbTime.textContent = t.toFixed(2) + ' / ' + dur.toFixed(2) + 's';
+  }
+
+  pbRange.addEventListener('input', () => seekTo(Number(pbRange.value) / 1000));
+  $('#pbStepB').addEventListener('click', () => stepFrame(-1));
+  $('#pbStepF').addEventListener('click', () => stepFrame(1));
+  pbLoop.addEventListener('click', () => {
+    loopAnim = !loopAnim;
+    setLoopBtn();
+    store.set('loop', loopAnim);
+    if (cut && animSel.value) playAnimation(animSel.value);
+  });
+  pbPlay.addEventListener('click', () => { playing = !playing; setPlayBtn(); });
+  pbSpeed.addEventListener('input', () => {
+    pbSpeedVal.textContent = fmtSpeed(pbSpeed.value);
+    store.set('speed', Number(pbSpeed.value));
+    if (cut) cut.state.timeScale = Number(pbSpeed.value);
+  });
+  function fmtSpeed(v) { return Number(v).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'x'; }
+
+  // ---------- 渲染循环 ----------
+  function loop(t) {
+    requestAnimationFrame(loop);
+    const dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
+    lastT = t;
+    try {
+    if (cut) {
+      if (playing) {
+        cut.state.update(dt);
+        cut.state.apply(cut.skeleton);
+      }
+      if (poseLocked) applyPoseToSkeleton(cut.skeleton, poseLocked);
+      K.updateWorldTransform(cut.skeleton);
+      K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots);
+    }
+    if (cmpOn && cmp) {
+      if (playing) { cmp.state.update(dt); cmp.state.apply(cmp.skeleton); }
+      K.updateWorldTransform(cmp.skeleton);
+    }
+    if (mgl && renderer) {
+      const raw = mgl.gl || mgl;
+      const bgv = getBg();
+      if (bgv === 'checker') raw.clearColor(0, 0, 0, 0);
+      else {
+        const c = K.parseColor(bgv, [0.06, 0.07, 0.09]);
+        raw.clearColor(c[0], c[1], c[2], 1);
+      }
+      raw.clear(raw.COLOR_BUFFER_BIT);
+      renderer.begin();
+      if (cut) renderer.drawSkeleton(cut.skeleton, cut.pma);
+      if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
+      if (cut && K.debugActive(debugFlags)) {
+        K.applyDebugFlags(renderer, debugFlags);
+        K.drawDebug(renderer, [cut.skeleton]);
+      }
+      if (cut && highlightSlot) K.drawSlotHighlight(renderer, cut.skeleton, highlightSlot);
+      if (boneEditMode) drawEditSkeleton(renderer);
+      drawBoneMarker(renderer);
+      renderer.end();
+      if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) playerDrawnSeq = cutLoadSeq;
+    }
+    if (cut && playing) syncTimeline();
+    if (embedded && cut && playerReadySeq === cutLoadSeq && t - playerLastPlayback >= 125) {
+      playerLastPlayback = t;
+      playerPlayback();
+    }
+    } catch (error) {
+      if (embedded && playerFailedSeq !== cutLoadSeq) {
+        playerFailedSeq = cutLoadSeq;
+        playerReadySeq = -1;
+        playerPost('error', { code: 'render-failed', message: error.message || String(error) });
+      }
+    }
+  }
+
+  // ---------- 视图 ----------
+  function computeView() {
+    if (!cut) return;
+    const b = cut.bounds;
+    cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
+    cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
+    cut.fitScale = Math.min((cv.width * 0.92) / (b.maxX - b.minX), (cv.height * 0.92) / (b.maxY - b.minY));
+  }
+  function applyView() {
+    if (!cut) return;
+    const scale = fitMode ? ((cmpOn && cmp) ? cmp.fitScale : cut.fitScale) : userScale;
+    cut.skeleton.scaleX = scale;
+    cut.skeleton.scaleY = scale;
+    cut.skeleton.x = panX + cut.centerX * scale - (cmpOn && cmp ? cmp.sepMain * scale : 0);
+    cut.skeleton.y = panY + cut.centerY * scale;
+    if (cmpOn && cmp) {
+      cmp.skeleton.scaleX = scale;
+      cmp.skeleton.scaleY = scale;
+      cmp.skeleton.x = panX + cmp.centerX * scale + cmp.sepCmp * scale;
+      cmp.skeleton.y = panY + cmp.centerY * scale;
+    }
+    updateZoomPct();
+  }
+  function refit() { if (!cut) return; panX = 0; panY = 0; if (cmpOn && cmp) computeCompareView(); computeView(); applyView(); }
+  function set100() { if (!cut) return; fitMode = false; userScale = 1; panX = 0; panY = 0; applyView(); }
+  function resetViewForLoad() { fitMode = true; userScale = 1; panX = 0; panY = 0; }
+  function zoomBy(factor, anchorX, anchorY) {
+    if (!cut) return;
+    const old = fitMode ? cut.fitScale : userScale;
+    const next = Math.min(8, Math.max(0.05, old * factor));
+    if (anchorX === undefined) { anchorX = cv.width / 2; anchorY = cv.height / 2; }
+    panX = anchorX - (anchorX - panX) * (next / old);
+    panY = anchorY - (anchorY - panY) * (next / old);
+    fitMode = false;
+    userScale = next;
+    applyView();
+    btn100.classList.add('active'); btnFit.classList.remove('active');
+  }
+  function updateZoomPct() {
+    $('#zPct').textContent = (!cut || fitMode) ? '适应' : Math.round(userScale / (cut.fitScale || 1) * 100) + '%';
+  }
+  function mergeBounds(a, b) {
+    if (!b || !(b.maxX > b.minX) || !(b.maxY > b.minY)) return a;
+    if (!a) return { minX: b.minX, minY: b.minY, maxX: b.maxX, maxY: b.maxY };
+    return {
+      minX: Math.min(a.minX, b.minX), minY: Math.min(a.minY, b.minY),
+      maxX: Math.max(a.maxX, b.maxX), maxY: Math.max(a.maxY, b.maxY),
+    };
+  }
+
+  // Sample the active animation so transitions cannot grow beyond a fit based on its first frame.
+  function measureAnimationBounds(target, name) {
+    if (!target || !target.data || !name) return target && target.bounds ? target.bounds : null;
+    const SP = K.getSpine(cur && cur.spineVersion);
+    const anim = target.data.animations && target.data.animations.find(a => a.name === name);
+    if (!SP || !anim || !SP.AnimationState || !SP.AnimationStateData) return target.bounds || null;
+    const duration = Math.max(0, Number(anim.duration) || 0);
+    const times = duration > 0
+      ? [0, duration * 0.125, duration * 0.25, duration * 0.375, duration * 0.5,
+        duration * 0.625, duration * 0.75, duration * 0.875, duration * 0.99, duration]
+      : [0];
+    let bounds = null;
+    try {
+      const sample = new SP.Skeleton(target.data);
+      for (const time of times) {
+        sample.setToSetupPose();
+        const stateData = new SP.AnimationStateData(target.data);
+        stateData.defaultMix = 0;
+        const state = new SP.AnimationState(stateData);
+        state.setAnimation(0, anim.name, false);
+        state.update(time);
+        state.apply(sample);
+        K.updateWorldTransform(sample);
+        K.applyHiddenSlots(sample, target.hiddenSlots);
+        bounds = mergeBounds(bounds, K.measureBounds(sample, SP));
+      }
+    } catch {}
+    return bounds || target.bounds || null;
+  }
+
+  function playAnimation(name) {
+    if (!cut) return;
+    cut.state.clearTracks();
+    cut.skeleton.setToSetupPose();
+    cut.state.setAnimation(0, name, loopAnim);
+    cut.state.timeScale = Number(pbSpeed.value);
+    cut.state.update(0);
+    cut.state.apply(cut.skeleton);
+    K.updateWorldTransform(cut.skeleton);
+    K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots);
+    if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
+      cmp.state.clearTracks();
+      cmp.skeleton.setToSetupPose();
+      cmp.state.setAnimation(0, name, loopAnim);
+      cmp.state.timeScale = Number(pbSpeed.value);
+      cmp.state.update(0);
+      cmp.state.apply(cmp.skeleton);
+      K.updateWorldTransform(cmp.skeleton);
+    }
+    const bounds = measureAnimationBounds(cut, name);
+    if (bounds) cut.bounds = bounds;
+    if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
+      const cmpBounds = measureAnimationBounds(cmp, name);
+      if (cmpBounds) cmp.bounds = cmpBounds;
+    }
+    if (animCtl) animCtl.refresh();
+    if (fitMode) refit();
+    syncUrl(name);
+  }
+
+  // ---------- ArtHub desktop embed bridge ----------
+  const playerParams = new URLSearchParams(location.search);
+  const playerSessionId = playerParams.get('__arthubSession') || '';
+  const playerLoadId = playerParams.get('__arthubLoad') || '';
+  let playerDrawnSeq = -1;
+  let playerReadySeq = -1;
+  let playerFailedSeq = -1;
+  let playerLastPlayback = 0;
+  function playerPost(type, payload = {}, requestId = null) {
+    if (!embedded || !window.parent || window.parent === window) return;
+    window.parent.postMessage({
+      protocol: 'arthub-player', version: 1, type,
+      sessionId: playerSessionId, loadId: playerLoadId,
+      source: routeSource, assetId: cur && cur.id ? String(cur.id) : '',
+      requestId, payload,
+    }, location.origin);
+  }
+  function playerCapabilities() {
+    const animations = cut?.data?.animations || [];
+    const parts = (cut?.data?.slots || []).map(slot => ({
+      name: String(slot.name), visible: !cut.hiddenSlots.has(String(slot.name)),
+    }));
+    return {
+      animations: animations.map(a => ({ name: String(a.name), duration: Number(a.duration) || 0 })),
+      parts,
+      supports: { play: true, pause: true, seek: true, speed: true, animation: true, parts: true, loop: true, fit: true, resize: true, capture: true },
+    };
+  }
+  function playerPlayback(requestId = null) {
+    const track = getTrack();
+    const duration = Number(track?.animation?.duration) || 0;
+    const elapsed = Math.max(0, Number(track?.trackTime) || 0);
+    const time = duration > 0 ? (loopAnim ? elapsed % duration : Math.min(elapsed, duration)) : 0;
+    if (!loopAnim && duration > 0 && elapsed >= duration && playing) { playing = false; setPlayBtn(); }
+    playerPost('playback', {
+      playing, speed: Number(pbSpeed.value) || 1, animation: animSel.value || '',
+      loop: loopAnim, time, duration,
+    }, requestId);
+  }
+  function playerReady(seq) {
+    if (!embedded || seq !== cutLoadSeq || !cut) return;
+    playerDrawnSeq = -1;
+    playerReadySeq = -1;
+    let finished = false;
+    let frames = 0;
+    const timer = setTimeout(() => fail(), 5000);
+    const fail = () => {
+      if (finished) return;
+      finished = true; clearTimeout(timer);
+      if (seq !== cutLoadSeq || playerFailedSeq === seq) return;
+      playerFailedSeq = seq;
+      playerPost('error', { code: 'canvas-not-ready', message: 'WebGL 首帧绘制未完成，请重试或检查图形设备' });
+    };
+    const check = () => {
+      if (finished) return;
+      if (seq !== cutLoadSeq || !cut || playerFailedSeq === seq) { finished = true; clearTimeout(timer); return; }
+      frames += 1;
+      const raw = mgl?.gl || mgl;
+      if (playerDrawnSeq === seq && cv.width > 1 && cv.height > 1 && raw && !raw.isContextLost()) {
+        finished = true; clearTimeout(timer); playerReadySeq = seq;
+        playerPost('capabilities', playerCapabilities());
+        playerPost('state', { state: 'ready', evidence: 'draw-submitted', message: '资源解析完成，首帧已提交绘制', capabilities: playerCapabilities() });
+        playerPlayback();
+        return;
+      }
+      if (frames >= 120) { fail(); return; }
+      requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }
+  function setupDesktopBridge() {
+    if (!embedded) return;
+    window.addEventListener('message', event => {
+      if (event.origin !== location.origin || event.source !== window.parent) return;
+      const msg = event.data;
+      if (!msg || msg.protocol !== 'arthub-player' || msg.version !== 1 || msg.type !== 'command') return;
+      if (!playerSessionId || !playerLoadId || msg.sessionId !== playerSessionId || msg.loadId !== playerLoadId) return;
+      if (msg.source !== routeSource || !cur || msg.assetId !== String(cur.id)) return;
+      if (typeof msg.requestId !== 'string' || !msg.requestId || !msg.payload || typeof msg.payload !== 'object' || Array.isArray(msg.payload)) return;
+      const replyError = error => playerPost('error', { code: 'command-failed', message: error.message || String(error) }, msg.requestId);
+      try {
+        const p = msg.payload || {};
+        if (msg.command === 'getCapabilities') {
+          playerPost('capabilities', playerCapabilities(), msg.requestId);
+        } else if (msg.command === 'play') {
+          playing = true; setPlayBtn(); playerPlayback(msg.requestId);
+        } else if (msg.command === 'pause') {
+          playing = false; setPlayBtn(); playerPlayback(msg.requestId);
+        } else if (msg.command === 'seek') {
+          seekTo(Math.max(0, Math.min(1, Number(p.ratio) || 0))); playerPlayback(msg.requestId);
+        } else if (msg.command === 'setSpeed') {
+          const value = Math.max(0.05, Math.min(3, Number(p.speed) || 1));
+          pbSpeed.value = String(value); pbSpeed.dispatchEvent(new Event('input', { bubbles: true })); playerPlayback(msg.requestId);
+        } else if (msg.command === 'setLoop') {
+          loopAnim = p.loop !== false; setLoopBtn(); if (cut && animSel.value) playAnimation(animSel.value); playerPlayback(msg.requestId);
+        } else if (msg.command === 'setAnimation') {
+          const name = String(p.name || '');
+          if (!cut || !cut.data.animations.some(a => a.name === name)) throw new Error('动画不存在: ' + name);
+          animSel.value = name; playAnimation(name); playerPlayback(msg.requestId);
+        } else if (msg.command === 'setParts') {
+          const changes = Array.isArray(p.parts) ? p.parts : [];
+          for (const change of changes) {
+            const name = String(change.name || '');
+            if (!name || !cut?.data?.slots?.some(slot => String(slot.name) === name)) continue;
+            if (change.visible === false) cut.hiddenSlots.add(name); else cut.hiddenSlots.delete(name);
+          }
+          if (cut) { K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots); partsCtl?.refresh(); updatePartsBadge(); persistHidden(); }
+          playerPost('capabilities', playerCapabilities(), msg.requestId);
+        } else if (msg.command === 'fit') {
+          refit(); playerPost('state', { state: 'ready', capabilities: playerCapabilities() }, msg.requestId);
+        } else if (msg.command === 'resize') {
+          K.resizeCanvas(cv, renderer); if (cut) { computeView(); applyView(); }
+          playerPost('state', { state: 'ready', capabilities: playerCapabilities() }, msg.requestId);
+        } else if (msg.command === 'capture') {
+          const captureSeq = cutLoadSeq;
+          requestAnimationFrame(() => {
+            if (captureSeq !== cutLoadSeq || !cut) return;
+            try { playerPost('capture-result', { dataUrl: cv.toDataURL('image/png') }, msg.requestId); }
+            catch (error) { replyError(error); }
+          });
+        } else if (msg.command === 'dispose') {
+          cutLoadSeq++; playerReadySeq = -1;
+          disposeCut(); playerPost('state', { state: 'idle' }, msg.requestId);
+        } else {
+          throw new Error('不支持的命令: ' + String(msg.command));
+        }
+      } catch (error) { replyError(error); }
+    });
+  }
+
+  // ---------- 资源选择 ----------
+  function selectChar(c, restore) {
+    cur = c;
+    cutLoadSeq++;
+    resetViewForLoad();
+    hidePartPopup();
+    disposeCut();
+    disposeCompare();
+    closeGrid();
+    editBoneName = null;
+    boneDrag = null;
+    poseLocked = null;
+    hoverBoneName = null;
+    for (const k in editOrig) delete editOrig[k];
+    $('#poseLock').classList.remove('on');
+    const alias = aliasOf(c.id);
+    mName.textContent = alias || c.name || c.id;
+    mId.textContent = (alias ? ((chars.find(x => x.id === c.id) || {}).name + ' · ') : '') + c.id;
+    $('#railStar').textContent = store.get('stars', []).includes(c.id) ? '★' : '☆';
+    const rt = $('#railThumb');
+    rt.innerHTML = '';
+    ThumbGen.request(c.id, c, (url) => { if (url) rt.innerHTML = '<img src="' + url + '">'; });
+    const vs = variantSel;
+    vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
+    vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
+    vs.onchange = () => loadCutscene(Number(vs.value));
+    updateCompareBtn();
+    animSel.innerHTML = '<option>读取中…</option>';
+    const startVar = restore && restore.variant != null ? restore.variant : 0;
+    vs.value = String(Math.min(startVar, c.cutscenes.length - 1));
+    store.set('lastChar', { id: c.id, variant: Number(vs.value), anim: restore ? restore.anim : null });
+    loadCutscene(Number(vs.value), restore ? restore.anim : null);
+  }
+  function syncUrl(animName) {
+    if (!cur) return;
+    const p = new URLSearchParams(location.search);
+    p.set('id', cur.id);
+    if (animName) p.set('anim', animName); else p.delete('anim');
+    const q = p.toString();
+    history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
+  }
+
+  // ---------- 加载 ----------
+  // 渲染器按 Spine 版本缓存: 切换 4.0/4.1 资源时重建(共享同一 WebGL 上下文)
+  let mglKey = null;
+  function curVerKey() {
+    const v = cur && cur.spineVersion;
+    const m = v && String(v).match(/^4\.\d/);
+    return m ? m[0] : '4.1';
+  }
+  function ensureGL() {
+    const key = curVerKey();
+    if (mgl && mglKey === key) return true;
+    const g = K.createGL(cv, K.getSpine(cur && cur.spineVersion));
+    if (!g) return false;
+    mgl = g.mgl; renderer = g.renderer; mglKey = key;
+    K.resizeCanvas(cv, renderer);
+    return true;
+  }
+  function disposeAtlas(atlas) {
+    try { if (atlas) for (const p of atlas.pages) if (p.texture && p.texture.dispose) p.texture.dispose(); } catch {}
+  }
+  function disposeCut() {
+    if (cut) {
+      disposeAtlas(cut.atlas);
+      cut = null;
+      if (partsCtl) partsCtl.refresh();
+      if (animCtl) animCtl.refresh();
+    }
+  }
+
+  // ---------- 原版对比模式 (仅 bd2mod: 同角色号 原版↔Mod 并排同步播放) ----------
+  let cmp = null, cmpOn = false, cmpOffset = 0, origByNum = null;
+
+  function disposeCompare() {
+    if (cmp) { disposeAtlas(cmp.atlas); cmp = null; }
+    cmpOn = false;
+  }
+  function updateCompareBtn() {
+    const btn = $('#railCompare');
+    if (!btn) return;
+    let num = null;
+    if (routeSource === 'bd2mod' && cur && origByNum) {
+      const m = ((cur.cutscenes[0] || {}).skel || '').match(/char(\d{6})/i);
+      if (m && origByNum[m[1]]) num = m[1];
+    }
+    btn.style.display = num ? '' : 'none';
+    btn.dataset.num = num || '';
+  }
+  function computeCompareView() {
+    if (!cmp || !cut) return;
+    const b1 = cut.bounds, b2 = cmp.bounds;
+    const w1 = b1.maxX - b1.minX, h1 = b1.maxY - b1.minY;
+    const w2 = b2.maxX - b2.minX, h2 = b2.maxY - b2.minY;
+    const gap = Math.min(w1, w2) * 0.3;
+    // 严格居中: 左模型偏移用右模型宽度, 右模型偏移用左模型宽度
+    const span = w1 + w2 + gap;
+    cmp.sepMain = span / 2 - w1 / 2;
+    cmp.sepCmp = span / 2 - w2 / 2;
+    cmp.fitScale = Math.min((cv.width * 0.92) / span, (cv.height * 0.92) / Math.max(h1, h2));
+  }
+  async function toggleCompare() {
+    if (cmpOn) { disposeCompare(); applyView(); status('已退出对比模式'); return; }
+    const num = $('#railCompare').dataset.num;
+    if (!num) return;
+    const reqCur = cur;
+    status('加载原版 ' + num + ' …');
+    try {
+      const entry = origByNum[num];
+      const v = entry.cutscenes[0];
+      const dir = '/bd2/' + v.dir;
+      const SP = K.getSpine(cur && cur.spineVersion);
+      const am = new SP.AssetManager(mgl, dir);
+      const atlas = await new Promise((res, rej) => am.loadTextureAtlas(v.atlas, (p, a) => res(a), (p, e) => rej(new Error(e))));
+      if (cur !== reqCur) { disposeAtlas(atlas); return; }
+      const loader = new SP.AtlasAttachmentLoader(atlas);
+      const resp = await fetch(dir + encodeURIComponent(v.skel));
+      if (!resp.ok) throw new Error('skeleton ' + resp.status);
+      if (cur !== reqCur) { disposeAtlas(atlas); return; }
+      const data = (v.format === 'json' || /\.json$/i.test(v.skel))
+        ? new SP.SkeletonJson(loader).readSkeletonData(await resp.text())
+        : new SP.SkeletonBinary(loader).readSkeletonData(new Uint8Array(await resp.arrayBuffer()));
+      const skeleton = new SP.Skeleton(data);
+      skeleton.setToSetupPose();
+      const stateData = new SP.AnimationStateData(data);
+      stateData.defaultMix = 0.15;
+      const state = new SP.AnimationState(stateData);
+      // 先应用要同步的动画再量包围盒(与主模型姿态一致)
+      const curAnim = animSel.value;
+      const anim = data.animations.find(a => a.name === curAnim)
+        || data.animations.find(a => /^loop/i.test(a.name))
+        || data.animations[0];
+      if (anim) {
+        state.setAnimation(0, anim.name, loopAnim);
+        state.timeScale = Number(pbSpeed.value);
+        state.update(0);
+        state.apply(skeleton);
+      }
+      K.updateWorldTransform(skeleton);
+      let bounds = K.measureBounds(skeleton, SP);
+      if (!bounds && data.skins && data.skins.length) {
+        const skin = data.skins.find(s => s.name === 'default') || data.skins[0];
+        try { skeleton.setSkin(skin); skeleton.setSlotsToSetupPose(); if (anim) state.apply(skeleton); K.updateWorldTransform(skeleton); } catch {}
+        bounds = K.measureBounds(skeleton, SP);
+      }
+      if (!bounds) throw new Error('原版资源量不出包围盒');
+      cmp = {
+        skeleton, state, atlas, data, bounds,
+        pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma),
+        centerX: -(bounds.minX + (bounds.maxX - bounds.minX) / 2),
+        centerY: -(bounds.minY + (bounds.maxY - bounds.minY) / 2),
+      };
+      cmpOn = true;
+      computeCompareView();
+      applyView();
+      status('对比模式: 原版 ' + entry.id + (anim ? ' · ' + anim.name : '') + ' ↔ Mod ' + (cur.name || cur.id) + ' · 再按 ⇋ 退出');
+    } catch (e) {
+      disposeCompare();
+      status('对比加载失败: ' + e.message);
+      console.error(e);
+    }
+  }
+  $('#railCompare').addEventListener('click', () => toggleCompare());
+  async function loadCutscene(idx, restoreAnim) {
+    const seq = ++cutLoadSeq;
+    disposeCut();
+    resetViewForLoad();
+    hidePartPopup();
+    highlightSlot = null;
+    const v = cur.cutscenes[idx] || cur.cutscenes[0];
+    if (!v) { status((cur.name || cur.id) + ' · 无过场'); return; }
+    if (!ensureGL()) { status('WebGL 不可用'); return; }
+    status('加载: ' + (cur.name || cur.id) + ' …');
+    playerPost('state', { state: 'loading', message: '正在读取骨骼、Atlas 与贴图' });
+    try {
+      const dir = '../' + v.dir;
+      const SP = K.getSpine(cur && cur.spineVersion);
+      const am = new SP.AssetManager(mgl, dir);
+      const atlas = await new Promise((resolve, reject) => {
+        am.loadTextureAtlas(v.atlas, (p, a) => resolve(a), (p, e) => reject(new Error(e)));
+      });
+      if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
+      const loader = new SP.AtlasAttachmentLoader(atlas);
+      let data;
+      if (v.format === 'json') {
+        const resp = await fetch(dir + encodeURIComponent(v.skel));
+        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
+        if (!resp.ok) throw new Error('skeleton 404');
+        const text = await resp.text();
+        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
+        data = new SP.SkeletonJson(loader).readSkeletonData(text);
+      } else {
+        const resp = await fetch(dir + encodeURIComponent(v.skel));
+        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
+        if (!resp.ok) throw new Error('skel 404');
+        const bytes = new Uint8Array(await resp.arrayBuffer());
+        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
+        data = new SP.SkeletonBinary(loader).readSkeletonData(bytes);
+      }
+      const skeleton = new SP.Skeleton(data);
+      skeleton.setToSetupPose();
+      const stateData = new SP.AnimationStateData(data);
+      stateData.defaultMix = 0.15;
+      const state = new SP.AnimationState(stateData);
+      // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
+      animSel.innerHTML = data.animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
+      const urlAnim = new URLSearchParams(location.search).get('anim');
+      const saved = restoreAnim && data.animations.some(a => a.name === restoreAnim) ? restoreAnim : null;
+      const previewAnim = data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
+        || data.animations.find(a => /^loop/i.test(a.name))
+        || data.animations[0];
+      const def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)
+        || (previewAnim && previewAnim.name);
+      state.setAnimation(0, def, loopAnim);
+      state.update(0);
+      state.apply(skeleton);
+      K.updateWorldTransform(skeleton);
+      const stageNS = K.getSpine(cur && cur.spineVersion);
+      let bounds = K.measureBounds(skeleton, stageNS);
+      if (!bounds && data.skins && data.skins.length) {
+        // 部分 4.0 模型附件挂在皮肤上, 不设皮肤量不出包围盒
+        const skin = data.skins.find(s => s.name === 'default') || data.skins[0];
+        try { skeleton.setSkin(skin); skeleton.setSlotsToSetupPose(); state.apply(skeleton); K.updateWorldTransform(skeleton); } catch {}
+        bounds = K.measureBounds(skeleton, stageNS);
+      }
+      if (!bounds) throw new Error('empty bounds');
+      if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
+      cut = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds, centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(),
+              pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma) };
+      window.__cutRef = () => cut;
+      window.__boneDebug = () => ({ boneEditMode, editBoneName, boneDrag: boneDrag ? boneDrag.mode : null, poseLocked: !!poseLocked });
+      restoreHidden();
+      if (partsCtl) partsCtl.refresh();
+      updatePartsBadge();
+      animSel.value = def;
+      animSel.onchange = () => {
+        if (cut) {
+          playAnimation(animSel.value);
+          const lc = store.get('lastChar', {});
+          lc.anim = animSel.value;
+          store.set('lastChar', lc);
+        }
+      };
+      if (animCtl) animCtl.refresh();
+      playAnimation(def);
+      if (fitMode) refit(); else set100();
+      status((cur.name || cur.id) + ' · ' + data.animations.length + ' 动画 · ' + data.bones.length + ' 骨骼');
+      syncUrl(def);
+      K.history.push({
+        k: routeSource + ':' + cur.id, src: routeSource,
+        t: aliasOf(cur.id) || cur.name || cur.id, s: cur.name || cur.source || '',
+        u: location.pathname + '?id=' + encodeURIComponent(cur.id),
+      });
+      playerReady(seq);
+    } catch (e) {
+      if (seq !== cutLoadSeq) return;
+      status('加载失败: ' + e.message);
+      playerPost('error', { code: 'asset-load-failed', message: e.message || String(e) });
+      console.error(e);
+    }
+  }
+
+  // ---------- GIF 导出 (当前动画, 离屏逐帧渲染) ----------
+  $('#btnGif').onclick = async () => {
+    if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
+    const animName = animSel.value;
+    const anim = cut.data.animations.find(a => a.name === animName);
+    if (!anim) { K.toast('动画不存在', 'err'); return; }
+    const fps = 15;
+    const dur = Math.max(anim.duration || 1, 0.1);
+    const frames = Math.min(Math.ceil(dur * fps), 120);
+    const dt = dur / frames;
+    const sourceVariant = cut.sourceVariant;
+    const hiddenSlots = new Set(cut.hiddenSlots);
+    const exportName = cur.name || cur.id;
+    const SP = K.getSpine(cur && cur.spineVersion);
+    let exportAtlas = null;
+    let exportGL = null;
+    K.toast(`正在渲染 GIF: ${frames} 帧…`, 'info', 10000);
+    try {
+      const { GIFEncoder, quantize, applyPalette } = await import('../../common/vendor/gifenc.esm.js');
+      const W = 640, H = 640;
+      const cv2 = document.createElement('canvas');
+      cv2.width = W; cv2.height = H;
+      const raw2 = cv2.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
+      if (!raw2) throw new Error('离屏 WebGL 不可用');
+      exportGL = raw2;
+      const mgl2 = new SP.ManagedWebGLRenderingContext(raw2);
+      const r2 = new SP.SceneRenderer(cv2, mgl2);
+      if (SP.GLTexture) SP.GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = true;
+      // WebGL textures belong to their context. Reparse with an atlas loaded
+      // into the export context instead of reusing the stage's attachments.
+      const base = '../' + sourceVariant.dir;
+      const am2 = new SP.AssetManager(mgl2, base);
+      exportAtlas = await new Promise((res, rej) => am2.loadTextureAtlas(sourceVariant.atlas, (p, a) => res(a), (p, e) => rej(new Error(e))));
+      const resp = await fetch(base + encodeURIComponent(sourceVariant.skel));
+      if (!resp.ok) throw new Error('skel ' + resp.status);
+      const loader = new SP.AtlasAttachmentLoader(exportAtlas);
+      const data2 = sourceVariant.format === 'json'
+        ? new SP.SkeletonJson(loader).readSkeletonData(await resp.text())
+        : new SP.SkeletonBinary(loader).readSkeletonData(new Uint8Array(await resp.arrayBuffer()));
+      const sk2 = new SP.Skeleton(data2);
+      const sd2 = new SP.AnimationStateData(data2);
+      sd2.defaultMix = 0;
+      const st2 = new SP.AnimationState(sd2);
+      st2.setAnimation(0, animName, false);
+      // 第一遍: 推进并求动画全程包围盒
+      let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+      for (let k = 0; k < frames; k++) {
+        st2.getCurrent(0).trackTime = k * dt;
+        st2.apply(sk2);
+        K.updateWorldTransform(sk2);
+        K.applyHiddenSlots(sk2, hiddenSlots);
+        const b = K.measureBounds(sk2, SP);
+        if (b) {
+          bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
+          bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+        }
+      }
+      if (!isFinite(bMinX)) throw new Error('空包围盒');
+      const spanW = bMaxX - bMinX, spanH = bMaxY - bMinY;
+      const scale = Math.min(W * 0.92 / spanW, H * 0.92 / spanH);
+      const cx = -(bMinX + spanW / 2), cy = -(bMinY + spanH / 2);
+      // 第二遍: 逐帧渲染
+      st2.clearTracks();
+      sk2.setToSetupPose();
+      st2.setAnimation(0, animName, false);
+      const cvRgb = document.createElement('canvas');
+      cvRgb.width = W; cvRgb.height = H;
+      const ctx2d = cvRgb.getContext('2d', { willReadFrequently: true });
+      const gif = GIFEncoder();
+      for (let k = 0; k < frames; k++) {
+        st2.getCurrent(0).trackTime = k * dt;
+        st2.apply(sk2);
+        sk2.scaleX = scale; sk2.scaleY = scale;
+        sk2.x = cx * scale; sk2.y = cy * scale;
+        K.updateWorldTransform(sk2);
+        K.applyHiddenSlots(sk2, hiddenSlots);
+        r2.begin();
+        raw2.clearColor(0, 0, 0, 0);
+        raw2.clear(raw2.COLOR_BUFFER_BIT);
+        r2.drawSkeleton(sk2, !!exportAtlas.pages[0]?.pma);
+        r2.end();
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('帧捕获失败')); img.src = cv2.toDataURL('image/png'); });
+        ctx2d.clearRect(0, 0, W, H);
+        ctx2d.drawImage(img, 0, 0);
+        const rgba = ctx2d.getImageData(0, 0, W, H).data;
+        const palette = quantize(rgba, 256, { format: 'rgba4444' });
+        const index = applyPalette(rgba, palette, 'rgba4444');
+        gif.writeFrame(index, W, H, { palette, delay: Math.max(Math.round(dt * 1000), 20), transparent: true });
+      }
+      gif.finish();
+      const a = document.createElement('a');
+      const blob = new Blob([gif.bytes()], { type: 'image/gif' });
+      a.href = URL.createObjectURL(blob);
+      a.download = (exportName + '_' + animName).replace(/[^\w.-]+/g, '_') + '.gif';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      K.toast('GIF 已导出 (' + frames + ' 帧)', 'ok');
+    } catch (e) {
+      console.error(e);
+      K.toast('GIF 导出失败: ' + e.message, 'err');
+    } finally {
+      if (exportAtlas) disposeAtlas(exportAtlas);
+      exportGL?.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+  };
+
+  // ---------- 数据加载 ----------
+  async function loadChars() {
+    const r = await fetch('../' + indexFile);
+    if (!r.ok) throw new Error(indexFile + ' ' + r.status);
+    const data = await r.json();
+    chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
+    chars.sort((a, b) => a.id.localeCompare(b.id));
+    $('#gridSub').textContent = chars.length + ' 个资源';
+    buildFilterChips();
+    const urlId = new URLSearchParams(location.search).get('id');
+    const urlAnim = new URLSearchParams(location.search).get('anim');
+    const byUrl = urlId && chars.find(x => x.id === urlId);
+    const last = store.get('lastChar', null);
+    const first = byUrl || (last && chars.find(x => x.id === last.id)) || chars[0];
+    if (first) {
+      selectChar(first, byUrl ? (urlAnim ? { anim: urlAnim } : null) : (last && last.id === first.id ? last : null));
+      if (byUrl) closeGrid(); else openGrid();
+    } else {
+      status('没有可用资源');
+    }
+  }
+
+  // ---------- PNG 导出 ----------
+  function exportFrame(transparent, mode, done) {
+    if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
+    const bak = { fit: fitMode, scale: userScale, px: panX, py: panY };
+    K.exportPNG({
+      canvas: cv, scale: exportScale, transparent, copy: mode === 'copy',
+      filename: routeSource + '-' + (cur.name || cur.id) + '.png',
+      resize(kk) {
+        K.syncRendererSize(cv, mgl, renderer);
+        const base = bak.fit ? cut.fitScale : bak.scale;
+        fitMode = false; userScale = base * kk; panX = bak.px * kk; panY = bak.py * kk;
+        applyView();
+      },
+      draw(tr) {
+        K.updateWorldTransform(cut.skeleton);
+        const raw = mgl.gl || mgl;
+        if (tr) raw.clearColor(0, 0, 0, 0);
+        else {
+          const c = K.parseColor(getBg() === 'checker' ? '#000000' : getBg(), [0.06, 0.07, 0.09]);
+          raw.clearColor(c[0], c[1], c[2], tr ? 0 : 1);
+        }
+        raw.clear(raw.COLOR_BUFFER_BIT);
+        renderer.begin();
+        renderer.drawSkeleton(cut.skeleton, cut.pma);
+        renderer.end();
+      },
+      restore() {
+        fitMode = bak.fit; userScale = bak.scale; panX = bak.px; panY = bak.py;
+        K.resizeCanvas(cv, renderer);
+        applyView();
+      },
+    }).then(r => {
+      if (mode === 'copy') K.toast('已复制到剪贴板: ' + r.w + '×' + r.h + 'px', 'ok');
+      else K.toast('已导出 PNG: ' + r.w + '×' + r.h + 'px', 'ok');
+      if (done) done();
+    }).catch(e => {
+      K.toast((mode === 'copy' ? '复制失败: ' : '导出失败: ') + e.message, 'err');
+      console.error(e);
+    });
+  }
+
+  // ---------- 背景弹窗 / 全屏 / 调试 / PNG 弹窗 ----------
+  makeStagePopup(btnBg, (pop) => {
+    const presets = [['深空', '#0f1218'], ['纯黑', '#000000'], ['石墨', '#1f242e'], ['浅灰', '#b9bec7'], ['棋盘(透明)', 'checker']];
+    pop.innerHTML = '<div class="col"><div class="col-title">背景</div><div class="opt-row" id="bgSwatches"></div></div>';
+    const row = pop.querySelector('#bgSwatches');
+    for (const [label, val] of presets) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      if (getBg() === val) b.style.color = 'var(--accent)';
+      b.onclick = () => { store.set('bg', val); applyBgToUI(); };
+      row.appendChild(b);
+    }
+  });
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else stage.requestFullscreen().catch(() => K.toast('浏览器拒绝了全屏请求', 'err'));
+  }
+  $('#btnFs').addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', () => {
+    requestAnimationFrame(() => { K.resizeCanvas(cv, renderer); if (cut && fitMode) refit(); else if (cut) applyView(); });
+  });
+  makeStagePopup(btnDebug, (pop) => {
+    const flags = [
+      ['bones', '骨骼线'], ['regions', '区域框'], ['bounds', '包围盒'],
+      ['meshHull', '网格轮廓'], ['meshTris', '网格三角面'], ['paths', '路径'], ['clipping', '裁剪形状'],
+    ];
+    pop.innerHTML = '<div class="col">'
+      + '<div class="col-title">调试视图(设置自动保存)</div>'
+      + flags.map(([k, lbl]) => '<label><input type="checkbox" data-f="' + k + '"' + (debugFlags[k] ? ' checked' : '') + '> ' + lbl + '</label>').join('')
+      + '</div>';
+    pop.addEventListener('change', (e) => {
+      const ch = e.target;
+      if (ch.dataset && ch.dataset.f) {
+        debugFlags[ch.dataset.f] = ch.checked;
+        store.set('debugView', debugFlags);
+      }
+    });
+  });
+  makeStagePopup(btnPng, (pop) => {
+    pop.innerHTML = '<div class="col">'
+      + '<div class="col-title" id="pngSize">倍率</div>'
+      + '<div class="opt-row"><button data-k="1" class="on">1x</button><button data-k="2">2x</button><button data-k="4">4x</button></div>'
+      + '<label><input type="checkbox" class="png-alpha"> 透明背景</label>'
+      + '<button class="png-go">' + I('camera', 13) + ' 导出 PNG</button>'
+      + '<button class="png-copy">' + I('copy', 13) + ' 复制到剪贴板</button>'
+      + '</div>';
+    const sizeEl = pop.querySelector('#pngSize');
+    const syncSize = () => {
+      sizeEl.textContent = '当前画布 ' + cv.width + '×' + cv.height + 'px · 导出 '
+        + Math.round(cv.width * exportScale) + '×' + Math.round(cv.height * exportScale) + 'px';
+    };
+    syncSize();
+    pop.querySelectorAll('.opt-row button').forEach(b => {
+      b.addEventListener('click', () => {
+        pop.querySelectorAll('.opt-row button').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        exportScale = Number(b.dataset.k);
+        syncSize();
+      });
+    });
+    pop.querySelector('.png-go').addEventListener('click', () => exportFrame(pop.querySelector('.png-alpha').checked, 'download', () => closePopups()));
+    pop.querySelector('.png-copy').addEventListener('click', () => exportFrame(pop.querySelector('.png-alpha').checked, 'copy', () => closePopups()));
+  });
+
+  // ---------- 重命名 ----------
+  $('#btnEditName').addEventListener('click', (e) => {
+    if (!cur) return;
+    e.stopPropagation();
+    closePopups();
+    const id = cur.id;
+    const pop = document.createElement('div');
+    pop.className = 'stage-popup';
+    pop.style.position = 'fixed';
+    pop.innerHTML = '<div class="col" style="min-width:250px">'
+      + '<div class="col-title">重命名(仅本机显示)</div>'
+      + '<input class="text-input alias-input" id="aliasInput" placeholder="输入显示名称,留空恢复原名" value="' + K.esc(aliasOf(id)) + '">'
+      + '<div class="opt-row"><button id="aliasSave">保存</button><button id="aliasClear">恢复原名</button></div></div>';
+    document.body.appendChild(pop);
+    const r = e.currentTarget.getBoundingClientRect();
+    pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 290)) + 'px';
+    pop.style.top = (r.bottom + 8) + 'px';
+    pop.addEventListener('click', ev => ev.stopPropagation());
+    pop.addEventListener('pointerdown', ev => ev.stopPropagation());
+    const input = pop.querySelector('#aliasInput');
+    input.focus(); input.select();
+    const save = (clear) => {
+      const v = clear ? '' : input.value.trim();
+      if (v) aliasMap[id] = v; else delete aliasMap[id];
+      store.set('aliasMap', aliasMap);
+      renderGrid();
+      const alias = aliasOf(id);
+      mName.textContent = alias || cur.name || id;
+      mId.textContent = (alias ? ((chars.find(x => x.id === id) || {}).name + ' · ') : '') + id;
+      K.toast(alias ? '已重命名为: ' + alias : '已恢复原名', 'ok');
+      pop.remove();
+    };
+    pop.querySelector('#aliasSave').onclick = () => save(false);
+    pop.querySelector('#aliasClear').onclick = () => save(true);
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') save(false);
+      if (ev.key === 'Escape') pop.remove();
+      ev.stopPropagation();
+    });
+    const dismiss = (ev) => { if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', dismiss); } };
+    setTimeout(() => document.addEventListener('click', dismiss), 0);
+  });
+
+  // ---------- 导航/收藏/缩放 ----------
+  $('#btnPrev').addEventListener('click', () => nav(-1));
+  $('#btnNext').addEventListener('click', () => nav(1));
+  $('#railStar').addEventListener('click', () => { if (cur) toggleStarById(cur.id); });
+  $('#railThumb').addEventListener('click', () => { if (cut) refit(); });
+  $('#zIn').addEventListener('click', () => zoomBy(1.2));
+  $('#zOut').addEventListener('click', () => zoomBy(0.8));
+
+  // ---------- 平移/缩放/点选 ----------
+  let down = null, moved = false;
+  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status')));
+  stage.addEventListener('contextmenu', (e) => {
+    if (isChrome(e.target)) return;
+    e.preventDefault();
+    K.showMenu([
+      { label: '复制 PNG 到剪贴板', fn: () => exportFrame(true, 'copy') },
+      { label: '导出 PNG', fn: () => exportFrame(false, 'download') },
+      { sep: true },
+      { label: '重命名', fn: () => $('#btnEditName').click() },
+      { label: '资源库 (G)', fn: () => openGrid() },
+      { sep: true },
+      { label: '全屏', fn: toggleFullscreen },
+    ], e.clientX, e.clientY);
+  });
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || isChrome(e.target)) return;
+    closePopups();
+    hidePartPopup();
+    // 骨骼编辑模式: 尝试拾取骨骼(优先末端=旋转, 本体=平移)
+    if (boneEditMode && cut) {
+      const hit = hitBoneAt(e.clientX, e.clientY);
+      if (hit) {
+        const [swx, swy] = wpt(e.clientX, e.clientY);
+        editBoneName = hit.bone.data.name;
+        if (!(editBoneName in editOrig)) {
+          editOrig[editBoneName] = { rotation: hit.bone.rotation, x: hit.bone.x, y: hit.bone.y };
+        }
+        if (hit.mode === 'rotate') {
+          boneDrag = { mode: 'rotate', boneName: editBoneName, ox: hit.bone.worldX, oy: hit.bone.worldY, startAngle: Math.atan2(swy - hit.bone.worldY, swx - hit.bone.worldX), startRot: hit.bone.rotation };
+        } else {
+          boneDrag = { mode: 'move', boneName: editBoneName, lastWX: swx, lastWY: swy };
+        }
+        try { stage.setPointerCapture(e.pointerId); } catch {}
+        return;
+      }
+      editBoneName = null;
+    }
+    down = { x: e.clientX, y: e.clientY };
+    moved = false;
+    stage.classList.add('panning');
+    try { stage.setPointerCapture(e.pointerId); } catch {}
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (boneEditMode && cut && !boneDrag) {
+      const hit = hitBoneAt(e.clientX, e.clientY);
+      const nm = hit ? hit.bone.data.name : null;
+      if (nm !== hoverBoneName) {
+        hoverBoneName = nm;
+        if (nm) status('骨骼: ' + nm + (hit.mode === 'rotate' ? ' · 拖末端旋转' : ' · 拖本体平移'));
+      }
+    }
+    if (boneDrag && cut) {
+      const [wx, wy] = wpt(e.clientX, e.clientY);
+      const bone = cut.skeleton.findBone(boneDrag.boneName);
+      if (!bone) { boneDrag = null; return; }
+      if (boneDrag.mode === 'rotate') {
+        const a = Math.atan2(wy - boneDrag.oy, wx - boneDrag.ox);
+        bone.rotation = boneDrag.startRot + (a - boneDrag.startAngle) * 180 / Math.PI;
+        status('骨骼 ' + boneDrag.boneName + ' · 旋转 ' + (bone.rotation - boneDrag.startRot).toFixed(1) + '° (右键恢复)');
+      } else {
+        const dx = wx - boneDrag.lastWX, dy = wy - boneDrag.lastWY;
+        const pa = bone.parent ? bone.parent.a : 1, pb = bone.parent ? bone.parent.b : 0;
+        const pc = bone.parent ? bone.parent.c : 0, pd = bone.parent ? bone.parent.d : 1;
+        const det = pa * pd - pb * pc;
+        if (det) { bone.x += (dx * pd - dy * pb) / det; bone.y += (dy * pa - dx * pc) / det; }
+        boneDrag.lastWX = wx;
+        boneDrag.lastWY = wy;
+        status('骨骼 ' + boneDrag.boneName + ' · 位移 x ' + bone.x.toFixed(1) + ' y ' + bone.y.toFixed(1) + ' (右键恢复)');
+      }
+      K.updateWorldTransform(cut.skeleton);
+      return;
+    }
+    if (!down || !cut) return;
+    const dpr = devicePixelRatio || 1;
+    if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) > 2) moved = true;
+    if (!moved) return;
+    panX += (e.clientX - down.x) * dpr;
+    panY += (e.clientY - down.y) * dpr;
+    down = { x: e.clientX, y: e.clientY };
+    if (fitMode) { fitMode = false; userScale = cut.fitScale; btn100.classList.add('active'); btnFit.classList.remove('active'); }
+    applyView();
+  });
+  stage.addEventListener('contextmenu', (e) => {
+    if (!boneEditMode || !cut) return;
+    e.preventDefault();
+    const hit = hitBoneAt(e.clientX, e.clientY);
+    if (hit && (hit.bone.data.name in editOrig)) {
+      const b = hit.bone, o = editOrig[hit.bone.data.name];
+      b.rotation = o.rotation; b.x = o.x; b.y = o.y;
+      K.updateWorldTransform(cut.skeleton);
+      status('已恢复骨骼: ' + hit.bone.data.name);
+    } else {
+      const keys = Object.keys(editOrig);
+      for (const k of keys) {
+        const b = cut.skeleton.findBone(k);
+        if (b) { b.rotation = editOrig[k].rotation; b.x = editOrig[k].x; b.y = editOrig[k].y; }
+      }
+      K.updateWorldTransform(cut.skeleton);
+      status(keys.length ? '已恢复 ' + keys.length + ' 根骨骼' : '没有编辑过的骨骼');
+    }
+  });
+  stage.addEventListener('pointerup', (e) => {
+    if (boneDrag) { boneDrag = null; return; }
+    if (down && e.pointerId !== undefined) { try { stage.releasePointerCapture(e.pointerId); } catch (err) {} }
+    const wasTap = down && !moved && e.button === 0;
+    const tapX = e.clientX, tapY = e.clientY;
+    down = null;
+    stage.classList.remove('panning');
+    if (wasTap && cut && !isChrome(e.target)) {
+      if (boneEditMode) {
+        const hit = hitBoneAt(tapX, tapY);
+        editBoneName = hit ? hit.bone.data.name : null;
+        status(editBoneName ? '已选中骨骼: ' + editBoneName : '未选中骨骼(点击骨骼本体或末端)');
+        return;
+      }
+      const rect = cv.getBoundingClientRect();
+      const dpr = devicePixelRatio || 1;
+      const name = K.hitTestSlot(cut.skeleton, (tapX - rect.left) * dpr - cv.width / 2, cv.height / 2 - (tapY - rect.top) * dpr, K.getSpine(cur && cur.spineVersion));
+      if (name) showPartPopup(name, tapX, tapY);
+      else hidePartPopup();
+    }
+  });
+  stage.addEventListener('wheel', (e) => {
+    if (e.target.closest('.playbar') || e.target.closest('.zoom-bar')) return;
+    e.preventDefault();
+    hidePartPopup();
+    if (!cut) return;
+    const rect = cv.getBoundingClientRect();
+    const dpr = devicePixelRatio || 1;
+    zoomBy(e.deltaY < 0 ? 1.1 : 0.9, (e.clientX - rect.left) * dpr - cv.width / 2, (e.clientY - rect.top) * dpr - cv.height / 2);
+    btn100.classList.add('active'); btnFit.classList.remove('active');
+  }, { passive: false });
+
+  // ---------- 调试视图 ----------
+  makeStagePopup(btnDebug, (pop) => {
+    const flags = [
+      ['bones', '骨骼线'], ['regions', '区域框'], ['bounds', '包围盒'],
+      ['meshHull', '网格轮廓'], ['meshTris', '网格三角面'], ['paths', '路径'], ['clipping', '裁剪形状'],
+    ];
+    pop.innerHTML = '<div class="col">'
+      + '<div class="col-title">调试视图(设置自动保存)</div>'
+      + flags.map(([k, lbl]) => '<label><input type="checkbox" data-f="' + k + '"' + (debugFlags[k] ? ' checked' : '') + '> ' + lbl + '</label>').join('')
+      + '</div>';
+    pop.addEventListener('change', (e) => {
+      const ch = e.target;
+      if (ch.dataset && ch.dataset.f) {
+        debugFlags[ch.dataset.f] = ch.checked;
+        store.set('debugView', debugFlags);
+      }
+    });
+  });
+
+  // ---------- 快捷键 ----------
+  K.bindKeys({
+    ' ': () => pbPlay.click(),
+    'l': () => pbLoop.click(), 'L': () => pbLoop.click(),
+    'ArrowLeft': () => nav(-1),
+    'ArrowRight': () => nav(1),
+    ',': () => stepFrame(-1),
+    '.': () => stepFrame(1),
+    'f': () => btnFit.click(), 'F': () => btnFit.click(),
+    'g': () => toggleGrid(), 'G': () => toggleGrid(),
+    'e': () => btnBoneEdit.click(), 'E': () => btnBoneEdit.click(),
+    'i': () => toggleImmersive(), 'I': () => toggleImmersive(),
+    '+': () => zoomBy(1.2), '=': () => zoomBy(1.2),
+    '-': () => zoomBy(0.8),
+    's': () => cur && toggleStarById(cur.id), 'S': () => cur && toggleStarById(cur.id),
+    '?': () => K.showShortcuts('快捷键速查', [
+      ['空格', '播放 / 暂停'], ['L', '循环'], [', / .', '后退 / 前进 1 帧'],
+      ['← / →', '切换资源'], ['G', '资源库 / 舞台'], ['I', '沉浸模式'],
+      ['E', '骨骼编辑模式'], ['F', '适应窗口'], ['+ / -', '缩放'], ['S', '收藏'], ['Esc', '关闭弹窗'],
+      ['↔ / 按钮', '原版对比 (Mod 分类)'], ['🎞 按钮', '导出当前动画 GIF'], ['Ctrl+K', '全局搜索'],
+    ]),
+    'Escape': () => { closePopups(); hidePartPopup(); },
+  });
+
+  // ---------- 启动 ----------
+  window.onerror = (msg) => { status('脚本错误: ' + msg); };
+  window.onunhandledrejection = (e) => { status('异步错误: ' + (e.reason && e.reason.message || e.reason)); };
+  // 多版本运行时: 静态脚本已载入 4.1, 这里再捕获并补载 4.0/4.2
+  (async () => {
+    setupDesktopBridge();
+    K.initSearchPalette();
+    K.captureSpine('4.1');
+    await K.loadSpineVersion('4.0', ['vendor/spine-webgl-4.0.js']);
+    await K.loadSpineVersion('4.2', ['vendor/spine-webgl-4.2.js']);
+    // bd2mod 分类: 预载原版索引供"⇋ 原版对比"配对
+    if (routeSource === 'bd2mod') {
+      fetch('../../bd2/bd2_chars.json').then(r => (r.ok ? r.json() : null)).then(d => {
+        if (!d || !d.characters) return;
+        origByNum = {};
+        for (const o of d.characters) origByNum[o.id] = o;
+        updateCompareBtn();
+      }).catch(() => {});
+    }
+    loadChars().catch(e => status('数据加载失败: ' + e.message));
+  })();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

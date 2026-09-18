@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-18T04:32:21.602Z",
+  "bucketRoot": "https://arthub-viewer-1324227516.cos.ap-guangzhou.myqcloud.com",
+  "note": "网页代码和小索引在 web-cos/ 中；以下大目录需上传到 COS，并保持远程前缀不变。",
+  "indexesKeptOnWebsite": true,
+  "sources": [
+    {
+      "key": "bd2",
+      "index": {
+        "local": "sources/bd2/index/bd2_chars.json",
+        "web": "bd2/bd2_chars.json",
+        "remote": null
+      },
+      "assets": [
+        {
+          "local": "data/bd2/spine",
+          "remote": "bd2/spine/",
+          "exists": true,
+          "files": 3488
+        }
+      ]
+    },
+    {
+      "key": "nikki",
+      "index": {
+        "local": "data/nikki/index/nikki_chars.json",
+        "web": "nikki/nikki_chars.json",
+        "remote": null
+      },
+      "assets": [
+        {
+          "local": "data/nikke/spine_carved",
+          "remote": "nikki/spine/",
+          "exists": true,
+          "files": 6162
+        }
+      ]
+    },
+    {
+      "key": "majsoul",
+      "index": {
+        "local": "sources/majsoul/index/characters.json",
+        "web": "majsoul/characters.json",
+        "remote": null
+      },
+      "assets": [
+        {
+          "local": "data/majsoul/assets_raw",
+          "remote": "majsoul/assets_raw/",
+          "exists": true,
+          "files": 5609
+        },
+        {
+          "local": "data/majsoul/web_illustrations",
+          "remote": "majsoul/web_illustrations/",
+          "exists": true,
+          "files": 466
+        }
+      ]
+    }
+  ],
+  "gallery": [
+    {
+      "id": "bd2",
+      "name": "棕色尘埃2图库",
+      "local": "E:/游戏解包资源/棕色尘埃2/Sorted2",
+      "remote": "gallery/bd2/",
+      "exists": true,
+      "files": 13643
+    },
+    {
+      "id": "nikke",
+      "name": "妮姬图库",
+      "local": "E:/游戏解包资源/妮姬/Exported",
+      "remote": "gallery/nikke/",
+      "exists": true,
+      "files": 73580
+    },
+    {
+      "id": "majsoul",
+      "name": "雀魂麻将图库",
+      "local": "E:/游戏解包资源/雀魂麻将",
+      "remote": "gallery/majsoul/",
+      "exists": true,
+      "files": 16685
+    }
+  ]
+}
