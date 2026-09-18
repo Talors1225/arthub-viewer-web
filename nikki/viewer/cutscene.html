@@ -188,6 +188,14 @@
   }
   .grid-head .grid-title { font-size: 16px; font-weight: 800; color: var(--accent); letter-spacing: .3px; }
   .grid-head .grid-sub { font-size: 11.5px; color: var(--text-faint); }
+  .grid-head .grid-sponsor {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border: 1px solid var(--accent);
+    border-radius: 999px; color: var(--accent); background: var(--accent-dim-bg);
+    font-size: 11px; font-weight: 700; text-decoration: none; white-space: nowrap;
+    transition: background .14s, color .14s, transform .14s;
+  }
+  .grid-head .grid-sponsor:hover { color: var(--accent-ink); background: var(--accent); transform: translateY(-1px); }
   .grid-head input { flex: 0 1 300px; margin-left: auto; }
   .thumb-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
@@ -328,6 +336,7 @@
     <div class="grid-head">
       <span class="grid-title" id="brandTitle">资源库</span>
       <span class="grid-sub" id="gridSub"></span>
+      <a class="grid-sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer" title="支持 ArtHub 项目维护">支持 ArtHub（爱发电） ↗</a>
       <div id="filterChips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
       <input id="gridSearch" class="text-input" placeholder="搜索名称 / 编号 / 路径...">
       <button id="btnTheme" class="edit-btn" title="打开主题调色板">◐</button>
