@@ -19,7 +19,7 @@ body {
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 
 /* ---------- 主题变量 ---------- */
-/* 主题变体(data-theme)只改中性表面与环境光；强调色由 data-accent 决定 */
+/* 背景由调色板动态设置；强调色由 data-accent 决定 */
 :root, html[data-accent="blue"] {
   --accent: #7d92f2;
   --accent-hi: #a3b3f7;
@@ -39,8 +39,8 @@ html[data-accent="gold"] {
   --sel: rgba(226, 194, 136, .09);
 }
 
-/* 主题: 深空(默认) */
-:root, html[data-theme="deep"] {
+/* 默认背景 */
+:root {
   --bg: #0b0d12;
   --bg-glow: radial-gradient(1200px 800px at 70% -10%, rgba(120, 140, 220, .05), transparent 60%);
   --panel: #0f1219;
@@ -50,38 +50,8 @@ html[data-accent="gold"] {
   --glass: rgba(13, 16, 24, .74);
   --glass-hi: rgba(255, 255, 255, .06);
 }
-/* 主题: 曜石(暖黑) */
-html[data-theme="obsidian"] {
-  --bg: #0c0b09;
-  --bg-glow: radial-gradient(1200px 800px at 70% -10%, rgba(220, 176, 110, .05), transparent 60%);
-  --panel: #111009;
-  --panel-grad: linear-gradient(180deg, #141210, #0f0d0b);
-  --panel2: #1b1815;
-  --panel3: #262119;
-  --glass: rgba(18, 15, 12, .74);
-}
-/* 主题: 墨绿 */
-html[data-theme="pine"] {
-  --bg: #080f0c;
-  --bg-glow: radial-gradient(1200px 800px at 70% -10%, rgba(110, 200, 160, .05), transparent 60%);
-  --panel: #0d1511;
-  --panel-grad: linear-gradient(180deg, #101a15, #0c1310);
-  --panel2: #142019;
-  --panel3: #1b2b22;
-  --glass: rgba(10, 18, 14, .74);
-}
-/* 主题: 紫昏 */
-html[data-theme="dusk"] {
-  --bg: #0d0b13;
-  --bg-glow: radial-gradient(1200px 800px at 70% -10%, rgba(170, 130, 235, .06), transparent 60%);
-  --panel: #120f1c;
-  --panel-grad: linear-gradient(180deg, #161223, #100d1a);
-  --panel2: #1b1629;
-  --panel3: #262040;
-  --glass: rgba(16, 13, 24, .74);
-}
 /* 全主题共用 token */
-:root, html[data-theme="deep"], html[data-theme="obsidian"], html[data-theme="pine"], html[data-theme="dusk"] {
+:root {
   --border: rgba(255, 255, 255, .05);
   --border2: rgba(255, 255, 255, .095);
   --text: #e4e9f2;
@@ -303,7 +273,7 @@ input[type="color"] {
   border: 1px solid var(--border2);
   backdrop-filter: blur(14px) saturate(1.35);
   -webkit-backdrop-filter: blur(14px) saturate(1.35);
-  color: #d5dbe8; padding: 6px 12px; border-radius: 999px;
+  color: var(--text); padding: 6px 12px; border-radius: 999px;
   font-size: 12px; pointer-events: none; max-width: calc(100% - 180px);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-hi);
@@ -325,7 +295,7 @@ input[type="color"] {
   box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-hi);
 }
 .zoom-bar button { min-width: 30px; }
-.zoom-bar .pct { min-width: 44px; text-align: center; font-size: 12px; color: #d5dbe8; font-variant-numeric: tabular-nums; }
+.zoom-bar .pct { min-width: 44px; text-align: center; font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* ---------- 舞台弹出菜单(部件/导出/调试) ---------- */
 .stage-popup {
@@ -347,7 +317,7 @@ input[type="color"] {
 }
 .stage-popup button:hover { border-color: var(--accent); color: var(--accent-hi); }
 .stage-popup button.danger { background: var(--danger-bg); border-color: var(--danger-bd); color: var(--danger-tx); }
-.stage-popup button.danger:hover { border-color: var(--danger-tx); color: #fff; }
+.stage-popup button.danger:hover { border-color: var(--danger-tx); color: var(--text); }
 .stage-popup .col { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .stage-popup .col-title { font-size: 11px; color: var(--text-faint); }
 .stage-popup .opt-row { display: flex; gap: 5px; align-items: center; }
@@ -371,15 +341,6 @@ input[type="color"] {
   background: var(--panel2); color: var(--text-dim); font: 17px/1 inherit; cursor: pointer;
 }
 .theme-palette-close:hover { color: var(--text); border-color: var(--accent); }
-.theme-palette-title { margin: 9px 0 6px; color: var(--text-faint); font-size: 11px; }
-.theme-palette-themes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-.theme-palette-theme {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
-  padding: 6px 3px; border: 1px solid var(--border2); border-radius: 8px;
-  background: var(--panel2); color: var(--text-dim); font-size: 11px; line-height: 1.1; font-family: inherit; cursor: pointer;
-}
-.theme-palette-theme i { width: 22px; height: 14px; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; }
-.theme-palette-theme:hover, .theme-palette-theme.on { border-color: var(--accent); color: var(--text); background: var(--accent-dim-bg); }
 .theme-palette-picker {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px;
   padding: 7px 8px; border: 1px solid var(--border2); border-radius: 8px;
@@ -458,7 +419,7 @@ input[type="color"] {
   cursor: pointer; padding: 2px 5px; font-size: 13px; border-radius: 5px;
   transition: color .14s, background .14s;
 }
-.layer-row button:hover { color: #fff; background: var(--panel3); }
+.layer-row button:hover { color: var(--text); background: var(--panel3); }
 .layer-row input[type="range"] { width: 64px; flex: none; }
 
 /* ---------- 部件行 ---------- */
@@ -780,7 +741,7 @@ body.immersive .immersive-exit:hover { opacity: 1; }
    目标：减少玻璃层和按钮噪音，让“找资源”和“看资源”成为两条清楚的路径。
    ============================================================ */
 html[data-gav-ui="clean"] {
-  /* 保留页面布局调整，但不再锁死颜色 token；主题切换由 data-theme 统一控制。 */
+  /* 保留页面布局调整，颜色 token 由背景调色板统一控制。 */
 }
 
 html[data-gav-ui="clean"] body {

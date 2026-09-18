@@ -1354,28 +1354,19 @@
   };
 
   // ---------- 主题切换 ----------
-  K.setTheme = (name, store) => {
-    const root = document.documentElement;
-    if (!name || name === 'deep') delete root.dataset.theme;
-    else root.dataset.theme = name;
-    if (store) store.set('theme', name || 'deep');
-  };
   K.initTheme = (store) => {
-    const t = store && store.get('theme', 'deep');
-    if (t && t !== 'deep') K.setTheme(t);
+    // 旧版本曾保存四套主题预设；现在统一由自定义背景颜色控制。
+    // 清掉旧主题状态，避免用户点“恢复默认”后仍残留旧预设。
+    const root = document.documentElement;
+    root.removeAttribute('data-theme');
+    if (store && store.get('theme', null)) store.del('theme');
     const background = store && store.get('backgroundColor', null);
     if (background) K.setBackground(background);
-    return t || 'deep';
+    return 'deep';
   };
 
   // ---------- 主题调色板 ----------
   // 主题负责背景层；自定义颜色会派生出面板、边框和文字对比度。
-  const THEME_PALETTE = [
-    ['deep', '深空', '#0b0d12'],
-    ['obsidian', '曜石', '#0c0b09'],
-    ['pine', '墨绿', '#080f0c'],
-    ['dusk', '紫昏', '#0d0b13'],
-  ];
   const BACKGROUND_STYLE_KEYS = [
     '--bg', '--bg-glow', '--panel', '--panel-grad', '--panel2', '--panel3', '--glass', '--glass-hi',
     '--border', '--border2', '--text', '--text-dim', '--text-faint', '--shadow-1', '--shadow-2',
@@ -1422,9 +1413,12 @@
     root.style.setProperty('--glass-hi', light ? 'rgba(255, 255, 255, .42)' : 'rgba(255, 255, 255, .06)');
     root.style.setProperty('--border', light ? 'rgba(20, 30, 45, .12)' : 'rgba(255, 255, 255, .06)');
     root.style.setProperty('--border2', light ? 'rgba(20, 30, 45, .22)' : 'rgba(255, 255, 255, .12)');
-    root.style.setProperty('--text', light ? '#20252e' : '#e4e9f2');
-    root.style.setProperty('--text-dim', light ? '#596273' : '#99a4b8');
-    root.style.setProperty('--text-faint', light ? '#7c8797' : '#657082');
+    const text = light ? '#000000' : '#ffffff';
+    const textDim = light ? 'rgba(0, 0, 0, .68)' : 'rgba(255, 255, 255, .72)';
+    const textFaint = light ? 'rgba(0, 0, 0, .48)' : 'rgba(255, 255, 255, .48)';
+    root.style.setProperty('--text', text);
+    root.style.setProperty('--text-dim', textDim);
+    root.style.setProperty('--text-faint', textFaint);
     root.style.setProperty('--shadow-1', `0 2px 10px rgba(0, 0, 0, ${light ? '.15' : '.40'})`);
     root.style.setProperty('--shadow-2', `0 12px 32px rgba(0, 0, 0, ${light ? '.22' : '.55'})`);
     root.dataset.userBackground = '1';
@@ -1465,33 +1459,14 @@
       panel.setAttribute('aria-label', '主题调色板');
       panel.innerHTML = `
         <div class="theme-palette-head"><strong>主题调色板</strong><button type="button" class="theme-palette-close" aria-label="关闭调色板">×</button></div>
-        <div class="theme-palette-title">背景主题</div>
-        <div class="theme-palette-themes"></div>
         <label class="theme-palette-picker"><span>自定义背景颜色</span><input type="color" aria-label="选择自定义背景颜色"></label>
         <button type="button" class="theme-palette-reset">恢复当前游戏默认背景</button>`;
       document.body.appendChild(panel);
       button.setAttribute('aria-expanded', 'true');
 
-      const themeRow = panel.querySelector('.theme-palette-themes');
-      THEME_PALETTE.forEach(([value, label, color]) => {
-        const choice = document.createElement('button');
-        choice.type = 'button';
-        choice.className = 'theme-palette-theme';
-        choice.dataset.theme = value;
-        choice.innerHTML = `<i style="background:${color}"></i><span>${label}</span>`;
-        choice.addEventListener('click', () => {
-          K.setBackground(null, store);
-          K.setTheme(value, store);
-          updateState();
-        });
-        themeRow.appendChild(choice);
-      });
-
       const picker = panel.querySelector('input[type="color"]');
-      const fallbackBackground = () => (THEME_PALETTE.find(item => item[0] === (root.dataset.theme || 'deep')) || THEME_PALETTE[0])[2];
+      const fallbackBackground = () => normalizeHex(getComputedStyle(root).getPropertyValue('--bg')) || '#0b0d12';
       const updateState = () => {
-        const activeTheme = root.dataset.theme || 'deep';
-        themeRow.querySelectorAll('[data-theme]').forEach(choice => choice.classList.toggle('on', choice.dataset.theme === activeTheme));
         picker.value = (store && normalizeHex(store.get('backgroundColor', null))) || fallbackBackground();
       };
       const applyPicker = () => { K.setBackground(picker.value, store); updateState(); };
