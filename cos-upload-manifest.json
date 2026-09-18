@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-18T06:10:27.370Z",
+  "generatedAt": "2026-09-18T06:28:59.208Z",
   "bucketRoot": "https://arthub-viewer-1324227516.cos.ap-guangzhou.myqcloud.com",
   "note": "网页代码和小索引在 web-cos/ 中；以下大目录需上传到 COS，并保持远程前缀不变。",
   "indexesKeptOnWebsite": true,
