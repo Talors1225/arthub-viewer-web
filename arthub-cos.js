@@ -60,6 +60,25 @@
     window.XMLHttpRequest.prototype.__arthubCosPatched = true;
   }
 
+  // Spine's browser loader creates HTMLImageElement instances and assigns
+  // image.src directly for atlas page PNGs.  fetch/XHR interception does not
+  // see that navigation, so rewrite the native src setter as well.
+  if (window.HTMLImageElement && window.HTMLImageElement.prototype && !window.HTMLImageElement.prototype.__arthubCosPatched) {
+    const descriptor = Object.getOwnPropertyDescriptor(window.HTMLImageElement.prototype, 'src');
+    if (descriptor && typeof descriptor.set === 'function') {
+      const nativeSet = descriptor.set;
+      const patchedSet = function(value) {
+        let target = value;
+        if (value !== null && value !== undefined) {
+          try { target = resolve(value); } catch {}
+        }
+        return nativeSet.call(this, target);
+      };
+      Object.defineProperty(window.HTMLImageElement.prototype, 'src', { ...descriptor, set: patchedSet });
+      window.HTMLImageElement.prototype.__arthubCosPatched = true;
+    }
+  }
+
   // gallery_meta.json remains on the web site with the small indexes. Rewrite
   // only its mount URLs so the existing gallery page can stay unchanged.
   const fetchWithRewrite = window.fetch;
