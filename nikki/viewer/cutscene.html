@@ -107,6 +107,10 @@
   #floatPanel .rp-page { flex: 1; overflow-y: auto; padding: 10px 12px 14px; display: none; }
   #floatPanel .rp-page.on { display: block; }
   #floatPanel .row { margin-bottom: 8px; }
+  #floatPanel .rp-panel-head { display: flex; align-items: center; gap: 6px; flex: none; padding: 10px 10px 0; }
+  #floatPanel .rp-panel-head .rp-tabs { flex: 1; min-width: 0; padding: 0 !important; }
+  #floatPanel .rp-panel-close { flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--border2); border-radius: 9px; background: var(--panel2); color: var(--text-dim); font: 18px/1 inherit; cursor: pointer; }
+  #floatPanel .rp-panel-close:hover { color: var(--text); border-color: var(--accent); background: var(--accent-dim-bg); }
 
   .playbar {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px;
@@ -333,10 +337,13 @@
   </div>
 
   <aside id="floatPanel">
-    <div class="rp-tabs">
-      <button data-tab="parts" class="on">部件</button>
-      <button data-tab="anim">动画</button>
-      <button data-tab="pose">姿势</button>
+    <div class="rp-panel-head">
+      <div class="rp-tabs">
+        <button data-tab="parts" class="on">部件</button>
+        <button data-tab="anim">动画</button>
+        <button data-tab="pose">姿势</button>
+      </div>
+      <button class="rp-panel-close" type="button" data-panel-close title="关闭面板" aria-label="关闭面板">×</button>
     </div>
     <div class="rp-page on" data-page="parts">
       <div class="row"><input id="partFilter" type="text" class="text-input" placeholder="过滤部件名,如 body / hand"></div>

@@ -1282,6 +1282,26 @@
         });
       }
     }
+    // 面板内部提供明确的关闭按钮，避免用户必须再次寻找外部工具按钮。
+    if (panel && panel.dataset.kitCloseFix !== '1') {
+      panel.dataset.kitCloseFix = '1';
+      const closeButton = panel.querySelector('[data-panel-close]');
+      if (closeButton) {
+        closeButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          panel.classList.remove('open');
+          panel.querySelectorAll('.rp-tabs button').forEach(button => button.classList.remove('on'));
+          ['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'btnPanel']
+            .map(id => document.getElementById(id))
+            .filter(Boolean)
+            .forEach(button => {
+              button.classList.remove('on');
+              if (button.id === 'btnPanel') button.classList.remove('active');
+            });
+        });
+      }
+    }
     const toolStrip = document.querySelector('.tool-strip');
     if (!toolStrip || toolStrip.dataset.kitClean === '1') return;
     toolStrip.dataset.kitClean = '1';
@@ -1664,8 +1684,4 @@
   else setTimeout(initLibraryUsability, 0);
 
   window.SpineKit = K;
-  // AI 复刻工作台按需加载：只在 Spine 查看器页面注入，图库页面不增加额外 UI。
-  if (document.getElementById('toolStrip') && document.getElementById('gridView')) {
-    setTimeout(() => K.loadScript('../../common/rekin.js').catch(() => {}), 0);
-  }
 })();

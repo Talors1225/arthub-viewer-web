@@ -743,28 +743,7 @@ body.immersive .immersive-exit:hover { opacity: 1; }
    目标：减少玻璃层和按钮噪音，让“找资源”和“看资源”成为两条清楚的路径。
    ============================================================ */
 html[data-gav-ui="clean"] {
-  --accent: #8fb7ef !important;
-  --accent-hi: #c3d8fa !important;
-  --accent-ink: #09111e !important;
-  --accent-dim-bg: rgba(143, 183, 239, .14) !important;
-  --accent-glow: 0 0 0 1px rgba(143, 183, 239, .38) !important;
-  --star: #f2c96b !important;
-  --sel: rgba(143, 183, 239, .12) !important;
-  --bg: #0d1118 !important;
-  --bg-glow: radial-gradient(900px 520px at 50% -12%, rgba(122, 156, 210, .085), transparent 68%) !important;
-  --panel: #121821 !important;
-  --panel-grad: linear-gradient(180deg, #151c26, #10151d) !important;
-  --panel2: #1b2430 !important;
-  --panel3: #263243 !important;
-  --glass: rgba(16, 21, 29, .93) !important;
-  --glass-hi: rgba(255, 255, 255, .055) !important;
-  --border: rgba(214, 226, 246, .075) !important;
-  --border2: rgba(214, 226, 246, .15) !important;
-  --text: #e8eef8 !important;
-  --text-dim: #aab7ca !important;
-  --text-faint: #748197 !important;
-  --shadow-1: 0 3px 16px rgba(0, 0, 0, .30) !important;
-  --shadow-2: 0 12px 30px rgba(0, 0, 0, .42) !important;
+  /* 保留页面布局调整，但不再锁死颜色 token；主题切换由 data-theme 统一控制。 */
 }
 
 html[data-gav-ui="clean"] body {
@@ -781,7 +760,7 @@ html[data-gav-ui="clean"] body .rail {
   gap: 2px !important;
   padding: 5px !important;
   border-radius: 13px !important;
-  background: rgba(16, 21, 29, .94) !important;
+  background: var(--glass) !important;
   border: 1px solid var(--border2) !important;
   box-shadow: var(--shadow-1) !important;
 }
@@ -799,14 +778,14 @@ html[data-gav-ui="clean"] body .rail .sep {
 html[data-gav-ui="clean"] body .top-pill {
   top: 16px !important;
   max-width: min(360px, calc(100% - 420px)) !important;
-  background: rgba(16, 21, 29, .94) !important;
+  background: var(--glass) !important;
   border-color: var(--border2) !important;
   box-shadow: var(--shadow-1) !important;
 }
 html[data-gav-ui="clean"] body .zoom-bar {
   top: 16px !important;
   right: 16px !important;
-  background: rgba(16, 21, 29, .94) !important;
+  background: var(--glass) !important;
   border-color: var(--border2) !important;
   box-shadow: var(--shadow-1) !important;
 }
@@ -819,7 +798,7 @@ html[data-gav-ui="clean"] body .tool-strip {
   gap: 2px !important;
   padding: 5px !important;
   border-radius: 13px !important;
-  background: rgba(16, 21, 29, .94) !important;
+  background: var(--glass) !important;
   border: 1px solid var(--border2) !important;
   box-shadow: var(--shadow-1) !important;
 }
@@ -854,7 +833,7 @@ html[data-gav-ui="clean"] body .kit-more-tool:hover {
 html[data-gav-ui="clean"] body .status {
   left: 16px !important;
   top: 66px !important;
-  background: rgba(16, 21, 29, .86) !important;
+  background: var(--glass) !important;
   border-color: var(--border) !important;
   box-shadow: none !important;
 }
@@ -876,7 +855,7 @@ html[data-gav-ui="clean"] body #floatPanel .rp-tabs button {
   padding: 7px 9px !important;
   border-radius: 9px !important;
   color: var(--text-dim) !important;
-  background: rgba(255, 255, 255, .025) !important;
+  background: var(--panel2) !important;
   border-color: var(--border) !important;
 }
 html[data-gav-ui="clean"] body #floatPanel .rp-tabs button:hover {
@@ -887,7 +866,7 @@ html[data-gav-ui="clean"] body #floatPanel .rp-tabs button:hover {
 html[data-gav-ui="clean"] body #floatPanel .rp-tabs button.on {
   color: var(--accent-hi) !important;
   background: var(--accent-dim-bg) !important;
-  border-color: rgba(143, 183, 239, .42) !important;
+  border-color: var(--accent) !important;
 }
 html[data-gav-ui="clean"] body #floatPanel .rp-page {
   padding: 12px 13px 16px !important;
@@ -898,7 +877,7 @@ html[data-gav-ui="clean"] body #floatPanel .anim-row {
 }
 html[data-gav-ui="clean"] body .playbar {
   border-color: var(--border2) !important;
-  background: rgba(16, 21, 29, .95) !important;
+  background: var(--glass) !important;
   box-shadow: var(--shadow-1) !important;
 }
 
@@ -910,7 +889,7 @@ html[data-gav-ui="clean"] body #gridView {
 html[data-gav-ui="clean"] body #gridView .grid-head {
   padding: 16px 22px 13px !important;
   gap: 8px 10px !important;
-  background: rgba(13, 17, 24, .97) !important;
+  background: var(--glass) !important;
   border-bottom-color: var(--border2) !important;
   box-shadow: 0 8px 22px rgba(0, 0, 0, .16) !important;
 }
@@ -979,7 +958,7 @@ html[data-gav-ui="clean"] body #gridView .thumb-grid {
 html[data-gav-ui="clean"] body #gridView .thumb-card {
   border-radius: 12px !important;
   border-color: var(--border) !important;
-  background: #151c26 !important;
+  background: var(--panel-grad) !important;
   box-shadow: none !important;
   animation-delay: 0ms !important;
 }
@@ -990,7 +969,7 @@ html[data-gav-ui="clean"] body #gridView .thumb-card:hover {
 }
 html[data-gav-ui="clean"] body #gridView .thumb-card .ph {
   aspect-ratio: 5 / 4 !important;
-  background: #1a222e !important;
+  background: var(--panel2) !important;
 }
 html[data-gav-ui="clean"] body #gridView .thumb-card .tm {
   padding: 8px 10px 9px !important;

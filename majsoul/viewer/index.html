@@ -104,6 +104,10 @@
   #floatPanel .rp-page { flex: 1; overflow-y: auto; padding: 10px 12px 14px; display: none; }
   #floatPanel .rp-page.on { display: block; }
   #floatPanel .row { margin-bottom: 8px; }
+  #floatPanel .rp-panel-head { display: flex; align-items: center; gap: 6px; flex: none; padding: 10px 10px 0; }
+  #floatPanel .rp-panel-head .rp-tabs { flex: 1; min-width: 0; padding: 0 !important; }
+  #floatPanel .rp-panel-close { flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--border2); border-radius: 9px; background: var(--panel2); color: var(--text-dim); font: 18px/1 inherit; cursor: pointer; }
+  #floatPanel .rp-panel-close:hover { color: var(--text); border-color: var(--accent); background: var(--accent-dim-bg); }
   #floatPanel .lbl { font-size: 12px; color: var(--text-dim); margin: 10px 0 5px; }
   #floatPanel .lbl:first-child { margin-top: 0; }
   #floatPanel .kbd-tips { font-size: 12px; color: var(--text-dim); line-height: 1.9; }
@@ -319,11 +323,14 @@
   </div>
 
   <aside id="floatPanel">
-    <div class="rp-tabs">
-      <button data-tab="layers" class="on">图层</button>
-      <button data-tab="parts">部件</button>
-      <button data-tab="anim">动作</button>
-      <button data-tab="view">视图</button>
+    <div class="rp-panel-head">
+      <div class="rp-tabs">
+        <button data-tab="layers" class="on">图层</button>
+        <button data-tab="parts">部件</button>
+        <button data-tab="anim">动作</button>
+        <button data-tab="view">视图</button>
+      </div>
+      <button class="rp-panel-close" type="button" data-panel-close title="关闭面板" aria-label="关闭面板">×</button>
     </div>
     <div class="rp-page on" data-page="layers">
       <div class="lbl">图层(点击名称选中 · 拖拽画面移动选中层)</div>
@@ -477,19 +484,20 @@
   for (const b of $$('#floatPanel .rp-tabs button')) {
     b.addEventListener('click', () => setFloatTab(b.dataset.tab));
   }
-  const layerBtn = $('#btnLayerPanel'), animBtn = $('#btnAnimPanel');
+  const layerBtn = $('#btnLayerPanel'), animBtn = $('#btnAnimPanel'), panelBtn = $('#btnPanel');
   function setFloatPanel(tab) {
     const isOpen = rightPanel.classList.contains('open') && rightPanel.dataset.tab === tab;
-    if (isOpen) { rightPanel.classList.remove('open'); layerBtn.classList.remove('on'); animBtn.classList.remove('on'); return; }
+    if (isOpen) { rightPanel.classList.remove('open'); layerBtn.classList.remove('on'); animBtn.classList.remove('on'); panelBtn.classList.remove('active'); return; }
     rightPanel.dataset.tab = tab;
     rightPanel.classList.add('open');
     setFloatTab(tab);
     layerBtn.classList.toggle('on', tab === 'layers');
     animBtn.classList.toggle('on', tab === 'anim');
+    panelBtn.classList.add('active');
   }
   layerBtn.addEventListener('click', () => setFloatPanel('layers'));
   animBtn.addEventListener('click', () => setFloatPanel('anim'));
-  $('#btnPanel').addEventListener('click', () => setFloatPanel(rightPanel.dataset.tab || 'layers'));
+  panelBtn.addEventListener('click', () => setFloatPanel(rightPanel.dataset.tab || 'layers'));
 
   // ---------- 弹窗基建 ----------
   const allPopups = [];
