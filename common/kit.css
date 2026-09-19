@@ -839,6 +839,15 @@ html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zPct,
 html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zIn {
   display: none !important;
 }
+/* 右上角只保留主要操作；适应窗口和原始比例改由手势/快捷键完成。 */
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom #btnFit,
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom #btn100,
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zFit,
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zReset,
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom,
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom + .strip-sep {
+  display: none !important;
+}
 html[data-gav-ui="clean"] body .tool-strip .kit-secondary-tool {
   display: none !important;
 }
@@ -1135,6 +1144,10 @@ html[data-gav-ui="clean"] body #gridView .thumb-card .tt {
   }
   html[data-gav-ui="clean"] body .tool-strip .zoom-bar .zoom-pct {
     min-width: 50px !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom,
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom + .strip-sep {
+    display: none !important;
   }
   html[data-gav-ui="clean"] body .tool-strip .strip-sep {
     flex: 0 0 1px !important;
