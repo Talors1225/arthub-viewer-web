@@ -361,6 +361,7 @@
       <button id="gridClose" class="ctl">返回舞台</button>
     </div>
     <div class="thumb-grid" id="thumbGrid"></div>
+    <nav id="gridPagination" class="grid-pagination" aria-label="资源库分页"></nav>
   </div>
 
   <aside id="floatPanel">
@@ -500,6 +501,7 @@
   const editOrig = {};   // 编辑过的骨骼在动画暂停帧的原始姿态, 右键恢复用
   let filterType = store.get('filterType', 'all');
   let sortMode = store.get('sortMode', 'default');
+  let sortDirection = store.get('sortDirection', 'asc');
   let gridQuery = '';
   let immersive = false;
   let exportScale = 1;
@@ -634,8 +636,22 @@
     sel.className = 'sort-sel';
     sel.innerHTML = '<option value="default">默认</option><option value="name">名称</option><option value="type">类型</option>';
     sel.value = sortMode;
-    sel.onchange = () => { sortMode = sel.value; store.set('sortMode', sortMode); renderGrid(); };
+    sel.onchange = () => { sortMode = sel.value; gridPage = 1; store.set('sortMode', sortMode); renderGrid(); };
     row.appendChild(sel);
+    const dir = document.createElement('button');
+    dir.type = 'button';
+    dir.className = 'sort-dir-toggle';
+    dir.textContent = sortDirection === 'desc' ? '\u2193' : '\u2191';
+    dir.title = sortDirection === 'desc' ? '当前倒序，点击切换为正序' : '当前正序，点击切换为倒序';
+    dir.setAttribute('aria-label', dir.title);
+    dir.onclick = () => {
+      sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+      store.set('sortDirection', sortDirection);
+      gridPage = 1;
+      buildFilterChips();
+      renderGrid();
+    };
+    row.appendChild(dir);
   }
 
   function getFilteredChars() {
@@ -645,8 +661,17 @@
       if (filterType === 'star') return starred.has(c.id);
       return displayType(c) === filterType;
     });
-    if (sortMode === 'name') arr = [...arr].sort((a, b) => String(aliasOf(a.id) || a.name).localeCompare(String(aliasOf(b.id) || b.name), 'zh'));
-    else if (sortMode === 'type') arr = [...arr].sort((a, b) => (TYPE_ORDER[displayType(a)] ?? 9) - (TYPE_ORDER[displayType(b)] ?? 9) || String(a.id).localeCompare(String(b.id)));
+    const direction = sortDirection === 'desc' ? -1 : 1;
+    if (sortMode === 'name') {
+      arr = [...arr].sort((a, b) => direction * String(aliasOf(a.id) || a.name || a.id).localeCompare(String(aliasOf(b.id) || b.name || b.id), 'zh'));
+    } else if (sortMode === 'type') {
+      arr = [...arr].sort((a, b) => {
+        const typeCmp = (TYPE_ORDER[displayType(a)] ?? 9) - (TYPE_ORDER[displayType(b)] ?? 9);
+        return direction * (typeCmp || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+      });
+    } else if (sortDirection === 'desc') {
+      arr = [...arr].reverse();
+    }
     return arr;
   }
   function nav(delta) {
@@ -862,10 +887,11 @@
     statusEl.classList.toggle('hide', !onStage);
     document.querySelector('.hint').style.display = onStage ? '' : 'none';
   }
-  // 网格分页: 大列表(967+)滚动增量渲染, 避免一次性建 DOM
+  // Fixed pagination: render one page at a time and never append cards on scroll.
   const GRID_PAGE = 120;
   let gridArr = [];
   let gridShown = 0;
+  let gridPage = 1;
 
   function buildCard(grid, starred, c) {
     const alias = aliasOf(c.id);
@@ -877,14 +903,14 @@
       + '<div class="tm"><div class="tn">' + K.esc(alias || c.name || c.id) + '</div>'
       + '<div class="ts">' + K.esc(alias ? c.name || '' : (c.source || '')) + '</div></div>'
       + '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '其它') + '</span>'
-      + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '★' : '☆') + '</button>';
+      + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '?' : '?') + '</button>';
     card.onclick = () => { selectChar(c); closeGrid(); };
     card.querySelector('.tstar').onclick = (e) => {
       e.stopPropagation();
       toggleStarById(c.id);
       const on = store.get('stars', []).includes(c.id);
       e.target.classList.toggle('on', on);
-      e.target.textContent = on ? '★' : '☆';
+      e.target.textContent = on ? '?' : '?';
     };
     const ph = card.querySelector('.ph');
     const variant = String(c.cutscenes?.[0]?.variant || '0');
@@ -895,15 +921,49 @@
     grid.appendChild(card);
   }
 
-  function renderMore(starred) {
-    if (starred === undefined) starred = new Set(store.get('stars', []));
-    const grid = $('#thumbGrid');
-    const end = Math.min(gridShown + GRID_PAGE, gridArr.length);
-    for (let i = gridShown; i < end; i++) buildCard(grid, starred, gridArr[i]);
-    gridShown = end;
-    $('#gridSub').textContent = gridShown >= gridArr.length
-      ? gridArr.length + ' 个资源 · 点击打开完整资源'
-      : '已显示 ' + gridShown + ' / ' + gridArr.length + ' · 滚动继续加载';
+  function renderPagination() {
+    const nav = $('#gridPagination');
+    if (!nav) return;
+    const totalPages = Math.max(1, Math.ceil(gridArr.length / GRID_PAGE));
+    gridPage = Math.min(Math.max(gridPage, 1), totalPages);
+    nav.innerHTML = '';
+    if (!gridArr.length || totalPages <= 1) {
+      nav.hidden = true;
+      return;
+    }
+    nav.hidden = false;
+    const addButton = (label, page, options = {}) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'grid-page-btn' + (options.current ? ' on' : '');
+      b.textContent = label;
+      b.disabled = !!options.disabled;
+      if (options.current) b.setAttribute('aria-current', 'page');
+      if (!options.disabled && page !== undefined) b.onclick = () => {
+        gridPage = page;
+        renderGrid();
+        gridView.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      nav.appendChild(b);
+    };
+    addButton('\u2039', gridPage - 1, { disabled: gridPage <= 1 });
+    const pages = [];
+    const push = p => { if (!pages.includes(p)) pages.push(p); };
+    push(1);
+    for (let p = Math.max(2, gridPage - 2); p <= Math.min(totalPages - 1, gridPage + 2); p++) push(p);
+    if (totalPages > 1) push(totalPages);
+    let previous = 0;
+    for (const page of pages) {
+      if (previous && page - previous > 1) {
+        const gap = document.createElement('span');
+        gap.className = 'grid-page-gap';
+        gap.textContent = '\u2026';
+        nav.appendChild(gap);
+      }
+      addButton(String(page), page, { current: page === gridPage });
+      previous = page;
+    }
+    addButton('\u203a', gridPage + 1, { disabled: gridPage >= totalPages });
   }
 
   function renderGrid() {
@@ -918,8 +978,19 @@
     grid.innerHTML = '';
     const starred = new Set(store.get('stars', []));
     gridArr = arr;
-    gridShown = 0;
-    renderMore(starred);
+    const totalPages = Math.max(1, Math.ceil(gridArr.length / GRID_PAGE));
+    gridPage = Math.min(Math.max(gridPage, 1), totalPages);
+    const start = (gridPage - 1) * GRID_PAGE;
+    const end = Math.min(start + GRID_PAGE, gridArr.length);
+    gridShown = start;
+    for (let i = start; i < end; i++) {
+      buildCard(grid, starred, gridArr[i]);
+      gridShown++;
+    }
+    $('#gridSub').textContent = gridArr.length
+      ? gridArr.length + ' \u4e2a\u8d44\u6e90 \u00b7 \u7b2c ' + gridPage + ' / ' + totalPages + ' \u9875'
+      : '没有匹配资源';
+    renderPagination();
   }
   function setupGridObserver() {
     gridObserver = new IntersectionObserver((entries) => {
@@ -951,11 +1022,7 @@
   function toggleGrid() { stageMode ? openGrid() : closeGrid(); }
   $('#railGrid').addEventListener('click', toggleGrid);
   $('#gridClose').addEventListener('click', closeGrid);
-  $('#gridSearch').addEventListener('input', (e) => { gridQuery = e.target.value; renderGrid(); });
-  gridView.addEventListener('scroll', () => {
-    if (gridShown >= gridArr.length) return;
-    if (gridView.scrollTop + gridView.clientHeight > gridView.scrollHeight - 800) renderMore();
-  });
+  $('#gridSearch').addEventListener('input', (e) => { gridQuery = e.target.value; gridPage = 1; renderGrid(); });
 
   // ---------- 沉浸模式 ----------
   function applyImmersive() {

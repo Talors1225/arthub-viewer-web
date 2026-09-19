@@ -324,8 +324,9 @@
       const select = document.querySelector('#filterChips .sort-sel, .sort-sel');
       const savedMode = K.Store(route).get('sortMode', null);
       const mode = select ? select.value : (savedMode || 'default');
-      // 名称排序交给原页面处理；默认/类别排序统一使用目录中的角色名和稳定键。
-      if (mode === 'name') return;
+      // MaJsoul handles its own page ordering; do not rewrite the visible page.
+      if (route === 'majsoul' || mode === 'name') return;
+      const direction = K.Store(route).get('sortDirection', 'asc') === 'desc' ? -1 : 1;
       const map = sourceMap();
       const cards = [...spineGrid.querySelectorAll('.thumb-card')];
       if (cards.length < 2) return;
@@ -334,7 +335,7 @@
         const meta = map[id];
         return (meta && meta.sortKey) || ('999|' + id);
       };
-      const sorted = cards.slice().sort((a, b) => naturalAssetCompare(key(a), key(b)));
+      const sorted = cards.slice().sort((a, b) => direction * naturalAssetCompare(key(a), key(b)));
       if (sorted.every((card, index) => card === cards[index])) return;
       const frag = document.createDocumentFragment();
       for (const card of sorted) frag.appendChild(card);
@@ -894,7 +895,12 @@
             const opener = document.getElementById('railGrid');
             const gridView = document.getElementById('gridView');
             if (opener && gridView && !gridView.classList.contains('open')) opener.click();
-            setTimeout(() => { el.focus(); el.select(); }, 40);
+            setTimeout(() => {
+              const box = el.closest('.kit-search-box');
+              const toggle = box && box.querySelector('.kit-search-toggle');
+              if (box && box.classList.contains('is-collapsed') && toggle) toggle.click();
+              el.focus(); el.select();
+            }, 40);
           }
           : () => el.click();
         commands.push({ group: '操作', title, sub: sub || '', run });
@@ -1559,6 +1565,29 @@
     wrap.className = isGallery ? 'kit-search-box kit-gallery-search' : 'kit-search-box kit-grid-search';
     oldParent.insertBefore(wrap, search);
     wrap.appendChild(search);
+    const searchCollapsible = !isGallery;
+    const searchToggle = document.createElement('button');
+    searchToggle.type = 'button';
+    searchToggle.className = 'kit-search-toggle';
+    searchToggle.textContent = '\u2315';
+    searchToggle.setAttribute('aria-label', '\u5c55\u5f00\u641c\u7d22');
+    searchToggle.title = '\u5c55\u5f00\u641c\u7d22';
+    if (searchCollapsible) wrap.insertBefore(searchToggle, search);
+    const setSearchExpanded = (expanded, focus) => {
+      if (!searchCollapsible) return;
+      wrap.classList.toggle('is-collapsed', !expanded && !search.value);
+      searchToggle.setAttribute('aria-expanded', String(!!expanded));
+      searchToggle.setAttribute('aria-label', expanded ? '\u6536\u8d77\u641c\u7d22' : '\u5c55\u5f00\u641c\u7d22');
+      searchToggle.title = expanded ? '\u6536\u8d77\u641c\u7d22' : '\u5c55\u5f00\u641c\u7d22';
+      if (focus && expanded) search.focus();
+    };
+    if (searchCollapsible) {
+      searchToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const expanded = wrap.classList.contains('is-collapsed');
+        setSearchExpanded(expanded, expanded);
+      });
+    }
 
     const clear = document.createElement('button');
     clear.type = 'button';
@@ -1573,6 +1602,7 @@
       const value = search.value.trim();
       store.set('query', value);
       clear.hidden = !value;
+      if (searchCollapsible) setSearchExpanded(!!value || document.activeElement === search, false);
       if (isGallery && location.hash) {
         const params = new URLSearchParams(location.hash.replace(/^#/, ''));
         if (value) params.set('q', value); else params.delete('q');
@@ -1581,17 +1611,27 @@
     };
     search.addEventListener('input', syncQuery);
     search.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && search.value) {
-        search.value = '';
-        search.dispatchEvent(new Event('input', { bubbles: true }));
+      if (e.key === 'Escape') {
+        if (search.value) {
+          search.value = '';
+          search.dispatchEvent(new Event('input', { bubbles: true }));
+        } else if (searchCollapsible) {
+          setSearchExpanded(false, false);
+        }
         e.preventDefault();
       }
     });
     clear.addEventListener('click', () => {
       search.value = '';
       search.dispatchEvent(new Event('input', { bubbles: true }));
-      search.focus();
+      setSearchExpanded(true, true);
     });
+    if (searchCollapsible) {
+      document.addEventListener('click', (event) => {
+        if (!wrap.contains(event.target) && !search.value) setSearchExpanded(false, false);
+      });
+    }
+
 
     const url = new URL(location.href);
     const urlQuery = isGallery ? readHash() : (url.searchParams.get('q') || '');
@@ -1772,6 +1812,7 @@
             if (option.value === 'default') option.textContent = '默认顺序';
             else if (option.value === 'name') option.textContent = '名称 A–Z';
             else if (option.value === 'type') option.textContent = '类别 → 名称';
+            else if (option.value === 'group') option.textContent = '\u5206\u7ec4 \u2192 \u540d\u79f0';
           }
           select.dataset.kitLabels = '1';
         }
@@ -1796,7 +1837,7 @@
       const opener = document.getElementById('railGrid');
       const gridView = document.getElementById('gridView');
       if (opener && gridView && !gridView.classList.contains('open')) opener.click();
-      setTimeout(() => { search.focus(); search.select(); }, 40);
+      setTimeout(() => { setSearchExpanded(true, false); search.focus(); search.select(); }, 40);
     };
     window.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {

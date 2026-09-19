@@ -334,9 +334,19 @@
       <span class="grid-title" id="brandTitle">雀魂资源库</span>
       <span class="grid-sub" id="gridSub"></span>
       <input id="gridSearch" class="text-input" placeholder="搜索名称 / 编号 / 分组...">
+      <div id="filterChips" class="kit-majsoul-filters">
+        <select id="majsoulGroupFilter" class="kit-facet-select" aria-label="按分组筛选"><option value="">全部分组</option></select>
+        <select id="majsoulSort" class="sort-sel" aria-label="排序方式">
+          <option value="default">默认顺序</option>
+          <option value="name">名称</option>
+          <option value="group">分组</option>
+        </select>
+        <button id="majsoulSortDir" type="button" class="sort-dir-toggle" aria-label="切换排序方向" title="当前正序，点击切换为倒序">↑</button>
+      </div>
       <button id="btnTheme" class="edit-btn" title="打开主题调色板">◐</button>
     </div>
     <div class="thumb-grid" id="thumbGrid"></div>
+    <nav id="gridPagination" class="grid-pagination" aria-label="资源库分页"></nav>
   </div>
 
   <aside id="floatPanel">
@@ -565,6 +575,11 @@
 
   // ---------- 网格视图 ----------
   let gridQuery = '';
+  let gridGroup = '';
+  let sortMode = store.get('sortMode', 'default');
+  let sortDirection = store.get('sortDirection', 'asc');
+  let gridPage = 1;
+  const GRID_PAGE = 120;
 
   function setChrome(onStage) {
     rail.classList.toggle('hide', !onStage);
@@ -574,48 +589,101 @@
     statusEl.classList.toggle('hide', !onStage);
     document.querySelector('.hint').style.display = onStage ? '' : 'none';
   }
+  function renderPagination(totalItems) {
+    const nav = $('#gridPagination');
+    if (!nav) return;
+    const totalPages = Math.max(1, Math.ceil(totalItems / GRID_PAGE));
+    gridPage = Math.min(Math.max(gridPage, 1), totalPages);
+    nav.innerHTML = '';
+    if (!totalItems || totalPages <= 1) { nav.hidden = true; return; }
+    nav.hidden = false;
+    const addButton = (label, page, options = {}) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'grid-page-btn' + (options.current ? ' on' : '');
+      b.textContent = label;
+      b.disabled = !!options.disabled;
+      if (options.current) b.setAttribute('aria-current', 'page');
+      if (!options.disabled && page !== undefined) b.onclick = () => {
+        gridPage = page;
+        renderGrid();
+        gridView.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      nav.appendChild(b);
+    };
+    addButton('\u2039', gridPage - 1, { disabled: gridPage <= 1 });
+    const pages = [];
+    const push = p => { if (!pages.includes(p)) pages.push(p); };
+    push(1);
+    for (let p = Math.max(2, gridPage - 2); p <= Math.min(totalPages - 1, gridPage + 2); p++) push(p);
+    if (totalPages > 1) push(totalPages);
+    let previous = 0;
+    for (const page of pages) {
+      if (previous && page - previous > 1) {
+        const gap = document.createElement('span');
+        gap.className = 'grid-page-gap';
+        gap.textContent = '\u2026';
+        nav.appendChild(gap);
+      }
+      addButton(String(page), page, { current: page === gridPage });
+      previous = page;
+    }
+    addButton('\u203a', gridPage + 1, { disabled: gridPage >= totalPages });
+  }
+
   function renderGrid() {
     (window.__obsFlow = window.__obsFlow || []).push('renderGrid:' + characters.length);
-
     const grid = $('#thumbGrid');
     const q = gridQuery.trim().toLowerCase();
-    let arr = characters;
+    let arr = characters.filter(c => !gridGroup || String(c.group || '') === gridGroup);
     if (q) arr = arr.filter(c => {
       const label = String(c.label || c.id).replace(/\s*\[[^\]]*\]\s*$/, '');
       return label.toLowerCase().includes(q) || String(c.group || '').toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
     });
+    const direction = sortDirection === 'desc' ? -1 : 1;
+    const labelOf = c => String(c.label || c.id).replace(/\s*\[[^\]]*\]\s*$/, '');
+    if (sortMode === 'name') {
+      arr = [...arr].sort((a, b) => direction * labelOf(a).localeCompare(labelOf(b), undefined, { numeric: true }));
+    } else if (sortMode === 'group') {
+      arr = [...arr].sort((a, b) => direction * (String(a.group || '').localeCompare(String(b.group || ''), undefined, { numeric: true }) || labelOf(a).localeCompare(labelOf(b), undefined, { numeric: true })));
+    } else if (sortDirection === 'desc') {
+      arr = [...arr].reverse();
+    }
+    const totalPages = Math.max(1, Math.ceil(arr.length / GRID_PAGE));
+    gridPage = Math.min(Math.max(gridPage, 1), totalPages);
+    const start = (gridPage - 1) * GRID_PAGE;
+    const pageArr = arr.slice(start, start + GRID_PAGE);
     grid.innerHTML = '';
     const starred = new Set(store.get('stars', []));
-    let idx = 0;
-    for (const c of arr) {
-      const label = String(c.label || c.id).replace(/\s*\[[^\]]*\]\s*$/, '');
+    pageArr.forEach((c, idx) => {
+      const label = labelOf(c);
       const card = document.createElement('div');
       card.className = 'thumb-card' + (curEntry && curEntry.id === c.id ? ' active' : '');
       card.dataset.id = c.id;
-      card.style.setProperty('--i', Math.min(idx++, 16));
-      card.innerHTML = '<div class="ph ph-info"><div class="ph-icon">🎴</div><div class="ph-nl">' + K.esc(label) + '</div></div>'
+      card.style.setProperty('--i', Math.min(idx, 16));
+      card.innerHTML = '<div class="ph ph-info"><div class="ph-icon">' + String.fromCodePoint(0x1f3b4) + '</div><div class="ph-nl">' + K.esc(label) + '</div></div>'
         + '<div class="tm"><div class="tn">' + K.esc(label) + '</div>'
         + '<div class="ts">' + K.esc(c.group || '') + '</div></div>'
-        + '<span class="tt">' + (c.composite ? c.layers.length + ' 层' : '单模') + '</span>'
-        + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '★' : '☆') + '</button>';
+        + '<span class="tt">' + (c.composite ? c.layers.length + ' \u5c42' : '\u5355\u6a21') + '</span>'
+        + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="\u6536\u85cf/\u53d6\u6d88\u6536\u85cf">' + (starred.has(c.id) ? '\u2605' : '\u2606') + '</button>';
       card.onclick = () => { loadSelection(c); };
       card.querySelector('.tstar').onclick = (e) => {
         e.stopPropagation();
         toggleStarById(c.id);
         const on = store.get('stars', []).includes(c.id);
         e.target.classList.toggle('on', on);
-        e.target.textContent = on ? '★' : '☆';
+        e.target.textContent = on ? '\u2605' : '\u2606';
       };
       grid.appendChild(card);
       const ph = card.querySelector('.ph');
       const thumbPath = webThumbs['majsoul:' + c.id];
-      if (thumbPath) {
-        ph.innerHTML = '<img src="' + THUMB_PREFIX + thumbPath + '" alt="" loading="lazy" decoding="async">';
-      }
-    }
-    $('#gridSub').textContent = arr.length + ' 个条目 · 分层组已拼合';
-    // 异步加载缓存的缩略图 (从主画布截取, 用户浏览过的角色自动积累)
-    for (const c of arr) {
+      if (thumbPath) ph.innerHTML = '<img src="' + THUMB_PREFIX + thumbPath + '" alt="" loading="lazy" decoding="async">';
+    });
+    $('#gridSub').textContent = arr.length
+      ? arr.length + ' \u4e2a\u6761\u76ee \u00b7 \u7b2c ' + gridPage + ' / ' + totalPages + ' \u9875'
+      : '\u6ca1\u6709\u5339\u914d\u6761\u76ee';
+    renderPagination(arr.length);
+    for (const c of pageArr) {
       const phEl = grid.querySelector('.thumb-card[data-id="' + c.id + '"] .ph');
       if (!phEl) continue;
       ThumbStore.get('majsoul:' + c.id).then(url => {
@@ -623,6 +691,7 @@
       });
     }
   }
+
   function setChrome(onStage) {
     rail.classList.toggle('hide', !onStage);
     topPill.classList.toggle('hide', !onStage);
@@ -664,7 +733,20 @@
   }
   function toggleGrid() { stageMode ? openGrid() : closeGrid(); }
   $('#railGrid').addEventListener('click', toggleGrid);
-  $('#gridSearch').addEventListener('input', (e) => { gridQuery = e.target.value; renderGrid(); });
+  $('#gridSearch').addEventListener('input', (e) => { gridQuery = e.target.value; gridPage = 1; renderGrid(); });
+  const groupFilter = $('#majsoulGroupFilter');
+  const sortSelect = $('#majsoulSort');
+  const sortDirButton = $('#majsoulSortDir');
+  sortSelect.value = sortMode;
+  const syncSortDirection = () => {
+    sortDirButton.textContent = sortDirection === 'desc' ? '\u2193' : '\u2191';
+    sortDirButton.title = sortDirection === 'desc' ? '\u5f53\u524d\u5012\u5e8f\uff0c\u70b9\u51fb\u5207\u6362\u4e3a\u6b63\u5e8f' : '\u5f53\u524d\u6b63\u5e8f\uff0c\u70b9\u51fb\u5207\u6362\u4e3a\u5012\u5e8f';
+    sortDirButton.setAttribute('aria-label', sortDirButton.title);
+  };
+  syncSortDirection();
+  groupFilter.addEventListener('change', () => { gridGroup = groupFilter.value; store.set('groupFilter', gridGroup); gridPage = 1; renderGrid(); });
+  sortSelect.addEventListener('change', () => { sortMode = sortSelect.value; store.set('sortMode', sortMode); gridPage = 1; renderGrid(); });
+  sortDirButton.addEventListener('click', () => { sortDirection = sortDirection === 'desc' ? 'asc' : 'desc'; store.set('sortDirection', sortDirection); gridPage = 1; syncSortDirection(); renderGrid(); });
 
   // ---------- 沉浸模式 ----------
   function applyImmersive() {
@@ -1650,6 +1732,16 @@
       all.filter(c => c.composite).flatMap(c => c.layers.map(l => l.id))
     );
     characters = all.filter(c => c.composite || !compositeLayerIds.has(c.id));
+    const groups = [...new Set(characters.map(c => String(c.group || '').trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    for (const group of groups) {
+      const option = document.createElement('option');
+      option.value = group;
+      option.textContent = group;
+      groupFilter.appendChild(option);
+    }
+    gridGroup = store.get('groupFilter', '');
+    if (gridGroup && groups.includes(gridGroup)) groupFilter.value = gridGroup;
     const hashId = new URLSearchParams(location.hash.replace(/^#/, '')).get('sel');
     const lastId = store.get('lastChar', null);
     const first = (hashId && characters.find(x => x.id === hashId))
