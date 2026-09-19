@@ -91,15 +91,9 @@
   };
   K.classifyNikkeCatalog = (entry) => {
     if (!entry || entry.type !== 'catalog') return null;
-    const id = String(entry.id || entry.name || '').replace(/^catalog-/i, '');
-    let type = 'unknown';
-    if (/(eventscene|eventtitle|cutscene|story|minigame|mvg|foolsday|fortheking|dessert|soda)/i.test(id)) type = 'cutscene';
-    else if (/(skillcut|slillcut|skill[_-])/i.test(id)) type = 'skill';
-    else if (/(^c\d+_(aim|cover))|^(bm|bh)_|^(boss|monster|minion)_|(^|[_-])(weapon|enemy)([_-]|$)|dummy_(aim|cover)|monster|tower/i.test(id)) type = 'battle';
-    else if (/(idle|rest|move|sit|victory|getitem|talent)/i.test(id)) type = 'idle';
-    else if (/^c\d+_/i.test(id)) type = 'lobby';
-    else if (/(favoriteitem|item|icon|ui)/i.test(id)) type = 'store';
-    return { type, label: NIKKE_CATEGORY_LABEL[type] };
+    // Directory/catalog exports are auxiliary resources rather than gameplay
+    // actions; keep them together under the Other filter.
+    return { type: 'unknown', label: NIKKE_CATEGORY_LABEL.unknown };
   };
   K.decorateNikkeIndex = (data) => {
     if (!data || !Array.isArray(data.characters)) return data;
@@ -1471,6 +1465,27 @@
       document.body.appendChild(panel);
       button.setAttribute('aria-expanded', 'true');
 
+      const grid = document.getElementById('thumbGrid');
+      let densitySelect = null;
+      if (grid) {
+        const densityRow = document.createElement('label');
+        densityRow.className = 'theme-palette-density';
+        densityRow.innerHTML = '<span>\u7f29\u7565\u56fe</span><select aria-label="\u7f29\u7565\u56fe\u5927\u5c0f"><option value="compact">\u7d27\u51d1</option><option value="standard">\u6807\u51c6</option><option value="large">\u5927\u56fe</option></select>';
+        densitySelect = densityRow.querySelector('select');
+        const applyDensity = value => {
+          const next = ['compact', 'standard', 'large'].includes(value) ? value : 'standard';
+          grid.dataset.density = next;
+          if (densitySelect) densitySelect.value = next;
+        };
+        applyDensity(store ? store.get('density', grid.dataset.density || 'standard') : (grid.dataset.density || 'standard'));
+        densitySelect.addEventListener('change', () => {
+          applyDensity(densitySelect.value);
+          if (store) store.set('density', densitySelect.value);
+        });
+        const resetButton = panel.querySelector('.theme-palette-reset');
+        panel.insertBefore(densityRow, resetButton || null);
+      }
+
       const picker = panel.querySelector('input[type="color"]');
       const fallbackBackground = () => normalizeHex(getComputedStyle(root).getPropertyValue('--bg')) || '#0b0d12';
       const updateState = () => {
@@ -1645,139 +1660,55 @@
     }
     search.setAttribute('title', '输入名称、编号或分类；按 / 或 Ctrl+Shift+F 聚焦');
 
-    const copyText = async (value) => {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(value);
-        return;
-      }
-      const area = document.createElement('textarea');
-      area.value = value;
-      area.style.position = 'fixed';
-      area.style.opacity = '0';
-      document.body.appendChild(area);
-      area.select();
-      const ok = document.execCommand('copy');
-      area.remove();
-      if (!ok) throw new Error('clipboard unavailable');
-    };
-    const shareUrl = () => {
-      const u = new URL(location.href);
-      const value = search.value.trim();
-      if (isGallery) {
-        const params = new URLSearchParams(u.hash.replace(/^#/, ''));
-        if (value) params.set('q', value); else params.delete('q');
-        u.hash = params.toString();
-      } else if (value) u.searchParams.set('q', value);
-      else u.searchParams.delete('q');
-      return u.href;
-    };
-    const announce = (text, kind) => {
-      if (K.toast) K.toast(text, kind || 'ok');
-    };
-
     const actionHost = isGallery
       ? document.querySelector('.tb-right')
       : document.querySelector('#gridView .grid-head');
-    if (actionHost && !actionHost.querySelector('.kit-actions')) {
-      const actions = document.createElement('div');
-      actions.className = 'kit-actions';
-      const homePath = (() => {
-        const routeNames = new Set(['bd2', 'nikki', 'majsoul']);
-        const parts = location.pathname.split('/').filter(Boolean);
-        const routeIndex = parts.findIndex((part) => routeNames.has(part));
-        return routeIndex > 0 ? '/' + parts.slice(0, routeIndex).join('/') + '/' : '/';
-      })();
+    const homePath = (() => {
+      const routeNames = new Set(['bd2', 'nikki', 'majsoul']);
+      const parts = location.pathname.split('/').filter(Boolean);
+      const routeIndex = parts.findIndex((part) => routeNames.has(part));
+      return routeIndex > 0 ? '/' + parts.slice(0, routeIndex).join('/') + '/' : '/';
+    })();
+    if (actionHost && !actionHost.querySelector('.kit-home-action')) {
       const home = document.createElement('a');
-      home.className = 'kit-action';
+      home.className = 'kit-action kit-home-action';
       home.href = homePath;
       home.textContent = '⌂ 主界面';
       home.title = '返回 ArtHub 主界面';
-      const copy = document.createElement('button');
-      copy.type = 'button';
-      copy.className = 'kit-action';
-      copy.textContent = '复制链接';
-      copy.title = '复制当前资源库/搜索条件的直达链接';
-      copy.addEventListener('click', async () => {
-        try {
-          await copyText(shareUrl());
-          announce('已复制直达链接', 'ok');
-        } catch { announce('复制失败，请手动复制地址栏', 'err'); }
-      });
-      const exportSettings = document.createElement('button');
-      exportSettings.type = 'button';
-      exportSettings.className = 'kit-action';
-      exportSettings.textContent = '导出设置';
-      exportSettings.title = '导出收藏、别名、主题和布局设置，可在另一台电脑导入';
-      exportSettings.addEventListener('click', () => {
-        try { K.settings.download(); announce('设置已导出', 'ok'); }
-        catch { announce('设置导出失败', 'err'); }
-      });
-      const importSettings = document.createElement('button');
-      importSettings.type = 'button';
-      importSettings.className = 'kit-action';
-      importSettings.textContent = '导入设置';
-      importSettings.title = '从 JSON 文件导入收藏、别名、主题和布局设置';
-      const importInput = document.createElement('input');
-      importInput.type = 'file';
-      importInput.accept = 'application/json,.json';
-      importInput.hidden = true;
-      importInput.addEventListener('change', async () => {
-        const file = importInput.files && importInput.files[0];
-        importInput.value = '';
-        if (!file) return;
-        try {
-          const count = await K.settings.importFile(file);
-          if (!count) { announce('没有找到可导入的查看器设置', 'err'); return; }
-          announce('已导入 ' + count + ' 项设置，正在刷新…', 'ok');
-          setTimeout(() => location.reload(), 260);
-        } catch (e) { announce('设置导入失败: ' + (e.message || '文件格式错误'), 'err'); }
-      });
-      importSettings.addEventListener('click', () => importInput.click());
-      exportSettings.classList.add('kit-secondary-action');
-      importSettings.classList.add('kit-secondary-action');
-      const more = document.createElement('button');
-      more.type = 'button';
-      more.className = 'kit-action kit-more-action';
-      more.textContent = '更多';
-      more.title = '导入/导出设置等低频操作';
-      more.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const rect = more.getBoundingClientRect();
-        K.showMenu([
-          { label: '导出设置', fn: () => exportSettings.click() },
-          { label: '导入设置', fn: () => importSettings.click() },
-        ], rect.left, rect.bottom + 6);
-      });
-      actions.append(home, copy, more, exportSettings, importSettings, importInput);
-      if (!isGallery) {
-        const grid = document.getElementById('thumbGrid');
-        if (grid) {
-          const density = document.createElement('select');
-          density.className = 'kit-density-select';
-          density.title = '缩略图密度';
-          density.setAttribute('aria-label', '缩略图密度');
-          density.innerHTML = '<option value="compact">紧凑</option><option value="standard">标准</option><option value="large">大图</option>';
-          const applyDensity = (value) => {
-            const v = ['compact', 'standard', 'large'].includes(value) ? value : 'standard';
-            grid.dataset.density = v;
-            density.value = v;
-          };
-          applyDensity(store.get('density', 'standard'));
-          density.addEventListener('change', () => {
-            applyDensity(density.value);
-            store.set('density', density.value);
-          });
-          actions.appendChild(density);
-        }
-      }
-      if (isGallery) actionHost.insertBefore(actions, actionHost.firstChild);
-      else {
-        const before = document.getElementById('btnTheme') || document.getElementById('gridClose');
-        actionHost.insertBefore(actions, before || null);
+      if (isGallery) {
+        const actions = document.createElement('div');
+        actions.className = 'kit-actions';
+        actions.appendChild(home);
+        actionHost.insertBefore(actions, actionHost.firstChild);
+      } else {
+        actionHost.insertBefore(home, actionHost.firstChild);
       }
     }
 
-    // 雀魂原页面没有类型 chips，用索引中的 group 做一个轻量下拉筛选。
+    const thumbGrid = document.getElementById('thumbGrid');
+    if (thumbGrid && thumbGrid.dataset.kitDensityReady !== '1') {
+      thumbGrid.dataset.kitDensityReady = '1';
+      const density = store.get('density', 'standard');
+      thumbGrid.dataset.density = ['compact', 'standard', 'large'].includes(density) ? density : 'standard';
+    }
+
+    // Mobile scrolling collapses the resource-library controls and restores them after the gesture.
+    const scrollHost = document.getElementById('gridView');
+    if (scrollHost && scrollHost.dataset.kitScrollChrome !== '1') {
+      scrollHost.dataset.kitScrollChrome = '1';
+      let scrollTimer = 0;
+      scrollHost.addEventListener('scroll', () => {
+        if (window.matchMedia && !window.matchMedia('(max-width: 720px)').matches) return;
+        if (scrollHost.scrollTop <= 2) {
+          scrollHost.classList.remove('kit-grid-scrolling');
+          return;
+        }
+        scrollHost.classList.add('kit-grid-scrolling');
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => scrollHost.classList.remove('kit-grid-scrolling'), 420);
+      }, { passive: true });
+    }
+
     if (!isGallery && route === 'majsoul' && !document.getElementById('filterChips')) {
       const facet = document.createElement('select');
       facet.className = 'kit-facet-select';

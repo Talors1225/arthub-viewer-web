@@ -118,16 +118,16 @@
 
   .playbar {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px;
-    z-index: 20; display: flex; align-items: center; gap: 7px;
-    width: min(700px, calc(100% - 40px));
-    flex-wrap: wrap; justify-content: center;
+    z-index: 20; display: flex; align-items: center; gap: 4px;
+    width: auto; min-width: 0; flex-wrap: nowrap; justify-content: center;
     background: var(--glass); border: 1px solid var(--border2);
     backdrop-filter: blur(18px) saturate(1.4);
     -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    border-radius: 16px; padding: 8px 12px;
+    border-radius: 12px; padding: 4px;
     box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
-    transition: opacity .2s;
+    transition: opacity .2s, width .18s ease;
   }
+  .playbar .playbar-controls { display:flex; align-items:center; gap:7px; width:min(700px, calc(100vw - 60px)); min-width:0; }
   .playbar.hide { opacity: 0; pointer-events: none; }
   .playbar .pb-speed { flex: none; width: 80px; }
   .playbar .pb-speed-val { flex: none; font-size: 11px; color: var(--text-dim); min-width: 26px; }
@@ -280,7 +280,6 @@
   <div class="stage" id="stage">
     <canvas id="cv"></canvas>
     <div class="status" id="status">加载中…</div>
-    <div class="hint">←→ 切换角色 · 拖拽移动选中层 · 中右键平移 · 滚轮缩放 · G 资源库 · ? 快捷键</div>
 
     <div class="rail" id="rail">
       <button id="railGrid" title="资源库 (G)"></button>
@@ -297,14 +296,17 @@
       <a class="tp-link" id="browseLink" href="#" target="_blank">部件图</a>
     </div>
 
-    <div class="playbar" id="playbar">
-      <button id="pbPlay" class="ctl active" title="播放/暂停 (空格)"></button>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)">速度
-        <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1">
-        <span class="pb-speed-val" id="pbSpeedVal">1x</span>
-      </label>
-      <span style="flex:1"></span>
-      <button id="btnPanel" class="ctl active" title="显示/隐藏面板 (T)">面板</button>
+    <div class="playbar collapsed" id="playbar" aria-label="&#x64ad;&#x653e;&#x63a7;&#x5236;">
+      <button id="playbarToggle" class="playbar-toggle" type="button" aria-expanded="false" title="&#x5c55;&#x5f00;&#x64ad;&#x653e;&#x63a7;&#x5236;">&#x2261;</button>
+      <div class="playbar-controls">
+        <button id="pbPlay" class="ctl active" title="&#x64ad;&#x653e;/&#x6682;&#x505c; (Space)"></button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)">&#x901f;&#x5ea6;
+          <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1">
+          <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+        </label>
+        <span style="flex:1"></span>
+        <button id="btnPanel" class="ctl active" title="&#x663e;&#x793a;/&#x9690;&#x85cf;&#x9762;&#x677f; (T)">&#x9762;&#x677f;</button>
+      </div>
     </div>
 
     <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
@@ -318,13 +320,12 @@
         <button id="zReset" title="复位视图">↺</button>
       </div>
       <div class="strip-sep"></div>
-      <button id="btnLayerPanel" title="图层面板">☰</button>
+      <button id="btnLayerPanel" title="Layers panel" aria-hidden="true" tabindex="-1" style="display:none"></button>
       <button id="btnAnimPanel" title="动作/皮肤">▶</button>
       <div class="strip-sep"></div>
       <button id="btnDebug" title="骨骼 / 网格 / 包围盒 调试视图">🦴</button>
       <button id="btnPng" title="导出当前画面为 PNG">📷</button>
       <div class="strip-sep"></div>
-      <button id="btnFs" title="全屏模式">⛶</button>
       <button id="btnPresetImmersive" title="沉浸模式 (Tab / I)">⛶</button>
     </div>
   </div>
@@ -352,14 +353,13 @@
   <aside id="floatPanel">
     <div class="rp-panel-head">
       <div class="rp-tabs">
-        <button data-tab="layers" class="on">图层</button>
-        <button data-tab="parts">部件</button>
-        <button data-tab="anim">动作</button>
-        <button data-tab="view">视图</button>
+        <button data-tab="anim" class="on">&#x52a8;&#x4f5c;</button>
+        <button data-tab="parts">&#x90e8;&#x4ef6;</button>
+        <button data-tab="view">&#x89c6;&#x56fe;</button>
       </div>
       <button class="rp-panel-close" type="button" data-panel-close title="关闭面板" aria-label="关闭面板">×</button>
     </div>
-    <div class="rp-page on" data-page="layers">
+    <div class="rp-page" data-page="layers">
       <div class="lbl">图层(点击名称选中 · 拖拽画面移动选中层)</div>
       <div id="layerPanel"></div>
     </div>
@@ -373,7 +373,7 @@
       </div>
       <div id="slotList" class="slot-list"></div>
     </div>
-    <div class="rp-page" data-page="anim">
+    <div class="rp-page on" data-page="anim">
       <div class="lbl">动作(作用于全部可见图层)</div>
       <div class="chips" id="animChips"></div>
       <div class="lbl">皮肤(作用于选中图层)</div>
@@ -383,19 +383,10 @@
       <div class="lbl">视图</div>
       <label class="row"><input type="checkbox" id="autoIdle" checked> 6 秒无操作自动回到待机</label>
       <label class="row">整体缩放 <input type="range" id="zoom" min="0.1" max="4" step="0.01" value="1" style="flex:1;width:auto"></label>
-      <label class="row">背景 <input type="color" id="bg" value="#171a21"></label>
+      <label class="row">背景 <input type="color" id="bg" value="#000000"></label>
       <div class="chips" style="margin-top:6px">
         <button id="btnFit2">适合窗口</button>
         <button id="btnReset2">复位视图</button>
-      </div>
-      <div class="lbl">操作说明</div>
-      <div class="kbd-tips">
-        <kbd>←</kbd> <kbd>→</kbd> 上/下一个角色<br>
-        <kbd>F</kbd> 适应窗口 · <kbd>S</kbd> 收藏当前 · <kbd>Esc</kbd> 关闭弹窗<br>
-        滚轮 = 缩放(绕鼠标) · <kbd>G</kbd> 资源库 · <kbd>Tab/I</kbd> 沉浸模式<br>
-        左键拖拽 = 移动选中层 / 整组<br>
-        中键或右键拖拽 = 平移画布<br>
-        点击角色 = 选中该层(蓝框) · 点击空白 = 取消选中
       </div>
       <div class="lbl">链接</div>
       <div class="row"><a id="browseLink2" href="#" target="_blank" style="color:var(--accent)">浏览本角色原始部件图</a></div>
@@ -422,6 +413,7 @@
   const gridView = $('#gridView'), rail = $('#rail'), topPill = $('#topPill'), toolStrip = $('#toolStrip');
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const pbPlay = $('#pbPlay'), pbSpeed = $('#pbSpeed'), pbSpeedVal = $('#pbSpeedVal');
+  const playbarToggle = $('#playbarToggle'), playbar = $('#playbar');
   const store = K.Store('majsoul');
 
   let pausedAll = false, speedAll = Number(store.get('speed', 1)) || 1;
@@ -448,6 +440,18 @@
   }
 
   // ---------- 主题 ----------
+  let playbarCollapsed = store.get('playbarCollapsed', true) !== false;
+  const setPlaybarCollapsed = collapsed => {
+    playbarCollapsed = !!collapsed;
+    playbar.classList.toggle('collapsed', playbarCollapsed);
+    playbarToggle.setAttribute('aria-expanded', String(!playbarCollapsed));
+    playbarToggle.textContent = playbarCollapsed ? '\u2261' : '\u00d7';
+    playbarToggle.title = playbarCollapsed ? '\u5c55\u5f00\u64ad\u653e\u63a7\u5236' : '\u6536\u8d77\u64ad\u653e\u63a7\u5236';
+    store.set('playbarCollapsed', playbarCollapsed);
+  };
+  playbarToggle.addEventListener('click', () => setPlaybarCollapsed(!playbarCollapsed));
+  setPlaybarCollapsed(playbarCollapsed);
+
   K.initTheme(store);
   K.bindThemePalette($('#btnTheme'), store);
 
@@ -467,7 +471,6 @@
   $('#railGrid').innerHTML = I('grid', 16);
   $('#btnPrev').innerHTML = I('chevL', 13);
   $('#btnNext').innerHTML = I('chevR', 13);
-  $('#btnFs').innerHTML = I('expand', 13);
   $('#btnPresetImmersive').innerHTML = I('collapse', 13);
   $('#zFit').innerHTML = I('expand', 13);
   const setPbPlay = () => {
@@ -476,7 +479,7 @@
   };
 
   // ---------- 设置恢复 ----------
-  bgInput.value = store.get('bg', '#171a21');
+  bgInput.value = store.get('bg', '#000000');
   autoIdleChk.checked = store.get('autoIdle', true);
   bgInput.addEventListener('input', () => store.set('bg', bgInput.value));
   autoIdleChk.addEventListener('change', () => store.set('autoIdle', autoIdleChk.checked));
@@ -517,7 +520,7 @@
   }
   layerBtn.addEventListener('click', () => setFloatPanel('layers'));
   animBtn.addEventListener('click', () => setFloatPanel('anim'));
-  panelBtn.addEventListener('click', () => setFloatPanel(rightPanel.dataset.tab || 'layers'));
+  panelBtn.addEventListener('click', () => setFloatPanel(rightPanel.dataset.tab || 'anim'));
 
   // ---------- 弹窗基建 ----------
   const allPopups = [];
@@ -587,8 +590,7 @@
     toolStrip.classList.toggle('hide', !onStage);
     $('#playbar').classList.toggle('hide', !onStage);
     statusEl.classList.toggle('hide', !onStage);
-    document.querySelector('.hint').style.display = onStage ? '' : 'none';
-  }
+      }
   function renderPagination(totalItems) {
     const nav = $('#gridPagination');
     if (!nav) return;
@@ -698,8 +700,7 @@
     toolStrip.classList.toggle('hide', !onStage);
     $('#playbar').classList.toggle('hide', !onStage);
     statusEl.classList.toggle('hide', !onStage);
-    document.querySelector('.hint').style.display = onStage ? '' : 'none';
-  }
+      }
   function openGrid() {
     // 截取当前画布帧作为缩略图 (必须在 grid 覆盖前)
     if (curEntry && gl && layers.length) {

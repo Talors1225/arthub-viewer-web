@@ -114,16 +114,16 @@
 
   .playbar {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px;
-    z-index: 20; display: flex; align-items: center; gap: 7px;
-    width: min(820px, calc(100% - 40px));
-    flex-wrap: wrap; justify-content: center;
+    z-index: 20; display: flex; align-items: center; gap: 4px;
+    width: auto; min-width: 0; flex-wrap: nowrap; justify-content: center;
     background: var(--glass); border: 1px solid var(--border2);
     backdrop-filter: blur(18px) saturate(1.4);
     -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    border-radius: 16px; padding: 8px 12px;
+    border-radius: 12px; padding: 4px;
     box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-hi);
-    transition: opacity .2s;
+    transition: opacity .2s, width .18s ease;
   }
+  .playbar .playbar-controls { display:flex; align-items:center; gap:7px; width:min(790px, calc(100vw - 60px)); min-width:0; }
   .playbar.hide { opacity: 0; pointer-events: none; }
   .playbar input[type="range"] { flex: 1; width: auto; min-width: 80px; }
   .playbar .pb-time {
@@ -287,7 +287,6 @@
   <div class="stage" id="stage">
     <canvas id="cv"></canvas>
     <div class="status" id="status">加载中…</div>
-    <div class="hint">空格 播放/暂停 · 滚轮缩放 · 拖拽平移 · 点击部件隐藏 · G 资源库 · ⇋ 对比 · 🎞 GIF · Ctrl+K 搜索 · ? 快捷键</div>
 
     <div class="rail" id="rail">
       <button id="railGrid" title="资源库 (G)"></button>
@@ -308,15 +307,18 @@
       <button class="edit-btn" id="btnEditName" title="重命名(仅本机)"></button>
     </div>
 
-    <div class="playbar" id="playbar">
-      <button id="pbPlay" class="ctl active" title="播放/暂停 (空格)"></button>
-      <button id="pbStepB" class="ctl" title="后退 1 帧 (,)">«</button>
-      <input id="pbRange" type="range" min="0" max="1000" value="0">
-      <button id="pbStepF" class="ctl" title="前进 1帧 (.)">»</button>
-      <span class="pb-time" id="pbTime">0.00 / 0.00s</span>
-      <button id="pbLoop" class="ctl active" title="循环 (L)"></button>
-      <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="播放速度">
-      <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+    <div class="playbar collapsed" id="playbar" aria-label="&#x64ad;&#x653e;&#x63a7;&#x5236;">
+      <button id="playbarToggle" class="playbar-toggle" type="button" aria-expanded="false" title="&#x5c55;&#x5f00;&#x64ad;&#x653e;&#x63a7;&#x5236;">&#x2261;</button>
+      <div class="playbar-controls">
+        <button id="pbPlay" class="ctl active" title="&#x64ad;&#x653e;/&#x6682;&#x505c; (Space)"></button>
+        <button id="pbStepB" class="ctl" title="&#x540e;&#x9000; 1 &#x5e27;">&laquo;</button>
+        <input id="pbRange" type="range" min="0" max="1000" value="0">
+        <button id="pbStepF" class="ctl" title="&#x524d;&#x8fdb; 1 &#x5e27;">&raquo;</button>
+        <span class="pb-time" id="pbTime">0.00 / 0.00s</span>
+        <button id="pbLoop" class="ctl active" title="&#x5faa;&#x73af;"></button>
+        <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="&#x64ad;&#x653e;&#x901f;&#x5ea6;">
+        <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+      </div>
     </div>
 
     <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
@@ -330,7 +332,7 @@
         <button id="btn100" title="原始比例">1:1</button>
       </div>
       <div class="strip-sep"></div>
-      <button id="btnParts" title="部件面板"></button>
+      <button id="btnParts" title="Parts panel" aria-hidden="true" tabindex="-1" style="display:none"></button>
       <button id="btnAnimTab" title="动画面板"></button>
       <button id="btnBoneEdit" title="骨骼编辑模式 (E)"></button>
       <div class="strip-sep"></div>
@@ -339,7 +341,6 @@
       <button id="btnGif" title="导出当前动画为 GIF">🎞</button>
       <button id="btnBg" title="背景颜色 / 预设">◐</button>
       <div class="strip-sep"></div>
-      <button id="btnFs" title="全屏模式"></button>
       <button id="btnPresetImmersive" title="沉浸模式 (I)"></button>
     </div>
 
@@ -367,24 +368,24 @@
   <aside id="floatPanel">
     <div class="rp-panel-head">
       <div class="rp-tabs">
-        <button data-tab="parts" class="on">部件</button>
-        <button data-tab="anim">动画</button>
-        <button data-tab="pose">姿势</button>
+        <button data-tab="anim" class="on">&#x52a8;&#x753b;</button>
+        <button data-tab="parts">&#x90e8;&#x4ef6;</button>
+        <button data-tab="pose">&#x59ff;&#x52bf;</button>
       </div>
       <button class="rp-panel-close" type="button" data-panel-close title="关闭面板" aria-label="关闭面板">×</button>
     </div>
-    <div class="rp-page on" data-page="parts">
-      <div class="row"><input id="partFilter" type="text" class="text-input" placeholder="过滤部件名,如 body / hand"></div>
+    <div class="rp-page on" data-page="anim">
+      <div class="row"><input id="animFilter" type="text" class="text-input" placeholder="&#x8fc7;&#x6ee4;&#x52a8;&#x753b;&#x540d;"></div>
+      <div id="animList" class="anim-list"></div>
+    </div>
+    <div class="rp-page" data-page="parts">
+      <div class="row"><input id="partFilter" type="text" class="text-input" placeholder="&#x8fc7;&#x6ee4;&#x90e8;&#x4ef6;&#x540d;, &#x5982; body / hand"></div>
       <div class="parts-tools">
-        <button id="partAll">全显</button>
-        <button id="partNone">全隐</button>
-        <button id="partInv">反选</button>
+        <button id="partAll">&#x5168;&#x663e;</button>
+        <button id="partNone">&#x5168;&#x9690;</button>
+        <button id="partInv">&#x53cd;&#x9009;</button>
       </div>
       <div id="slotList" class="slot-list"></div>
-    </div>
-    <div class="rp-page" data-page="anim">
-      <div class="row"><input id="animFilter" type="text" class="text-input" placeholder="过滤动画名"></div>
-      <div id="animList" class="anim-list"></div>
     </div>
     <div class="rp-page" data-page="pose">
       <div class="lbl">骨骼编辑: 点击骨骼选中 · 拖拽本体平移 · 拖拽末端旋转</div>
@@ -439,6 +440,7 @@
   const mName = $('#mName'), mId = $('#mId');
   const btnFit = $('#btnFit'), btn100 = $('#btn100');
   const pbPlay = $('#pbPlay'), pbLoop = $('#pbLoop'), pbRange = $('#pbRange'), pbTime = $('#pbTime');
+  const playbarToggle = $('#playbarToggle'), playbar = $('#playbar');
   const pbSpeed = $('#pbSpeed'), pbSpeedVal = $('#pbSpeedVal');
   const btnParts = $('#btnParts'), btnAnimTab = $('#btnAnimTab');
   const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg');
@@ -557,7 +559,6 @@
   $('#btnBoneEdit').innerHTML = I('move', 15);
   btnDebug.innerHTML = I('bone', 15);
   btnPng.innerHTML = I('camera', 15);
-  $('#btnFs').innerHTML = I('expand', 13);
   $('#btnPresetImmersive').innerHTML = I('collapse', 13);
   $('#zOut').innerHTML = I('minus', 12);
   $('#zIn').innerHTML = I('plus', 12);
@@ -567,15 +568,27 @@
   setLoopBtn();
 
   // ---------- 主题 ----------
+  let playbarCollapsed = store.get('playbarCollapsed', true) !== false;
+  const setPlaybarCollapsed = collapsed => {
+    playbarCollapsed = !!collapsed;
+    playbar.classList.toggle('collapsed', playbarCollapsed);
+    playbarToggle.setAttribute('aria-expanded', String(!playbarCollapsed));
+    playbarToggle.textContent = playbarCollapsed ? '\u2261' : '\u00d7';
+    playbarToggle.title = playbarCollapsed ? 'Expand playback' : 'Collapse playback';
+    store.set('playbarCollapsed', playbarCollapsed);
+  };
+  playbarToggle.addEventListener('click', () => setPlaybarCollapsed(!playbarCollapsed));
+  setPlaybarCollapsed(playbarCollapsed);
+
   K.initTheme(store);
   K.bindThemePalette($('#btnTheme'), store);
 
   // ---------- 背景 ----------
-  const getBg = () => store.get('bg', '#0f1218');
+  const getBg = () => store.get('bg', '#000000');
   const applyBgToUI = () => stage.classList.toggle('checker', getBg() === 'checker');
   applyBgToUI();
   makeStagePopup(btnBg, (pop) => {
-    const presets = [['深空', '#0f1218'], ['纯黑', '#000000'], ['石墨', '#1f242e'], ['浅灰', '#b9bec7'], ['棋盘(透明)', 'checker']];
+    const presets = [['\u7eaf\u9ed1', '#000000'], ['\u6df1\u7a7a', '#0f1218'], ['\u77f3\u58a8', '#1f242e'], ['\u6d45\u7070', '#b9bec7'], ['\u68cb\u76d8(\u900f\u660e)', 'checker']];
     pop.innerHTML = '<div class="col"><div class="col-title">背景</div><div class="opt-row" id="bgSwatches"></div></div>';
     const row = pop.querySelector('#bgSwatches');
     for (const [label, val] of presets) {
@@ -595,17 +608,10 @@
   function displayType(c) {
     const explicit = String(c && c.type || '').toLowerCase();
     if (routeSource !== 'nikki') return explicit || 'unknown';
-    // NIKKE 的过场、待机和未归类目录素材统一归入“其它”；战斗动作目录保留在“战斗”。
-    // common/kit.js 会先给目录条目补上原始分类，因此这里同时识别目录来源。
+    // NIKKE 的目录提取素材统一归入“其它”，只有明确标记的技能、战斗和立绘保留原分类。
+    // common/kit.js 会先给目录条目补上分类，因此这里同时识别目录来源。
     const catalogLike = explicit === 'catalog' || /NIKKE core catalog|目录重组提取/i.test(JSON.stringify(c || ''));
-    if (catalogLike) {
-      if (explicit === 'skill' || explicit === 'battle' || explicit === 'lobby') return explicit;
-      const catalogText = JSON.stringify(c || '');
-      if (/skillcut|skill[_-]|burst|special/i.test(catalogText)) return 'skill';
-      if (/(?:^|[_-])(aim|cover|battle|attack|combat)(?:[_-]|$)/i.test(catalogText)) return 'battle';
-      if (/lobby|standing|portrait/i.test(catalogText)) return 'lobby';
-      return 'other';
-    }
+    if (catalogLike) return 'other';
     if (explicit === 'skill' || explicit === 'battle' || explicit === 'lobby') return explicit;
     if (explicit === 'cutscene' || explicit === 'idle' || explicit === 'store' || explicit === 'unknown') return 'other';
     const text = JSON.stringify(c || '');
@@ -885,7 +891,6 @@
     toolStrip.classList.toggle('hide', !onStage);
     $('#playbar').classList.toggle('hide', !onStage);
     statusEl.classList.toggle('hide', !onStage);
-    document.querySelector('.hint').style.display = onStage ? '' : 'none';
   }
   // Fixed pagination: render one page at a time and never append cards on scroll.
   const GRID_PAGE = 120;
@@ -2133,7 +2138,7 @@
     });
   }
 
-  // ---------- 背景弹窗 / 全屏 / 调试 / PNG 弹窗 ----------
+  // ---------- 背景弹窗 / 调试 / PNG 弹窗 ----------
   makeStagePopup(btnBg, (pop) => {
     const presets = [['深空', '#0f1218'], ['纯黑', '#000000'], ['石墨', '#1f242e'], ['浅灰', '#b9bec7'], ['棋盘(透明)', 'checker']];
     pop.innerHTML = '<div class="col"><div class="col-title">背景</div><div class="opt-row" id="bgSwatches"></div></div>';
@@ -2145,14 +2150,6 @@
       b.onclick = () => { store.set('bg', val); applyBgToUI(); };
       row.appendChild(b);
     }
-  });
-  function toggleFullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else stage.requestFullscreen().catch(() => K.toast('浏览器拒绝了全屏请求', 'err'));
-  }
-  $('#btnFs').addEventListener('click', toggleFullscreen);
-  document.addEventListener('fullscreenchange', () => {
-    requestAnimationFrame(() => { K.resizeCanvas(cv, renderer); if (cut && fitMode) refit(); else if (cut) applyView(); });
   });
   makeStagePopup(btnDebug, (pop) => {
     const flags = [
@@ -2261,7 +2258,7 @@
       { label: '重命名', fn: () => $('#btnEditName').click() },
       { label: '资源库 (G)', fn: () => openGrid() },
       { sep: true },
-      { label: '全屏', fn: toggleFullscreen },
+
     ], e.clientX, e.clientY);
   });
   stage.addEventListener('pointerdown', (e) => {

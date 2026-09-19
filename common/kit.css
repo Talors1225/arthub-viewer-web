@@ -41,8 +41,8 @@ html[data-accent="gold"] {
 
 /* 默认背景 */
 :root {
-  --bg: #0b0d12;
-  --bg-glow: radial-gradient(1200px 800px at 70% -10%, rgba(120, 140, 220, .05), transparent 60%);
+  --bg: #000000;
+  --bg-glow: none;
   --panel: #0f1219;
   --panel-grad: linear-gradient(180deg, #121620, #0e1119);
   --panel2: #171d28;
@@ -1290,4 +1290,195 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-majsoul-filters { gap
   }
   .grid-pagination { gap: 3px; padding-left: 8px; padding-right: 8px; }
   .grid-page-btn { min-width: 28px; padding-left: 6px; padding-right: 6px; }
+}
+
+
+/* ---------- Consolidated viewer controls ---------- */
+/* Compact playback controls and mobile resource-library chrome. */
+.playbar {
+  width: auto !important;
+  min-width: 0 !important;
+  flex-wrap: nowrap !important;
+  padding: 4px !important;
+  gap: 4px !important;
+}
+.playbar .playbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  width: min(790px, calc(100vw - 60px));
+}
+.playbar-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: var(--panel2);
+  color: var(--text-dim);
+  font: 700 18px/1 inherit;
+  cursor: pointer;
+}
+.playbar-toggle:hover { color: var(--accent); background: var(--accent-dim-bg); }
+.playbar.collapsed .playbar-controls { display: none !important; }
+.playbar.collapsed { border-radius: 11px !important; }
+html[data-gav-ui="clean"] body .hint,
+html[data-gav-ui="clean"] body .kbd-tips { display: none !important; }
+
+/* Resource-library actions. */
+html[data-gav-ui="clean"] body #gridView .grid-head > .kit-home-action {
+  order: 0;
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
+html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions {
+  order: 0;
+  margin: 0 !important;
+}
+html[data-gav-ui="clean"] body #gridView .grid-head > .kit-home-action,
+html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-action {
+  min-height: 30px !important;
+  padding: 5px 9px !important;
+  border-color: var(--border) !important;
+}
+
+/* Thumbnail density selector inside the theme palette. */
+.theme-palette-density {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  padding: 7px 8px;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.theme-palette-density select {
+  min-width: 74px;
+  padding: 4px 6px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+.theme-palette-density select:focus { border-color: var(--accent); }
+
+/* Mobile layout. */
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom {
+    display: flex !important;
+    position: static !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    padding: 1px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zOut,
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zIn,
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zPct {
+    display: inline-flex !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #btnFit,
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #btn100,
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zFit,
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zReset {
+    display: none !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zPct,
+  html[data-gav-ui="clean"] body .tool-strip .zoom-pct {
+    min-width: 44px !important;
+    width: 44px !important;
+  }
+
+  html[data-gav-ui="clean"] body #gridView .grid-head {
+    padding: 8px 10px 7px !important;
+    gap: 5px 6px !important;
+    transition: transform .18s ease, opacity .18s ease, max-height .18s ease, padding .18s ease;
+  }
+  html[data-gav-ui="clean"] body #gridView.kit-grid-scrolling .grid-head {
+    transform: translateY(-105%);
+    opacity: 0;
+    pointer-events: none;
+    max-height: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: hidden;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > .grid-sponsor {
+    display: none !important;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > .grid-title {
+    order: 1;
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 15px !important;
+    white-space: nowrap;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > .grid-sub {
+    order: 2;
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > .kit-home-action {
+    order: 0;
+    min-height: 30px !important;
+    padding: 5px 7px !important;
+    font-size: 10px !important;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > .kit-grid-search {
+    order: 3;
+    flex: 0 0 34px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    margin-left: 0 !important;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > .kit-grid-search:not(.is-collapsed) {
+    flex: 1 1 100% !important;
+    width: auto !important;
+    order: 5;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > #btnTheme {
+    order: 4;
+    flex: 0 0 34px;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > #gridClose {
+    order: 6;
+    min-height: 30px !important;
+    padding: 5px 7px !important;
+    font-size: 10px !important;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > #filterChips {
+    order: 7;
+    flex: 1 0 100% !important;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+    scrollbar-width: none;
+    padding-top: 2px !important;
+    border-top: 0 !important;
+  }
+  html[data-gav-ui="clean"] body #gridView .grid-head > #filterChips::-webkit-scrollbar { display: none; }
+  html[data-gav-ui="clean"] body #gridView .thumb-grid {
+    padding-top: 9px !important;
+  }
+  .playbar .playbar-controls {
+    width: min(790px, calc(100vw - 62px));
+  }
+  .playbar.collapsed { bottom: 10px !important; }
 }
