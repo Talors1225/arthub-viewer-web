@@ -7,6 +7,7 @@
 
   const ASSET_MARKERS = [
     '/bd2/spine/', '/nikki/spine/', '/nikki/spine_carved/',
+    '/majsoul/assets_raw/', '/majsoul/web_illustrations/',
   ];
 
   const PATH_REWRITES = {

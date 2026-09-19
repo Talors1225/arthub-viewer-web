@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-19T08:29:33.899Z",
+  "generatedAt": "2026-09-19T08:52:56.192Z",
   "bucketRoot": "https://arthub-viewer-1324227516.cos.ap-guangzhou.myqcloud.com",
   "note": "网页代码和小索引在 web-cos/ 中；以下大目录需上传到 COS，并保持远程前缀不变。",
   "indexesKeptOnWebsite": true,
@@ -34,6 +34,28 @@
           "remote": "bd2/spine/",
           "exists": true,
           "files": 3488
+        }
+      ]
+    },
+    {
+      "key": "majsoul",
+      "index": {
+        "local": "sources/majsoul/index/characters.json",
+        "web": "majsoul/characters.json",
+        "remote": null
+      },
+      "assets": [
+        {
+          "local": "data/majsoul/assets_raw",
+          "remote": "majsoul/assets_raw/",
+          "exists": true,
+          "files": 5609
+        },
+        {
+          "local": "data/majsoul/web_illustrations",
+          "remote": "majsoul/web_illustrations/",
+          "exists": true,
+          "files": 466
         }
       ]
     }
