@@ -1306,7 +1306,7 @@
     if (!toolStrip || toolStrip.dataset.kitClean === '1') return;
     toolStrip.dataset.kitClean = '1';
 
-    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'btnPng']);
+    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel']);
     const secondary = [...toolStrip.querySelectorAll('button')]
       .filter(button => button.parentElement === toolStrip)
       .filter(button => !primary.has(button.id));

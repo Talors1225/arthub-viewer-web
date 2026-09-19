@@ -833,6 +833,12 @@ html[data-gav-ui="clean"] body .tool-strip .zoom-bar button {
 html[data-gav-ui="clean"] body .tool-strip .zoom-bar .zoom-pct {
   min-width: 42px !important;
 }
+/* 保留适应窗口/复位视图，隐藏容易误触且占空间的连续缩放三键。 */
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zOut,
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zPct,
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom #zIn {
+  display: none !important;
+}
 html[data-gav-ui="clean"] body .tool-strip .kit-secondary-tool {
   display: none !important;
 }
@@ -1090,11 +1096,11 @@ html[data-gav-ui="clean"] body #gridView .thumb-card .tt {
     margin: 8px 4px !important;
   }
   html[data-gav-ui="clean"] body .tool-strip {
-    left: 10px !important;
+    left: auto !important;
     right: 10px !important;
-    top: 62px !important;
+    top: 10px !important;
     width: auto !important;
-    max-width: none !important;
+    max-width: calc(100% - 180px) !important;
     justify-content: flex-start !important;
     gap: 3px !important;
     padding: 4px !important;
@@ -1137,13 +1143,13 @@ html[data-gav-ui="clean"] body #gridView .thumb-card .tt {
   }
   html[data-gav-ui="clean"] body .status {
     left: 10px !important;
-    top: 120px !important;
+    top: 68px !important;
     max-width: calc(100% - 20px) !important;
   }
   html[data-gav-ui="clean"] body #floatPanel {
     left: 10px !important;
     right: 10px !important;
-    max-height: calc(100vh - 190px) !important;
+    max-height: calc(100vh - 140px) !important;
   }
   html[data-gav-ui="clean"] body .playbar {
     overflow-x: auto !important;
