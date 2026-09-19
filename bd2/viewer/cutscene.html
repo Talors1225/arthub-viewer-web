@@ -115,7 +115,8 @@
   .playbar {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px;
     z-index: 20; display: flex; align-items: center; gap: 7px;
-    width: min(640px, calc(100% - 140px));
+    width: min(820px, calc(100% - 40px));
+    flex-wrap: wrap; justify-content: center;
     background: var(--glass); border: 1px solid var(--border2);
     backdrop-filter: blur(18px) saturate(1.4);
     -webkit-backdrop-filter: blur(18px) saturate(1.4);
@@ -133,13 +134,9 @@
   .playbar .pb-speed-val { flex: none; font-size: 11px; color: var(--text-dim); min-width: 26px; }
 
   .zoom-bar {
-    position: fixed; right: 60px; top: 12px; z-index: 20;
-    display: flex; gap: 4px; align-items: center;
-    background: var(--glass); border: 1px solid var(--border2);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    padding: 4px 6px; border-radius: 999px;
-    box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-hi);
+    position: static; z-index: auto;
+    display: flex; gap: 2px; align-items: center; flex: none;
+    margin-left: 2px; padding-left: 6px; border-left: 1px solid var(--border2);
   }
   .zoom-bar button {
     width: 28px; height: 28px; border-radius: 50%;
@@ -150,6 +147,9 @@
   .zoom-bar button:hover { background: var(--accent-dim-bg); color: var(--accent); }
   .zoom-bar button.active { background: var(--accent-dim-bg); color: var(--accent); }
   .zoom-bar .zoom-pct { min-width: 40px; text-align: center; font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+  /* 详情名称和动作选择保留在 DOM 供脚本使用，界面只保留右侧工具和底部播放栏。 */
+  .top-pill { display: none !important; }
 
   .status {
     position: fixed; left: 14px; top: 12px; z-index: 20;
@@ -258,8 +258,12 @@
   body.immersive .rail, body.immersive .top-pill, body.immersive .tool-strip,
   body.immersive .playbar, body.immersive .status, body.immersive .hint,
   body.immersive .zoom-bar, body.immersive #floatPanel { display: none !important; }
+  .immersive-exit { display: none; }
   body.immersive .immersive-exit {
     position: fixed; top: 12px; right: 12px; z-index: 90;
+    display: flex; align-items: center; justify-content: center;
+    padding: 7px 11px; border: 1px solid var(--border2); border-radius: 999px;
+    background: var(--glass); color: var(--text); cursor: pointer;
     opacity: .22; transition: opacity .2s;
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
@@ -304,14 +308,6 @@
       <button class="edit-btn" id="btnEditName" title="重命名(仅本机)"></button>
     </div>
 
-    <div class="zoom-bar">
-      <button id="zOut" title="缩小">−</button>
-      <span class="zoom-pct" id="zPct">适应</span>
-      <button id="zIn" title="放大">＋</button>
-      <button id="btnFit" title="适应窗口 (F)"></button>
-      <button id="btn100" title="原始比例">1:1</button>
-    </div>
-
     <div class="playbar" id="playbar">
       <button id="pbPlay" class="ctl active" title="播放/暂停 (空格)"></button>
       <button id="pbStepB" class="ctl" title="后退 1 帧 (,)">«</button>
@@ -321,7 +317,16 @@
       <button id="pbLoop" class="ctl active" title="循环 (L)"></button>
       <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="播放速度">
       <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+      <div class="zoom-bar" aria-label="视图缩放">
+        <button id="zOut" title="缩小">−</button>
+        <span class="zoom-pct" id="zPct">适应</span>
+        <button id="zIn" title="放大">＋</button>
+        <button id="btnFit" title="适应窗口 (F)"></button>
+        <button id="btn100" title="原始比例">1:1</button>
+      </div>
     </div>
+
+    <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
 
     <div class="tool-strip" id="toolStrip">
       <button id="btnParts" title="部件面板"></button>
@@ -582,13 +587,28 @@
   // ---------- 类型/排序/别名 ----------
   const aliasMap = store.get('aliasMap', {});
   const aliasOf = id => aliasMap[id] || '';
-  const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', unknown: '其他' };
-  const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, store: 8, unknown: 9 };
+  const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
+  const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, other: 9, store: 10, catalog: 10, unknown: 9 };
+  function displayType(c) {
+    const explicit = String(c && c.type || '').toLowerCase();
+    if (routeSource !== 'nikki') return explicit || 'unknown';
+    // NIKKE 的目录重组条目归入“其它”，避免目录素材重复出现在战斗分类。
+    // common/kit.js 会先给目录条目补上原始分类，因此这里同时识别目录来源。
+    const catalogLike = explicit === 'catalog' || /NIKKE core catalog|目录重组提取/i.test(JSON.stringify(c || ''));
+    if (catalogLike) return 'other';
+    if (explicit === 'skill' || explicit === 'battle' || explicit === 'lobby') return explicit;
+    if (explicit === 'cutscene' || explicit === 'idle' || explicit === 'store' || explicit === 'unknown') return 'other';
+    const text = JSON.stringify(c || '');
+    if (/skillcut|skill[_-]|burst|special/i.test(text)) return 'skill';
+    if (/(?:^|[_-])(aim|cover|battle|attack|combat)(?:[_-]|$)/i.test(text)) return 'battle';
+    if (/lobby|standing|portrait/i.test(text)) return 'lobby';
+    return 'other';
+  }
 
   function buildFilterChips() {
     const row = $('#filterChips');
     const counts = {};
-    for (const c of chars) counts[c.type || 'unknown'] = (counts[c.type || 'unknown'] || 0) + 1;
+    for (const c of chars) { const t = displayType(c); counts[t] = (counts[t] || 0) + 1; }
     const types = Object.keys(counts).sort((a, b) => (TYPE_ORDER[a] ?? 8) - (TYPE_ORDER[b] ?? 8));
     const starred = new Set(store.get('stars', []));
     const chips = [['all', '全部', chars.length], ['star', '★', starred.size],
@@ -615,10 +635,10 @@
     let arr = chars.filter(c => {
       if (filterType === 'all') return true;
       if (filterType === 'star') return starred.has(c.id);
-      return (c.type || 'unknown') === filterType;
+      return displayType(c) === filterType;
     });
     if (sortMode === 'name') arr = [...arr].sort((a, b) => String(aliasOf(a.id) || a.name).localeCompare(String(aliasOf(b.id) || b.name), 'zh'));
-    else if (sortMode === 'type') arr = [...arr].sort((a, b) => (TYPE_ORDER[a.type] ?? 8) - (TYPE_ORDER[b.type] ?? 8) || String(a.id).localeCompare(String(b.id)));
+    else if (sortMode === 'type') arr = [...arr].sort((a, b) => (TYPE_ORDER[displayType(a)] ?? 9) - (TYPE_ORDER[displayType(b)] ?? 9) || String(a.id).localeCompare(String(b.id)));
     return arr;
   }
   function nav(delta) {
@@ -848,7 +868,7 @@
     card.innerHTML = '<div class="ph"><span class="spin"></span></div>'
       + '<div class="tm"><div class="tn">' + K.esc(alias || c.name || c.id) + '</div>'
       + '<div class="ts">' + K.esc(alias ? c.name || '' : (c.source || '')) + '</div></div>'
-      + '<span class="tt">' + (TYPE_LABEL[c.type || 'unknown'] || '其他') + '</span>'
+      + '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '其它') + '</span>'
       + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '★' : '☆') + '</button>';
     card.onclick = () => { selectChar(c); closeGrid(); };
     card.querySelector('.tstar').onclick = (e) => {
@@ -946,6 +966,7 @@
     if (!immersive) { K.resizeCanvas(cv, renderer); if (cut && fitMode) refit(); }
   }
   $('#btnPresetImmersive').addEventListener('click', toggleImmersive);
+  $('#immersiveExit').addEventListener('click', toggleImmersive);
 
   // ---------- 部件/动画浮动面板 ----------
   function setFloatPanel(tab) {
@@ -2154,7 +2175,7 @@
 
   // ---------- 平移/缩放/点选 ----------
   let down = null, moved = false;
-  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status')));
+  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit')));
   stage.addEventListener('contextmenu', (e) => {
     if (isChrome(e.target)) return;
     e.preventDefault();
@@ -2231,7 +2252,7 @@
     if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) > 2) moved = true;
     if (!moved) return;
     panX += (e.clientX - down.x) * dpr;
-    panY += (e.clientY - down.y) * dpr;
+    panY -= (e.clientY - down.y) * dpr;
     down = { x: e.clientX, y: e.clientY };
     if (fitMode) { fitMode = false; userScale = cut.fitScale; btn100.classList.add('active'); btnFit.classList.remove('active'); }
     applyView();

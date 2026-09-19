@@ -119,6 +119,8 @@
   .playbar {
     position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px;
     z-index: 20; display: flex; align-items: center; gap: 7px;
+    width: min(700px, calc(100% - 40px));
+    flex-wrap: wrap; justify-content: center;
     background: var(--glass); border: 1px solid var(--border2);
     backdrop-filter: blur(18px) saturate(1.4);
     -webkit-backdrop-filter: blur(18px) saturate(1.4);
@@ -131,13 +133,9 @@
   .playbar .pb-speed-val { flex: none; font-size: 11px; color: var(--text-dim); min-width: 26px; }
 
   .zoom-bar {
-    position: fixed; right: 60px; top: 12px; z-index: 20;
-    display: flex; gap: 4px; align-items: center;
-    background: var(--glass); border: 1px solid var(--border2);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    padding: 4px 6px; border-radius: 999px;
-    box-shadow: var(--shadow-1), inset 0 1px 0 var(--glass-hi);
+    position: static; z-index: auto;
+    display: flex; gap: 2px; align-items: center; flex: none;
+    margin-left: 2px; padding-left: 6px; border-left: 1px solid var(--border2);
   }
   .zoom-bar button {
     width: 28px; height: 28px; border-radius: 50%;
@@ -147,6 +145,7 @@
   }
   .zoom-bar button:hover { background: var(--accent-dim-bg); color: var(--accent); }
   .zoom-bar .zoom-pct { min-width: 40px; text-align: center; font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .top-pill { display: none !important; }
 
   .status {
     position: fixed; left: 14px; top: 12px; z-index: 20;
@@ -243,8 +242,12 @@
   body.immersive .rail, body.immersive .top-pill, body.immersive .tool-strip,
   body.immersive .playbar, body.immersive .status, body.immersive .hint,
   body.immersive .zoom-bar, body.immersive #floatPanel { display: none !important; }
+  .immersive-exit { display: none; }
   body.immersive .immersive-exit {
     position: fixed; top: 12px; right: 12px; z-index: 90;
+    display: flex; align-items: center; justify-content: center;
+    padding: 7px 11px; border: 1px solid var(--border2); border-radius: 999px;
+    background: var(--glass); color: var(--text); cursor: pointer;
     opacity: .22; transition: opacity .2s;
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
@@ -294,14 +297,6 @@
       <a class="tp-link" id="browseLink" href="#" target="_blank">部件图</a>
     </div>
 
-    <div class="zoom-bar">
-      <button id="zOut" title="缩小">−</button>
-      <span class="zoom-pct" id="zPct">100%</span>
-      <button id="zIn" title="放大">＋</button>
-      <button id="zFit" title="适应窗口 (F)">⤢</button>
-      <button id="zReset" title="复位视图">↺</button>
-    </div>
-
     <div class="playbar" id="playbar">
       <button id="pbPlay" class="ctl active" title="播放/暂停 (空格)"></button>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)">速度
@@ -310,7 +305,16 @@
       </label>
       <span style="flex:1"></span>
       <button id="btnPanel" class="ctl active" title="显示/隐藏面板 (T)">面板</button>
+      <div class="zoom-bar" aria-label="视图缩放">
+        <button id="zOut" title="缩小">−</button>
+        <span class="zoom-pct" id="zPct">100%</span>
+        <button id="zIn" title="放大">＋</button>
+        <button id="zFit" title="适应窗口 (F)">⤢</button>
+        <button id="zReset" title="复位视图">↺</button>
+      </div>
     </div>
+
+    <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
 
     <div class="tool-strip" id="toolStrip">
       <button id="btnLayerPanel" title="图层面板">☰</button>
@@ -677,6 +681,7 @@
     if (!immersive) { K.resizeCanvas(canvas, renderer); applyAllTransforms(); }
   }
   $('#btnPresetImmersive').addEventListener('click', toggleImmersive);
+  $('#immersiveExit').addEventListener('click', toggleImmersive);
 
   // ---------- 渲染循环 ----------
   let lastFrame = performance.now();
@@ -1450,7 +1455,7 @@
 
   // ---------- 交互(拖层 / 平移 / 选层 / 滚轮) ----------
   let downPos = null, downTime = 0, moved = false, lastPos = null, panMode = false;
-  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status')));
+  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit')));
   stage.addEventListener('contextmenu', e => e.preventDefault());
   stage.addEventListener('pointerdown', (e) => {
     if (isChrome(e.target)) return;
