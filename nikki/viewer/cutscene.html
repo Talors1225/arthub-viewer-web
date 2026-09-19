@@ -264,7 +264,7 @@
     display: flex; align-items: center; justify-content: center;
     padding: 7px 11px; border: 1px solid var(--border2); border-radius: 999px;
     background: var(--glass); color: var(--text); cursor: pointer;
-    opacity: .22; transition: opacity .2s;
+    opacity: .72; transition: opacity .2s;
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
@@ -595,7 +595,7 @@
     // NIKKE 的目录重组条目归入“其它”，避免目录素材重复出现在战斗分类。
     // common/kit.js 会先给目录条目补上原始分类，因此这里同时识别目录来源。
     const catalogLike = explicit === 'catalog' || /NIKKE core catalog|目录重组提取/i.test(JSON.stringify(c || ''));
-    if (catalogLike) return 'other';
+    if (catalogLike) return (explicit === 'skill' || explicit === 'lobby') ? explicit : 'other';
     if (explicit === 'skill' || explicit === 'battle' || explicit === 'lobby') return explicit;
     if (explicit === 'cutscene' || explicit === 'idle' || explicit === 'store' || explicit === 'unknown') return 'other';
     const text = JSON.stringify(c || '');
