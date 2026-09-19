@@ -851,7 +851,7 @@
 
   function disposeLayer(L) {
     try {
-      if (L.atlas) for (const p of L.atlas.pages) if (p.texture && p.texture.dispose) p.texture.dispose();
+      if (L.atlas) for (const p of L.atlas.pages) if (p && p.texture && p.texture.dispose) p.texture.dispose();
     } catch {}
   }
 
@@ -1367,7 +1367,7 @@
         for (const L of Ls) renderer2.drawSkeleton(L.skeleton, false);
         renderer2.end();
         const url = cv2.toDataURL('image/png');
-        for (const L of Ls) for (const p of L.atlas.pages) if (p.texture && p.texture.dispose) p.texture.dispose();
+        for (const L of Ls) for (const p of L.atlas.pages) if (p && p.texture && p.texture.dispose) p.texture.dispose();
         return url;
       }
     }
