@@ -788,7 +788,7 @@ html[data-gav-ui="clean"] body .zoom-bar {
   box-shadow: var(--shadow-1) !important;
 }
 html[data-gav-ui="clean"] body .tool-strip {
-  top: 64px !important;
+  top: 16px !important;
   right: 16px !important;
   bottom: auto !important;
   transform: none !important;
@@ -810,6 +810,28 @@ html[data-gav-ui="clean"] body .tool-strip .strip-sep {
   width: 1px !important;
   height: 20px !important;
   margin: 8px 3px !important;
+}
+html[data-gav-ui="clean"] body .tool-strip .zoom-bar {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  display: flex !important;
+  gap: 2px !important;
+  margin: 0 !important;
+  padding: 2px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-gav-ui="clean"] body .tool-strip .zoom-bar button {
+  display: flex !important;
+  min-width: 30px !important;
+  width: 30px !important;
+  height: 34px !important;
+  border-radius: 9px !important;
+}
+html[data-gav-ui="clean"] body .tool-strip .zoom-bar .zoom-pct {
+  min-width: 42px !important;
 }
 html[data-gav-ui="clean"] body .tool-strip .kit-secondary-tool {
   display: none !important;
@@ -994,12 +1016,8 @@ html[data-gav-ui="clean"] body #gridView .thumb-card .tt {
     top: 58px !important;
     max-width: calc(100% - 20px) !important;
   }
-  html[data-gav-ui="clean"] body .zoom-bar {
-    top: 10px !important;
-    right: 10px !important;
-  }
   html[data-gav-ui="clean"] body .tool-strip {
-    top: 58px !important;
+    top: 10px !important;
     right: 10px !important;
     max-width: calc(100% - 20px) !important;
   }

@@ -1308,6 +1308,7 @@
 
     const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'btnPng']);
     const secondary = [...toolStrip.querySelectorAll('button')]
+      .filter(button => button.parentElement === toolStrip)
       .filter(button => !primary.has(button.id));
     if (!secondary.length) return;
 

@@ -317,18 +317,19 @@
       <button id="pbLoop" class="ctl active" title="循环 (L)"></button>
       <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="播放速度">
       <span class="pb-speed-val" id="pbSpeedVal">1x</span>
-      <div class="zoom-bar" aria-label="视图缩放">
+    </div>
+
+    <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
+
+    <div class="tool-strip" id="toolStrip">
+      <div class="zoom-bar tool-zoom" aria-label="视图缩放">
         <button id="zOut" title="缩小">−</button>
         <span class="zoom-pct" id="zPct">适应</span>
         <button id="zIn" title="放大">＋</button>
         <button id="btnFit" title="适应窗口 (F)"></button>
         <button id="btn100" title="原始比例">1:1</button>
       </div>
-    </div>
-
-    <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
-
-    <div class="tool-strip" id="toolStrip">
+      <div class="strip-sep"></div>
       <button id="btnParts" title="部件面板"></button>
       <button id="btnAnimTab" title="动画面板"></button>
       <button id="btnBoneEdit" title="骨骼编辑模式 (E)"></button>
@@ -592,10 +593,17 @@
   function displayType(c) {
     const explicit = String(c && c.type || '').toLowerCase();
     if (routeSource !== 'nikki') return explicit || 'unknown';
-    // NIKKE 的目录重组条目归入“其它”，避免目录素材重复出现在战斗分类。
+    // NIKKE 的过场、待机和未归类目录素材统一归入“其它”；战斗动作目录保留在“战斗”。
     // common/kit.js 会先给目录条目补上原始分类，因此这里同时识别目录来源。
     const catalogLike = explicit === 'catalog' || /NIKKE core catalog|目录重组提取/i.test(JSON.stringify(c || ''));
-    if (catalogLike) return (explicit === 'skill' || explicit === 'lobby') ? explicit : 'other';
+    if (catalogLike) {
+      if (explicit === 'skill' || explicit === 'battle' || explicit === 'lobby') return explicit;
+      const catalogText = JSON.stringify(c || '');
+      if (/skillcut|skill[_-]|burst|special/i.test(catalogText)) return 'skill';
+      if (/(?:^|[_-])(aim|cover|battle|attack|combat)(?:[_-]|$)/i.test(catalogText)) return 'battle';
+      if (/lobby|standing|portrait/i.test(catalogText)) return 'lobby';
+      return 'other';
+    }
     if (explicit === 'skill' || explicit === 'battle' || explicit === 'lobby') return explicit;
     if (explicit === 'cutscene' || explicit === 'idle' || explicit === 'store' || explicit === 'unknown') return 'other';
     const text = JSON.stringify(c || '');
