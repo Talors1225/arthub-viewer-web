@@ -1970,7 +1970,7 @@
   // ---------- 数据加载 ----------
   async function loadChars() {
     try {
-      const tr = await fetch('../../thumbs/index.json');
+      const tr = await fetch('../../thumbs/');
       if (tr.ok) {
         const td = await tr.json();
         webThumbs = td.items || {};

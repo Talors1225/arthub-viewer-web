@@ -1635,7 +1635,7 @@
   setupDesktopBridge();
   K.initSearchPalette();
   Promise.all([
-    fetch('../../thumbs/index.json').then(r => r.ok ? r.json() : { items: {} }).catch(() => ({ items: {} })),
+    fetch('../../thumbs/').then(r => r.ok ? r.json() : { items: {} }).catch(() => ({ items: {} })),
     fetch('../characters.json').then(r => r.json()),
   ]).then(([thumbData, data]) => {
     webThumbs = thumbData.items || {};
