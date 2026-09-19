@@ -1067,3 +1067,97 @@ html[data-gav-ui="clean"] body #gridView .thumb-card .tt {
     padding: 12px 10px 22px !important;
   }
 }
+
+/* 竖屏优先：把导航和工具分成两行，给拇指留下连续、足够大的点击目标。 */
+@media (max-width: 720px) and (orientation: portrait) {
+  html[data-gav-ui="clean"] body .rail {
+    left: 10px !important;
+    top: 10px !important;
+    max-width: calc(100% - 20px) !important;
+    gap: 3px !important;
+    padding: 4px !important;
+  }
+  html[data-gav-ui="clean"] body .rail button,
+  html[data-gav-ui="clean"] body .rail .rail-thumb {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
+  }
+  html[data-gav-ui="clean"] body .rail .strip-sep,
+  html[data-gav-ui="clean"] body .rail .sep {
+    height: 24px !important;
+    margin: 8px 4px !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip {
+    left: 10px !important;
+    right: 10px !important;
+    top: 62px !important;
+    width: auto !important;
+    max-width: none !important;
+    justify-content: flex-start !important;
+    gap: 3px !important;
+    padding: 4px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+  html[data-gav-ui="clean"] body .tool-strip::-webkit-scrollbar {
+    display: none;
+  }
+  html[data-gav-ui="clean"] body .tool-strip button,
+  html[data-gav-ui="clean"] body .tool-strip .kit-more-tool {
+    flex: 0 0 42px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    border-radius: 11px !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .zoom-bar {
+    flex: 0 0 auto !important;
+    gap: 3px !important;
+    padding: 1px !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .zoom-bar button {
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .zoom-bar .zoom-pct {
+    min-width: 50px !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .strip-sep {
+    flex: 0 0 1px !important;
+    height: 24px !important;
+    margin: 9px 3px !important;
+  }
+  html[data-gav-ui="clean"] body .status {
+    left: 10px !important;
+    top: 120px !important;
+    max-width: calc(100% - 20px) !important;
+  }
+  html[data-gav-ui="clean"] body #floatPanel {
+    left: 10px !important;
+    right: 10px !important;
+    max-height: calc(100vh - 190px) !important;
+  }
+  html[data-gav-ui="clean"] body .playbar {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    scrollbar-width: none !important;
+    touch-action: pan-x;
+  }
+  html[data-gav-ui="clean"] body .playbar::-webkit-scrollbar {
+    display: none;
+  }
+  html[data-gav-ui="clean"] body .playbar .pb-speed {
+    width: 56px !important;
+    min-width: 56px !important;
+  }
+}
