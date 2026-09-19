@@ -546,6 +546,8 @@
   ];
   let gl = null, renderer = null;
   let characters = [];
+  let webThumbs = {};
+  const THUMB_PREFIX = '../../thumbs/';
   let curEntry = null;
   let layers = [];
   let groupOX = 0, groupOY = 0, globalZoom = 1;
@@ -601,6 +603,10 @@
       };
       grid.appendChild(card);
       const ph = card.querySelector('.ph');
+      const thumbPath = webThumbs['majsoul:' + c.id];
+      if (thumbPath) {
+        ph.innerHTML = '<img src="' + THUMB_PREFIX + thumbPath + '" alt="" loading="lazy" decoding="async">';
+      }
     }
     $('#gridSub').textContent = arr.length + ' 个条目 · 分层组已拼合';
     // 异步加载缓存的缩略图 (从主画布截取, 用户浏览过的角色自动积累)
@@ -1628,7 +1634,11 @@
   // ---------- 角色数据 ----------
   setupDesktopBridge();
   K.initSearchPalette();
-  fetch('../characters.json').then(r => r.json()).then(data => {
+  Promise.all([
+    fetch('../../thumbs/index.json').then(r => r.ok ? r.json() : { items: {} }).catch(() => ({ items: {} })),
+    fetch('../characters.json').then(r => r.json()),
+  ]).then(([thumbData, data]) => {
+    webThumbs = thumbData.items || {};
     const all = data.characters || [];
     const compositeLayerIds = new Set(
       all.filter(c => c.composite).flatMap(c => c.layers.map(l => l.id))

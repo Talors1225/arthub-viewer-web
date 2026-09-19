@@ -468,6 +468,8 @@
   }
 
   let chars = [];
+  let webThumbs = {};
+  const THUMB_PREFIX = '../../thumbs/';
   let cur = null;
   let mgl = null, renderer = null;
   let cut = null;
@@ -856,10 +858,13 @@
       e.target.classList.toggle('on', on);
       e.target.textContent = on ? '★' : '☆';
     };
-    grid.appendChild(card);
     const ph = card.querySelector('.ph');
-    gridObserver.observe(ph);
-    ph.dataset.tid = c.id;
+    const variant = String(c.cutscenes?.[0]?.variant || '0');
+    const thumbPath = webThumbs[routeSource + ':' + c.id + ':' + variant];
+    if (thumbPath) {
+      ph.innerHTML = '<img src="' + THUMB_PREFIX + thumbPath + '" alt="" loading="lazy" decoding="async">';
+    }
+    grid.appendChild(card);
   }
 
   function renderMore(starred) {
@@ -869,7 +874,7 @@
     for (let i = gridShown; i < end; i++) buildCard(grid, starred, gridArr[i]);
     gridShown = end;
     $('#gridSub').textContent = gridShown >= gridArr.length
-      ? gridArr.length + ' 个资源 · 点击打开 · 缩略图自动生成'
+      ? gridArr.length + ' 个资源 · 点击打开完整资源'
       : '已显示 ' + gridShown + ' / ' + gridArr.length + ' · 滚动继续加载';
   }
 
@@ -1964,6 +1969,13 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
+    try {
+      const tr = await fetch('../../thumbs/index.json');
+      if (tr.ok) {
+        const td = await tr.json();
+        webThumbs = td.items || {};
+      }
+    } catch {}
     const r = await fetch('../' + indexFile);
     if (!r.ok) throw new Error(indexFile + ' ' + r.status);
     const data = await r.json();

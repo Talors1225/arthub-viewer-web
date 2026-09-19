@@ -412,7 +412,7 @@
   let view = [];           // file 模式: 文件项; seq 模式: 组项
   let singles = [];        // seq 模式下的单图列表(灯箱导航用)
   let shown = 0;
-  const PAGE = 120;
+  const PAGE = 32;
   let selectSeq = 0; // 防止快速切换分类时的懒加载竞态
 
   // ---------- 工具 ----------
@@ -725,7 +725,7 @@
     cell.style.setProperty('--i', Math.min(i % PAGE, 14));
     const url = fileUrl(lib, file.rel);
     if (file.vid) {
-      cell.innerHTML = '<video src="' + url + '" muted preload="metadata"></video><span class="badge">▶ 视频</span>';
+      cell.innerHTML = '<video src="' + url + '" muted preload="none"></video><span class="badge">▶ 视频</span>';
     } else {
       cell.innerHTML = '<img loading="lazy" src="' + url + '">';
     }
@@ -746,7 +746,7 @@
     const show = g.frames[Math.floor(g.frames.length / 2)];
     const url = fileUrl(curLib, show.rel);
     if (show.vid) {
-      cell.innerHTML = '<video src="' + url + '" muted preload="metadata"></video><span class="badge">▶ 视频</span>';
+      cell.innerHTML = '<video src="' + url + '" muted preload="none"></video><span class="badge">▶ 视频</span>';
     } else {
       cell.innerHTML = '<img loading="lazy" src="' + url + '">';
       if (isSeq) {
