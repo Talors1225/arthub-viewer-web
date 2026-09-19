@@ -4,11 +4,11 @@
 
 源码仓库：[GitHub](https://github.com/Talors1225/arthub-viewer-web)
 
-这是公开的网页查看器代码。网页代码和小型索引放在 GitHub，大型 Spine、贴图和静态图库从腾讯云 COS 按需读取。
+这是公开的网页查看器代码。网页代码和小型索引放在 GitHub，大型 Spine 和贴图从腾讯云 COS 按需读取。
 
 ## 直接使用
 
-打开上面的在线地址，选择棕色尘埃2、NIKKE、雀魂麻将或图库即可查看。
+打开上面的在线地址，选择 NIKKE 即可查看；棕色尘埃2入口保留，后续继续完善。
 
 如果页面能打开但资源为空，通常是 COS 资源还没有上传完成，或者 COS 还没有配置跨域读取。
 
@@ -16,8 +16,7 @@
 
 - 棕色尘埃2 Spine 动态查看器
 - NIKKE 普通版 Spine 动态查看器
-- 雀魂麻将 Spine / Live2D 查看器
-- 棕色尘埃2、妮姬、雀魂麻将静态图库
+- 暂不发布雀魂麻将和静态图库
 - 网页端不包含 BD2 Mod 或 NIKKE Mod
 
 ## COS 目录
@@ -28,11 +27,6 @@ COS 中需要保持以下远程目录，目录名和层级不能改变：
 | --- | --- |
 | `bd2/spine/` | 棕色尘埃2动态资源 |
 | `nikki/spine_carved/` | NIKKE普通版动态资源 |
-| `majsoul/assets_raw/` | 雀魂动态资源 |
-| `majsoul/web_illustrations/` | 雀魂网页插图 |
-| `gallery/bd2/` | 棕色尘埃2图库 |
-| `gallery/nikke/` | 妮姬图库 |
-| `gallery/majsoul/` | 雀魂麻将图库 |
 
 COS 跨域建议设置为：
 

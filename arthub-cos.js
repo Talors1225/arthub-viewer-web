@@ -7,8 +7,6 @@
 
   const ASSET_MARKERS = [
     '/bd2/spine/', '/nikki/spine/', '/nikki/spine_carved/',
-    '/majsoul/assets_raw/', '/majsoul/web_illustrations/',
-    '/gallery/bd2/', '/gallery/nikke/', '/gallery/majsoul/',
   ];
 
   const PATH_REWRITES = {
@@ -79,25 +77,5 @@
     }
   }
 
-  // gallery_meta.json remains on the web site with the small indexes. Rewrite
-  // only its mount URLs so the existing gallery page can stay unchanged.
-  const fetchWithRewrite = window.fetch;
-  window.fetch = (input, init) => fetchWithRewrite(input, init).then(async response => {
-    let url = '';
-    try { url = new URL(input instanceof Request ? input.url : String(input), location.href).pathname; } catch {}
-    if (!/\/gallery\/(?:index\/)?gallery_meta\.json$/i.test(url) || !response.ok) return response;
-    try {
-      const data = await response.clone().json();
-      for (const lib of data.libraries || []) {
-        if (!lib || typeof lib.mount !== 'string' || !lib.mount.startsWith('/gallery/')) continue;
-        lib.mount = root + lib.mount;
-      }
-      const headers = new Headers(response.headers);
-      headers.delete('content-length');
-      headers.delete('content-encoding');
-      headers.set('content-type', 'application/json; charset=utf-8');
-      return new Response(JSON.stringify(data), { status: response.status, statusText: response.statusText, headers });
-    } catch { return response; }
-  });
 })();
 

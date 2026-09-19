@@ -1641,7 +1641,7 @@
       const actions = document.createElement('div');
       actions.className = 'kit-actions';
       const homePath = (() => {
-        const routeNames = new Set(['bd2', 'nikki', 'majsoul', 'gallery']);
+        const routeNames = new Set(['bd2', 'nikki']);
         const parts = location.pathname.split('/').filter(Boolean);
         const routeIndex = parts.findIndex((part) => routeNames.has(part));
         return routeIndex > 0 ? '/' + parts.slice(0, routeIndex).join('/') + '/' : '/';
