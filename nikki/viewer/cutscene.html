@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css">
+<link rel="stylesheet" href="../../common/kit.css?v=20260920-ui3">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -608,6 +608,12 @@
   function displayType(c) {
     const explicit = String(c && c.type || '').toLowerCase();
     if (routeSource !== 'nikki') return explicit || 'unknown';
+    // The shared asset catalog supplies the reliable semantic type for
+    // directory-derived entries.  Use it before the generic catalog rule so
+    // skill/battle/lobby assets do not appear under "其它" merely because
+    // their source entry came from the catalog.
+    const catalogType = String(c && c.resourceType || '').toLowerCase();
+    if (catalogType === 'skill' || catalogType === 'battle' || catalogType === 'lobby') return catalogType;
     // NIKKE 的目录提取素材统一归入“其它”，只有明确标记的技能、战斗和立绘保留原分类。
     // common/kit.js 会先给目录条目补上分类，因此这里同时识别目录来源。
     const catalogLike = explicit === 'catalog' || /NIKKE core catalog|目录重组提取/i.test(JSON.stringify(c || ''));
