@@ -611,7 +611,7 @@
     // asset-catalog.json carries the curated display category for NIKKE
     // entries, including catalog-derived resources whose raw type is unknown.
     const catalogType = String(c && c.resourceType || '').toLowerCase();
-    if (catalogType === 'cutscene' || catalogType === 'skill' || catalogType === 'battle' || catalogType === 'lobby' || catalogType === 'idle') return catalogType;
+    if (catalogType === 'skill' || catalogType === 'battle' || catalogType === 'lobby') return catalogType;
     // NIKKE 的目录提取素材统一归入“其它”，只有明确标记的技能、战斗和立绘保留原分类。
     // common/kit.js 会先给目录条目补上分类，因此这里同时识别目录来源。
     const catalogLike = explicit === 'catalog' || /NIKKE core catalog|目录重组提取/i.test(JSON.stringify(c || ''));
