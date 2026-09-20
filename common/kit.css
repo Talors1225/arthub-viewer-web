@@ -1480,25 +1480,26 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
     overflow: hidden;
   }
   html[data-gav-ui="clean"] body #gridView .grid-head > .grid-sponsor {
-    order: 2;
+    order: 4;
     display: inline-flex !important;
-    flex: 0 0 30px !important;
-    width: 30px !important;
-    min-width: 30px !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
     height: 30px !important;
     box-sizing: border-box;
     align-items: center;
     justify-content: center;
-    gap: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    gap: 3px !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    padding: 0 8px !important;
     border-radius: 9px !important;
     font-size: 0 !important;
     line-height: 1;
   }
   html[data-gav-ui="clean"] body #gridView .grid-head > .grid-sponsor::before {
-    content: '\2665';
-    font-size: 15px;
+    content: '\2665  \7231\53d1\7535';
+    font-size: 11px;
     line-height: 1;
   }
   html[data-gav-ui="clean"] body #gridView .grid-head > .grid-title {
@@ -1523,7 +1524,7 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
     font-size: 10px !important;
   }
   html[data-gav-ui="clean"] body #gridView .grid-head > .kit-grid-search {
-    order: 4;
+    order: 5;
     flex: 0 0 34px !important;
     width: 34px !important;
     min-width: 34px !important;
@@ -1532,20 +1533,20 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
   html[data-gav-ui="clean"] body #gridView .grid-head > .kit-grid-search:not(.is-collapsed) {
     flex: 1 1 100% !important;
     width: auto !important;
-    order: 5;
+    order: 6;
   }
   html[data-gav-ui="clean"] body #gridView .grid-head > #btnTheme {
-    order: 5;
+    order: 6;
     flex: 0 0 34px;
   }
   html[data-gav-ui="clean"] body #gridView .grid-head > #gridClose {
-    order: 6;
+    order: 7;
     min-height: 30px !important;
     padding: 5px 7px !important;
     font-size: 10px !important;
   }
   html[data-gav-ui="clean"] body #gridView .grid-head > #filterChips {
-    order: 7;
+    order: 8;
     flex: 1 0 100% !important;
     width: 100%;
     max-width: 100%;
@@ -1564,4 +1565,44 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
     width: min(790px, calc(100vw - 62px));
   }
   .playbar.collapsed { bottom: 10px !important; }
+}
+
+/* Mobile portrait viewer toolbar: keep the navigation rail above the stage and move
+   zoom/animation controls into a compact vertical dock above the playback bar. */
+@media (max-width: 720px) and (orientation: portrait) {
+  html[data-gav-ui="clean"] body .tool-strip {
+    left: auto !important;
+    right: 10px !important;
+    top: auto !important;
+    bottom: calc(58px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100vh - 150px) !important;
+    box-sizing: border-box !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 3px !important;
+    padding: 4px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+    touch-action: pan-y !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip::-webkit-scrollbar { display: none; }
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+  html[data-gav-ui="clean"] body .tool-strip .strip-sep {
+    flex: 0 0 1px !important;
+    width: 20px !important;
+    height: 1px !important;
+    margin: 3px auto !important;
+  }
+  html[data-gav-ui="clean"] body .status {
+    top: 60px !important;
+    max-width: calc(100% - 20px) !important;
+  }
 }
