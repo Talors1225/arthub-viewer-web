@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-19T13:44:08.850Z",
+  "generatedAt": "2026-09-20T10:26:17.924Z",
   "bucketRoot": "https://pub-bdd986c6ec274f53b01df62ac49e02e2.r2.dev",
   "note": "网页代码和小索引在 web-cos/ 中；以下大目录需上传到 COS，并保持远程前缀不变。",
   "indexesKeptOnWebsite": true,
@@ -33,7 +33,7 @@
           "local": "data/bd2/spine",
           "remote": "bd2/spine/",
           "exists": true,
-          "files": 3488
+          "files": 3558
         }
       ]
     },

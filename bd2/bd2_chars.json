@@ -114,7 +114,7 @@
    "cutscenes": [
     {
      "variant": "0",
-     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char000303/",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char000303/char000303/",
      "skel": "cutscene_char000303.skel.bytes",
      "atlas": "cutscene_char000303.atlas.txt"
     }
@@ -369,6 +369,18 @@
      "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char001006/",
      "skel": "cutscene_char001006.skel.bytes",
      "atlas": "cutscene_char001006.atlas.txt"
+    }
+   ]
+  },
+  {
+   "id": "001092",
+   "name": "001092",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char001092/",
+     "skel": "cutscene_char001092.skel.bytes",
+     "atlas": "cutscene_char001092.atlas.txt"
     }
    ]
   },
@@ -681,6 +693,12 @@
      "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char003604/",
      "skel": "cutscene_char003604.skel.bytes",
      "atlas": "cutscene_char003604.atlas.txt"
+    },
+    {
+     "variant": "c",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char003604_c/",
+     "skel": "cutscene_char003604_c.skel.bytes",
+     "atlas": "cutscene_char003604_c.atlas.txt"
     }
    ]
   },
@@ -717,6 +735,18 @@
      "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char003703/",
      "skel": "cutscene_char003703.skel.bytes",
      "atlas": "cutscene_char003703.atlas.txt"
+    }
+   ]
+  },
+  {
+   "id": "003793",
+   "name": "003793",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char003793/",
+     "skel": "cutscene_char003793.skel.bytes",
+     "atlas": "cutscene_char003793.atlas.txt"
     }
    ]
   },
@@ -879,6 +909,12 @@
      "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char004201_1/",
      "skel": "cutscene_char004201.skel.bytes",
      "atlas": "cutscene_char004201.atlas.txt"
+    },
+    {
+     "variant": "c",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char004201_c/",
+     "skel": "cutscene_char004201_c.skel.bytes",
+     "atlas": "cutscene_char004201_c.atlas.txt"
     }
    ]
   },
@@ -1063,6 +1099,42 @@
    ]
   },
   {
+   "id": "021101",
+   "name": "021101",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char021101/",
+     "skel": "cutscene_char021101.skel.bytes",
+     "atlas": "cutscene_char021101.atlas.txt"
+    }
+   ]
+  },
+  {
+   "id": "021201",
+   "name": "021201",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char021201/",
+     "skel": "cutscene_char021201.skel.bytes",
+     "atlas": "cutscene_char021201.atlas.txt"
+    }
+   ]
+  },
+  {
+   "id": "021291",
+   "name": "021291",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char021291/",
+     "skel": "cutscene_char021291.skel.bytes",
+     "atlas": "cutscene_char021291.atlas.txt"
+    }
+   ]
+  },
+  {
    "id": "060401",
    "name": "060401",
    "cutscenes": [
@@ -1243,6 +1315,18 @@
    ]
   },
   {
+   "id": "061003",
+   "name": "061003",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char061003/",
+     "skel": "cutscene_char061003.skel.bytes",
+     "atlas": "cutscene_char061003.atlas.txt"
+    }
+   ]
+  },
+  {
    "id": "061092",
    "name": "061092",
    "cutscenes": [
@@ -1327,6 +1411,18 @@
    ]
   },
   {
+   "id": "061392",
+   "name": "061392",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char061392/",
+     "skel": "cutscene_char061392.skel.bytes",
+     "atlas": "cutscene_char061392.atlas.txt"
+    }
+   ]
+  },
+  {
    "id": "061402",
    "name": "061402",
    "cutscenes": [
@@ -1383,6 +1479,18 @@
      "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char065103/",
      "skel": "cutscene_char065103.skel.bytes",
      "atlas": "cutscene_char065103.atlas.txt"
+    }
+   ]
+  },
+  {
+   "id": "065193",
+   "name": "065193",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char065193/",
+     "skel": "cutscene_char065193.skel.bytes",
+     "atlas": "cutscene_char065193.atlas.txt"
     }
    ]
   },
@@ -1491,6 +1599,18 @@
      "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char066906/",
      "skel": "cutscene_char066906.skel.bytes",
      "atlas": "cutscene_char066906.atlas.txt"
+    }
+   ]
+  },
+  {
+   "id": "066907",
+   "name": "066907",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char066907/",
+     "skel": "cutscene_char066907.skel.bytes",
+     "atlas": "cutscene_char066907.atlas.txt"
     }
    ]
   },
@@ -1809,6 +1929,18 @@
      "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char067803_1/",
      "skel": "cutscene_char067803_1.skel.bytes",
      "atlas": "cutscene_char067803_1.atlas.txt"
+    }
+   ]
+  },
+  {
+   "id": "067901",
+   "name": "067901",
+   "cutscenes": [
+    {
+     "variant": "0",
+     "dir": "spine/Assets/AddressableResources/BundleCommon/SkeletonData/cutscene_char067901/",
+     "skel": "cutscene_char067901.skel.bytes",
+     "atlas": "cutscene_char067901.atlas.txt"
     }
    ]
   },
