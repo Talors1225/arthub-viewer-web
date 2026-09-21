@@ -1,0 +1,3238 @@
+{
+  "schemaVersion": "character-name-map/v1",
+  "game": "bd2",
+  "generatedAt": "2026-09-21T03:46:27.184Z",
+  "policy": "Resource IDs and evidence paths are retained; names only affect the viewer display layer.",
+  "sources": [
+    {
+      "type": "asset-path-evidence",
+      "repository": "https://github.com/Zormolo/Brown-Dust-2-Assets",
+      "commit": "5683545973d499c2cecc71ef0229980eae02d8a6",
+      "evidenceBaseUrl": "https://github.com/Zormolo/Brown-Dust-2-Assets/tree/5683545973d499c2cecc71ef0229980eae02d8a6/assets/spine/character"
+    }
+  ],
+  "coverage": {
+    "evidenceIds": 201,
+    "localIndexIds": 167,
+    "matchedLocalIndexIds": 167,
+    "unmatchedLocalIndexIds": []
+  },
+  "entries": {
+    "100101": {
+      "portraitName": "char100101",
+      "characterNameEn": "Gynt",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Gynt/Lugo_Hunter/char100101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Gynt/Lugo_Hunter/char100101.atlas",
+        "assets/spine/character/Gynt/Lugo_Hunter/char100101.png",
+        "assets/spine/character/Gynt/Lugo_Hunter/char100101.skel"
+      ],
+      "costumes": [
+        "Lugo Hunter"
+      ]
+    },
+    "100201": {
+      "portraitName": "char100201",
+      "characterNameEn": "Fred",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Fred/Lugo_Defense_Force/char100201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Fred/Lugo_Defense_Force/char100201.atlas",
+        "assets/spine/character/Fred/Lugo_Defense_Force/char100201.png",
+        "assets/spine/character/Fred/Lugo_Defense_Force/char100201.skel"
+      ],
+      "costumes": [
+        "Lugo Defense Force"
+      ]
+    },
+    "100301": {
+      "portraitName": "char100301",
+      "characterNameEn": "Lisianne",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lisianne/Wandering_Priest/char100301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lisianne/Wandering_Priest/char100301.atlas",
+        "assets/spine/character/Lisianne/Wandering_Priest/char100301.png",
+        "assets/spine/character/Lisianne/Wandering_Priest/char100301.skel"
+      ],
+      "costumes": [
+        "Wandering Priest"
+      ]
+    },
+    "100401": {
+      "portraitName": "char100401",
+      "characterNameEn": "Remnunt",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Remnunt/Combat_Doctor/char100401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Remnunt/Combat_Doctor/char100401.atlas",
+        "assets/spine/character/Remnunt/Combat_Doctor/char100401.png",
+        "assets/spine/character/Remnunt/Combat_Doctor/char100401.skel"
+      ],
+      "costumes": [
+        "Combat Doctor"
+      ]
+    },
+    "100501": {
+      "portraitName": "char100501",
+      "characterNameEn": "Wiggle",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Wiggle/Bomb_Fanatic/char100501.skel",
+      "evidencePaths": [
+        "assets/spine/character/Wiggle/Bomb_Fanatic/char100501.atlas",
+        "assets/spine/character/Wiggle/Bomb_Fanatic/char100501.png",
+        "assets/spine/character/Wiggle/Bomb_Fanatic/char100501.skel"
+      ],
+      "costumes": [
+        "Bomb Fanatic"
+      ]
+    },
+    "100502": {
+      "portraitName": "char100502",
+      "characterNameEn": "Wiggle",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Wiggle/Bomb_in_the_Hoodie/char100502.skel",
+      "evidencePaths": [
+        "assets/spine/character/Wiggle/Bomb_in_the_Hoodie/char100502.atlas",
+        "assets/spine/character/Wiggle/Bomb_in_the_Hoodie/char100502.png",
+        "assets/spine/character/Wiggle/Bomb_in_the_Hoodie/char100502.skel"
+      ],
+      "costumes": [
+        "Bomb in the Hoodie"
+      ]
+    },
+    "100601": {
+      "portraitName": "char100601",
+      "characterNameEn": "Lucrezia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lucrezia/Seductive_Wings/char100601.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lucrezia/Seductive_Wings/char100601.atlas",
+        "assets/spine/character/Lucrezia/Seductive_Wings/char100601.png",
+        "assets/spine/character/Lucrezia/Seductive_Wings/char100601.skel"
+      ],
+      "costumes": [
+        "Seductive Wings"
+      ]
+    },
+    "100801": {
+      "portraitName": "char100801",
+      "characterNameEn": "Bernie",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Bernie/Righteous_Raider_Girl/char100801.skel",
+      "evidencePaths": [
+        "assets/spine/character/Bernie/Righteous_Raider_Girl/char100801.atlas",
+        "assets/spine/character/Bernie/Righteous_Raider_Girl/char100801.png",
+        "assets/spine/character/Bernie/Righteous_Raider_Girl/char100801.skel"
+      ],
+      "costumes": [
+        "Righteous Raider Girl"
+      ]
+    },
+    "101101": {
+      "portraitName": "char101101",
+      "characterNameEn": "Seir",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Seir/Demon's_Daughter/char101101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Seir/Demon's_Daughter/char101101.atlas",
+        "assets/spine/character/Seir/Demon's_Daughter/char101101.png",
+        "assets/spine/character/Seir/Demon's_Daughter/char101101.skel"
+      ],
+      "costumes": [
+        "Demon's Daughter"
+      ]
+    },
+    "101102": {
+      "portraitName": "char101102",
+      "characterNameEn": "Seir",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Seir/B-Rank_Idol/char101102.skel",
+      "evidencePaths": [
+        "assets/spine/character/Seir/B-Rank_Idol/char101102.atlas",
+        "assets/spine/character/Seir/B-Rank_Idol/char101102.png",
+        "assets/spine/character/Seir/B-Rank_Idol/char101102.skel"
+      ],
+      "costumes": [
+        "B-Rank Idol"
+      ]
+    },
+    "101103": {
+      "portraitName": "char101103",
+      "characterNameEn": "Seir",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Seir/New_Hire/char101103.skel",
+      "evidencePaths": [
+        "assets/spine/character/Seir/New_Hire/char101103.atlas",
+        "assets/spine/character/Seir/New_Hire/char101103.png",
+        "assets/spine/character/Seir/New_Hire/char101103.skel"
+      ],
+      "costumes": [
+        "New Hire"
+      ]
+    },
+    "101201": {
+      "portraitName": "char101201",
+      "characterNameEn": "Jayden",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Jayden/Beautiful_Girl_Devotee/char101201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Jayden/Beautiful_Girl_Devotee/char101201.atlas",
+        "assets/spine/character/Jayden/Beautiful_Girl_Devotee/char101201.png",
+        "assets/spine/character/Jayden/Beautiful_Girl_Devotee/char101201.skel"
+      ],
+      "costumes": [
+        "Beautiful Girl Devotee"
+      ]
+    },
+    "101202": {
+      "portraitName": "char101202",
+      "characterNameEn": "Jayden",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Jayden/Manga_Research_Club/char101202.skel",
+      "evidencePaths": [
+        "assets/spine/character/Jayden/Manga_Research_Club/char101202.atlas",
+        "assets/spine/character/Jayden/Manga_Research_Club/char101202.png",
+        "assets/spine/character/Jayden/Manga_Research_Club/char101202.skel"
+      ],
+      "costumes": [
+        "Manga Research Club"
+      ]
+    },
+    "101301": {
+      "portraitName": "char101301",
+      "characterNameEn": "Emma",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Emma/Haggard_Delinquent/char101301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Emma/Haggard_Delinquent/char101301.atlas",
+        "assets/spine/character/Emma/Haggard_Delinquent/char101301.png",
+        "assets/spine/character/Emma/Haggard_Delinquent/char101301.skel"
+      ],
+      "costumes": [
+        "Haggard Delinquent"
+      ]
+    },
+    "101302": {
+      "portraitName": "char101302",
+      "characterNameEn": "Emma",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Emma/School_Queen/char101302.skel",
+      "evidencePaths": [
+        "assets/spine/character/Emma/School_Queen/char101302.atlas",
+        "assets/spine/character/Emma/School_Queen/char101302.png",
+        "assets/spine/character/Emma/School_Queen/char101302.skel"
+      ],
+      "costumes": [
+        "School Queen"
+      ]
+    },
+    "101401": {
+      "portraitName": "char101401",
+      "characterNameEn": "Samay",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Samay/Kind_Liberator/char101401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Samay/Kind_Liberator/char101401.atlas",
+        "assets/spine/character/Samay/Kind_Liberator/char101401.png",
+        "assets/spine/character/Samay/Kind_Liberator/char101401.skel"
+      ],
+      "costumes": [
+        "Kind Liberator"
+      ]
+    },
+    "101402": {
+      "portraitName": "char101402",
+      "characterNameEn": "Samay",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Samay/Kind_Student/char101402.skel",
+      "evidencePaths": [
+        "assets/spine/character/Samay/Kind_Student/char101402.atlas",
+        "assets/spine/character/Samay/Kind_Student/char101402.png",
+        "assets/spine/character/Samay/Kind_Student/char101402.skel"
+      ],
+      "costumes": [
+        "Kind Student"
+      ]
+    },
+    "101501": {
+      "portraitName": "char101501",
+      "characterNameEn": "Kry",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Kry/Liberated_Marauder/char101501.skel",
+      "evidencePaths": [
+        "assets/spine/character/Kry/Liberated_Marauder/char101501.atlas",
+        "assets/spine/character/Kry/Liberated_Marauder/char101501.png",
+        "assets/spine/character/Kry/Liberated_Marauder/char101501.skel"
+      ],
+      "costumes": [
+        "Liberated Marauder"
+      ]
+    },
+    "101502": {
+      "portraitName": "char101502",
+      "characterNameEn": "Kry",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Kry/Violent_Student/char101502.skel",
+      "evidencePaths": [
+        "assets/spine/character/Kry/Violent_Student/char101502.atlas",
+        "assets/spine/character/Kry/Violent_Student/char101502.png",
+        "assets/spine/character/Kry/Violent_Student/char101502.skel"
+      ],
+      "costumes": [
+        "Violent Student"
+      ]
+    },
+    "103201": {
+      "portraitName": "char103201",
+      "characterNameEn": "Carlson",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Carlson/The_Mercenary_Knight/char103201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Carlson/The_Mercenary_Knight/char103201.atlas",
+        "assets/spine/character/Carlson/The_Mercenary_Knight/char103201.png",
+        "assets/spine/character/Carlson/The_Mercenary_Knight/char103201.skel"
+      ],
+      "costumes": [
+        "The Mercenary Knight"
+      ]
+    },
+    "103301": {
+      "portraitName": "char103301",
+      "characterNameEn": "Lydia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lydia/Apprentice_Spearman/char103301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lydia/Apprentice_Spearman/char103301.atlas",
+        "assets/spine/character/Lydia/Apprentice_Spearman/char103301.png",
+        "assets/spine/character/Lydia/Apprentice_Spearman/char103301.skel"
+      ],
+      "costumes": [
+        "Apprentice Spearman"
+      ]
+    },
+    "103401": {
+      "portraitName": "char103401",
+      "characterNameEn": "Rigenette",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rigenette/Little_Hunter/char103401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rigenette/Little_Hunter/char103401.atlas",
+        "assets/spine/character/Rigenette/Little_Hunter/char103401.png",
+        "assets/spine/character/Rigenette/Little_Hunter/char103401.skel"
+      ],
+      "costumes": [
+        "Little Hunter"
+      ]
+    },
+    "103501": {
+      "portraitName": "char103501",
+      "characterNameEn": "Beatrice",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Beatrice/The_Mighty_Warrior_of_the_Tribe/char103501.skel",
+      "evidencePaths": [
+        "assets/spine/character/Beatrice/The_Mighty_Warrior_of_the_Tribe/char103501.atlas",
+        "assets/spine/character/Beatrice/The_Mighty_Warrior_of_the_Tribe/char103501.png",
+        "assets/spine/character/Beatrice/The_Mighty_Warrior_of_the_Tribe/char103501.skel"
+      ],
+      "costumes": [
+        "The Mighty Warrior of the Tribe"
+      ]
+    },
+    "103601": {
+      "portraitName": "char103601",
+      "characterNameEn": "Maria",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Maria/Archmage/char103601.skel",
+      "evidencePaths": [
+        "assets/spine/character/Maria/Archmage/char103601.atlas",
+        "assets/spine/character/Maria/Archmage/char103601.png",
+        "assets/spine/character/Maria/Archmage/char103601.skel"
+      ],
+      "costumes": [
+        "Archmage"
+      ]
+    },
+    "103701": {
+      "portraitName": "char103701",
+      "characterNameEn": "Arines",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Arines/Priest_of_Vitality/char103701.skel",
+      "evidencePaths": [
+        "assets/spine/character/Arines/Priest_of_Vitality/char103701.atlas",
+        "assets/spine/character/Arines/Priest_of_Vitality/char103701.png",
+        "assets/spine/character/Arines/Priest_of_Vitality/char103701.skel"
+      ],
+      "costumes": [
+        "Priest of Vitality"
+      ]
+    },
+    "000101": {
+      "portraitName": "char000101",
+      "characterNameEn": "Lathel",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lathel/Herb_Tracker/char000101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lathel/Herb_Tracker/char000101.atlas",
+        "assets/spine/character/Lathel/Herb_Tracker/char000101.png",
+        "assets/spine/character/Lathel/Herb_Tracker/char000101.skel"
+      ],
+      "costumes": [
+        "Herb Tracker"
+      ]
+    },
+    "000102": {
+      "portraitName": "char000102",
+      "characterNameEn": "Lathel",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lathel/Lonely_Survivor/char000102.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lathel/Lonely_Survivor/char000102.atlas",
+        "assets/spine/character/Lathel/Lonely_Survivor/char000102.png",
+        "assets/spine/character/Lathel/Lonely_Survivor/char000102.skel"
+      ],
+      "costumes": [
+        "Lonely Survivor"
+      ]
+    },
+    "000103": {
+      "portraitName": "char000103",
+      "characterNameEn": "Lathel",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lathel/Homunculus/char000103.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lathel/Homunculus/char000103.atlas",
+        "assets/spine/character/Lathel/Homunculus/char000103.png",
+        "assets/spine/character/Lathel/Homunculus/char000103.skel"
+      ],
+      "costumes": [
+        "Homunculus"
+      ]
+    },
+    "000104": {
+      "portraitName": "char000104",
+      "characterNameEn": "Lathel",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lathel/Dark_Knight/char000104.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lathel/Dark_Knight/char000104.atlas",
+        "assets/spine/character/Lathel/Dark_Knight/char000104.png",
+        "assets/spine/character/Lathel/Dark_Knight/char000104.skel"
+      ],
+      "costumes": [
+        "Dark Knight"
+      ]
+    },
+    "000105": {
+      "portraitName": "char000105",
+      "characterNameEn": "Lathel",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lathel/Promise_of_Vengeance/char000105.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lathel/Promise_of_Vengeance/char000105.atlas",
+        "assets/spine/character/Lathel/Promise_of_Vengeance/char000105.png",
+        "assets/spine/character/Lathel/Promise_of_Vengeance/char000105.skel"
+      ],
+      "costumes": [
+        "Promise of Vengeance"
+      ]
+    },
+    "000106": {
+      "portraitName": "char000106",
+      "characterNameEn": "Lathel",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lathel/Pool_Party/char000106.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lathel/Pool_Party/char000106.atlas",
+        "assets/spine/character/Lathel/Pool_Party/char000106.png",
+        "assets/spine/character/Lathel/Pool_Party/char000106.skel"
+      ],
+      "costumes": [
+        "Pool Party"
+      ]
+    },
+    "000201": {
+      "portraitName": "char000201",
+      "characterNameEn": "Justia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Justia/Knight_of_Blood/char000201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Justia/Knight_of_Blood/char000201.atlas",
+        "assets/spine/character/Justia/Knight_of_Blood/char000201.png",
+        "assets/spine/character/Justia/Knight_of_Blood/char000201.skel"
+      ],
+      "costumes": [
+        "Knight of Blood"
+      ]
+    },
+    "000202": {
+      "portraitName": "char000202",
+      "characterNameEn": "Justia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Justia/White_Reaper/char000202.skel",
+      "evidencePaths": [
+        "assets/spine/character/Justia/White_Reaper/char000202.atlas",
+        "assets/spine/character/Justia/White_Reaper/char000202.png",
+        "assets/spine/character/Justia/White_Reaper/char000202.skel"
+      ],
+      "costumes": [
+        "White Reaper"
+      ]
+    },
+    "000203": {
+      "portraitName": "char000203",
+      "characterNameEn": "Justia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Justia/Blood_Glutton/char000203.skel",
+      "evidencePaths": [
+        "assets/spine/character/Justia/Blood_Glutton/char000203.atlas",
+        "assets/spine/character/Justia/Blood_Glutton/char000203.png",
+        "assets/spine/character/Justia/Blood_Glutton/char000203.skel"
+      ],
+      "costumes": [
+        "Blood Glutton"
+      ]
+    },
+    "000204": {
+      "portraitName": "char000204",
+      "characterNameEn": "Justia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Justia/Kendo_Club/char000204.skel",
+      "evidencePaths": [
+        "assets/spine/character/Justia/Kendo_Club/char000204.atlas",
+        "assets/spine/character/Justia/Kendo_Club/char000204.png",
+        "assets/spine/character/Justia/Kendo_Club/char000204.skel"
+      ],
+      "costumes": [
+        "Kendo Club"
+      ]
+    },
+    "000206": {
+      "portraitName": "char000206",
+      "characterNameEn": "Justia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Justia/Pool_Party/char000206.skel",
+      "evidencePaths": [
+        "assets/spine/character/Justia/Pool_Party/char000206.atlas",
+        "assets/spine/character/Justia/Pool_Party/char000206.png",
+        "assets/spine/character/Justia/Pool_Party/char000206.skel"
+      ],
+      "costumes": [
+        "Pool Party"
+      ]
+    },
+    "000296": {
+      "portraitName": "char000296",
+      "characterNameEn": "Justia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Justia/Hot_Summer_Dream/char000296.skel",
+      "evidencePaths": [
+        "assets/spine/character/Justia/Hot_Summer_Dream/char000296.atlas",
+        "assets/spine/character/Justia/Hot_Summer_Dream/char000296.png",
+        "assets/spine/character/Justia/Hot_Summer_Dream/char000296.skel"
+      ],
+      "costumes": [
+        "Hot Summer Dream"
+      ]
+    },
+    "000301": {
+      "portraitName": "char000301",
+      "characterNameEn": "Scheherazade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Scheherazade/The_Lapis_Witch/char000301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Scheherazade/The_Lapis_Witch/char000301.atlas",
+        "assets/spine/character/Scheherazade/The_Lapis_Witch/char000301.png",
+        "assets/spine/character/Scheherazade/The_Lapis_Witch/char000301.skel"
+      ],
+      "costumes": [
+        "The Lapis Witch"
+      ]
+    },
+    "000303": {
+      "portraitName": "char000303",
+      "characterNameEn": "Scheherazade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Scheherazade/The_Magic_School_Professor/char000303.skel",
+      "evidencePaths": [
+        "assets/spine/character/Scheherazade/The_Magic_School_Professor/char000303.atlas",
+        "assets/spine/character/Scheherazade/The_Magic_School_Professor/char000303.png",
+        "assets/spine/character/Scheherazade/The_Magic_School_Professor/char000303.skel"
+      ],
+      "costumes": [
+        "The Magic School Professor"
+      ]
+    },
+    "000304": {
+      "portraitName": "char000304",
+      "characterNameEn": "Scheherazade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Scheherazade/Code_Name_S/char000304.skel",
+      "evidencePaths": [
+        "assets/spine/character/Scheherazade/Code_Name_S/char000304.atlas",
+        "assets/spine/character/Scheherazade/Code_Name_S/char000304.png",
+        "assets/spine/character/Scheherazade/Code_Name_S/char000304.skel"
+      ],
+      "costumes": [
+        "Code Name S"
+      ]
+    },
+    "000306": {
+      "portraitName": "char000306",
+      "characterNameEn": "Scheherazade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Scheherazade/Pool_Party/char000306.skel",
+      "evidencePaths": [
+        "assets/spine/character/Scheherazade/Pool_Party/char000306.atlas",
+        "assets/spine/character/Scheherazade/Pool_Party/char000306.png",
+        "assets/spine/character/Scheherazade/Pool_Party/char000306.skel"
+      ],
+      "costumes": [
+        "Pool Party"
+      ]
+    },
+    "000396": {
+      "portraitName": "char000396",
+      "characterNameEn": "Scheherazade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Scheherazade/Deliberate_Ace/char000396.skel",
+      "evidencePaths": [
+        "assets/spine/character/Scheherazade/Deliberate_Ace/char000396.atlas",
+        "assets/spine/character/Scheherazade/Deliberate_Ace/char000396.png",
+        "assets/spine/character/Scheherazade/Deliberate_Ace/char000396.skel"
+      ],
+      "costumes": [
+        "Deliberate Ace"
+      ]
+    },
+    "000401": {
+      "portraitName": "char000401",
+      "characterNameEn": "Gray",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Gray/The_Sharpshooter_of_the_Mist/char000401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Gray/The_Sharpshooter_of_the_Mist/char000401.atlas",
+        "assets/spine/character/Gray/The_Sharpshooter_of_the_Mist/char000401.png",
+        "assets/spine/character/Gray/The_Sharpshooter_of_the_Mist/char000401.skel"
+      ],
+      "costumes": [
+        "The Sharpshooter of the Mist"
+      ]
+    },
+    "000402": {
+      "portraitName": "char000402",
+      "characterNameEn": "Gray",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Gray/B-Rank_Manager/char000402.skel",
+      "evidencePaths": [
+        "assets/spine/character/Gray/B-Rank_Manager/char000402.atlas",
+        "assets/spine/character/Gray/B-Rank_Manager/char000402.png",
+        "assets/spine/character/Gray/B-Rank_Manager/char000402.skel"
+      ],
+      "costumes": [
+        "B-Rank Manager"
+      ]
+    },
+    "000403": {
+      "portraitName": "char000403",
+      "characterNameEn": "Gray",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Gray/Vanguard/char000403.skel",
+      "evidencePaths": [
+        "assets/spine/character/Gray/Vanguard/char000403.atlas",
+        "assets/spine/character/Gray/Vanguard/char000403.png",
+        "assets/spine/character/Gray/Vanguard/char000403.skel"
+      ],
+      "costumes": [
+        "Vanguard"
+      ]
+    },
+    "000406": {
+      "portraitName": "char000406",
+      "characterNameEn": "Gray",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Gray/Pool_Party/char000406.skel",
+      "evidencePaths": [
+        "assets/spine/character/Gray/Pool_Party/char000406.atlas",
+        "assets/spine/character/Gray/Pool_Party/char000406.png",
+        "assets/spine/character/Gray/Pool_Party/char000406.skel"
+      ],
+      "costumes": [
+        "Pool Party"
+      ]
+    },
+    "000501": {
+      "portraitName": "char000501",
+      "characterNameEn": "Rou",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rou/White_Cat/char000501.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rou/White_Cat/char000501.atlas",
+        "assets/spine/character/Rou/White_Cat/char000501.png",
+        "assets/spine/character/Rou/White_Cat/char000501.skel"
+      ],
+      "costumes": [
+        "White Cat"
+      ]
+    },
+    "000502": {
+      "portraitName": "char000502",
+      "characterNameEn": "Rou",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rou/Red_Riding_Hood/char000502.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rou/Red_Riding_Hood/char000502.atlas",
+        "assets/spine/character/Rou/Red_Riding_Hood/char000502.png",
+        "assets/spine/character/Rou/Red_Riding_Hood/char000502.skel"
+      ],
+      "costumes": [
+        "Red Riding Hood"
+      ]
+    },
+    "000504": {
+      "portraitName": "char000504",
+      "characterNameEn": "Rou",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rou/Nature's_Claw/char000504.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rou/Nature's_Claw/char000504.atlas",
+        "assets/spine/character/Rou/Nature's_Claw/char000504.png",
+        "assets/spine/character/Rou/Nature's_Claw/char000504.skel"
+      ],
+      "costumes": [
+        "Nature's Claw"
+      ]
+    },
+    "000506": {
+      "portraitName": "char000506",
+      "characterNameEn": "Rou",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rou/Stray_Cat/char000506.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rou/Stray_Cat/char000506.atlas",
+        "assets/spine/character/Rou/Stray_Cat/char000506.png",
+        "assets/spine/character/Rou/Stray_Cat/char000506.skel"
+      ],
+      "costumes": [
+        "Stray Cat"
+      ]
+    },
+    "000601": {
+      "portraitName": "char000601",
+      "characterNameEn": "Olstein",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Olstein/The_Fiend_Scholar/char000601.skel",
+      "evidencePaths": [
+        "assets/spine/character/Olstein/The_Fiend_Scholar/char000601.atlas",
+        "assets/spine/character/Olstein/The_Fiend_Scholar/char000601.png",
+        "assets/spine/character/Olstein/The_Fiend_Scholar/char000601.skel"
+      ],
+      "costumes": [
+        "The Fiend Scholar"
+      ]
+    },
+    "000604": {
+      "portraitName": "char000604",
+      "characterNameEn": "Olstein",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Olstein/Sage_of_Blue_Clouds/char000604.skel",
+      "evidencePaths": [
+        "assets/spine/character/Olstein/Sage_of_Blue_Clouds/char000604.atlas",
+        "assets/spine/character/Olstein/Sage_of_Blue_Clouds/char000604.png",
+        "assets/spine/character/Olstein/Sage_of_Blue_Clouds/char000604.skel"
+      ],
+      "costumes": [
+        "Sage of Blue Clouds"
+      ]
+    },
+    "000701": {
+      "portraitName": "char000701",
+      "characterNameEn": "Eclipse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eclipse/Dimension_Witch/char000701.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eclipse/Dimension_Witch/char000701.atlas",
+        "assets/spine/character/Eclipse/Dimension_Witch/char000701.png",
+        "assets/spine/character/Eclipse/Dimension_Witch/char000701.skel"
+      ],
+      "costumes": [
+        "Dimension Witch"
+      ]
+    },
+    "000706": {
+      "portraitName": "char000706",
+      "characterNameEn": "Eclipse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eclipse/Nightmare_Bunny/char000706.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eclipse/Nightmare_Bunny/char000706.atlas",
+        "assets/spine/character/Eclipse/Nightmare_Bunny/char000706.png",
+        "assets/spine/character/Eclipse/Nightmare_Bunny/char000706.skel"
+      ],
+      "costumes": [
+        "Nightmare Bunny"
+      ]
+    },
+    "000707": {
+      "portraitName": "char000707",
+      "characterNameEn": "Eclipse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eclipse/Beach_Vacation/char000707.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eclipse/Beach_Vacation/char000707.atlas",
+        "assets/spine/character/Eclipse/Beach_Vacation/char000707.png",
+        "assets/spine/character/Eclipse/Beach_Vacation/char000707.skel"
+      ],
+      "costumes": [
+        "Beach Vacation"
+      ]
+    },
+    "000708": {
+      "portraitName": "char000708",
+      "characterNameEn": "Eclipse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eclipse/Dream_Bride/char000708.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eclipse/Dream_Bride/char000708.atlas",
+        "assets/spine/character/Eclipse/Dream_Bride/char000708.png",
+        "assets/spine/character/Eclipse/Dream_Bride/char000708.skel"
+      ],
+      "costumes": [
+        "Dream Bride"
+      ]
+    },
+    "000801": {
+      "portraitName": "char000801",
+      "characterNameEn": "Rubia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rubia/Thorn_of_the_Desert/char000801.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rubia/Thorn_of_the_Desert/char000801.atlas",
+        "assets/spine/character/Rubia/Thorn_of_the_Desert/char000801.png",
+        "assets/spine/character/Rubia/Thorn_of_the_Desert/char000801.skel"
+      ],
+      "costumes": [
+        "Thorn of the Desert"
+      ]
+    },
+    "000804": {
+      "portraitName": "char000804",
+      "characterNameEn": "Rubia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rubia/The_Empress_of_the_Ocean/char000804.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rubia/The_Empress_of_the_Ocean/char000804.atlas",
+        "assets/spine/character/Rubia/The_Empress_of_the_Ocean/char000804.png",
+        "assets/spine/character/Rubia/The_Empress_of_the_Ocean/char000804.skel"
+      ],
+      "costumes": [
+        "The Empress of the Ocean"
+      ]
+    },
+    "000806": {
+      "portraitName": "char000806",
+      "characterNameEn": "Rubia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rubia/Maid_Name_C/char000806.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rubia/Maid_Name_C/char000806.atlas",
+        "assets/spine/character/Rubia/Maid_Name_C/char000806.png",
+        "assets/spine/character/Rubia/Maid_Name_C/char000806.skel"
+      ],
+      "costumes": [
+        "Maid Name C"
+      ]
+    },
+    "000807": {
+      "portraitName": "char000807",
+      "characterNameEn": "Rubia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rubia/Maid_Bikini/char000807.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rubia/Maid_Bikini/char000807.atlas",
+        "assets/spine/character/Rubia/Maid_Bikini/char000807.png",
+        "assets/spine/character/Rubia/Maid_Bikini/char000807.skel"
+      ],
+      "costumes": [
+        "Maid Bikini"
+      ]
+    },
+    "001001": {
+      "portraitName": "char001001",
+      "characterNameEn": "Sylvia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sylvia/Desert_Flower/char001001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sylvia/Desert_Flower/char001001.atlas",
+        "assets/spine/character/Sylvia/Desert_Flower/char001001.png",
+        "assets/spine/character/Sylvia/Desert_Flower/char001001.skel"
+      ],
+      "costumes": [
+        "Desert Flower"
+      ]
+    },
+    "001002": {
+      "portraitName": "char001002",
+      "characterNameEn": "Sylvia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sylvia/The_Sword_Queen/char001002.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sylvia/The_Sword_Queen/char001002.atlas",
+        "assets/spine/character/Sylvia/The_Sword_Queen/char001002.png",
+        "assets/spine/character/Sylvia/The_Sword_Queen/char001002.skel"
+      ],
+      "costumes": [
+        "The Sword Queen"
+      ]
+    },
+    "001004": {
+      "portraitName": "char001004",
+      "characterNameEn": "Sylvia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sylvia/Admiral/char001004.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sylvia/Admiral/char001004.atlas",
+        "assets/spine/character/Sylvia/Admiral/char001004.png",
+        "assets/spine/character/Sylvia/Admiral/char001004.skel"
+      ],
+      "costumes": [
+        "Admiral"
+      ]
+    },
+    "001006": {
+      "portraitName": "char001006",
+      "characterNameEn": "Sylvia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sylvia/Bikini_Agent/char001006.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sylvia/Bikini_Agent/char001006.atlas",
+        "assets/spine/character/Sylvia/Bikini_Agent/char001006.png",
+        "assets/spine/character/Sylvia/Bikini_Agent/char001006.skel"
+      ],
+      "costumes": [
+        "Bikini Agent"
+      ]
+    },
+    "001092": {
+      "portraitName": "char001092",
+      "characterNameEn": "Sylvia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sylvia/Crimson_Lotus/char001092.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sylvia/Crimson_Lotus/char001092.atlas",
+        "assets/spine/character/Sylvia/Crimson_Lotus/char001092.png",
+        "assets/spine/character/Sylvia/Crimson_Lotus/char001092.skel"
+      ],
+      "costumes": [
+        "Crimson Lotus"
+      ]
+    },
+    "001101": {
+      "portraitName": "char001101",
+      "characterNameEn": "Teresse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Teresse/Angel_of_Destruction/char001101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Teresse/Angel_of_Destruction/char001101.atlas",
+        "assets/spine/character/Teresse/Angel_of_Destruction/char001101.png",
+        "assets/spine/character/Teresse/Angel_of_Destruction/char001101.skel"
+      ],
+      "costumes": [
+        "Angel of Destruction"
+      ]
+    },
+    "001106": {
+      "portraitName": "char001106",
+      "characterNameEn": "Teresse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Teresse/Medical_Club/char001106.skel",
+      "evidencePaths": [
+        "assets/spine/character/Teresse/Medical_Club/char001106.atlas",
+        "assets/spine/character/Teresse/Medical_Club/char001106.png",
+        "assets/spine/character/Teresse/Medical_Club/char001106.skel"
+      ],
+      "costumes": [
+        "Medical Club"
+      ]
+    },
+    "001107": {
+      "portraitName": "char001107",
+      "characterNameEn": "Teresse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Teresse/Beachside_Angel/char001107.skel",
+      "evidencePaths": [
+        "assets/spine/character/Teresse/Beachside_Angel/char001107.atlas",
+        "assets/spine/character/Teresse/Beachside_Angel/char001107.png",
+        "assets/spine/character/Teresse/Beachside_Angel/char001107.skel"
+      ],
+      "costumes": [
+        "Beachside Angel"
+      ]
+    },
+    "001197": {
+      "portraitName": "char001197",
+      "characterNameEn": "Teresse",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Teresse/Milky_Bikini/char001197.skel",
+      "evidencePaths": [
+        "assets/spine/character/Teresse/Milky_Bikini/char001197.atlas",
+        "assets/spine/character/Teresse/Milky_Bikini/char001197.png",
+        "assets/spine/character/Teresse/Milky_Bikini/char001197.skel"
+      ],
+      "costumes": [
+        "Milky Bikini"
+      ]
+    },
+    "001201": {
+      "portraitName": "char001201",
+      "characterNameEn": "Liatris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Liatris/Rodev's_Star/char001201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Liatris/Rodev's_Star/char001201.atlas",
+        "assets/spine/character/Liatris/Rodev's_Star/char001201.png",
+        "assets/spine/character/Liatris/Rodev's_Star/char001201.skel"
+      ],
+      "costumes": [
+        "Rodev's Star"
+      ]
+    },
+    "001206": {
+      "portraitName": "char001206",
+      "characterNameEn": "Liatris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Liatris/Neon_Stalker/char001206.skel",
+      "evidencePaths": [
+        "assets/spine/character/Liatris/Neon_Stalker/char001206.atlas",
+        "assets/spine/character/Liatris/Neon_Stalker/char001206.png",
+        "assets/spine/character/Liatris/Neon_Stalker/char001206.skel"
+      ],
+      "costumes": [
+        "Neon Stalker"
+      ]
+    },
+    "001207": {
+      "portraitName": "char001207",
+      "characterNameEn": "Liatris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Liatris/Maid_Name_R/char001207.skel",
+      "evidencePaths": [
+        "assets/spine/character/Liatris/Maid_Name_R/char001207.atlas",
+        "assets/spine/character/Liatris/Maid_Name_R/char001207.png",
+        "assets/spine/character/Liatris/Maid_Name_R/char001207.skel"
+      ],
+      "costumes": [
+        "Maid Name R"
+      ]
+    },
+    "002401": {
+      "portraitName": "char002401",
+      "characterNameEn": "Diana",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Diana/Adventurer_of_the_Unknown/char002401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Diana/Adventurer_of_the_Unknown/char002401.atlas",
+        "assets/spine/character/Diana/Adventurer_of_the_Unknown/char002401.png",
+        "assets/spine/character/Diana/Adventurer_of_the_Unknown/char002401.skel"
+      ],
+      "costumes": [
+        "Adventurer of the Unknown"
+      ]
+    },
+    "002403": {
+      "portraitName": "char002403",
+      "characterNameEn": "Diana",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Diana/Magical_Innovator/char002403.skel",
+      "evidencePaths": [
+        "assets/spine/character/Diana/Magical_Innovator/char002403.atlas",
+        "assets/spine/character/Diana/Magical_Innovator/char002403.png",
+        "assets/spine/character/Diana/Magical_Innovator/char002403.skel"
+      ],
+      "costumes": [
+        "Magical Innovator"
+      ]
+    },
+    "002406": {
+      "portraitName": "char002406",
+      "characterNameEn": "Diana",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Diana/Anti-Dystopia/char002406.skel",
+      "evidencePaths": [
+        "assets/spine/character/Diana/Anti-Dystopia/char002406.atlas",
+        "assets/spine/character/Diana/Anti-Dystopia/char002406.png",
+        "assets/spine/character/Diana/Anti-Dystopia/char002406.skel"
+      ],
+      "costumes": [
+        "Anti-Dystopia"
+      ]
+    },
+    "003001": {
+      "portraitName": "char003001",
+      "characterNameEn": "Layla",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Layla/Anvil_of_Creation/char003001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Layla/Anvil_of_Creation/char003001.atlas",
+        "assets/spine/character/Layla/Anvil_of_Creation/char003001.png",
+        "assets/spine/character/Layla/Anvil_of_Creation/char003001.skel"
+      ],
+      "costumes": [
+        "Anvil of Creation"
+      ]
+    },
+    "003101": {
+      "portraitName": "char003101",
+      "characterNameEn": "Elpis",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Elpis/Hand_of_Salvation/char003101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Elpis/Hand_of_Salvation/char003101.atlas",
+        "assets/spine/character/Elpis/Hand_of_Salvation/char003101.png",
+        "assets/spine/character/Elpis/Hand_of_Salvation/char003101.skel"
+      ],
+      "costumes": [
+        "Hand of Salvation"
+      ]
+    },
+    "003201": {
+      "portraitName": "char003201",
+      "characterNameEn": "Loen",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Loen/Last_Hope/char003201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Loen/Last_Hope/char003201.atlas",
+        "assets/spine/character/Loen/Last_Hope/char003201.png",
+        "assets/spine/character/Loen/Last_Hope/char003201.skel"
+      ],
+      "costumes": [
+        "Last Hope"
+      ]
+    },
+    "003202": {
+      "portraitName": "char003202",
+      "characterNameEn": "Loen",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Loen/Track_and_Field_Team/char003202.skel",
+      "evidencePaths": [
+        "assets/spine/character/Loen/Track_and_Field_Team/char003202.atlas",
+        "assets/spine/character/Loen/Track_and_Field_Team/char003202.png",
+        "assets/spine/character/Loen/Track_and_Field_Team/char003202.skel"
+      ],
+      "costumes": [
+        "Track and Field Team"
+      ]
+    },
+    "003203": {
+      "portraitName": "char003203",
+      "characterNameEn": "Loen",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Loen/Celebrity_Bunny/char003203.skel",
+      "evidencePaths": [
+        "assets/spine/character/Loen/Celebrity_Bunny/char003203.atlas",
+        "assets/spine/character/Loen/Celebrity_Bunny/char003203.png",
+        "assets/spine/character/Loen/Celebrity_Bunny/char003203.skel"
+      ],
+      "costumes": [
+        "Celebrity Bunny"
+      ]
+    },
+    "003301": {
+      "portraitName": "char003301",
+      "characterNameEn": "Nebris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Nebris/Labyrinth_Gatekeeper/char003301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Nebris/Labyrinth_Gatekeeper/char003301.atlas",
+        "assets/spine/character/Nebris/Labyrinth_Gatekeeper/char003301.png",
+        "assets/spine/character/Nebris/Labyrinth_Gatekeeper/char003301.skel"
+      ],
+      "costumes": [
+        "Labyrinth Gatekeeper"
+      ]
+    },
+    "003302": {
+      "portraitName": "char003302",
+      "characterNameEn": "Nebris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Nebris/Laid-back_Lifeguard/char003302.skel",
+      "evidencePaths": [
+        "assets/spine/character/Nebris/Laid-back_Lifeguard/char003302.atlas",
+        "assets/spine/character/Nebris/Laid-back_Lifeguard/char003302.png",
+        "assets/spine/character/Nebris/Laid-back_Lifeguard/char003302.skel"
+      ],
+      "costumes": [
+        "Laid-back Lifeguard"
+      ]
+    },
+    "003303": {
+      "portraitName": "char003303",
+      "characterNameEn": "Nebris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Nebris/New_Hire/char003303.skel",
+      "evidencePaths": [
+        "assets/spine/character/Nebris/New_Hire/char003303.atlas",
+        "assets/spine/character/Nebris/New_Hire/char003303.png",
+        "assets/spine/character/Nebris/New_Hire/char003303.skel"
+      ],
+      "costumes": [
+        "New Hire"
+      ]
+    },
+    "003392": {
+      "portraitName": "char003392",
+      "characterNameEn": "Nebris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Nebris/Lucky_Bikini/char003392.skel",
+      "evidencePaths": [
+        "assets/spine/character/Nebris/Lucky_Bikini/char003392.atlas",
+        "assets/spine/character/Nebris/Lucky_Bikini/char003392.png",
+        "assets/spine/character/Nebris/Lucky_Bikini/char003392.skel"
+      ],
+      "costumes": [
+        "Lucky Bikini"
+      ]
+    },
+    "003401": {
+      "portraitName": "char003401",
+      "characterNameEn": "Morpeah",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Morpeah/Beach_Vacation/char003401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Morpeah/Beach_Vacation/char003401.atlas",
+        "assets/spine/character/Morpeah/Beach_Vacation/char003401.png",
+        "assets/spine/character/Morpeah/Beach_Vacation/char003401.skel"
+      ],
+      "costumes": [
+        "Beach Vacation"
+      ]
+    },
+    "003402": {
+      "portraitName": "char003402",
+      "characterNameEn": "Morpeah",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Morpeah/Daydream_Bunny/char003402.skel",
+      "evidencePaths": [
+        "assets/spine/character/Morpeah/Daydream_Bunny/char003402.atlas",
+        "assets/spine/character/Morpeah/Daydream_Bunny/char003402.png",
+        "assets/spine/character/Morpeah/Daydream_Bunny/char003402.skel"
+      ],
+      "costumes": [
+        "Daydream Bunny"
+      ]
+    },
+    "003403": {
+      "portraitName": "char003403",
+      "characterNameEn": "Morpeah",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Morpeah/Apostle/char003403.skel",
+      "evidencePaths": [
+        "assets/spine/character/Morpeah/Apostle/char003403.atlas",
+        "assets/spine/character/Morpeah/Apostle/char003403.png",
+        "assets/spine/character/Morpeah/Apostle/char003403.skel"
+      ],
+      "costumes": [
+        "Apostle"
+      ]
+    },
+    "003501": {
+      "portraitName": "char003501",
+      "characterNameEn": "Sacred Justia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sacred_Justia/Reclaimed_Destiny/char003501.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sacred_Justia/Reclaimed_Destiny/char003501.atlas",
+        "assets/spine/character/Sacred_Justia/Reclaimed_Destiny/char003501.png",
+        "assets/spine/character/Sacred_Justia/Reclaimed_Destiny/char003501.skel"
+      ],
+      "costumes": [
+        "Reclaimed Destiny"
+      ]
+    },
+    "003601": {
+      "portraitName": "char003601",
+      "characterNameEn": "Olivier",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Olivier/Faithful_Wings/char003601.skel",
+      "evidencePaths": [
+        "assets/spine/character/Olivier/Faithful_Wings/char003601.atlas",
+        "assets/spine/character/Olivier/Faithful_Wings/char003601.png",
+        "assets/spine/character/Olivier/Faithful_Wings/char003601.skel"
+      ],
+      "costumes": [
+        "Faithful Wings"
+      ]
+    },
+    "003602": {
+      "portraitName": "char003602",
+      "characterNameEn": "Olivier",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Olivier/Apostle/char003602.skel",
+      "evidencePaths": [
+        "assets/spine/character/Olivier/Apostle/char003602.atlas",
+        "assets/spine/character/Olivier/Apostle/char003602.png",
+        "assets/spine/character/Olivier/Apostle/char003602.skel"
+      ],
+      "costumes": [
+        "Apostle"
+      ]
+    },
+    "003603": {
+      "portraitName": "char003603",
+      "characterNameEn": "Olivier",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Olivier/Fallen_Wings/char003603.skel",
+      "evidencePaths": [
+        "assets/spine/character/Olivier/Fallen_Wings/char003603.atlas",
+        "assets/spine/character/Olivier/Fallen_Wings/char003603.png",
+        "assets/spine/character/Olivier/Fallen_Wings/char003603.skel"
+      ],
+      "costumes": [
+        "Fallen Wings"
+      ]
+    },
+    "003604": {
+      "portraitName": "char003604",
+      "characterNameEn": "Olivier",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Olivier/Retired_Legend/char003604.skel",
+      "evidencePaths": [
+        "assets/spine/character/Olivier/Retired_Legend/char003604.atlas",
+        "assets/spine/character/Olivier/Retired_Legend/char003604.png",
+        "assets/spine/character/Olivier/Retired_Legend/char003604.skel"
+      ],
+      "costumes": [
+        "Retired Legend"
+      ]
+    },
+    "003701": {
+      "portraitName": "char003701",
+      "characterNameEn": "Blade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Blade/Apostle/char003701.skel",
+      "evidencePaths": [
+        "assets/spine/character/Blade/Apostle/char003701.atlas",
+        "assets/spine/character/Blade/Apostle/char003701.png",
+        "assets/spine/character/Blade/Apostle/char003701.skel"
+      ],
+      "costumes": [
+        "Apostle"
+      ]
+    },
+    "003702": {
+      "portraitName": "char003702",
+      "characterNameEn": "Blade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Blade/Onsen_Swordfighter/char003702.skel",
+      "evidencePaths": [
+        "assets/spine/character/Blade/Onsen_Swordfighter/char003702.atlas",
+        "assets/spine/character/Blade/Onsen_Swordfighter/char003702.png",
+        "assets/spine/character/Blade/Onsen_Swordfighter/char003702.skel"
+      ],
+      "costumes": [
+        "Onsen Swordfighter"
+      ]
+    },
+    "003703": {
+      "portraitName": "char003703",
+      "characterNameEn": "Blade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Blade/Young_Lady/char003703.skel",
+      "evidencePaths": [
+        "assets/spine/character/Blade/Young_Lady/char003703.atlas",
+        "assets/spine/character/Blade/Young_Lady/char003703.png",
+        "assets/spine/character/Blade/Young_Lady/char003703.skel"
+      ],
+      "costumes": [
+        "Young Lady"
+      ]
+    },
+    "003793": {
+      "portraitName": "char003793",
+      "characterNameEn": "Blade",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Blade/Tender_Dream/char003793.skel",
+      "evidencePaths": [
+        "assets/spine/character/Blade/Tender_Dream/char003793.atlas",
+        "assets/spine/character/Blade/Tender_Dream/char003793.png",
+        "assets/spine/character/Blade/Tender_Dream/char003793.skel"
+      ],
+      "costumes": [
+        "Tender Dream"
+      ]
+    },
+    "003801": {
+      "portraitName": "char003801",
+      "characterNameEn": "Liberta",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Liberta/Dark_Saintess/char003801.skel",
+      "evidencePaths": [
+        "assets/spine/character/Liberta/Dark_Saintess/char003801.atlas",
+        "assets/spine/character/Liberta/Dark_Saintess/char003801.png",
+        "assets/spine/character/Liberta/Dark_Saintess/char003801.skel"
+      ],
+      "costumes": [
+        "Dark Saintess"
+      ]
+    },
+    "003802": {
+      "portraitName": "char003802",
+      "characterNameEn": "Liberta",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Liberta/Onsen_Manager/char003802.skel",
+      "evidencePaths": [
+        "assets/spine/character/Liberta/Onsen_Manager/char003802.atlas",
+        "assets/spine/character/Liberta/Onsen_Manager/char003802.png",
+        "assets/spine/character/Liberta/Onsen_Manager/char003802.skel"
+      ],
+      "costumes": [
+        "Onsen Manager"
+      ]
+    },
+    "003803": {
+      "portraitName": "char003803",
+      "characterNameEn": "Liberta",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Liberta/Miracle_Rose/char003803.skel",
+      "evidencePaths": [
+        "assets/spine/character/Liberta/Miracle_Rose/char003803.atlas",
+        "assets/spine/character/Liberta/Miracle_Rose/char003803.png",
+        "assets/spine/character/Liberta/Miracle_Rose/char003803.skel"
+      ],
+      "costumes": [
+        "Miracle Rose"
+      ]
+    },
+    "003892": {
+      "portraitName": "char003892",
+      "characterNameEn": "Liberta",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Liberta/Hedonist/char003892.skel",
+      "evidencePaths": [
+        "assets/spine/character/Liberta/Hedonist/char003892.atlas",
+        "assets/spine/character/Liberta/Hedonist/char003892.png",
+        "assets/spine/character/Liberta/Hedonist/char003892.skel"
+      ],
+      "costumes": [
+        "Hedonist"
+      ]
+    },
+    "003901": {
+      "portraitName": "char003901",
+      "characterNameEn": "Sonya",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sonya/Shadowed_Dream/char003901.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sonya/Shadowed_Dream/char003901.atlas",
+        "assets/spine/character/Sonya/Shadowed_Dream/char003901.png",
+        "assets/spine/character/Sonya/Shadowed_Dream/char003901.skel"
+      ],
+      "costumes": [
+        "Shadowed Dream"
+      ]
+    },
+    "003902": {
+      "portraitName": "char003902",
+      "characterNameEn": "Sonya",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sonya/Little_Pumpkin_Girl/char003902.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sonya/Little_Pumpkin_Girl/char003902.atlas",
+        "assets/spine/character/Sonya/Little_Pumpkin_Girl/char003902.png",
+        "assets/spine/character/Sonya/Little_Pumpkin_Girl/char003902.skel"
+      ],
+      "costumes": [
+        "Little Pumpkin Girl"
+      ]
+    },
+    "004001": {
+      "portraitName": "char004001",
+      "characterNameEn": "Darian",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Darian/Prophetic_Dream/char004001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Darian/Prophetic_Dream/char004001.atlas",
+        "assets/spine/character/Darian/Prophetic_Dream/char004001.png",
+        "assets/spine/character/Darian/Prophetic_Dream/char004001.skel"
+      ],
+      "costumes": [
+        "Prophetic Dream"
+      ]
+    },
+    "004002": {
+      "portraitName": "char004002",
+      "characterNameEn": "Darian",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Darian/Bittersweet_Bunny/char004002.skel",
+      "evidencePaths": [
+        "assets/spine/character/Darian/Bittersweet_Bunny/char004002.atlas",
+        "assets/spine/character/Darian/Bittersweet_Bunny/char004002.png",
+        "assets/spine/character/Darian/Bittersweet_Bunny/char004002.skel"
+      ],
+      "costumes": [
+        "Bittersweet Bunny"
+      ]
+    },
+    "004091": {
+      "portraitName": "char004091",
+      "characterNameEn": "Darian",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Darian/Herald_of_Enlightenment/char004091.skel",
+      "evidencePaths": [
+        "assets/spine/character/Darian/Herald_of_Enlightenment/char004091.atlas",
+        "assets/spine/character/Darian/Herald_of_Enlightenment/char004091.png",
+        "assets/spine/character/Darian/Herald_of_Enlightenment/char004091.skel"
+      ],
+      "costumes": [
+        "Herald of Enlightenment"
+      ]
+    },
+    "004101": {
+      "portraitName": "char004101",
+      "characterNameEn": "Tyr",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Tyr/Starlight_Guardian/char004101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Tyr/Starlight_Guardian/char004101.atlas",
+        "assets/spine/character/Tyr/Starlight_Guardian/char004101.png",
+        "assets/spine/character/Tyr/Starlight_Guardian/char004101.skel"
+      ],
+      "costumes": [
+        "Starlight Guardian"
+      ]
+    },
+    "004102": {
+      "portraitName": "char004102",
+      "characterNameEn": "Tyr",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Tyr/Innocent_Bunny/char004102.skel",
+      "evidencePaths": [
+        "assets/spine/character/Tyr/Innocent_Bunny/char004102.atlas",
+        "assets/spine/character/Tyr/Innocent_Bunny/char004102.png",
+        "assets/spine/character/Tyr/Innocent_Bunny/char004102.skel"
+      ],
+      "costumes": [
+        "Innocent Bunny"
+      ]
+    },
+    "004201": {
+      "portraitName": "char004201",
+      "characterNameEn": "Palette",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Palette/Shattered_Dream/char004201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Palette/Shattered_Dream/char004201.atlas",
+        "assets/spine/character/Palette/Shattered_Dream/char004201.png",
+        "assets/spine/character/Palette/Shattered_Dream/char004201.skel"
+      ],
+      "costumes": [
+        "Shattered Dream"
+      ]
+    },
+    "004202": {
+      "portraitName": "char004202",
+      "characterNameEn": "Palette",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Palette/Miracle_Violet/char004202.skel",
+      "evidencePaths": [
+        "assets/spine/character/Palette/Miracle_Violet/char004202.atlas",
+        "assets/spine/character/Palette/Miracle_Violet/char004202.png",
+        "assets/spine/character/Palette/Miracle_Violet/char004202.skel"
+      ],
+      "costumes": [
+        "Miracle Violet"
+      ]
+    },
+    "004301": {
+      "portraitName": "char004301",
+      "characterNameEn": "Nekyndalia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Nekyndalia/Deadeye/char004301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Nekyndalia/Deadeye/char004301.atlas",
+        "assets/spine/character/Nekyndalia/Deadeye/char004301.png",
+        "assets/spine/character/Nekyndalia/Deadeye/char004301.skel"
+      ],
+      "costumes": [
+        "Deadeye"
+      ]
+    },
+    "020001": {
+      "portraitName": "char020001",
+      "characterNameEn": "Eris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eris/Esteemed_Adventurer/char020001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eris/Esteemed_Adventurer/char020001.atlas",
+        "assets/spine/character/Eris/Esteemed_Adventurer/char020001.png",
+        "assets/spine/character/Eris/Esteemed_Adventurer/char020001.skel"
+      ],
+      "costumes": [
+        "Esteemed Adventurer"
+      ]
+    },
+    "020002": {
+      "portraitName": "char020002",
+      "characterNameEn": "Eris",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eris/Your_Very_Own_Cat/char020002.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eris/Your_Very_Own_Cat/char020002.atlas",
+        "assets/spine/character/Eris/Your_Very_Own_Cat/char020002.png",
+        "assets/spine/character/Eris/Your_Very_Own_Cat/char020002.skel"
+      ],
+      "costumes": [
+        "Your Very Own Cat"
+      ]
+    },
+    "020101": {
+      "portraitName": "char020101",
+      "characterNameEn": "Roxy",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Roxy/Respected_Master/char020101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Roxy/Respected_Master/char020101.atlas",
+        "assets/spine/character/Roxy/Respected_Master/char020101.png",
+        "assets/spine/character/Roxy/Respected_Master/char020101.skel"
+      ],
+      "costumes": [
+        "Respected Master"
+      ]
+    },
+    "020102": {
+      "portraitName": "char020102",
+      "characterNameEn": "Roxy",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Roxy/Emerging_Desire/char020102.skel",
+      "evidencePaths": [
+        "assets/spine/character/Roxy/Emerging_Desire/char020102.atlas",
+        "assets/spine/character/Roxy/Emerging_Desire/char020102.png",
+        "assets/spine/character/Roxy/Emerging_Desire/char020102.skel"
+      ],
+      "costumes": [
+        "Emerging Desire"
+      ]
+    },
+    "020201": {
+      "portraitName": "char020201",
+      "characterNameEn": "Yomi",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Yomi/Gentle_Destroyer/char020201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Yomi/Gentle_Destroyer/char020201.atlas",
+        "assets/spine/character/Yomi/Gentle_Destroyer/char020201.png",
+        "assets/spine/character/Yomi/Gentle_Destroyer/char020201.skel"
+      ],
+      "costumes": [
+        "Gentle Destroyer"
+      ]
+    },
+    "020301": {
+      "portraitName": "char020301",
+      "characterNameEn": "Yozakura",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Yozakura/Fist_of_Conviction/char020301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Yozakura/Fist_of_Conviction/char020301.atlas",
+        "assets/spine/character/Yozakura/Fist_of_Conviction/char020301.png",
+        "assets/spine/character/Yozakura/Fist_of_Conviction/char020301.skel"
+      ],
+      "costumes": [
+        "Fist of Conviction"
+      ]
+    },
+    "020401": {
+      "portraitName": "char020401",
+      "characterNameEn": "Yumi",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Yumi/Dancing_Snowflake/char020401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Yumi/Dancing_Snowflake/char020401.atlas",
+        "assets/spine/character/Yumi/Dancing_Snowflake/char020401.png",
+        "assets/spine/character/Yumi/Dancing_Snowflake/char020401.skel"
+      ],
+      "costumes": [
+        "Dancing Snowflake"
+      ]
+    },
+    "020501": {
+      "portraitName": "char020501",
+      "characterNameEn": "Hikage",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Hikage/Kind_Ruthlessness/char020501.skel",
+      "evidencePaths": [
+        "assets/spine/character/Hikage/Kind_Ruthlessness/char020501.atlas",
+        "assets/spine/character/Hikage/Kind_Ruthlessness/char020501.png",
+        "assets/spine/character/Hikage/Kind_Ruthlessness/char020501.skel"
+      ],
+      "costumes": [
+        "Kind Ruthlessness"
+      ]
+    },
+    "020601": {
+      "portraitName": "char020601",
+      "characterNameEn": "Goblin Slayer",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Goblin_Slayer/Orcbolg/char020601.skel",
+      "evidencePaths": [
+        "assets/spine/character/Goblin_Slayer/Orcbolg/char020601.atlas",
+        "assets/spine/character/Goblin_Slayer/Orcbolg/char020601.png",
+        "assets/spine/character/Goblin_Slayer/Orcbolg/char020601.skel"
+      ],
+      "costumes": [
+        "Orcbolg"
+      ]
+    },
+    "020701": {
+      "portraitName": "char020701",
+      "characterNameEn": "Priestess",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Priestess/Earth_Mother_Believer/char020701.skel",
+      "evidencePaths": [
+        "assets/spine/character/Priestess/Earth_Mother_Believer/char020701.atlas",
+        "assets/spine/character/Priestess/Earth_Mother_Believer/char020701.png",
+        "assets/spine/character/Priestess/Earth_Mother_Believer/char020701.skel"
+      ],
+      "costumes": [
+        "Earth Mother Believer"
+      ]
+    },
+    "020801": {
+      "portraitName": "char020801",
+      "characterNameEn": "High Elf Archer",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/High_Elf_Archer/Daughter_of_Starwind/char020801.skel",
+      "evidencePaths": [
+        "assets/spine/character/High_Elf_Archer/Daughter_of_Starwind/char020801.atlas",
+        "assets/spine/character/High_Elf_Archer/Daughter_of_Starwind/char020801.png",
+        "assets/spine/character/High_Elf_Archer/Daughter_of_Starwind/char020801.skel"
+      ],
+      "costumes": [
+        "Daughter of Starwind"
+      ]
+    },
+    "020901": {
+      "portraitName": "char020901",
+      "characterNameEn": "Sword Maiden",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Sword_Maiden/Supreme_God_Archbishop/char020901.skel",
+      "evidencePaths": [
+        "assets/spine/character/Sword_Maiden/Supreme_God_Archbishop/char020901.atlas",
+        "assets/spine/character/Sword_Maiden/Supreme_God_Archbishop/char020901.png",
+        "assets/spine/character/Sword_Maiden/Supreme_God_Archbishop/char020901.skel"
+      ],
+      "costumes": [
+        "Supreme God Archbishop"
+      ]
+    },
+    "021001": {
+      "portraitName": "char021001",
+      "characterNameEn": "Ikaruga",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Ikaruga/Noble_Flame/char021001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Ikaruga/Noble_Flame/char021001.atlas",
+        "assets/spine/character/Ikaruga/Noble_Flame/char021001.png",
+        "assets/spine/character/Ikaruga/Noble_Flame/char021001.skel"
+      ],
+      "costumes": [
+        "Noble Flame"
+      ]
+    },
+    "021101": {
+      "portraitName": "char021101",
+      "characterNameEn": "Kyouka Uzen",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Kyouka_Uzen/Eternal_Chains/char021101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Kyouka_Uzen/Eternal_Chains/char021101.atlas",
+        "assets/spine/character/Kyouka_Uzen/Eternal_Chains/char021101.png",
+        "assets/spine/character/Kyouka_Uzen/Eternal_Chains/char021101.skel"
+      ],
+      "costumes": [
+        "Eternal Chains"
+      ]
+    },
+    "021201": {
+      "portraitName": "char021201",
+      "characterNameEn": "Tenka Izumo",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Tenka_Izumo/Ame-no-Mitori/char021201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Tenka_Izumo/Ame-no-Mitori/char021201.atlas",
+        "assets/spine/character/Tenka_Izumo/Ame-no-Mitori/char021201.png",
+        "assets/spine/character/Tenka_Izumo/Ame-no-Mitori/char021201.skel"
+      ],
+      "costumes": [
+        "Ame-no-Mitori"
+      ]
+    },
+    "021291": {
+      "portraitName": "char021291",
+      "characterNameEn": "Tenka Izumo",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Tenka_Izumo/Special_Date/char021291.skel",
+      "evidencePaths": [
+        "assets/spine/character/Tenka_Izumo/Special_Date/char021291.atlas",
+        "assets/spine/character/Tenka_Izumo/Special_Date/char021291.png",
+        "assets/spine/character/Tenka_Izumo/Special_Date/char021291.skel"
+      ],
+      "costumes": [
+        "Special Date"
+      ]
+    },
+    "021301": {
+      "portraitName": "char021301",
+      "characterNameEn": "Ren Yamashiro",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Ren_Yamashiro/Lord_of_the_Cosmos/char021301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Ren_Yamashiro/Lord_of_the_Cosmos/char021301.atlas",
+        "assets/spine/character/Ren_Yamashiro/Lord_of_the_Cosmos/char021301.png",
+        "assets/spine/character/Ren_Yamashiro/Lord_of_the_Cosmos/char021301.skel"
+      ],
+      "costumes": [
+        "Lord of the Cosmos"
+      ]
+    },
+    "060301": {
+      "portraitName": "char060301",
+      "characterNameEn": "Alec",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Alec/The_Destruction/char060301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Alec/The_Destruction/char060301.atlas",
+        "assets/spine/character/Alec/The_Destruction/char060301.png",
+        "assets/spine/character/Alec/The_Destruction/char060301.skel"
+      ],
+      "costumes": [
+        "The Destruction"
+      ]
+    },
+    "060302": {
+      "portraitName": "char060302",
+      "characterNameEn": "Alec",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Alec/Sword_Breaker/char060302.skel",
+      "evidencePaths": [
+        "assets/spine/character/Alec/Sword_Breaker/char060302.atlas",
+        "assets/spine/character/Alec/Sword_Breaker/char060302.png",
+        "assets/spine/character/Alec/Sword_Breaker/char060302.skel"
+      ],
+      "costumes": [
+        "Sword Breaker"
+      ]
+    },
+    "060401": {
+      "portraitName": "char060401",
+      "characterNameEn": "Celia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Celia/The_Curse/char060401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Celia/The_Curse/char060401.atlas",
+        "assets/spine/character/Celia/The_Curse/char060401.png",
+        "assets/spine/character/Celia/The_Curse/char060401.skel"
+      ],
+      "costumes": [
+        "The Curse"
+      ]
+    },
+    "060402": {
+      "portraitName": "char060402",
+      "characterNameEn": "Celia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Celia/Descendant_of_the_Great_Witch/char060402.skel",
+      "evidencePaths": [
+        "assets/spine/character/Celia/Descendant_of_the_Great_Witch/char060402.atlas",
+        "assets/spine/character/Celia/Descendant_of_the_Great_Witch/char060402.png",
+        "assets/spine/character/Celia/Descendant_of_the_Great_Witch/char060402.skel"
+      ],
+      "costumes": [
+        "Descendant of the Great Witch"
+      ]
+    },
+    "060403": {
+      "portraitName": "char060403",
+      "characterNameEn": "Celia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Celia/Masquerade_Bunny/char060403.skel",
+      "evidencePaths": [
+        "assets/spine/character/Celia/Masquerade_Bunny/char060403.atlas",
+        "assets/spine/character/Celia/Masquerade_Bunny/char060403.png",
+        "assets/spine/character/Celia/Masquerade_Bunny/char060403.skel"
+      ],
+      "costumes": [
+        "Masquerade Bunny"
+      ]
+    },
+    "060501": {
+      "portraitName": "char060501",
+      "characterNameEn": "Anastasia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Anastasia/Gentle_Maid/char060501.skel",
+      "evidencePaths": [
+        "assets/spine/character/Anastasia/Gentle_Maid/char060501.atlas",
+        "assets/spine/character/Anastasia/Gentle_Maid/char060501.png",
+        "assets/spine/character/Anastasia/Gentle_Maid/char060501.skel"
+      ],
+      "costumes": [
+        "Gentle Maid"
+      ]
+    },
+    "060502": {
+      "portraitName": "char060502",
+      "characterNameEn": "Anastasia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Anastasia/Fire_Graffiti/char060502.skel",
+      "evidencePaths": [
+        "assets/spine/character/Anastasia/Fire_Graffiti/char060502.atlas",
+        "assets/spine/character/Anastasia/Fire_Graffiti/char060502.png",
+        "assets/spine/character/Anastasia/Fire_Graffiti/char060502.skel"
+      ],
+      "costumes": [
+        "Fire Graffiti"
+      ]
+    },
+    "060601": {
+      "portraitName": "char060601",
+      "characterNameEn": "Lecliss",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lecliss/Killer_Doll/char060601.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lecliss/Killer_Doll/char060601.atlas",
+        "assets/spine/character/Lecliss/Killer_Doll/char060601.png",
+        "assets/spine/character/Lecliss/Killer_Doll/char060601.skel"
+      ],
+      "costumes": [
+        "Killer Doll"
+      ]
+    },
+    "060602": {
+      "portraitName": "char060602",
+      "characterNameEn": "Lecliss",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Lecliss/Android_Queen/char060602.skel",
+      "evidencePaths": [
+        "assets/spine/character/Lecliss/Android_Queen/char060602.atlas",
+        "assets/spine/character/Lecliss/Android_Queen/char060602.png",
+        "assets/spine/character/Lecliss/Android_Queen/char060602.skel"
+      ],
+      "costumes": [
+        "Android Queen"
+      ]
+    },
+    "060701": {
+      "portraitName": "char060701",
+      "characterNameEn": "Rafina",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rafina/Steel_Engine/char060701.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rafina/Steel_Engine/char060701.atlas",
+        "assets/spine/character/Rafina/Steel_Engine/char060701.png",
+        "assets/spine/character/Rafina/Steel_Engine/char060701.skel"
+      ],
+      "costumes": [
+        "Steel Engine"
+      ]
+    },
+    "060702": {
+      "portraitName": "char060702",
+      "characterNameEn": "Rafina",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rafina/Code_Name_A/char060702.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rafina/Code_Name_A/char060702.atlas",
+        "assets/spine/character/Rafina/Code_Name_A/char060702.png",
+        "assets/spine/character/Rafina/Code_Name_A/char060702.skel"
+      ],
+      "costumes": [
+        "Code Name A"
+      ]
+    },
+    "060706": {
+      "portraitName": "char060706",
+      "characterNameEn": "Rafina",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Rafina/Game_Club/char060706.skel",
+      "evidencePaths": [
+        "assets/spine/character/Rafina/Game_Club/char060706.atlas",
+        "assets/spine/character/Rafina/Game_Club/char060706.png",
+        "assets/spine/character/Rafina/Game_Club/char060706.skel"
+      ],
+      "costumes": [
+        "Game Club"
+      ]
+    },
+    "060801": {
+      "portraitName": "char060801",
+      "characterNameEn": "Elise",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Elise/Lovely_Lady/char060801.skel",
+      "evidencePaths": [
+        "assets/spine/character/Elise/Lovely_Lady/char060801.atlas",
+        "assets/spine/character/Elise/Lovely_Lady/char060801.png",
+        "assets/spine/character/Elise/Lovely_Lady/char060801.skel"
+      ],
+      "costumes": [
+        "Lovely Lady"
+      ]
+    },
+    "060802": {
+      "portraitName": "char060802",
+      "characterNameEn": "Elise",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Elise/Code_Name_O/char060802.skel",
+      "evidencePaths": [
+        "assets/spine/character/Elise/Code_Name_O/char060802.atlas",
+        "assets/spine/character/Elise/Code_Name_O/char060802.png",
+        "assets/spine/character/Elise/Code_Name_O/char060802.skel"
+      ],
+      "costumes": [
+        "Code Name O"
+      ]
+    },
+    "060804": {
+      "portraitName": "char060804",
+      "characterNameEn": "Elise",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Elise/Naive_Lady/char060804.skel",
+      "evidencePaths": [
+        "assets/spine/character/Elise/Naive_Lady/char060804.atlas",
+        "assets/spine/character/Elise/Naive_Lady/char060804.png",
+        "assets/spine/character/Elise/Naive_Lady/char060804.skel"
+      ],
+      "costumes": [
+        "Naive Lady"
+      ]
+    },
+    "061001": {
+      "portraitName": "char061001",
+      "characterNameEn": "Helena",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Helena/Top_Idol/char061001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Helena/Top_Idol/char061001.atlas",
+        "assets/spine/character/Helena/Top_Idol/char061001.png",
+        "assets/spine/character/Helena/Top_Idol/char061001.skel"
+      ],
+      "costumes": [
+        "Top Idol"
+      ]
+    },
+    "061002": {
+      "portraitName": "char061002",
+      "characterNameEn": "Helena",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Helena/B-Rank_Idol/char061002.skel",
+      "evidencePaths": [
+        "assets/spine/character/Helena/B-Rank_Idol/char061002.atlas",
+        "assets/spine/character/Helena/B-Rank_Idol/char061002.png",
+        "assets/spine/character/Helena/B-Rank_Idol/char061002.skel"
+      ],
+      "costumes": [
+        "B-Rank Idol"
+      ]
+    },
+    "061003": {
+      "portraitName": "char061003",
+      "characterNameEn": "Helena",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Helena/Sunny_Inn_Hand/char061003.skel",
+      "evidencePaths": [
+        "assets/spine/character/Helena/Sunny_Inn_Hand/char061003.atlas",
+        "assets/spine/character/Helena/Sunny_Inn_Hand/char061003.png",
+        "assets/spine/character/Helena/Sunny_Inn_Hand/char061003.skel"
+      ],
+      "costumes": [
+        "Sunny Inn Hand"
+      ]
+    },
+    "061092": {
+      "portraitName": "char061092",
+      "characterNameEn": "Helena",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Helena/Rising_Star/char061092.skel",
+      "evidencePaths": [
+        "assets/spine/character/Helena/Rising_Star/char061092.atlas",
+        "assets/spine/character/Helena/Rising_Star/char061092.png",
+        "assets/spine/character/Helena/Rising_Star/char061092.skel"
+      ],
+      "costumes": [
+        "Rising Star"
+      ]
+    },
+    "061101": {
+      "portraitName": "char061101",
+      "characterNameEn": "Eleaneer",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eleaneer/Piercing_Magic_Bow/char061101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eleaneer/Piercing_Magic_Bow/char061101.atlas",
+        "assets/spine/character/Eleaneer/Piercing_Magic_Bow/char061101.png",
+        "assets/spine/character/Eleaneer/Piercing_Magic_Bow/char061101.skel"
+      ],
+      "costumes": [
+        "Piercing Magic Bow"
+      ]
+    },
+    "061102": {
+      "portraitName": "char061102",
+      "characterNameEn": "Eleaneer",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eleaneer/B-Rank_Idol/char061102.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eleaneer/B-Rank_Idol/char061102.atlas",
+        "assets/spine/character/Eleaneer/B-Rank_Idol/char061102.png",
+        "assets/spine/character/Eleaneer/B-Rank_Idol/char061102.skel"
+      ],
+      "costumes": [
+        "B-Rank Idol"
+      ]
+    },
+    "061103": {
+      "portraitName": "char061103",
+      "characterNameEn": "Eleaneer",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Eleaneer/Shadow_Bunny/char061103.skel",
+      "evidencePaths": [
+        "assets/spine/character/Eleaneer/Shadow_Bunny/char061103.atlas",
+        "assets/spine/character/Eleaneer/Shadow_Bunny/char061103.png",
+        "assets/spine/character/Eleaneer/Shadow_Bunny/char061103.skel"
+      ],
+      "costumes": [
+        "Shadow Bunny"
+      ]
+    },
+    "061302": {
+      "portraitName": "char061302",
+      "characterNameEn": "Dalvi",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Dalvi/Bright_Moon/char061302.skel",
+      "evidencePaths": [
+        "assets/spine/character/Dalvi/Bright_Moon/char061302.atlas",
+        "assets/spine/character/Dalvi/Bright_Moon/char061302.png",
+        "assets/spine/character/Dalvi/Bright_Moon/char061302.skel"
+      ],
+      "costumes": [
+        "Bright Moon"
+      ]
+    },
+    "061305": {
+      "portraitName": "char061305",
+      "characterNameEn": "Dalvi",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Dalvi/Summer_Vacation/char061305.skel",
+      "evidencePaths": [
+        "assets/spine/character/Dalvi/Summer_Vacation/char061305.atlas",
+        "assets/spine/character/Dalvi/Summer_Vacation/char061305.png",
+        "assets/spine/character/Dalvi/Summer_Vacation/char061305.skel"
+      ],
+      "costumes": [
+        "Summer Vacation"
+      ]
+    },
+    "061306": {
+      "portraitName": "char061306",
+      "characterNameEn": "Dalvi",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Dalvi/Tricky_Lover/char061306.skel",
+      "evidencePaths": [
+        "assets/spine/character/Dalvi/Tricky_Lover/char061306.atlas",
+        "assets/spine/character/Dalvi/Tricky_Lover/char061306.png",
+        "assets/spine/character/Dalvi/Tricky_Lover/char061306.skel"
+      ],
+      "costumes": [
+        "Tricky Lover"
+      ]
+    },
+    "061392": {
+      "portraitName": "char061392",
+      "characterNameEn": "Dalvi",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Dalvi/Butterfly_Dream/char061392.skel",
+      "evidencePaths": [
+        "assets/spine/character/Dalvi/Butterfly_Dream/char061392.atlas",
+        "assets/spine/character/Dalvi/Butterfly_Dream/char061392.png",
+        "assets/spine/character/Dalvi/Butterfly_Dream/char061392.skel"
+      ],
+      "costumes": [
+        "Butterfly Dream"
+      ]
+    },
+    "061402": {
+      "portraitName": "char061402",
+      "characterNameEn": "Zenith",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Zenith/Robin_Hood/char061402.skel",
+      "evidencePaths": [
+        "assets/spine/character/Zenith/Robin_Hood/char061402.atlas",
+        "assets/spine/character/Zenith/Robin_Hood/char061402.png",
+        "assets/spine/character/Zenith/Robin_Hood/char061402.skel"
+      ],
+      "costumes": [
+        "Robin Hood"
+      ]
+    },
+    "061404": {
+      "portraitName": "char061404",
+      "characterNameEn": "Zenith",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Zenith/Poolside_Guardian/char061404.skel",
+      "evidencePaths": [
+        "assets/spine/character/Zenith/Poolside_Guardian/char061404.atlas",
+        "assets/spine/character/Zenith/Poolside_Guardian/char061404.png",
+        "assets/spine/character/Zenith/Poolside_Guardian/char061404.skel"
+      ],
+      "costumes": [
+        "Poolside Guardian"
+      ]
+    },
+    "061492": {
+      "portraitName": "char061492",
+      "characterNameEn": "Zenith",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Zenith/Stranger_Bunny/char061492.skel",
+      "evidencePaths": [
+        "assets/spine/character/Zenith/Stranger_Bunny/char061492.atlas",
+        "assets/spine/character/Zenith/Stranger_Bunny/char061492.png",
+        "assets/spine/character/Zenith/Stranger_Bunny/char061492.skel"
+      ],
+      "costumes": [
+        "Stranger Bunny"
+      ]
+    },
+    "062001": {
+      "portraitName": "char062001",
+      "characterNameEn": "Andrew",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Andrew/Loyal_Butler/char062001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Andrew/Loyal_Butler/char062001.atlas",
+        "assets/spine/character/Andrew/Loyal_Butler/char062001.png",
+        "assets/spine/character/Andrew/Loyal_Butler/char062001.skel"
+      ],
+      "costumes": [
+        "Loyal Butler"
+      ]
+    },
+    "062002": {
+      "portraitName": "char062002",
+      "characterNameEn": "Andrew",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Andrew/Specialist/char062002.skel",
+      "evidencePaths": [
+        "assets/spine/character/Andrew/Specialist/char062002.atlas",
+        "assets/spine/character/Andrew/Specialist/char062002.png",
+        "assets/spine/character/Andrew/Specialist/char062002.skel"
+      ],
+      "costumes": [
+        "Specialist"
+      ]
+    },
+    "063001": {
+      "portraitName": "char063001",
+      "characterNameEn": "Ingrid",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Ingrid/Kardis'_Bullet/char063001.skel",
+      "evidencePaths": [
+        "assets/spine/character/Ingrid/Kardis'_Bullet/char063001.atlas",
+        "assets/spine/character/Ingrid/Kardis'_Bullet/char063001.png",
+        "assets/spine/character/Ingrid/Kardis'_Bullet/char063001.skel"
+      ],
+      "costumes": [
+        "Kardis' Bullet"
+      ]
+    },
+    "063301": {
+      "portraitName": "char063301",
+      "characterNameEn": "Cynthia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Cynthia/Warmth_within_the_Severe_Cold/char063301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Cynthia/Warmth_within_the_Severe_Cold/char063301.atlas",
+        "assets/spine/character/Cynthia/Warmth_within_the_Severe_Cold/char063301.png",
+        "assets/spine/character/Cynthia/Warmth_within_the_Severe_Cold/char063301.skel"
+      ],
+      "costumes": [
+        "Warmth within the Severe Cold"
+      ]
+    },
+    "063401": {
+      "portraitName": "char063401",
+      "characterNameEn": "Julie",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Julie/Healer/char063401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Julie/Healer/char063401.atlas",
+        "assets/spine/character/Julie/Healer/char063401.png",
+        "assets/spine/character/Julie/Healer/char063401.skel"
+      ],
+      "costumes": [
+        "Healer"
+      ]
+    },
+    "065102": {
+      "portraitName": "char065102",
+      "characterNameEn": "Yuri",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Yuri/Whitebolt/char065102.skel",
+      "evidencePaths": [
+        "assets/spine/character/Yuri/Whitebolt/char065102.atlas",
+        "assets/spine/character/Yuri/Whitebolt/char065102.png",
+        "assets/spine/character/Yuri/Whitebolt/char065102.skel"
+      ],
+      "costumes": [
+        "Whitebolt"
+      ]
+    },
+    "065103": {
+      "portraitName": "char065103",
+      "characterNameEn": "Yuri",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Yuri/Comeback_Idol/char065103.skel",
+      "evidencePaths": [
+        "assets/spine/character/Yuri/Comeback_Idol/char065103.atlas",
+        "assets/spine/character/Yuri/Comeback_Idol/char065103.png",
+        "assets/spine/character/Yuri/Comeback_Idol/char065103.skel"
+      ],
+      "costumes": [
+        "Comeback Idol"
+      ]
+    },
+    "065193": {
+      "portraitName": "char065193",
+      "characterNameEn": "Yuri",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Yuri/Forever_Mascot/char065193.skel",
+      "evidencePaths": [
+        "assets/spine/character/Yuri/Forever_Mascot/char065193.atlas",
+        "assets/spine/character/Yuri/Forever_Mascot/char065193.png",
+        "assets/spine/character/Yuri/Forever_Mascot/char065193.skel"
+      ],
+      "costumes": [
+        "Forever Mascot"
+      ]
+    },
+    "065802": {
+      "portraitName": "char065802",
+      "characterNameEn": "Nartas",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Nartas/Anonymous_Sage/char065802.skel",
+      "evidencePaths": [
+        "assets/spine/character/Nartas/Anonymous_Sage/char065802.atlas",
+        "assets/spine/character/Nartas/Anonymous_Sage/char065802.png",
+        "assets/spine/character/Nartas/Anonymous_Sage/char065802.skel"
+      ],
+      "costumes": [
+        "Anonymous Sage"
+      ]
+    },
+    "066401": {
+      "portraitName": "char066401",
+      "characterNameEn": "Angelica",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Angelica/The_Fallen/char066401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Angelica/The_Fallen/char066401.atlas",
+        "assets/spine/character/Angelica/The_Fallen/char066401.png",
+        "assets/spine/character/Angelica/The_Fallen/char066401.skel"
+      ],
+      "costumes": [
+        "The Fallen"
+      ]
+    },
+    "066402": {
+      "portraitName": "char066402",
+      "characterNameEn": "Angelica",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Angelica/Pool_Party/char066402.skel",
+      "evidencePaths": [
+        "assets/spine/character/Angelica/Pool_Party/char066402.atlas",
+        "assets/spine/character/Angelica/Pool_Party/char066402.png",
+        "assets/spine/character/Angelica/Pool_Party/char066402.skel"
+      ],
+      "costumes": [
+        "Pool Party"
+      ]
+    },
+    "066403": {
+      "portraitName": "char066403",
+      "characterNameEn": "Angelica",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Angelica/Neon_Savior/char066403.skel",
+      "evidencePaths": [
+        "assets/spine/character/Angelica/Neon_Savior/char066403.atlas",
+        "assets/spine/character/Angelica/Neon_Savior/char066403.png",
+        "assets/spine/character/Angelica/Neon_Savior/char066403.skel"
+      ],
+      "costumes": [
+        "Neon Savior"
+      ]
+    },
+    "066801": {
+      "portraitName": "char066801",
+      "characterNameEn": "Refithea",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Refithea/The_Gluttonous/char066801.skel",
+      "evidencePaths": [
+        "assets/spine/character/Refithea/The_Gluttonous/char066801.atlas",
+        "assets/spine/character/Refithea/The_Gluttonous/char066801.png",
+        "assets/spine/character/Refithea/The_Gluttonous/char066801.skel"
+      ],
+      "costumes": [
+        "The Gluttonous"
+      ]
+    },
+    "066802": {
+      "portraitName": "char066802",
+      "characterNameEn": "Refithea",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Refithea/Pure_White_Blessing/char066802.skel",
+      "evidencePaths": [
+        "assets/spine/character/Refithea/Pure_White_Blessing/char066802.atlas",
+        "assets/spine/character/Refithea/Pure_White_Blessing/char066802.png",
+        "assets/spine/character/Refithea/Pure_White_Blessing/char066802.skel"
+      ],
+      "costumes": [
+        "Pure White Blessing"
+      ]
+    },
+    "066803": {
+      "portraitName": "char066803",
+      "characterNameEn": "Refithea",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Refithea/Poolside_Fairy/char066803.skel",
+      "evidencePaths": [
+        "assets/spine/character/Refithea/Poolside_Fairy/char066803.atlas",
+        "assets/spine/character/Refithea/Poolside_Fairy/char066803.png",
+        "assets/spine/character/Refithea/Poolside_Fairy/char066803.skel"
+      ],
+      "costumes": [
+        "Poolside Fairy"
+      ]
+    },
+    "066902": {
+      "portraitName": "char066902",
+      "characterNameEn": "Glacia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Glacia/Alice/char066902.skel",
+      "evidencePaths": [
+        "assets/spine/character/Glacia/Alice/char066902.atlas",
+        "assets/spine/character/Glacia/Alice/char066902.png",
+        "assets/spine/character/Glacia/Alice/char066902.skel"
+      ],
+      "costumes": [
+        "Alice"
+      ]
+    },
+    "066906": {
+      "portraitName": "char066906",
+      "characterNameEn": "Glacia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Glacia/Disciplinary_Committee/char066906.skel",
+      "evidencePaths": [
+        "assets/spine/character/Glacia/Disciplinary_Committee/char066906.atlas",
+        "assets/spine/character/Glacia/Disciplinary_Committee/char066906.png",
+        "assets/spine/character/Glacia/Disciplinary_Committee/char066906.skel"
+      ],
+      "costumes": [
+        "Disciplinary Committee"
+      ]
+    },
+    "066907": {
+      "portraitName": "char066907",
+      "characterNameEn": "Glacia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Glacia/Heavenly_Guardian_Successor/char066907.skel",
+      "evidencePaths": [
+        "assets/spine/character/Glacia/Heavenly_Guardian_Successor/char066907.atlas",
+        "assets/spine/character/Glacia/Heavenly_Guardian_Successor/char066907.png",
+        "assets/spine/character/Glacia/Heavenly_Guardian_Successor/char066907.skel"
+      ],
+      "costumes": [
+        "Heavenly Guardian Successor"
+      ]
+    },
+    "067002": {
+      "portraitName": "char067002",
+      "characterNameEn": "Ventana",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Ventana/Snow_White/char067002.skel",
+      "evidencePaths": [
+        "assets/spine/character/Ventana/Snow_White/char067002.atlas",
+        "assets/spine/character/Ventana/Snow_White/char067002.png",
+        "assets/spine/character/Ventana/Snow_White/char067002.skel"
+      ],
+      "costumes": [
+        "Snow White"
+      ]
+    },
+    "067003": {
+      "portraitName": "char067003",
+      "characterNameEn": "Ventana",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Ventana/Comeback_Idol/char067003.skel",
+      "evidencePaths": [
+        "assets/spine/character/Ventana/Comeback_Idol/char067003.atlas",
+        "assets/spine/character/Ventana/Comeback_Idol/char067003.png",
+        "assets/spine/character/Ventana/Comeback_Idol/char067003.skel"
+      ],
+      "costumes": [
+        "Comeback Idol"
+      ]
+    },
+    "067004": {
+      "portraitName": "char067004",
+      "characterNameEn": "Ventana",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Ventana/Onsen_Practitioner/char067004.skel",
+      "evidencePaths": [
+        "assets/spine/character/Ventana/Onsen_Practitioner/char067004.atlas",
+        "assets/spine/character/Ventana/Onsen_Practitioner/char067004.png",
+        "assets/spine/character/Ventana/Onsen_Practitioner/char067004.skel"
+      ],
+      "costumes": [
+        "Onsen Practitioner"
+      ]
+    },
+    "067101": {
+      "portraitName": "char067101",
+      "characterNameEn": "Granhildr",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Granhildr/The_Void/char067101.skel",
+      "evidencePaths": [
+        "assets/spine/character/Granhildr/The_Void/char067101.atlas",
+        "assets/spine/character/Granhildr/The_Void/char067101.png",
+        "assets/spine/character/Granhildr/The_Void/char067101.skel"
+      ],
+      "costumes": [
+        "The Void"
+      ]
+    },
+    "067102": {
+      "portraitName": "char067102",
+      "characterNameEn": "Granhildr",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Granhildr/Comeback_Idol/char067102.skel",
+      "evidencePaths": [
+        "assets/spine/character/Granhildr/Comeback_Idol/char067102.atlas",
+        "assets/spine/character/Granhildr/Comeback_Idol/char067102.png",
+        "assets/spine/character/Granhildr/Comeback_Idol/char067102.skel"
+      ],
+      "costumes": [
+        "Comeback Idol"
+      ]
+    },
+    "067103": {
+      "portraitName": "char067103",
+      "characterNameEn": "Granhildr",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Granhildr/Boo_Ghost/char067103.skel",
+      "evidencePaths": [
+        "assets/spine/character/Granhildr/Boo_Ghost/char067103.atlas",
+        "assets/spine/character/Granhildr/Boo_Ghost/char067103.png",
+        "assets/spine/character/Granhildr/Boo_Ghost/char067103.skel"
+      ],
+      "costumes": [
+        "Boo Ghost"
+      ]
+    },
+    "067104": {
+      "portraitName": "char067104",
+      "characterNameEn": "Granhildr",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Granhildr/Combat_Medic/char067104.skel",
+      "evidencePaths": [
+        "assets/spine/character/Granhildr/Combat_Medic/char067104.atlas",
+        "assets/spine/character/Granhildr/Combat_Medic/char067104.png",
+        "assets/spine/character/Granhildr/Combat_Medic/char067104.skel"
+      ],
+      "costumes": [
+        "Combat Medic"
+      ]
+    },
+    "067201": {
+      "portraitName": "char067201",
+      "characterNameEn": "Venaka",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Venaka/DJ/char067201.skel",
+      "evidencePaths": [
+        "assets/spine/character/Venaka/DJ/char067201.atlas",
+        "assets/spine/character/Venaka/DJ/char067201.png",
+        "assets/spine/character/Venaka/DJ/char067201.skel"
+      ],
+      "costumes": [
+        "DJ"
+      ]
+    },
+    "067202": {
+      "portraitName": "char067202",
+      "characterNameEn": "Venaka",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Venaka/Wind_Dancer/char067202.skel",
+      "evidencePaths": [
+        "assets/spine/character/Venaka/Wind_Dancer/char067202.atlas",
+        "assets/spine/character/Venaka/Wind_Dancer/char067202.png",
+        "assets/spine/character/Venaka/Wind_Dancer/char067202.skel"
+      ],
+      "costumes": [
+        "Wind Dancer"
+      ]
+    },
+    "067301": {
+      "portraitName": "char067301",
+      "characterNameEn": "Levia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Levia/Track_and_Field_Captain/char067301.skel",
+      "evidencePaths": [
+        "assets/spine/character/Levia/Track_and_Field_Captain/char067301.atlas",
+        "assets/spine/character/Levia/Track_and_Field_Captain/char067301.png",
+        "assets/spine/character/Levia/Track_and_Field_Captain/char067301.skel"
+      ],
+      "costumes": [
+        "Track and Field Captain"
+      ]
+    },
+    "067302": {
+      "portraitName": "char067302",
+      "characterNameEn": "Levia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Levia/Night_of_Jealousy/char067302.skel",
+      "evidencePaths": [
+        "assets/spine/character/Levia/Night_of_Jealousy/char067302.atlas",
+        "assets/spine/character/Levia/Night_of_Jealousy/char067302.png",
+        "assets/spine/character/Levia/Night_of_Jealousy/char067302.skel"
+      ],
+      "costumes": [
+        "Night of Jealousy"
+      ]
+    },
+    "067303": {
+      "portraitName": "char067303",
+      "characterNameEn": "Levia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Levia/Overheat/char067303.skel",
+      "evidencePaths": [
+        "assets/spine/character/Levia/Overheat/char067303.atlas",
+        "assets/spine/character/Levia/Overheat/char067303.png",
+        "assets/spine/character/Levia/Overheat/char067303.skel"
+      ],
+      "costumes": [
+        "Overheat"
+      ]
+    },
+    "067401": {
+      "portraitName": "char067401",
+      "characterNameEn": "Michaela",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Michaela/Beachside_Justice/char067401.skel",
+      "evidencePaths": [
+        "assets/spine/character/Michaela/Beachside_Justice/char067401.atlas",
+        "assets/spine/character/Michaela/Beachside_Justice/char067401.png",
+        "assets/spine/character/Michaela/Beachside_Justice/char067401.skel"
+      ],
+      "costumes": [
+        "Beachside Justice"
+      ]
+    },
+    "067402": {
+      "portraitName": "char067402",
+      "characterNameEn": "Michaela",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Michaela/Queen_of_Signatures/char067402.skel",
+      "evidencePaths": [
+        "assets/spine/character/Michaela/Queen_of_Signatures/char067402.atlas",
+        "assets/spine/character/Michaela/Queen_of_Signatures/char067402.png",
+        "assets/spine/character/Michaela/Queen_of_Signatures/char067402.skel"
+      ],
+      "costumes": [
+        "Queen of Signatures"
+      ]
+    },
+    "067403": {
+      "portraitName": "char067403",
+      "characterNameEn": "Michaela",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Michaela/Acting_Archbishop/char067403.skel",
+      "evidencePaths": [
+        "assets/spine/character/Michaela/Acting_Archbishop/char067403.atlas",
+        "assets/spine/character/Michaela/Acting_Archbishop/char067403.png",
+        "assets/spine/character/Michaela/Acting_Archbishop/char067403.skel"
+      ],
+      "costumes": [
+        "Acting Archbishop"
+      ]
+    },
+    "067491": {
+      "portraitName": "char067491",
+      "characterNameEn": "Michaela",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Michaela/True_Liberation/char067491.skel",
+      "evidencePaths": [
+        "assets/spine/character/Michaela/True_Liberation/char067491.atlas",
+        "assets/spine/character/Michaela/True_Liberation/char067491.png",
+        "assets/spine/character/Michaela/True_Liberation/char067491.skel"
+      ],
+      "costumes": [
+        "True Liberation"
+      ]
+    },
+    "067502": {
+      "portraitName": "char067502",
+      "characterNameEn": "Luvencia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Luvencia/Deal_Snatcher/char067502.skel",
+      "evidencePaths": [
+        "assets/spine/character/Luvencia/Deal_Snatcher/char067502.atlas",
+        "assets/spine/character/Luvencia/Deal_Snatcher/char067502.png",
+        "assets/spine/character/Luvencia/Deal_Snatcher/char067502.skel"
+      ],
+      "costumes": [
+        "Deal Snatcher"
+      ]
+    },
+    "067503": {
+      "portraitName": "char067503",
+      "characterNameEn": "Luvencia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Luvencia/Wild_Dog/char067503.skel",
+      "evidencePaths": [
+        "assets/spine/character/Luvencia/Wild_Dog/char067503.atlas",
+        "assets/spine/character/Luvencia/Wild_Dog/char067503.png",
+        "assets/spine/character/Luvencia/Wild_Dog/char067503.skel"
+      ],
+      "costumes": [
+        "Wild Dog"
+      ]
+    },
+    "067504": {
+      "portraitName": "char067504",
+      "characterNameEn": "Luvencia",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Luvencia/Ocean_Vanguard/char067504.skel",
+      "evidencePaths": [
+        "assets/spine/character/Luvencia/Ocean_Vanguard/char067504.atlas",
+        "assets/spine/character/Luvencia/Ocean_Vanguard/char067504.png",
+        "assets/spine/character/Luvencia/Ocean_Vanguard/char067504.skel"
+      ],
+      "costumes": [
+        "Ocean Vanguard"
+      ]
+    },
+    "067601": {
+      "portraitName": "char067601",
+      "characterNameEn": "Wilhelmina",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Wilhelmina/Iron_Monarch/char067601.skel",
+      "evidencePaths": [
+        "assets/spine/character/Wilhelmina/Iron_Monarch/char067601.atlas",
+        "assets/spine/character/Wilhelmina/Iron_Monarch/char067601.png",
+        "assets/spine/character/Wilhelmina/Iron_Monarch/char067601.skel"
+      ],
+      "costumes": [
+        "Iron Monarch"
+      ]
+    },
+    "067603": {
+      "portraitName": "char067603",
+      "characterNameEn": "Wilhelmina",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Wilhelmina/Water_Park_Queen/char067603.skel",
+      "evidencePaths": [
+        "assets/spine/character/Wilhelmina/Water_Park_Queen/char067603.atlas",
+        "assets/spine/character/Wilhelmina/Water_Park_Queen/char067603.png",
+        "assets/spine/character/Wilhelmina/Water_Park_Queen/char067603.skel"
+      ],
+      "costumes": [
+        "Water Park Queen"
+      ]
+    },
+    "067604": {
+      "portraitName": "char067604",
+      "characterNameEn": "Wilhelmina",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Wilhelmina/Frozen_Queen/char067604.skel",
+      "evidencePaths": [
+        "assets/spine/character/Wilhelmina/Frozen_Queen/char067604.atlas",
+        "assets/spine/character/Wilhelmina/Frozen_Queen/char067604.png",
+        "assets/spine/character/Wilhelmina/Frozen_Queen/char067604.skel"
+      ],
+      "costumes": [
+        "Frozen Queen"
+      ]
+    },
+    "067701": {
+      "portraitName": "char067701",
+      "characterNameEn": "Granadair",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Granadair/Shrine_Maiden_of_Purification/char067701.skel",
+      "evidencePaths": [
+        "assets/spine/character/Granadair/Shrine_Maiden_of_Purification/char067701.atlas",
+        "assets/spine/character/Granadair/Shrine_Maiden_of_Purification/char067701.png",
+        "assets/spine/character/Granadair/Shrine_Maiden_of_Purification/char067701.skel"
+      ],
+      "costumes": [
+        "Shrine Maiden of Purification"
+      ]
+    },
+    "067702": {
+      "portraitName": "char067702",
+      "characterNameEn": "Granadair",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Granadair/Queen_of_Gluttis/char067702.skel",
+      "evidencePaths": [
+        "assets/spine/character/Granadair/Queen_of_Gluttis/char067702.atlas",
+        "assets/spine/character/Granadair/Queen_of_Gluttis/char067702.png",
+        "assets/spine/character/Granadair/Queen_of_Gluttis/char067702.skel"
+      ],
+      "costumes": [
+        "Queen of Gluttis"
+      ]
+    },
+    "067801": {
+      "portraitName": "char067801",
+      "characterNameEn": "Mamonir",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Mamonir/Night_of_Death/char067801.skel",
+      "evidencePaths": [
+        "assets/spine/character/Mamonir/Night_of_Death/char067801.atlas",
+        "assets/spine/character/Mamonir/Night_of_Death/char067801.png",
+        "assets/spine/character/Mamonir/Night_of_Death/char067801.skel"
+      ],
+      "costumes": [
+        "Night of Death"
+      ]
+    },
+    "067803": {
+      "portraitName": "char067803",
+      "characterNameEn": "Mamonir",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Mamonir/Miracle_Marine/char067803.skel",
+      "evidencePaths": [
+        "assets/spine/character/Mamonir/Miracle_Marine/char067803.atlas",
+        "assets/spine/character/Mamonir/Miracle_Marine/char067803.png",
+        "assets/spine/character/Mamonir/Miracle_Marine/char067803.skel"
+      ],
+      "costumes": [
+        "Miracle Marine"
+      ]
+    },
+    "067901": {
+      "portraitName": "char067901",
+      "characterNameEn": "Aquila",
+      "characterName": "",
+      "source": "Brown-Dust-2-Assets asset path",
+      "confidence": "asset-path-evidence",
+      "evidencePath": "assets/spine/character/Aquila/Savage_Warrior/char067901.skel",
+      "evidencePaths": [
+        "assets/spine/character/Aquila/Savage_Warrior/char067901.atlas",
+        "assets/spine/character/Aquila/Savage_Warrior/char067901.png",
+        "assets/spine/character/Aquila/Savage_Warrior/char067901.skel"
+      ],
+      "costumes": [
+        "Savage Warrior"
+      ]
+    }
+  }
+}
