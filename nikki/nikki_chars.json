@@ -42320,6 +42320,1371 @@
           "format": "binary"
         }
       ]
+    },
+    {
+      "id": "c017_01_bg",
+      "name": "c017_01_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c017_01_bg/",
+      "skeleton": "c017_01_bg.skel",
+      "atlas": "c017_01_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c017_01_bg/",
+          "skel": "c017_01_bg.skel",
+          "atlas": "c017_01_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c017_02_bg",
+      "name": "c017_02_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c017_02_bg/",
+      "skeleton": "c017_02_bg.skel",
+      "atlas": "c017_02_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c017_02_bg/",
+          "skel": "c017_02_bg.skel",
+          "atlas": "c017_02_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c063_00",
+      "name": "c063_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c063_00/",
+      "skeleton": "c063_00.skel",
+      "atlas": "c063_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c063_00/",
+          "skel": "c063_00.skel",
+          "atlas": "c063_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c063_00_skillcut",
+      "name": "c063_00_skillcut · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE core catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c063_00_skillcut/",
+      "skeleton": "c063_00_skillcut.skel",
+      "atlas": "c063_00_skillcut.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c063_00_skillcut/",
+          "skel": "c063_00_skillcut.skel",
+          "atlas": "c063_00_skillcut.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c063_aim_00",
+      "name": "c063_aim_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c063_aim_00/",
+      "skeleton": "c063_aim_00.skel",
+      "atlas": "c063_aim_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c063_aim_00/",
+          "skel": "c063_aim_00.skel",
+          "atlas": "c063_aim_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c063_cover_00",
+      "name": "c063_cover_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c063_cover_00/",
+      "skeleton": "c063_cover_00.skel",
+      "atlas": "c063_cover_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c063_cover_00/",
+          "skel": "c063_cover_00.skel",
+          "atlas": "c063_cover_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c103_00_bg",
+      "name": "c103_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c103_00_bg/",
+      "skeleton": "c103_00_bg.skel",
+      "atlas": "c103_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c103_00_bg/",
+          "skel": "c103_00_bg.skel",
+          "atlas": "c103_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c105_00_bg",
+      "name": "c105_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c105_00_bg/",
+      "skeleton": "c105_00_bg.skel",
+      "atlas": "c105_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c105_00_bg/",
+          "skel": "c105_00_bg.skel",
+          "atlas": "c105_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c140_03",
+      "name": "c140_03 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c140_03/",
+      "skeleton": "c140_03.skel",
+      "atlas": "c140_03.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c140_03/",
+          "skel": "c140_03.skel",
+          "atlas": "c140_03.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c140_03_skillcut",
+      "name": "c140_03_skillcut · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE core catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c140_03_skillcut/",
+      "skeleton": "c140_03_skillcut.skel",
+      "atlas": "c140_03_skillcut.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c140_03_skillcut/",
+          "skel": "c140_03_skillcut.skel",
+          "atlas": "c140_03_skillcut.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c140_aim_03",
+      "name": "c140_aim_03 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c140_aim_03/",
+      "skeleton": "c140_aim_03.skel",
+      "atlas": "c140_aim_03.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c140_aim_03/",
+          "skel": "c140_aim_03.skel",
+          "atlas": "c140_aim_03.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c140_cover_03",
+      "name": "c140_cover_03 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c140_cover_03/",
+      "skeleton": "c140_cover_03.skel",
+      "atlas": "c140_cover_03.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c140_cover_03/",
+          "skel": "c140_cover_03.skel",
+          "atlas": "c140_cover_03.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c262_01_bg",
+      "name": "c262_01_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c262_01_bg/",
+      "skeleton": "c262_01_bg.skel",
+      "atlas": "c262_01_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c262_01_bg/",
+          "skel": "c262_01_bg.skel",
+          "atlas": "c262_01_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c281_98",
+      "name": "c281_98 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c281_98/",
+      "skeleton": "c281_98.skel",
+      "atlas": "c281_98.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c281_98/",
+          "skel": "c281_98.skel",
+          "atlas": "c281_98.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c290_01",
+      "name": "c290_01 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c290_01/",
+      "skeleton": "c290_01.skel",
+      "atlas": "c290_01.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c290_01/",
+          "skel": "c290_01.skel",
+          "atlas": "c290_01.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c290_aim_01",
+      "name": "c290_aim_01 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c290_aim_01/",
+      "skeleton": "c290_aim_01.skel",
+      "atlas": "c290_aim_01.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c290_aim_01/",
+          "skel": "c290_aim_01.skel",
+          "atlas": "c290_aim_01.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c290_cover_01",
+      "name": "c290_cover_01 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c290_cover_01/",
+      "skeleton": "c290_cover_01.skel",
+      "atlas": "c290_cover_01.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c290_cover_01/",
+          "skel": "c290_cover_01.skel",
+          "atlas": "c290_cover_01.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c404_00",
+      "name": "c404_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c404_00/",
+      "skeleton": "c404_00.skel",
+      "atlas": "c404_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c404_00/",
+          "skel": "c404_00.skel",
+          "atlas": "c404_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c404_00_skillcut",
+      "name": "c404_00_skillcut · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE core catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c404_00_skillcut/",
+      "skeleton": "c404_00_skillcut.skel",
+      "atlas": "c404_00_skillcut.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c404_00_skillcut/",
+          "skel": "c404_00_skillcut.skel",
+          "atlas": "c404_00_skillcut.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c404_aim_00",
+      "name": "c404_aim_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c404_aim_00/",
+      "skeleton": "c404_aim_00.skel",
+      "atlas": "c404_aim_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c404_aim_00/",
+          "skel": "c404_aim_00.skel",
+          "atlas": "c404_aim_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c404_cover_00",
+      "name": "c404_cover_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c404_cover_00/",
+      "skeleton": "c404_cover_00.skel",
+      "atlas": "c404_cover_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c404_cover_00/",
+          "skel": "c404_cover_00.skel",
+          "atlas": "c404_cover_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c405_00",
+      "name": "c405_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c405_00/",
+      "skeleton": "c405_00.skel",
+      "atlas": "c405_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c405_00/",
+          "skel": "c405_00.skel",
+          "atlas": "c405_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c405_00_skillcut",
+      "name": "c405_00_skillcut · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE core catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c405_00_skillcut/",
+      "skeleton": "c405_00_skillcut.skel",
+      "atlas": "c405_00_skillcut.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c405_00_skillcut/",
+          "skel": "c405_00_skillcut.skel",
+          "atlas": "c405_00_skillcut.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c405_aim_00",
+      "name": "c405_aim_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c405_aim_00/",
+      "skeleton": "c405_aim_00.skel",
+      "atlas": "c405_aim_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c405_aim_00/",
+          "skel": "c405_aim_00.skel",
+          "atlas": "c405_aim_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c405_cover_00",
+      "name": "c405_cover_00 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c405_cover_00/",
+      "skeleton": "c405_cover_00.skel",
+      "atlas": "c405_cover_00.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c405_cover_00/",
+          "skel": "c405_cover_00.skel",
+          "atlas": "c405_cover_00.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c441_00_bg",
+      "name": "c441_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c441_00_bg/",
+      "skeleton": "c441_00_bg.skel",
+      "atlas": "c441_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c441_00_bg/",
+          "skel": "c441_00_bg.skel",
+          "atlas": "c441_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c450_03_bg",
+      "name": "c450_03_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c450_03_bg/",
+      "skeleton": "c450_03_bg.skel",
+      "atlas": "c450_03_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c450_03_bg/",
+          "skel": "c450_03_bg.skel",
+          "atlas": "c450_03_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c451_03_bg",
+      "name": "c451_03_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c451_03_bg/",
+      "skeleton": "c451_03_bg.skel",
+      "atlas": "c451_03_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c451_03_bg/",
+          "skel": "c451_03_bg.skel",
+          "atlas": "c451_03_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c513_03_bg",
+      "name": "c513_03_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c513_03_bg/",
+      "skeleton": "c513_03_bg.skel",
+      "atlas": "c513_03_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c513_03_bg/",
+          "skel": "c513_03_bg.skel",
+          "atlas": "c513_03_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c513_03_fg",
+      "name": "c513_03_fg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c513_03_fg/",
+      "skeleton": "c513_03_fg.skel",
+      "atlas": "c513_03_fg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c513_03_fg/",
+          "skel": "c513_03_fg.skel",
+          "atlas": "c513_03_fg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c515_00_bg",
+      "name": "c515_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c515_00_bg/",
+      "skeleton": "c515_00_bg.skel",
+      "atlas": "c515_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c515_00_bg/",
+          "skel": "c515_00_bg.skel",
+          "atlas": "c515_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c515_00_fg",
+      "name": "c515_00_fg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c515_00_fg/",
+      "skeleton": "c515_00_fg.skel",
+      "atlas": "c515_00_fg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c515_00_fg/",
+          "skel": "c515_00_fg.skel",
+          "atlas": "c515_00_fg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c521_01",
+      "name": "c521_01 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c521_01/",
+      "skeleton": "c521_01.skel",
+      "atlas": "c521_01.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c521_01/",
+          "skel": "c521_01.skel",
+          "atlas": "c521_01.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c521_aim_01",
+      "name": "c521_aim_01 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c521_aim_01/",
+      "skeleton": "c521_aim_01.skel",
+      "atlas": "c521_aim_01.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c521_aim_01/",
+          "skel": "c521_aim_01.skel",
+          "atlas": "c521_aim_01.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c521_cover_01",
+      "name": "c521_cover_01 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c521_cover_01/",
+      "skeleton": "c521_cover_01.skel",
+      "atlas": "c521_cover_01.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c521_cover_01/",
+          "skel": "c521_cover_01.skel",
+          "atlas": "c521_cover_01.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c580_01_bg",
+      "name": "c580_01_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c580_01_bg/",
+      "skeleton": "c580_01_bg.skel",
+      "atlas": "c580_01_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c580_01_bg/",
+          "skel": "c580_01_bg.skel",
+          "atlas": "c580_01_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c600_00_bg",
+      "name": "c600_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c600_00_bg/",
+      "skeleton": "c600_00_bg.skel",
+      "atlas": "c600_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c600_00_bg/",
+          "skel": "c600_00_bg.skel",
+          "atlas": "c600_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c601_00_bg",
+      "name": "c601_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c601_00_bg/",
+      "skeleton": "c601_00_bg.skel",
+      "atlas": "c601_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c601_00_bg/",
+          "skel": "c601_00_bg.skel",
+          "atlas": "c601_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c870_02_bg",
+      "name": "c870_02_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c870_02_bg/",
+      "skeleton": "c870_02_bg.skel",
+      "atlas": "c870_02_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c870_02_bg/",
+          "skel": "c870_02_bg.skel",
+          "atlas": "c870_02_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c870_02_fg",
+      "name": "c870_02_fg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c870_02_fg/",
+      "skeleton": "c870_02_fg.skel",
+      "atlas": "c870_02_fg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c870_02_fg/",
+          "skel": "c870_02_fg.skel",
+          "atlas": "c870_02_fg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c871_00_bg",
+      "name": "c871_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c871_00_bg/",
+      "skeleton": "c871_00_bg.skel",
+      "atlas": "c871_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c871_00_bg/",
+          "skel": "c871_00_bg.skel",
+          "atlas": "c871_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c871_01_bg",
+      "name": "c871_01_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c871_01_bg/",
+      "skeleton": "c871_01_bg.skel",
+      "atlas": "c871_01_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c871_01_bg/",
+          "skel": "c871_01_bg.skel",
+          "atlas": "c871_01_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c871_02_bg",
+      "name": "c871_02_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c871_02_bg/",
+      "skeleton": "c871_02_bg.skel",
+      "atlas": "c871_02_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c871_02_bg/",
+          "skel": "c871_02_bg.skel",
+          "atlas": "c871_02_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "c872_00_bg",
+      "name": "c872_00_bg · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/c872_00_bg/",
+      "skeleton": "c872_00_bg.skel",
+      "atlas": "c872_00_bg.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/c872_00_bg/",
+          "skel": "c872_00_bg.skel",
+          "atlas": "c872_00_bg.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "EventScene_coinrushshowdown_02",
+      "name": "EventScene_coinrushshowdown_02 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE core catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/EventScene_coinrushshowdown_02/",
+      "skeleton": "EventScene_coinrushshowdown_02.skel",
+      "atlas": "EventScene_coinrushshowdown_02.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/EventScene_coinrushshowdown_02/",
+          "skel": "EventScene_coinrushshowdown_02.skel",
+          "atlas": "EventScene_coinrushshowdown_02.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_guilty",
+      "name": "tcr_guilty · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_guilty/",
+      "skeleton": "tcr_guilty.skel",
+      "atlas": "tcr_guilty.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_guilty/",
+          "skel": "tcr_guilty.skel",
+          "atlas": "tcr_guilty.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_ade",
+      "name": "tcr_monster_ade · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_ade/",
+      "skeleton": "tcr_monster_ade.skel",
+      "atlas": "tcr_monster_ade.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_ade/",
+          "skel": "tcr_monster_ade.skel",
+          "atlas": "tcr_monster_ade.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_alice",
+      "name": "tcr_monster_alice · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_alice/",
+      "skeleton": "tcr_monster_alice.skel",
+      "atlas": "tcr_monster_alice.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_alice/",
+          "skel": "tcr_monster_alice.skel",
+          "atlas": "tcr_monster_alice.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_blanc",
+      "name": "tcr_monster_blanc · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_blanc/",
+      "skeleton": "tcr_monster_blanc.skel",
+      "atlas": "tcr_monster_blanc.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_blanc/",
+          "skel": "tcr_monster_blanc.skel",
+          "atlas": "tcr_monster_blanc.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_exia",
+      "name": "tcr_monster_exia · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_exia/",
+      "skeleton": "tcr_monster_exia.skel",
+      "atlas": "tcr_monster_exia.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_exia/",
+          "skel": "tcr_monster_exia.skel",
+          "atlas": "tcr_monster_exia.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_folkwang",
+      "name": "tcr_monster_folkwang · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_folkwang/",
+      "skeleton": "tcr_monster_folkwang.skel",
+      "atlas": "tcr_monster_folkwang.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_folkwang/",
+          "skel": "tcr_monster_folkwang.skel",
+          "atlas": "tcr_monster_folkwang.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_milk",
+      "name": "tcr_monster_milk · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_milk/",
+      "skeleton": "tcr_monster_milk.skel",
+      "atlas": "tcr_monster_milk.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_milk/",
+          "skel": "tcr_monster_milk.skel",
+          "atlas": "tcr_monster_milk.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_noir",
+      "name": "tcr_monster_noir · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_noir/",
+      "skeleton": "tcr_monster_noir.skel",
+      "atlas": "tcr_monster_noir.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_noir/",
+          "skel": "tcr_monster_noir.skel",
+          "atlas": "tcr_monster_noir.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_normal_1",
+      "name": "tcr_monster_normal_1 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_normal_1/",
+      "skeleton": "tcr_monster_normal_1.skel",
+      "atlas": "tcr_monster_normal_1.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_normal_1/",
+          "skel": "tcr_monster_normal_1.skel",
+          "atlas": "tcr_monster_normal_1.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_normal_2",
+      "name": "tcr_monster_normal_2 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_normal_2/",
+      "skeleton": "tcr_monster_normal_2.skel",
+      "atlas": "tcr_monster_normal_2.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_normal_2/",
+          "skel": "tcr_monster_normal_2.skel",
+          "atlas": "tcr_monster_normal_2.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_normal_3",
+      "name": "tcr_monster_normal_3 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_normal_3/",
+      "skeleton": "tcr_monster_normal_3.skel",
+      "atlas": "tcr_monster_normal_3.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_normal_3/",
+          "skel": "tcr_monster_normal_3.skel",
+          "atlas": "tcr_monster_normal_3.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_normal_4",
+      "name": "tcr_monster_normal_4 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_normal_4/",
+      "skeleton": "tcr_monster_normal_4.skel",
+      "atlas": "tcr_monster_normal_4.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_normal_4/",
+          "skel": "tcr_monster_normal_4.skel",
+          "atlas": "tcr_monster_normal_4.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_normal_5",
+      "name": "tcr_monster_normal_5 · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_normal_5/",
+      "skeleton": "tcr_monster_normal_5.skel",
+      "atlas": "tcr_monster_normal_5.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_normal_5/",
+          "skel": "tcr_monster_normal_5.skel",
+          "atlas": "tcr_monster_normal_5.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_monster_soda",
+      "name": "tcr_monster_soda · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_monster_soda/",
+      "skeleton": "tcr_monster_soda.skel",
+      "atlas": "tcr_monster_soda.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_monster_soda/",
+          "skel": "tcr_monster_soda.skel",
+          "atlas": "tcr_monster_soda.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_sin",
+      "name": "tcr_sin · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_sin/",
+      "skeleton": "tcr_sin.skel",
+      "atlas": "tcr_sin.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_sin/",
+          "skel": "tcr_sin.skel",
+          "atlas": "tcr_sin.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_sugar",
+      "name": "tcr_sugar · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_sugar/",
+      "skeleton": "tcr_sugar.skel",
+      "atlas": "tcr_sugar.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_sugar/",
+          "skel": "tcr_sugar.skel",
+          "atlas": "tcr_sugar.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_sugar_blacktyphoon",
+      "name": "tcr_sugar_blacktyphoon · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_sugar_blacktyphoon/",
+      "skeleton": "tcr_sugar_blacktyphoon.skel",
+      "atlas": "tcr_sugar_blacktyphoon.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_sugar_blacktyphoon/",
+          "skel": "tcr_sugar_blacktyphoon.skel",
+          "atlas": "tcr_sugar_blacktyphoon.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_ultskill_cutscene_guilty",
+      "name": "tcr_ultskill_cutscene_guilty · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_ultskill_cutscene_guilty/",
+      "skeleton": "tcr_ultskill_cutscene_guilty.skel",
+      "atlas": "tcr_ultskill_cutscene_guilty.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_ultskill_cutscene_guilty/",
+          "skel": "tcr_ultskill_cutscene_guilty.skel",
+          "atlas": "tcr_ultskill_cutscene_guilty.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_ultskill_cutscene_sin",
+      "name": "tcr_ultskill_cutscene_sin · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_ultskill_cutscene_sin/",
+      "skeleton": "tcr_ultskill_cutscene_sin.skel",
+      "atlas": "tcr_ultskill_cutscene_sin.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_ultskill_cutscene_sin/",
+          "skel": "tcr_ultskill_cutscene_sin.skel",
+          "atlas": "tcr_ultskill_cutscene_sin.atlas",
+          "format": "binary"
+        }
+      ]
+    },
+    {
+      "id": "tcr_ultskill_cutscene_sugar",
+      "name": "tcr_ultskill_cutscene_sugar · 目录重组提取",
+      "author": "game",
+      "source": "NIKKE dp catalog via ndb VFS",
+      "type": "catalog",
+      "spineVersion": "4.1.20",
+      "resourceDir": "spine/tcr_ultskill_cutscene_sugar/",
+      "skeleton": "tcr_ultskill_cutscene_sugar.skel",
+      "atlas": "tcr_ultskill_cutscene_sugar.atlas",
+      "format": "binary",
+      "cutscenes": [
+        {
+          "variant": "Catalog",
+          "dir": "spine/tcr_ultskill_cutscene_sugar/",
+          "skel": "tcr_ultskill_cutscene_sugar.skel",
+          "atlas": "tcr_ultskill_cutscene_sugar.atlas",
+          "format": "binary"
+        }
+      ]
     }
   ]
 }
