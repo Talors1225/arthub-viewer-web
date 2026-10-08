@@ -331,6 +331,7 @@
       <button id="btnPng" title="导出当前画面为 PNG"></button>
       <button id="btnGif" title="导出当前动画为 GIF">🎞</button>
       <button id="btnBg" title="背景颜色 / 预设">◐</button>
+      <button id="btnVoice" title="点击立绘播放角色语音" aria-label="点击立绘播放角色语音" aria-pressed="true"></button>
       <div class="strip-sep"></div>
       <button id="btnPresetImmersive" title="沉浸模式 (I)"></button>
     </div>
@@ -394,6 +395,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/kit.js?v=17151739ade2"></script>
 <script src="../../common/asset-loader.js?v=17151739ade2"></script>
+<script src="../../common/portrait-audio.js?v=c32ec89109a8"></script>
 <script>
 
 (() => {
@@ -410,6 +412,7 @@
       loop: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
       bone: '<path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"/>',
       camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+      volume: '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>',
       layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
       minus: '<path d="M5 12h14"/>',
       plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
@@ -435,7 +438,7 @@
   const playbarToggle = $('#playbarToggle'), playbar = $('#playbar');
   const pbSpeed = $('#pbSpeed'), pbSpeedVal = $('#pbSpeedVal');
   const btnParts = $('#btnParts'), btnAnimTab = $('#btnAnimTab');
-  const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg');
+  const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg'), btnVoice = $('#btnVoice');
   const floatPanel = $('#floatPanel'), gridView = $('#gridView');
   const rail = $('#rail'), topPill = $('#topPill'), toolStrip = $('#toolStrip');
   // GitHub Pages 使用 /项目名/游戏名/viewer/ 的路径；本地服务则是 /游戏名/viewer/。
@@ -474,6 +477,7 @@
   let cur = null;
   let mgl = null, renderer = null;
   let cut = null;
+  let portraitAudio = null;
   let cutLoadSeq = 0;
   let playing = true;
   let loopAnim = true;
@@ -538,6 +542,7 @@
   const setPlayBtn = () => {
     pbPlay.innerHTML = playing ? I('pause', 15) : I('play', 15);
     pbPlay.classList.toggle('active', playing);
+    portraitAudio?.playbackChanged();
   };
   const setLoopBtn = () => {
     pbLoop.innerHTML = I('loop', 14);
@@ -551,6 +556,7 @@
   $('#btnBoneEdit').innerHTML = I('move', 15);
   btnDebug.innerHTML = I('bone', 15);
   btnPng.innerHTML = I('camera', 15);
+  btnVoice.innerHTML = I('volume', 15);
   $('#btnPresetImmersive').innerHTML = I('collapse', 13);
   $('#zOut').innerHTML = I('minus', 12);
   $('#zIn').innerHTML = I('plus', 12);
@@ -988,6 +994,7 @@
   let gridScroll = 0;
   function openGrid() {
     stageMode = false;
+    portraitAudio?.playbackChanged();
     gridView.classList.add('open');
     setChrome(false);
     renderGrid();
@@ -1000,6 +1007,7 @@
       selectChar(chars.find(c => c.id === last.id) || gridArr[0] || chars[0], last);
     }
     stageMode = true;
+    portraitAudio?.playbackChanged();
     gridView.classList.remove('open');
     setChrome(true);
     requestAnimationFrame(() => { K.resizeCanvas(cv, renderer); if (cut && fitMode) refit(); else if (cut) applyView(); });
@@ -1349,6 +1357,7 @@
       const layerTrack = layer.state && layer.state.getCurrent(0);
       if (layerTrack) layerTrack.trackTime = time;
     }
+    portraitAudio?.seek();
     if (!playing) { applyCutLayerStates(); }
     syncTimeline();
   }
@@ -1363,6 +1372,7 @@
       const layerTrack = layer.state && layer.state.getCurrent(0);
       if (layerTrack) layerTrack.trackTime = t;
     }
+    portraitAudio?.seek();
     if (!playing) { applyCutLayerStates(); }
     syncTimeline();
   }
@@ -1370,7 +1380,7 @@
     const track = getTrack();
     if (!track) { pbTime.textContent = '0.00 / 0.00s'; return; }
     const dur = track.animation.duration || 0.0001;
-    const t = ((track.trackTime % dur) + dur) % dur;
+    const t = track.loop ? ((track.trackTime % dur) + dur) % dur : Math.min(dur, Math.max(0, track.trackTime));
     pbRange.value = String(Math.round(t / dur * 1000));
     pbTime.textContent = t.toFixed(2) + ' / ' + dur.toFixed(2) + 's';
   }
@@ -1389,15 +1399,17 @@
     pbSpeedVal.textContent = fmtSpeed(pbSpeed.value);
     store.set('speed', Number(pbSpeed.value));
     if (cut) for (const layer of cutLayers()) if (layer.state) layer.state.timeScale = Number(pbSpeed.value);
+    portraitAudio?.speedChanged();
   });
   function fmtSpeed(v) { return Number(v).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'x'; }
 
   // ---------- 渲染循环 ----------
   function loop(t) {
     requestAnimationFrame(loop);
-    const dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
+    let dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
     lastT = t;
-    if (document.hidden || (!embedded && !stageMode)) return;
+    if (document.hidden || (!embedded && !stageMode)) { portraitAudio?.syncPause(); return; }
+    if (portraitAudio) dt = portraitAudio.animationDelta(dt);
     try {
     if (cut) {
       for (const layer of cutLayers()) {
@@ -1409,6 +1421,7 @@
         K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
       }
     }
+    portraitAudio?.tick();
     if (cmpOn && cmp) {
       if (playing) { cmp.state.update(dt); cmp.state.apply(cmp.skeleton); }
       K.updateWorldTransform(cmp.skeleton);
@@ -1531,8 +1544,9 @@
     return bounds || target.bounds || null;
   }
 
-  function playAnimation(name) {
+  function playAnimation(name, options = {}) {
     if (!cut) return;
+    portraitAudio?.animationChanged(name, options);
     let bounds = null;
     for (const layer of cutLayers()) {
       const layerName = layerAnimationName(layer, name);
@@ -1540,7 +1554,7 @@
       if (layer.state) {
         layer.state.clearTracks();
         layer.skeleton.setToSetupPose();
-        if (layerName) layer.state.setAnimation(0, layerName, loopAnim);
+        if (layerName) layer.state.setAnimation(0, layerName, options.loop ?? loopAnim);
         layer.state.timeScale = Number(pbSpeed.value);
         layer.state.update(0);
         layer.state.apply(layer.skeleton);
@@ -1571,9 +1585,51 @@
       if (cmpBounds) cmp.bounds = cmpBounds;
     }
     if (animCtl) animCtl.refresh();
-    if (fitMode) refit();
+    if (fitMode && !options.keepView) refit();
+    pbLoop.classList.toggle('active', options.loop ?? loopAnim);
+    syncTimeline();
     syncUrl(name);
   }
+
+
+  // The adapter keeps audio out of exporters, thumbnails, comparison rigs and bone editing.
+  function initPortraitAudio() {
+    if (routeSource !== 'nikki' || !window.ArtHubPortraitAudio) return;
+    const talk = speaking => {
+      if (!cut) return;
+      const name = speaking ? 'talk_start' : 'talk_end';
+      if (cut.data.animations.some(a => a.name === name)) {
+        cut.state.setAnimation(1, name, false);
+        if (!speaking && cut.state.addEmptyAnimation) cut.state.addEmptyAnimation(1, 0.05, 0);
+      }
+    };
+    portraitAudio = new ArtHubPortraitAudio.Controller({
+      store, popup: makeStagePopup, status, embedded,
+      duration: name => cut?.data.animations.find(a => a.name === name)?.duration || 0,
+      advance: delta => {
+        if (!cut) return;
+        for (const layer of cut.layers || [cut]) if (layer.active !== false && layer.state) {
+          layer.state.update(delta); layer.state.apply(layer.skeleton);
+        }
+        syncTimeline();
+      },
+      indexURL: new URL('../audio-logic.json', location.href).href,
+      snapshot: () => {
+        const track = getTrack();
+        if (!cut || !cur || !track) return null;
+        return { id: cur.id, animation: track.animation.name, time: track.trackTime,
+          duration: track.animation.duration, loop: track.loop, speed: Number(pbSpeed.value) || 1,
+          playing, active: (embedded || stageMode) && !boneEditMode,
+          animations: cut.data.animations.map(a => a.name) };
+      },
+      talk,
+      play: () => { playing = true; setPlayBtn(); },
+      react: name => { animSel.value = name; playAnimation(name, { loop: false, keepSpeech: true, keepView: true }); },
+      idle: name => { animSel.value = name; playAnimation(name, { loop: true, keepSpeech: true, keepView: true }); if (portraitAudio.voice) talk(true); },
+    });
+    window.__arthubPortraitAudio = portraitAudio;
+  }
+
 
   // ---------- ArtHub desktop embed bridge ----------
   const playerParams = new URLSearchParams(location.search);
@@ -1803,6 +1859,7 @@
     }
   }
   function disposeCut() {
+    portraitAudio?.reset();
     if (cut) {
       for (const layer of cutLayers(cut)) disposeAtlas(layer.atlas);
       cut = null;
@@ -2472,7 +2529,10 @@
       const rect = cv.getBoundingClientRect();
       const dpr = devicePixelRatio || 1;
       const name = K.hitTestSlot(cut.skeleton, (tapX - rect.left) * dpr - cv.width / 2, cv.height / 2 - (tapY - rect.top) * dpr, K.getSpine(cur && cur.spineVersion));
-      if (name) showPartPopup(name, tapX, tapY);
+      if (name) {
+        if (!portraitAudio?.interact()) showPartPopup(name, tapX, tapY);
+        else hidePartPopup();
+      }
       else hidePartPopup();
     }
   });
@@ -2550,6 +2610,7 @@
   // 多版本运行时: 静态脚本已载入 4.1, 这里再捕获并补载 4.0/4.2
   (async () => {
     setupDesktopBridge();
+    initPortraitAudio();
     K.initSearchPalette();
     K.captureSpine('4.1');
     // Other runtime versions load only when a selected model needs them.

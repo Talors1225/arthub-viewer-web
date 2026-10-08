@@ -6,7 +6,7 @@
   if (!root) return;
 
   const ASSET_MARKERS = [
-    '/bd2/spine/', '/nikki/spine/', '/nikki/spine_carved/',
+    '/bd2/spine/', '/nikki/spine/', '/nikki/spine_carved/', '/nikki/audio/',
     '/majsoul/assets_raw/', '/majsoul/web_illustrations/',
   ];
 
@@ -79,4 +79,3 @@
   }
 
 })();
-
