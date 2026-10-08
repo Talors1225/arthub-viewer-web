@@ -8,8 +8,23 @@
   const K = {};
 
   // ---------- Store: localStorage 封装 ----------
+  // 部件显隐只作用于当前 Skeleton，但旧版会把 hiddenMap 按资源 ID 长期保存。
+  // 资源更新后同名 ID 可能复用旧槽位记录，导致完整资源仍以残缺状态显示。
+  // 仅对三个公开查看器做一次状态迁移；不触碰 data/ 下的原始资源。
+  const HIDDEN_STATE_MIGRATION = 'visible-assets-20260921';
+  const HIDDEN_STATE_PREFIXES = new Set(['bd2', 'nikki', 'majsoul']);
   K.Store = (prefix) => {
-    const key = n => prefix + ':' + n;
+    const prefixText = String(prefix || '');
+    const key = n => prefixText + ':' + n;
+    if (HIDDEN_STATE_PREFIXES.has(prefixText)) {
+      try {
+        const markerKey = key('hiddenStateMigration');
+        if (localStorage.getItem(markerKey) !== JSON.stringify(HIDDEN_STATE_MIGRATION)) {
+          localStorage.removeItem(key('hiddenMap'));
+          localStorage.setItem(markerKey, JSON.stringify(HIDDEN_STATE_MIGRATION));
+        }
+      } catch {}
+    }
     return {
       get(n, def) {
         try {
@@ -69,7 +84,7 @@
   };
 
   // ---------- NIKKE 目录资源的显示分类 ----------
-  // 原始索引仍保持 type=catalog，分类只在浏览器内生效，避免覆盖用户导出的数据。
+  // 原始索引保持只读。发布索引自带分类；本地旧索引按文件名回退。
   const NIKKE_CATEGORY_LABEL = {
     cutscene: '过场', skill: '技能', battle: '战斗', lobby: '立绘',
     idle: '待机', store: '客户端提取', unknown: '其他',
@@ -91,9 +106,15 @@
   };
   K.classifyNikkeCatalog = (entry) => {
     if (!entry || entry.type !== 'catalog') return null;
-    // Directory/catalog exports are auxiliary resources rather than gameplay
-    // actions; keep them together under the Other filter.
-    return { type: 'unknown', label: NIKKE_CATEGORY_LABEL.unknown };
+    let type = String(entry.resourceType || '').toLowerCase();
+    if (!type) {
+      const id = String(entry.id || '');
+      if (/skillcut|(?:^|[_-])(?:skill|burst)(?:[_-]|$)/i.test(id)) type = 'skill';
+      else if (/(?:^|[_-])(?:aim|cover|battle|attack|combat)(?:[_-]|$)/i.test(id)) type = 'battle';
+      else if (/^c\d{3,4}_\d{2}(?:$|_lobby)|lobby|standing|portrait/i.test(id)) type = 'lobby';
+    }
+    if (!['skill', 'battle', 'lobby'].includes(type)) type = 'unknown';
+    return { type, label: NIKKE_CATEGORY_LABEL[type] };
   };
   K.decorateNikkeIndex = (data) => {
     if (!data || !Array.isArray(data.characters)) return data;
@@ -163,8 +184,9 @@
   };
   const catalogFetchBase = window.fetch.bind(window);
   let assetCatalog = ASSET_CATALOG_FALLBACK;
-  const assetCatalogReady = catalogFetchBase('../../common/asset-catalog.json', { cache: 'no-cache' })
-    .then(r => r.ok ? r.json() : ASSET_CATALOG_FALLBACK)
+  const assetCatalogReady = (window.ARTHUB_COS_CONFIG?.staticCatalog
+    ? Promise.resolve(ASSET_CATALOG_FALLBACK)
+    : catalogFetchBase('../../common/asset-catalog.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : ASSET_CATALOG_FALLBACK))
     .then(data => { if (data && typeof data === 'object') assetCatalog = data; return assetCatalog; })
     .catch(() => assetCatalog);
   K.assetCatalogReady = assetCatalogReady;
@@ -180,20 +202,24 @@
     headers.set('content-type', 'application/json; charset=utf-8');
     return new Response(JSON.stringify(data), { status: response.status, statusText: response.statusText, headers });
   };
+  const embeddedSpineMeta = {};
 
   K.spineMeta = (source, id) => {
     const map = assetCatalog.spine && assetCatalog.spine[source];
-    return (map && map[String(id)]) || null;
+    return (embeddedSpineMeta[source] && embeddedSpineMeta[source][String(id)]) || (map && map[String(id)]) || null;
   };
 
   K.decorateAssetIndex = (data, source) => {
     if (!data || !Array.isArray(data.characters)) return data;
     const labels = assetTypeLabels();
     const map = assetCatalog.spine && assetCatalog.spine[source] || {};
+    const embedded = embeddedSpineMeta[source] || (embeddedSpineMeta[source] = {});
     const characters = data.characters.map(entry => {
       const id = String(entry && (entry.id || entry.name) || '');
-      const meta = map[id];
+      const meta = data.catalogNormalized ? entry : map[id];
       if (!meta) return entry;
+      embedded[id] = meta;
+      if (data.catalogNormalized) return entry;
       const originalName = String(meta.originalName || entry.originalName || entry.name || id);
       const displayName = String(meta.displayName || entry.displayName || originalName);
       const oldSource = String(entry.source || '').replace(/\s+·\s+原名：?[^\n]+$/u, '');
@@ -305,8 +331,8 @@
     if (!spineGrid && !galleryGrid) return;
     document.documentElement.dataset.gavAssetNamingReady = '1';
 
-    const route = location.pathname.split('/').filter(Boolean)[0] || '';
-    const sourceMap = () => assetCatalog.spine && assetCatalog.spine[route] || {};
+    const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikke', 'nikki', 'majsoul', 'gallery'].includes(part)) || '';
+    const sourceMap = () => ({ ...(assetCatalog.spine && assetCatalog.spine[route] || {}), ...(embeddedSpineMeta[route] || {}) });
     const galleryContext = () => {
       const params = new URLSearchParams(location.hash.replace(/^#/, ''));
       return { lib: params.get('lib') || '', cat: params.get('cat') || '' };
@@ -420,7 +446,7 @@
         if (!response.ok || (!spineMatch && !galleryFilesMatch && !galleryMetaMatch)) return response;
         try {
           const data = await response.clone().json();
-          await assetCatalogReady;
+          if (!data.catalogNormalized && !window.ARTHUB_COS_CONFIG?.staticCatalog) await assetCatalogReady;
           let decorated = data;
           if (spineMatch) decorated = K.decorateAssetIndex(data, spineMatch[1].toLowerCase());
           else if (galleryFilesMatch) decorated = K.decorateGalleryFiles(data, galleryFilesMatch[1]);
@@ -432,6 +458,33 @@
   }
 
   let nikkeSearchPromise = null;
+  const staticSearchIndexes = new Map();
+  K.searchStaticCatalog = async (query) => {
+    const q = String(query || '').trim().toLowerCase();
+    if (q.length < 2) return [];
+    const root = K.siteRoot();
+    const games = [
+      { key: 'nikki', label: 'NIKKE', index: 'nikki/nikki_chars.json', page: 'nikki/viewer/cutscene.html' },
+      { key: 'bd2', label: '棕色尘埃2', index: 'bd2/bd2_chars.json', page: 'bd2/viewer/cutscene.html' },
+      { key: 'majsoul', label: '雀魂', index: 'majsoul/characters.json', page: 'majsoul/viewer/index.html' },
+    ];
+    const settled = await Promise.allSettled(games.map(async game => {
+      if (!staticSearchIndexes.has(game.key)) {
+        const pending = K.fetchJSON(root + game.index).then(data => data.characters || []);
+        staticSearchIndexes.set(game.key, pending);
+        pending.catch(() => staticSearchIndexes.delete(game.key));
+      }
+      const characters = await staticSearchIndexes.get(game.key);
+      return characters.filter(c => [c.id, c.name, c.label, c.displayName, c.characterName, c.originalName, c.source, c.group].filter(Boolean).join(' ').toLowerCase().includes(q))
+        .slice(0, 15).map(c => ({
+          group: game.label,
+          title: c.displayName || c.label || c.name || c.id,
+          sub: c.id,
+          url: root + game.page + (game.key === 'majsoul' ? '#sel=' : '?id=') + encodeURIComponent(c.id),
+        }));
+    }));
+    return settled.flatMap(result => result.status === 'fulfilled' ? result.value : []);
+  };
   K.searchNikkeCatalog = (query) => {
     const q = String(query || '').trim().toLowerCase();
     if (q.length < 2) return Promise.resolve([]);
@@ -455,9 +508,10 @@
   // ---------- 脚本 / 运行时加载 ----------
   K.loadScript = (src) => new Promise((res, rej) => {
     const s = document.createElement('script');
+    const timer = setTimeout(() => { s.remove(); rej(new Error('运行库加载超时')); }, 20000);
     s.src = src;
-    s.onload = () => res();
-    s.onerror = () => rej(new Error('加载失败 ' + src));
+    s.onload = () => { clearTimeout(timer); res(); };
+    s.onerror = () => { clearTimeout(timer); s.remove(); rej(new Error('运行库加载失败')); };
     document.head.appendChild(s);
   });
 
@@ -931,10 +985,11 @@
       timer = setTimeout(() => {
         const q = input.value.trim();
         if (!q) { render(quickRows()); return; }
-        const remote = fetch('/api/search?q=' + encodeURIComponent(q))
+        const remote = window.ARTHUB_COS_ROOT ? Promise.resolve({ results: [] }) : fetch('/api/search?q=' + encodeURIComponent(q))
           .then(r => r.ok ? r.json() : { results: [] })
           .catch(() => ({ results: [] }));
-        Promise.all([remote, K.searchNikkeCatalog(q).catch(() => [])]).then(([d, local]) => {
+        const localSearch = window.ARTHUB_COS_ROOT ? K.searchStaticCatalog(q) : K.searchNikkeCatalog(q);
+        Promise.all([remote, localSearch.catch(() => [])]).then(([d, local]) => {
           if (input.value.trim() !== q) return;
           const seen = new Set();
           const commands = currentCommands().filter(item => {
@@ -964,6 +1019,7 @@
     });
     function open() { pal.classList.add('open'); input.value = ''; render(quickRows()); setTimeout(() => input.focus(), 0); }
     function close() { pal.classList.remove('open'); }
+    K.openSearchPalette = open;
     pal.addEventListener('click', (e) => { if (e.target === pal) close(); });
     window.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); open(); }
@@ -1326,8 +1382,10 @@
     const invokeSecondary = (button) => {
       const originalStyle = button.getAttribute('style');
       const rect = more.getBoundingClientRect();
-      // 部分原生弹窗用按钮 rect 定位；收纳后按钮是 display:none，
-      // 临时给它一个不可见的“更多”位置，再恢复原样。
+      const parent = button.parentNode, next = button.nextSibling;
+      // The blurred toolbar creates a containing block for fixed descendants.
+      // Move the hidden anchor to body briefly so its rect uses viewport coordinates.
+      document.body.appendChild(button);
       button.classList.remove('kit-secondary-tool');
       button.style.position = 'fixed';
       button.style.left = rect.left + 'px';
@@ -1341,6 +1399,7 @@
         if (originalStyle == null) button.removeAttribute('style');
         else button.setAttribute('style', originalStyle);
         button.classList.add('kit-secondary-tool');
+        parent.insertBefore(button, next && next.parentNode === parent ? next : null);
       }
     };
     more.addEventListener('click', (event) => {
@@ -1573,7 +1632,7 @@
     document.documentElement.dataset.gavLibraryReady = '1';
 
     const isGallery = !!gallerySearch;
-    const route = location.pathname.split('/').filter(Boolean)[0] || 'viewer';
+    const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikke', 'nikki', 'majsoul', 'gallery'].includes(part)) || 'viewer';
     const store = K.Store('gav:library:' + route);
     const oldParent = search.parentElement;
     const wrap = document.createElement('div');

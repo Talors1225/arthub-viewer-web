@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css">
+<link rel="stylesheet" href="../../common/kit.css?v=17151739ade2">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -261,20 +261,8 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=98ce68499155"></script>
-  <script src="../../arthub-cos.js"></script>
-  <script src="https://tam.cdn-go.cn/aegis-sdk/latest/aegis.min.js"></script>
-<script>
-  if (typeof Aegis === 'function') {
-    new Aegis({
-      id: '16z7WCIp1j7YL6WwKd',
-      reportApiSpeed: true,
-      reportAssetSpeed: true,
-      spa: true,
-      hostUrl: 'https://rumt-zh.com'
-    });
-  }
-</script>
+  <script src="../../arthub-cos-config.js?v=59706fce5143"></script>
+  <script src="../../arthub-cos.js?v=17151739ade2"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -312,6 +300,9 @@
     <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
 
     <div class="tool-strip" id="toolStrip">
+      <button id="btnRetry" title="重新加载当前资源">↻</button>
+      <button id="btnRestoreParts" title="恢复默认部件显示">恢复部件</button>
+      <button id="btnGlobalSearch" title="全局搜索 (Ctrl+K)">⌕</button>
       <div class="zoom-bar tool-zoom" aria-label="视图缩放">
         <button id="zOut" title="缩小">−</button>
         <span class="zoom-pct" id="zPct">100%</span>
@@ -332,6 +323,7 @@
 
   <div id="gridView">
     <div class="grid-head">
+      <a class="grid-sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer" title="爱发电 · 支持 ArtHub">♥ 爱发电</a>
       <span class="grid-title" id="brandTitle">雀魂资源库</span>
       <span class="grid-sub" id="gridSub"></span>
       <input id="gridSearch" class="text-input" placeholder="搜索名称 / 编号 / 分组...">
@@ -394,7 +386,8 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/kit.js"></script>
+<script src="../../common/kit.js?v=17151739ade2"></script>
+<script src="../../common/asset-loader.js?v=17151739ade2"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -422,7 +415,7 @@
   let capturePending = null;
   const debugFlags = store.get('debugView', {});
 
-  const status = t => { statusEl.textContent = t; };
+  const status = t => K.setStatus(statusEl, t);
 
   if (embedded) {
     document.documentElement.classList.add('arthub-embedded');
@@ -582,7 +575,7 @@
   let sortMode = store.get('sortMode', 'default');
   let sortDirection = store.get('sortDirection', 'asc');
   let gridPage = 1;
-  const GRID_PAGE = 120;
+  const GRID_PAGE = K.libraryPageSize();
 
   function setChrome(onStage) {
     rail.classList.toggle('hide', !onStage);
@@ -592,12 +585,11 @@
     statusEl.classList.toggle('hide', !onStage);
       }
   function renderPagination(totalItems) {
-    const nav = $('#gridPagination');
-    if (!nav) return;
+    for (const nav of K.paginationHosts(gridView)) {
     const totalPages = Math.max(1, Math.ceil(totalItems / GRID_PAGE));
     gridPage = Math.min(Math.max(gridPage, 1), totalPages);
     nav.innerHTML = '';
-    if (!totalItems || totalPages <= 1) { nav.hidden = true; return; }
+    if (!totalItems || totalPages <= 1) { nav.hidden = true; continue; }
     nav.hidden = false;
     const addButton = (label, page, options = {}) => {
       const b = document.createElement('button');
@@ -631,6 +623,7 @@
       previous = page;
     }
     addButton('\u203a', gridPage + 1, { disabled: gridPage >= totalPages });
+    }
   }
 
   function renderGrid() {
@@ -679,7 +672,7 @@
       grid.appendChild(card);
       const ph = card.querySelector('.ph');
       const thumbPath = webThumbs['majsoul:' + c.id];
-      if (thumbPath) ph.innerHTML = '<img src="' + THUMB_PREFIX + thumbPath + '" alt="" loading="lazy" decoding="async">';
+      if (thumbPath) K.setPreview(ph, THUMB_PREFIX + thumbPath);
     });
     $('#gridSub').textContent = arr.length
       ? arr.length + ' \u4e2a\u6761\u76ee \u00b7 \u7b2c ' + gridPage + ' / ' + totalPages + ' \u9875'
@@ -687,7 +680,7 @@
     renderPagination(arr.length);
     for (const c of pageArr) {
       const phEl = grid.querySelector('.thumb-card[data-id="' + c.id + '"] .ph');
-      if (!phEl) continue;
+      if (!phEl || webThumbs['majsoul:' + c.id]) continue;
       ThumbStore.get('majsoul:' + c.id).then(url => {
         if (url && phEl.isConnected) phEl.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain">';
       });
@@ -701,6 +694,7 @@
     $('#playbar').classList.toggle('hide', !onStage);
     statusEl.classList.toggle('hide', !onStage);
       }
+  let gridScroll = 0;
   function openGrid() {
     // 截取当前画布帧作为缩略图 (必须在 grid 覆盖前)
     if (curEntry && gl && layers.length) {
@@ -725,12 +719,18 @@
     gridView.classList.add('open');
     setChrome(false);
     renderGrid();
+    requestAnimationFrame(() => { gridView.scrollTop = gridScroll; });
   }
   function closeGrid() {
+    gridScroll = gridView.scrollTop;
     stageMode = true;
     gridView.classList.remove('open');
     setChrome(true);
     requestAnimationFrame(() => { K.resizeCanvas(canvas, renderer); applyAllTransforms(); });
+    if (!curEntry && characters.length) {
+      const lastId = store.get('lastChar', null);
+      loadSelection(characters.find(entry => entry.id === lastId) || characters[0]);
+    }
   }
   function toggleGrid() { stageMode ? openGrid() : closeGrid(); }
   $('#railGrid').addEventListener('click', toggleGrid);
@@ -772,6 +772,7 @@
   function frame(now) {
     requestAnimationFrame(frame);
     if (!gl || !renderer) return;
+    if (document.hidden || (!embedded && !stageMode)) { lastFrame = now; return; }
     const delta = Math.min((now - lastFrame) / 1000, 0.25);
     lastFrame = now;
     try {
@@ -913,35 +914,31 @@
     return a ? a.name : null;
   }
 
-  async function loadLayerModel(entry) {
-    const dir = '../' + entry.dir;
-    const atlasName = entry.atlas.split('/').pop();
-    const assetManager = new spine.AssetManager(gl, dir);
-    const atlas = await new Promise((resolve, reject) => {
-      assetManager.loadTextureAtlas(atlasName, (p, a) => resolve(a), reject);
+  let selectionRequest = null;
+  async function loadLayerModel(entry, signal) {
+    const files = await K.loadSpineFiles(spine, gl, {
+      atlasURL: '../' + entry.atlas, skeletonURL: '../' + entry.skel, signal,
     });
-    const resp = await fetch('../' + entry.skel);
-    if (!resp.ok) throw new Error(entry.label + ' skel 404');
-    const isJson = /\.json$/i.test(entry.skel);
-    const bytes = new Uint8Array(await resp.arrayBuffer());
-    const loader = new spine.AtlasAttachmentLoader(atlas);
-    const data = isJson
-      ? new spine.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(bytes)))
-      : new spine.SkeletonBinary(loader).readSkeletonData(bytes);
-    const skeleton = new spine.Skeleton(data);
-    skeleton.setToSetupPose();
-    const stateData = new spine.AnimationStateData(data);
-    stateData.defaultMix = 0.15;
-    const state = new spine.AnimationState(stateData);
-    const idleAnim = animMatch(data, /idle|stand|dai|wait/i) || (data.animations.length ? data.animations[0].name : null);
-    if (idleAnim) state.setAnimation(0, idleAnim, true);
-    return { entry, skeleton, data, state, atlas, fitScale: 1, ox: 0, oy: 0, rot: 0, opacity: 1, visible: true, idleAnim, hiddenSlots: new Set(), rawBounds: null };
+    const atlas = files.atlas;
+    try {
+      const loader = new spine.AtlasAttachmentLoader(atlas);
+      const data = /\.json$/i.test(entry.skel)
+        ? new spine.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
+        : new spine.SkeletonBinary(loader).readSkeletonData(files.bytes);
+      const skeleton = new spine.Skeleton(data);
+      skeleton.setToSetupPose();
+      const stateData = new spine.AnimationStateData(data);
+      stateData.defaultMix = 0.15;
+      const state = new spine.AnimationState(stateData);
+      const idleAnim = animMatch(data, /idle|stand|dai|wait/i) || data.animations[0]?.name;
+      if (idleAnim) state.setAnimation(0, idleAnim, true);
+      return { entry, skeleton, data, state, atlas, fitScale: 1, ox: 0, oy: 0, rot: 0, opacity: 1,
+        visible: true, idleAnim, hiddenSlots: new Set(), rawBounds: null };
+    } catch (error) { K.disposeAtlas(atlas); throw error; }
   }
 
   function disposeLayer(L) {
-    try {
-      if (L.atlas) for (const p of L.atlas.pages) if (p && p.texture && p.texture.dispose) p.texture.dispose();
-    } catch {}
+    K.disposeAtlas(L.atlas);
   }
 
   function persistHidden() {
@@ -961,6 +958,9 @@
 
   async function loadSelection(entry) {
     const seq = ++loadSeq;
+    selectionRequest?.abort();
+    const request = selectionRequest = new AbortController();
+    let loaded = [];
     curEntry = entry;
     highlightSlot = null;
     curAnimName = null;
@@ -998,18 +998,17 @@
       K.resizeCanvas(canvas, renderer);
       const list = entry.composite ? entry.layers : [entry];
       const charHidden = (store.get('hiddenMap', {})[entry.id]) || {};
-      for (const e of list) {
-        const L = await loadLayerModel(e);
-        if (seq !== loadSeq) { disposeLayer(L); return; }
-        const saved = charHidden[e.id];
-        if (saved && saved.length) {
-          L.hiddenSlots = new Set(saved);
-          K.applyHiddenSlots(L.skeleton, L.hiddenSlots);
-        }
-        layers.push(L);
-        status('加载中: ' + entry.label + ' (' + layers.length + '/' + list.length + ') …');
+      const results = await Promise.allSettled(list.map(e => loadLayerModel(e, request.signal)));
+      loaded = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+      const failed = results.find(r => r.status === 'rejected');
+      if (failed) throw failed.reason;
+      if (seq !== loadSeq) { loaded.forEach(disposeLayer); return; }
+      for (const L of loaded) {
+        const saved = charHidden[L.entry.id];
+        if (saved?.length) { L.hiddenSlots = new Set(saved); K.applyHiddenSlots(L.skeleton, L.hiddenSlots); }
       }
-      if (seq !== loadSeq) return;
+      layers = loaded;
+
       globalZoom = 1;
       groupOX = 0;
       groupOY = 0;
@@ -1026,8 +1025,11 @@
       capturePending = entry.id;
       playerReady(seq);
     } catch (e) {
-      if (seq !== loadSeq) return;
-      status('加载失败: ' + e.message);
+      request.abort(e);
+      loaded.forEach(disposeLayer);
+      if (seq !== loadSeq || K.isAbort(e)) return;
+      layers = [];
+      status('加载失败: ' + e.message + ' · 可在更多中重试');
       playerPost('error', { code: 'asset-load-failed', message: e.message || String(e) });
       console.error(e);
     }
@@ -1512,7 +1514,7 @@
     }
     const f = curFit();
     groupOX += (anchorX - canvas.width / 2) * (1 / z2 - 1 / z1) / f;
-    groupOY += (anchorY - canvas.height / 2) * (1 / z2 - 1 / z1) / f;
+    groupOY += (canvas.height / 2 - anchorY) * (1 / z2 - 1 / z1) / f;
     globalZoom = z2;
     applyAllTransforms();
   }
@@ -1532,9 +1534,10 @@
     globalZoom = parseFloat(zoomRange.value);
     applyAllTransforms();
   });
-  window.addEventListener('resize', () => {
+  K.observeCanvas(canvas, () => {
     K.resizeCanvas(canvas, renderer);
-    applyAllTransforms();
+    K.syncRendererSize(canvas, gl, renderer);
+    if (globalZoom === 1) refitAll(); else applyAllTransforms();
   });
 
   // ---------- 交互(拖层 / 平移 / 选层 / 滚轮) ----------
@@ -1595,6 +1598,20 @@
     const cy = (e.clientY - rect.top) * dpr;
     zoomBy(e.deltaY < 0 ? 1.1 : 0.9, cx, cy);
   }, { passive: false });
+
+  stage.addEventListener('pointercancel', () => { downPos = lastPos = null; });
+  K.bindPinch(stage, {
+    isChrome, isTap: () => !!downPos && !moved,
+    cancelDrag: () => { downPos = lastPos = null; moved = true; },
+    zoom: (factor, x, y) => { const rect = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+      zoomBy(factor, (x - rect.left) * dpr, (y - rect.top) * dpr); },
+    fit: doFit,
+  });
+  zPct.setAttribute('role', 'button');
+  zPct.tabIndex = 0;
+  zPct.title = '适应窗口';
+  zPct.onclick = doFit;
+  zPct.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); doFit(); } };
 
   function hitTestLayer(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
@@ -1724,8 +1741,8 @@
   setupDesktopBridge();
   K.initSearchPalette();
   Promise.all([
-    fetch('../../thumbs/').then(r => r.ok ? r.json() : { items: {} }).catch(() => ({ items: {} })),
-    fetch('../characters.json').then(r => r.json()),
+    K.fetchJSON('../../thumbs/index.json').catch(() => ({ items: {} })),
+    K.fetchJSON('../characters.json'),
   ]).then(([thumbData, data]) => {
     webThumbs = thumbData.items || {};
     const all = data.characters || [];
@@ -1747,8 +1764,10 @@
     const lastId = store.get('lastChar', null);
     const first = (hashId && characters.find(x => x.id === hashId))
       || characters.find(x => x.id === lastId) || characters[0];
-    if (first) {
-      loadSelection(first).then(() => { if (!embedded && !hashId) openGrid(); });
+    if (first && (embedded || hashId)) {
+      loadSelection(first);
+    } else if (first) {
+      openGrid();
     } else {
       status('未找到角色。请先运行导出脚本');
       openGrid();
@@ -1758,6 +1777,13 @@
     openGrid();
   });
 
+  $('#btnRetry').onclick = () => { if (curEntry) loadSelection(curEntry); else location.reload(); };
+  $('#btnGlobalSearch').onclick = () => K.openSearchPalette?.();
+  $('#btnRestoreParts').onclick = () => {
+    if (!curEntry) return;
+    const hidden = store.get('hiddenMap', {}); delete hidden[curEntry.id]; store.set('hiddenMap', hidden);
+    loadSelection(curEntry);
+  };
   // ---------- 自动待机 ----------
   setInterval(() => {
     if (!autoIdleChk.checked || !layers.length) return;
@@ -1770,8 +1796,7 @@
     }
   }, 2000);
 })();
-</script>
-<!-- Cloudflare Web Analytics -->
+</script><!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->
 </body></html>

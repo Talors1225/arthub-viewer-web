@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css">
+<link rel="stylesheet" href="../../common/kit.css?v=17151739ade2">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -268,20 +268,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=98ce68499155"></script>
-  <script src="../../arthub-cos.js"></script>
-  <script src="https://tam.cdn-go.cn/aegis-sdk/latest/aegis.min.js"></script>
-<script>
-  if (typeof Aegis === 'function') {
-    new Aegis({
-      id: '16z7WCIp1j7YL6WwKd',
-      reportApiSpeed: true,
-      reportAssetSpeed: true,
-      spa: true,
-      hostUrl: 'https://rumt-zh.com'
-    });
-  }
-</script>
+  <script src="../../arthub-cos-config.js?v=59706fce5143"></script>
+  <script src="../../arthub-cos.js?v=17151739ade2"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -324,6 +312,9 @@
     <button id="immersiveExit" class="immersive-exit ctl" type="button" title="退出沉浸模式" aria-label="退出沉浸模式">退出沉浸</button>
 
     <div class="tool-strip" id="toolStrip">
+      <button id="btnRetry" title="重新加载当前资源">↻</button>
+      <button id="btnRestoreParts" title="恢复默认部件显示">恢复部件</button>
+      <button id="btnGlobalSearch" title="全局搜索 (Ctrl+K)">⌕</button>
       <div class="zoom-bar tool-zoom" aria-label="视图缩放">
         <button id="zOut" title="缩小">−</button>
         <span class="zoom-pct" id="zPct">适应</span>
@@ -401,7 +392,8 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/kit.js"></script>
+<script src="../../common/kit.js?v=17151739ade2"></script>
+<script src="../../common/asset-loader.js?v=17151739ade2"></script>
 <script>
 
 (() => {
@@ -459,7 +451,7 @@
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
-  const status = t => { statusEl.textContent = t; };
+  const status = t => K.setStatus(statusEl, t);
 
   if (embedded) {
     document.documentElement.classList.add('arthub-embedded');
@@ -574,7 +566,7 @@
     playbar.classList.toggle('collapsed', playbarCollapsed);
     playbarToggle.setAttribute('aria-expanded', String(!playbarCollapsed));
     playbarToggle.textContent = playbarCollapsed ? '\u2261' : '\u00d7';
-    playbarToggle.title = playbarCollapsed ? 'Expand playback' : 'Collapse playback';
+    playbarToggle.title = playbarCollapsed ? '展开播放控制' : '收起播放控制';
     store.set('playbarCollapsed', playbarCollapsed);
   };
   playbarToggle.addEventListener('click', () => setPlaybarCollapsed(!playbarCollapsed));
@@ -606,19 +598,9 @@
   const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
   const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, other: 9, store: 10, catalog: 10, unknown: 9 };
   function displayType(c) {
-    const explicit = String(c && c.type || '').toLowerCase();
-    if (routeSource !== 'nikki') return explicit || 'unknown';
-    // NIKKE 的目录提取素材统一归入“其它”，只有明确标记的技能、战斗和立绘保留原分类。
-    // common/kit.js 会先给目录条目补上分类，因此这里同时识别目录来源。
-    const catalogLike = explicit === 'catalog' || /NIKKE core catalog|目录重组提取/i.test(JSON.stringify(c || ''));
-    if (catalogLike) return 'other';
-    if (explicit === 'skill' || explicit === 'battle' || explicit === 'lobby') return explicit;
-    if (explicit === 'cutscene' || explicit === 'idle' || explicit === 'store' || explicit === 'unknown') return 'other';
-    const text = JSON.stringify(c || '');
-    if (/skillcut|skill[_-]|burst|special/i.test(text)) return 'skill';
-    if (/(?:^|[_-])(aim|cover|battle|attack|combat)(?:[_-]|$)/i.test(text)) return 'battle';
-    if (/lobby|standing|portrait/i.test(text)) return 'lobby';
-    return 'other';
+    const type = String(c && (c.resourceType || c.type) || 'unknown').toLowerCase();
+    if (routeSource !== 'nikki') return type;
+    return ['skill', 'battle', 'lobby'].includes(type) ? type : 'other';
   }
 
   function buildFilterChips() {
@@ -635,7 +617,7 @@
       const b = document.createElement('button');
       b.className = 'filter-chip' + (filterType === val ? ' on' : '');
       b.innerHTML = label + ' <span class="n">' + n + '</span>';
-      b.onclick = () => { filterType = val; store.set('filterType', filterType); buildFilterChips(); renderGrid(); };
+      b.onclick = () => { gridPage = 1; gridScroll = 0; filterType = val; store.set('filterType', filterType); buildFilterChips(); renderGrid(); };
       row.appendChild(b);
     }
     const sel = document.createElement('select');
@@ -707,7 +689,7 @@
   }
 
   // ---------- 缩略图引擎 ----------
-    const THUMB_CACHE_VERSION = 'pose-space-v4';
+    const THUMB_CACHE_VERSION = 'composite-layers-v1';
   const ThumbStore = (() => {
     let dbp = null;
     const keyOf = (id) => THUMB_CACHE_VERSION + ':' + id;
@@ -769,15 +751,19 @@
         return (ctxs[vkey] = { cv2, mgl2, renderer2 });
       } catch { return null; }
     }
-    function pickPreviewAnimation(data) {
+    function pickPreviewAnimation(data, preferredName) {
+      if (preferredName && data.animations) {
+        const preferred = data.animations.find(a => String(a.name) === String(preferredName));
+        if (preferred) return preferred;
+      }
       return data.animations && (
         data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name)) ||
         data.animations.find(a => /^loop/i.test(a.name)) || data.animations[0]
       );
     }
-    function applyPreviewPose(sk, data, SP, time, resourceId) {
+    function applyPreviewPose(sk, data, SP, time, resourceId, preferredName) {
       sk.setToSetupPose();
-      const anim = pickPreviewAnimation(data);
+      const anim = pickPreviewAnimation(data, preferredName);
       if (!anim || !SP.AnimationStateData || !SP.AnimationState) {
         K.updateWorldTransform(sk);
         return null;
@@ -809,13 +795,13 @@
           ? new SP.SkeletonJson(loader).readSkeletonData(await resp.text())
           : new SP.SkeletonBinary(loader).readSkeletonData(new Uint8Array(await resp.arrayBuffer()));
         const sk = new SP.Skeleton(data);
-        const anim = pickPreviewAnimation(data);
+        const anim = pickPreviewAnimation(data, v && v.previewAnimation);
         const duration = anim && Number.isFinite(Number(anim.duration)) ? Math.max(0, Number(anim.duration)) : 0;
         // 缩略图必须和舞台一样应用默认动画；同时取几个时间点的并集，避免动作伸展时被包围盒裁掉。
         const sampleTimes = duration > 0 ? [0, duration * 0.25, duration * 0.5, duration * 0.75, duration] : [0];
         let b = null;
         for (const time of sampleTimes) {
-          applyPreviewPose(sk, data, SP, time, entry && entry.id);
+          applyPreviewPose(sk, data, SP, time, entry && entry.id, v && v.previewAnimation);
           const frame = K.measureBounds(sk, SP);
           if (!frame || !(frame.maxX > frame.minX) || !(frame.maxY > frame.minY)) continue;
           b = b ? {
@@ -824,7 +810,7 @@
           } : frame;
         }
         // 最终仍显示中段姿势，避免缩略图停在入场帧；包围盒使用上面的全程采样结果。
-        applyPreviewPose(sk, data, SP, duration > 0 ? duration * 0.5 : 0, entry && entry.id);
+        applyPreviewPose(sk, data, SP, duration > 0 ? duration * 0.5 : 0, entry && entry.id, v && v.previewAnimation);
         b = b || K.measureBounds(sk, SP);
         if (!b) throw new Error('empty');
         const w = b.maxX - b.minX, h = b.maxY - b.minY;
@@ -893,7 +879,7 @@
     statusEl.classList.toggle('hide', !onStage);
   }
   // Fixed pagination: render one page at a time and never append cards on scroll.
-  const GRID_PAGE = 120;
+  const GRID_PAGE = K.libraryPageSize();
   let gridArr = [];
   let gridShown = 0;
   let gridPage = 1;
@@ -904,37 +890,36 @@
     card.className = 'thumb-card' + (cur && cur.id === c.id ? ' active' : '');
     card.dataset.id = c.id;
     card.style.setProperty('--i', Math.min(gridShown % GRID_PAGE, 16));
-    card.innerHTML = '<div class="ph"><span class="spin"></span></div>'
+    card.innerHTML = '<div class="ph">预览暂缺</div>'
       + '<div class="tm"><div class="tn">' + K.esc(alias || c.name || c.id) + '</div>'
       + '<div class="ts">' + K.esc(alias ? c.name || '' : (c.source || '')) + '</div></div>'
       + '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '其它') + '</span>'
-      + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '?' : '?') + '</button>';
+      + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '★' : '☆') + '</button>';
     card.onclick = () => { selectChar(c); closeGrid(); };
     card.querySelector('.tstar').onclick = (e) => {
       e.stopPropagation();
       toggleStarById(c.id);
       const on = store.get('stars', []).includes(c.id);
       e.target.classList.toggle('on', on);
-      e.target.textContent = on ? '?' : '?';
+      e.target.textContent = on ? '★' : '☆';
+      e.target.setAttribute('aria-pressed', String(on));
     };
+    card.querySelector('.tstar').setAttribute('aria-pressed', String(starred.has(c.id)));
     const ph = card.querySelector('.ph');
     const variant = String(c.cutscenes?.[0]?.variant || '0');
     const thumbPath = webThumbs[routeSource + ':' + c.id + ':' + variant];
-    if (thumbPath) {
-      ph.innerHTML = '<img src="' + THUMB_PREFIX + thumbPath + '" alt="" loading="lazy" decoding="async">';
-    }
+    K.setPreview(ph, thumbPath ? THUMB_PREFIX + thumbPath : null);
     grid.appendChild(card);
   }
 
   function renderPagination() {
-    const nav = $('#gridPagination');
-    if (!nav) return;
+    for (const nav of K.paginationHosts(gridView)) {
     const totalPages = Math.max(1, Math.ceil(gridArr.length / GRID_PAGE));
     gridPage = Math.min(Math.max(gridPage, 1), totalPages);
     nav.innerHTML = '';
     if (!gridArr.length || totalPages <= 1) {
       nav.hidden = true;
-      return;
+      continue;
     }
     nav.hidden = false;
     const addButton = (label, page, options = {}) => {
@@ -969,6 +954,7 @@
       previous = page;
     }
     addButton('\u203a', gridPage + 1, { disabled: gridPage >= totalPages });
+    }
   }
 
   function renderGrid() {
@@ -997,28 +983,22 @@
       : '没有匹配资源';
     renderPagination();
   }
-  function setupGridObserver() {
-    gridObserver = new IntersectionObserver((entries) => {
-      for (const en of entries) {
-        if (!en.isIntersecting) continue;
-        const ph = en.target;
-        gridObserver.unobserve(ph);
-        const id = ph.dataset.tid;
-        const c = chars.find(x => x.id === id);
-        if (!c) continue;
-        ThumbGen.request(id, c, (url) => { ph.innerHTML = url ? '<img src="' + url + '" alt="">' : '无预览'; });
-      }
-    }, { root: gridView, rootMargin: '300px' });
-  }
-  setupGridObserver();
 
+
+  let gridScroll = 0;
   function openGrid() {
     stageMode = false;
     gridView.classList.add('open');
     setChrome(false);
     renderGrid();
+    requestAnimationFrame(() => { gridView.scrollTop = gridScroll; });
   }
   function closeGrid() {
+    gridScroll = gridView.scrollTop;
+    if (!cur && chars.length) {
+      const last = store.get('lastChar', {});
+      selectChar(chars.find(c => c.id === last.id) || gridArr[0] || chars[0], last);
+    }
     stageMode = true;
     gridView.classList.remove('open');
     setChrome(true);
@@ -1071,7 +1051,7 @@
     allEl: $('#partAll'),
     noneEl: $('#partNone'),
     invEl: $('#partInv'),
-    getTargets: () => (cut ? [cut] : null),
+    getTargets: () => (cut ? cutLayers(cut) : null),
     onHover: (name) => { highlightSlot = name; },
     onChange: () => { persistHidden(); updatePartsBadge(); },
   });
@@ -1089,8 +1069,9 @@
     if (!cur || !cut) return;
     const saved = (store.get('hiddenMap', {}))[cur.id + '/' + cut.variant];
     if (saved && saved.length) {
-      cut.hiddenSlots = new Set(saved);
-      K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots);
+      cut.hiddenSlots.clear();
+      for (const name of saved) cut.hiddenSlots.add(String(name));
+      applyCutHidden(cut);
     }
   }
   function updatePartsBadge() {
@@ -1116,7 +1097,7 @@
   function hidePartFromPopup() {
     if (!cut || !popupSlot) return;
     cut.hiddenSlots.add(popupSlot);
-    K.hideSlot(cut.skeleton, popupSlot);
+    applyCutHidden(cut);
     persistHidden();
     if (partsCtl) partsCtl.refresh();
     updatePartsBadge();
@@ -1363,8 +1344,12 @@
   function seekTo(ratio) {
     const track = getTrack();
     if (!track) return;
-    track.trackTime = ratio * (track.animation.duration || 0.0001);
-    if (!playing) { cut.state.apply(cut.skeleton); }
+    const time = ratio * (track.animation.duration || 0.0001);
+    for (const layer of cutLayers()) {
+      const layerTrack = layer.state && layer.state.getCurrent(0);
+      if (layerTrack) layerTrack.trackTime = time;
+    }
+    if (!playing) { applyCutLayerStates(); }
     syncTimeline();
   }
   function stepFrame(dir) {
@@ -1374,8 +1359,11 @@
     let t = track.trackTime + dir * (1 / 30);
     if (t < 0) t = loopAnim ? dur + t : 0;
     if (t > dur) t = loopAnim ? t - dur : dur;
-    track.trackTime = t;
-    if (!playing) { cut.state.apply(cut.skeleton); }
+    for (const layer of cutLayers()) {
+      const layerTrack = layer.state && layer.state.getCurrent(0);
+      if (layerTrack) layerTrack.trackTime = t;
+    }
+    if (!playing) { applyCutLayerStates(); }
     syncTimeline();
   }
   function syncTimeline() {
@@ -1400,7 +1388,7 @@
   pbSpeed.addEventListener('input', () => {
     pbSpeedVal.textContent = fmtSpeed(pbSpeed.value);
     store.set('speed', Number(pbSpeed.value));
-    if (cut) cut.state.timeScale = Number(pbSpeed.value);
+    if (cut) for (const layer of cutLayers()) if (layer.state) layer.state.timeScale = Number(pbSpeed.value);
   });
   function fmtSpeed(v) { return Number(v).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'x'; }
 
@@ -1409,15 +1397,17 @@
     requestAnimationFrame(loop);
     const dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
     lastT = t;
+    if (document.hidden || (!embedded && !stageMode)) return;
     try {
     if (cut) {
-      if (playing) {
-        cut.state.update(dt);
-        cut.state.apply(cut.skeleton);
+      for (const layer of cutLayers()) {
+        if (layer.active === false) continue;
+        if (playing && layer.state) layer.state.update(dt);
+        if (layer.state) layer.state.apply(layer.skeleton);
+        if (poseLocked && layer === cutLayers()[0]) applyPoseToSkeleton(layer.skeleton, poseLocked);
+        K.updateWorldTransform(layer.skeleton);
+        K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
       }
-      if (poseLocked) applyPoseToSkeleton(cut.skeleton, poseLocked);
-      K.updateWorldTransform(cut.skeleton);
-      K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots);
     }
     if (cmpOn && cmp) {
       if (playing) { cmp.state.update(dt); cmp.state.apply(cmp.skeleton); }
@@ -1433,13 +1423,13 @@
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
       renderer.begin();
-      if (cut) renderer.drawSkeleton(cut.skeleton, cut.pma);
+      if (cut) for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
       if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
       if (cut && K.debugActive(debugFlags)) {
         K.applyDebugFlags(renderer, debugFlags);
-        K.drawDebug(renderer, [cut.skeleton]);
+        K.drawDebug(renderer, cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton));
       }
-      if (cut && highlightSlot) K.drawSlotHighlight(renderer, cut.skeleton, highlightSlot);
+      if (cut && highlightSlot) for (const layer of cutLayers()) if (layer.active !== false) K.drawSlotHighlight(renderer, layer.skeleton, highlightSlot);
       if (boneEditMode) drawEditSkeleton(renderer);
       drawBoneMarker(renderer);
       renderer.end();
@@ -1470,10 +1460,12 @@
   function applyView() {
     if (!cut) return;
     const scale = fitMode ? ((cmpOn && cmp) ? cmp.fitScale : cut.fitScale) : userScale;
-    cut.skeleton.scaleX = scale;
-    cut.skeleton.scaleY = scale;
-    cut.skeleton.x = panX + cut.centerX * scale - (cmpOn && cmp ? cmp.sepMain * scale : 0);
-    cut.skeleton.y = panY + cut.centerY * scale;
+    for (const layer of cutLayers()) {
+      layer.skeleton.scaleX = scale;
+      layer.skeleton.scaleY = scale;
+      layer.skeleton.x = panX + cut.centerX * scale - (cmpOn && cmp ? cmp.sepMain * scale : 0);
+      layer.skeleton.y = panY + cut.centerY * scale;
+    }
     if (cmpOn && cmp) {
       cmp.skeleton.scaleX = scale;
       cmp.skeleton.scaleY = scale;
@@ -1489,7 +1481,7 @@
     if (!cut) return;
     const old = fitMode ? cut.fitScale : userScale;
     const next = Math.min(8, Math.max(0.05, old * factor));
-    if (anchorX === undefined) { anchorX = cv.width / 2; anchorY = cv.height / 2; }
+    if (anchorX === undefined) { anchorX = 0; anchorY = 0; }
     panX = anchorX - (anchorX - panX) * (next / old);
     panY = anchorY - (anchorY - panY) * (next / old);
     fitMode = false;
@@ -1541,14 +1533,29 @@
 
   function playAnimation(name) {
     if (!cut) return;
-    cut.state.clearTracks();
-    cut.skeleton.setToSetupPose();
-    cut.state.setAnimation(0, name, loopAnim);
-    cut.state.timeScale = Number(pbSpeed.value);
-    cut.state.update(0);
-    cut.state.apply(cut.skeleton);
-    K.updateWorldTransform(cut.skeleton);
-    K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots);
+    let bounds = null;
+    for (const layer of cutLayers()) {
+      const layerName = layerAnimationName(layer, name);
+      layer.active = layerIsActive(layer, name);
+      if (layer.state) {
+        layer.state.clearTracks();
+        layer.skeleton.setToSetupPose();
+        if (layerName) layer.state.setAnimation(0, layerName, loopAnim);
+        layer.state.timeScale = Number(pbSpeed.value);
+        layer.state.update(0);
+        layer.state.apply(layer.skeleton);
+      } else {
+        layer.skeleton.setToSetupPose();
+      }
+      if (layer.active) {
+        K.updateWorldTransform(layer.skeleton);
+        K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
+        const layerBounds = layer.source && layer.source.static
+          ? layer.bounds
+          : (layerName ? measureAnimationBounds(layer, layerName) : layer.bounds);
+        bounds = mergeBounds(bounds, layerBounds);
+      }
+    }
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       cmp.state.clearTracks();
       cmp.skeleton.setToSetupPose();
@@ -1558,7 +1565,6 @@
       cmp.state.apply(cmp.skeleton);
       K.updateWorldTransform(cmp.skeleton);
     }
-    const bounds = measureAnimationBounds(cut, name);
     if (bounds) cut.bounds = bounds;
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
@@ -1675,7 +1681,7 @@
             if (!name || !cut?.data?.slots?.some(slot => String(slot.name) === name)) continue;
             if (change.visible === false) cut.hiddenSlots.add(name); else cut.hiddenSlots.delete(name);
           }
-          if (cut) { K.applyHiddenSlots(cut.skeleton, cut.hiddenSlots); partsCtl?.refresh(); updatePartsBadge(); persistHidden(); }
+          if (cut) { applyCutHidden(cut); partsCtl?.refresh(); updatePartsBadge(); persistHidden(); }
           playerPost('capabilities', playerCapabilities(), msg.requestId);
         } else if (msg.command === 'fit') {
           refit(); playerPost('state', { state: 'ready', capabilities: playerCapabilities() }, msg.requestId);
@@ -1720,7 +1726,8 @@
     $('#railStar').textContent = store.get('stars', []).includes(c.id) ? '★' : '☆';
     const rt = $('#railThumb');
     rt.innerHTML = '';
-    ThumbGen.request(c.id, c, (url) => { if (url) rt.innerHTML = '<img src="' + url + '">'; });
+    const preview = webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
+    K.setPreview(rt, preview ? THUMB_PREFIX + preview : null);
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
     vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
@@ -1759,11 +1766,45 @@
     return true;
   }
   function disposeAtlas(atlas) {
-    try { if (atlas) for (const p of atlas.pages) if (p.texture && p.texture.dispose) p.texture.dispose(); } catch {}
+    K.disposeAtlas(atlas);
+  }
+  function cutLayers(target = cut) {
+    if (!target) return [];
+    return Array.isArray(target.layers) && target.layers.length ? target.layers : [target];
+  }
+  function layerAnimationName(layer, name) {
+    if (!layer || !layer.data || !name) return null;
+    const source = layer.source || {};
+    if (source.static) return null;
+    const map = source.animationMap || {};
+    if (Object.prototype.hasOwnProperty.call(map, name)) {
+      const mapped = map[name];
+      return mapped && layer.data.animations.some(a => a.name === mapped) ? mapped : null;
+    }
+    return layer.data.animations.some(a => a.name === name) ? name : null;
+  }
+  function layerIsActive(layer, name) {
+    const source = layer && layer.source || {};
+    if (Array.isArray(source.activeWhen) && !source.activeWhen.includes(name)) return false;
+    if (source.static) return true;
+    return !!layerAnimationName(layer, name);
+  }
+  function applyCutHidden(target = cut) {
+    for (const layer of cutLayers(target)) {
+      if (layer && layer.hiddenSlots) K.applyHiddenSlots(layer.skeleton, layer.hiddenSlots);
+    }
+  }
+  function applyCutLayerStates(target = cut) {
+    for (const layer of cutLayers(target)) {
+      if (!layer || layer.active === false) continue;
+      if (layer.state) layer.state.apply(layer.skeleton);
+      K.updateWorldTransform(layer.skeleton);
+      if (layer.hiddenSlots) K.applyHiddenSlots(layer.skeleton, layer.hiddenSlots);
+    }
   }
   function disposeCut() {
     if (cut) {
-      disposeAtlas(cut.atlas);
+      for (const layer of cutLayers(cut)) disposeAtlas(layer.atlas);
       cut = null;
       if (partsCtl) partsCtl.refresh();
       if (animCtl) animCtl.refresh();
@@ -1862,42 +1903,64 @@
     }
   }
   $('#railCompare').addEventListener('click', () => toggleCompare());
+  let cutRequest = null;
+  async function loadCompositeLayer(entry, SP, seq, signal, baseLayer) {
+    const reuse = baseLayer && ['dir', 'atlas', 'skel'].every(key => entry[key] === baseLayer.source[key]);
+    let atlas = null;
+    try {
+      const files = reuse ? { atlas: baseLayer.atlas } : await K.loadSpineFiles(SP, mgl, {
+        atlasURL: '../' + entry.dir + entry.atlas,
+        skeletonURL: '../' + entry.dir + encodeURIComponent(entry.skel), signal,
+      });
+      atlas = files.atlas;
+      if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
+      const loader = new SP.AtlasAttachmentLoader(atlas);
+      const data = reuse ? baseLayer.data : (entry.format === 'json' || /\.json$/i.test(entry.skel)
+        ? new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
+        : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes));
+      const skeleton = new SP.Skeleton(data);
+      skeleton.setToSetupPose();
+      const stateData = new SP.AnimationStateData(data);
+      stateData.defaultMix = 0.15;
+      const state = new SP.AnimationState(stateData);
+      K.updateWorldTransform(skeleton);
+      return { source: entry, skeleton, data, state, atlas, bounds: K.measureBounds(skeleton, SP),
+        pma: !!atlas.pages[0]?.pma, active: true };
+    } catch (error) { if (!reuse) K.disposeAtlas(atlas); throw error; }
+  }
+
   async function loadCutscene(idx, restoreAnim) {
     const seq = ++cutLoadSeq;
+    cutRequest?.abort();
+    const request = cutRequest = new AbortController();
+    let loadedAtlas = null, loadedLayers = [];
     disposeCut();
     resetViewForLoad();
     hidePartPopup();
     highlightSlot = null;
     const v = cur.cutscenes[idx] || cur.cutscenes[0];
     if (!v) { status((cur.name || cur.id) + ' · 无过场'); return; }
-    if (!ensureGL()) { status('WebGL 不可用'); return; }
     status('加载: ' + (cur.name || cur.id) + ' …');
     playerPost('state', { state: 'loading', message: '正在读取骨骼、Atlas 与贴图' });
     try {
       const dir = '../' + v.dir;
-      const SP = K.getSpine(cur && cur.spineVersion);
-      const am = new SP.AssetManager(mgl, dir);
-      const atlas = await new Promise((resolve, reject) => {
-        am.loadTextureAtlas(v.atlas, (p, a) => resolve(a), (p, e) => reject(new Error(e)));
+      const SP = await K.ensureSpine(cur && cur.spineVersion);
+      if (seq !== cutLoadSeq) return;
+      if (!ensureGL()) throw new Error('WebGL 不可用');
+      const files = await K.loadSpineFiles(SP, mgl, {
+        atlasURL: dir + v.atlas, skeletonURL: dir + encodeURIComponent(v.skel), signal: request.signal,
+        onProgress: message => { if (seq === cutLoadSeq) status(message); },
       });
-      if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
+      const atlas = loadedAtlas = files.atlas;
+      if (seq !== cutLoadSeq) { K.disposeAtlas(atlas); return; }
       const loader = new SP.AtlasAttachmentLoader(atlas);
       let data;
-      if (v.format === 'json') {
-        const resp = await fetch(dir + encodeURIComponent(v.skel));
-        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
-        if (!resp.ok) throw new Error('skeleton 404');
-        const text = await resp.text();
-        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
-        data = new SP.SkeletonJson(loader).readSkeletonData(text);
-      } else {
-        const resp = await fetch(dir + encodeURIComponent(v.skel));
-        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
-        if (!resp.ok) throw new Error('skel 404');
-        const bytes = new Uint8Array(await resp.arrayBuffer());
-        if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
-        data = new SP.SkeletonBinary(loader).readSkeletonData(bytes);
-      }
+      try {
+        data = v.format === 'json' || /\.json$/i.test(v.skel)
+          ? new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
+          : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes);
+      } catch (error) { throw new Error('骨骼解析失败: ' + error.message); }
+
       const skeleton = new SP.Skeleton(data);
       skeleton.setToSetupPose();
       const stateData = new SP.AnimationStateData(data);
@@ -1907,7 +1970,8 @@
       animSel.innerHTML = data.animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
       const urlAnim = new URLSearchParams(location.search).get('anim');
       const saved = restoreAnim && data.animations.some(a => a.name === restoreAnim) ? restoreAnim : null;
-      const previewAnim = data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
+      const previewAnim = (v.previewAnimation && data.animations.find(a => a.name === v.previewAnimation))
+        || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
         || data.animations.find(a => /^loop/i.test(a.name))
         || data.animations[0];
       const def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)
@@ -1926,10 +1990,23 @@
       }
       if (!bounds) throw new Error('empty bounds');
       if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
-      cut = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds, centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(),
-              pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma) };
-      window.__cutRef = () => cut;
-      window.__boneDebug = () => ({ boneEditMode, editBoneName, boneDrag: boneDrag ? boneDrag.mode : null, poseLocked: !!poseLocked });
+      const baseLayer = {
+        source: v, skeleton, data, state, atlas, bounds,
+        pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma),
+        active: true,
+      };
+      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds,
+              centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(), layers: [baseLayer], pma: baseLayer.pma };
+      const results = await Promise.allSettled((v.compositeLayers || []).map(layerEntry =>
+        loadCompositeLayer(layerEntry, SP, seq, request.signal, baseLayer)));
+      loadedLayers = results.filter(result => result.status === 'fulfilled').map(result => result.value);
+      const failed = results.find(result => result.status === 'rejected');
+      if (failed) throw failed.reason;
+      if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
+      target.layers.push(...loadedLayers);
+      cut = target;
+      for (const layer of cut.layers) layer.hiddenSlots = cut.hiddenSlots;
+
       restoreHidden();
       if (partsCtl) partsCtl.refresh();
       updatePartsBadge();
@@ -1945,7 +2022,7 @@
       if (animCtl) animCtl.refresh();
       playAnimation(def);
       if (fitMode) refit(); else set100();
-      status((cur.name || cur.id) + ' · ' + data.animations.length + ' 动画 · ' + data.bones.length + ' 骨骼');
+      status((cur.name || cur.id) + ' · ' + data.animations.length + ' 动画 · ' + data.bones.length + ' 骨骼 · ' + cut.layers.length + ' 层');
       syncUrl(def);
       K.history.push({
         k: routeSource + ':' + cur.id, src: routeSource,
@@ -1954,8 +2031,12 @@
       });
       playerReady(seq);
     } catch (e) {
-      if (seq !== cutLoadSeq) return;
-      status('加载失败: ' + e.message);
+      request.abort(e);
+      K.disposeAtlas(loadedAtlas);
+      for (const layer of loadedLayers) K.disposeAtlas(layer.atlas);
+      if (seq !== cutLoadSeq || K.isAbort(e)) return;
+      if (cut) disposeCut();
+      status('加载失败: ' + e.message + ' · 可在更多中重试');
       playerPost('error', { code: 'asset-load-failed', message: e.message || String(e) });
       console.error(e);
     }
@@ -1975,7 +2056,7 @@
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
     const SP = K.getSpine(cur && cur.spineVersion);
-    let exportAtlas = null;
+    const exportAtlases = new Set();
     let exportGL = null;
     K.toast(`正在渲染 GIF: ${frames} 帧…`, 'info', 10000);
     try {
@@ -1991,31 +2072,49 @@
       if (SP.GLTexture) SP.GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = true;
       // WebGL textures belong to their context. Reparse with an atlas loaded
       // into the export context instead of reusing the stage's attachments.
-      const base = '../' + sourceVariant.dir;
-      const am2 = new SP.AssetManager(mgl2, base);
-      exportAtlas = await new Promise((res, rej) => am2.loadTextureAtlas(sourceVariant.atlas, (p, a) => res(a), (p, e) => rej(new Error(e))));
-      const resp = await fetch(base + encodeURIComponent(sourceVariant.skel));
-      if (!resp.ok) throw new Error('skel ' + resp.status);
-      const loader = new SP.AtlasAttachmentLoader(exportAtlas);
-      const data2 = sourceVariant.format === 'json'
-        ? new SP.SkeletonJson(loader).readSkeletonData(await resp.text())
-        : new SP.SkeletonBinary(loader).readSkeletonData(new Uint8Array(await resp.arrayBuffer()));
-      const sk2 = new SP.Skeleton(data2);
-      const sd2 = new SP.AnimationStateData(data2);
-      sd2.defaultMix = 0;
-      const st2 = new SP.AnimationState(sd2);
-      st2.setAnimation(0, animName, false);
+      const exportLayers = [], models = new Map();
+      for (const source of [sourceVariant, ...(sourceVariant.compositeLayers || [])]) {
+        const base = '../' + source.dir, key = base + source.atlas + '|' + source.skel;
+        let model = models.get(key);
+        if (!model) {
+          const files = await K.loadSpineFiles(SP, mgl2, { atlasURL: base + source.atlas, skeletonURL: base + encodeURIComponent(source.skel) });
+          exportAtlases.add(files.atlas);
+          const loader = new SP.AtlasAttachmentLoader(files.atlas);
+          const data = source.format === 'json' || /\.json$/i.test(source.skel)
+            ? new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
+            : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes);
+          model = { data, atlas: files.atlas }; models.set(key, model);
+        }
+        const skeleton = new SP.Skeleton(model.data); skeleton.setToSetupPose();
+        const stateData = new SP.AnimationStateData(model.data); stateData.defaultMix = 0;
+        const state = new SP.AnimationState(stateData);
+        const layer = { ...model, source, skeleton, state };
+        layer.active = layerIsActive(layer, animName);
+        const mapped = layerAnimationName(layer, animName);
+        if (mapped) state.setAnimation(0, mapped, false);
+        exportLayers.push(layer);
+      }
+      const applyExportFrame = (time, scale = 1, x = 0, y = 0) => {
+        for (const L of exportLayers) {
+          if (!L.active) continue;
+          const track = L.state.getCurrent(0); if (track) track.trackTime = time;
+          L.state.apply(L.skeleton);
+          L.skeleton.scaleX = L.skeleton.scaleY = scale;
+          L.skeleton.x = x; L.skeleton.y = y;
+          K.updateWorldTransform(L.skeleton); K.applyHiddenSlots(L.skeleton, hiddenSlots);
+        }
+      };
       // 第一遍: 推进并求动画全程包围盒
       let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
       for (let k = 0; k < frames; k++) {
-        st2.getCurrent(0).trackTime = k * dt;
-        st2.apply(sk2);
-        K.updateWorldTransform(sk2);
-        K.applyHiddenSlots(sk2, hiddenSlots);
-        const b = K.measureBounds(sk2, SP);
-        if (b) {
-          bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
-          bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+        applyExportFrame(k * dt);
+        for (const L of exportLayers) {
+          if (!L.active) continue;
+          const b = K.measureBounds(L.skeleton, SP);
+          if (b) {
+            bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
+            bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+          }
         }
       }
       if (!isFinite(bMinX)) throw new Error('空包围盒');
@@ -2023,24 +2122,19 @@
       const scale = Math.min(W * 0.92 / spanW, H * 0.92 / spanH);
       const cx = -(bMinX + spanW / 2), cy = -(bMinY + spanH / 2);
       // 第二遍: 逐帧渲染
-      st2.clearTracks();
-      sk2.setToSetupPose();
-      st2.setAnimation(0, animName, false);
+      for (const L of exportLayers) {
+        L.state.clearTracks(); L.skeleton.setToSetupPose();
+        const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, false);
+      }
       const cvRgb = document.createElement('canvas');
       cvRgb.width = W; cvRgb.height = H;
       const ctx2d = cvRgb.getContext('2d', { willReadFrequently: true });
       const gif = GIFEncoder();
       for (let k = 0; k < frames; k++) {
-        st2.getCurrent(0).trackTime = k * dt;
-        st2.apply(sk2);
-        sk2.scaleX = scale; sk2.scaleY = scale;
-        sk2.x = cx * scale; sk2.y = cy * scale;
-        K.updateWorldTransform(sk2);
-        K.applyHiddenSlots(sk2, hiddenSlots);
+        applyExportFrame(k * dt, scale, cx * scale, cy * scale);
+        raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT);
         r2.begin();
-        raw2.clearColor(0, 0, 0, 0);
-        raw2.clear(raw2.COLOR_BUFFER_BIT);
-        r2.drawSkeleton(sk2, !!exportAtlas.pages[0]?.pma);
+        for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
         r2.end();
         const img = new Image();
         await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('帧捕获失败')); img.src = cv2.toDataURL('image/png'); });
@@ -2063,39 +2157,50 @@
       console.error(e);
       K.toast('GIF 导出失败: ' + e.message, 'err');
     } finally {
-      if (exportAtlas) disposeAtlas(exportAtlas);
+      for (const atlas of exportAtlases) disposeAtlas(atlas);
       exportGL?.getExtension('WEBGL_lose_context')?.loseContext();
     }
   };
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    try {
-      const tr = await fetch('../../thumbs/');
-      if (tr.ok) {
-        const td = await tr.json();
-        webThumbs = td.items || {};
-      }
-    } catch {}
-    const r = await fetch('../' + indexFile);
-    if (!r.ok) throw new Error(indexFile + ' ' + r.status);
-    const data = await r.json();
+    const thumbnails = K.fetchJSON('../../thumbs/index.json').then(td => {
+      webThumbs = td.items || {};
+      if (gridView.classList.contains('open')) renderGrid();
+    }).catch(() => {});
+    const data = await K.fetchJSON('../' + indexFile);
     chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
     chars.sort((a, b) => a.id.localeCompare(b.id));
     $('#gridSub').textContent = chars.length + ' 个资源';
     buildFilterChips();
-    const urlId = new URLSearchParams(location.search).get('id');
-    const urlAnim = new URLSearchParams(location.search).get('anim');
-    const byUrl = urlId && chars.find(x => x.id === urlId);
-    const last = store.get('lastChar', null);
-    const first = byUrl || (last && chars.find(x => x.id === last.id)) || chars[0];
-    if (first) {
-      selectChar(first, byUrl ? (urlAnim ? { anim: urlAnim } : null) : (last && last.id === first.id ? last : null));
-      if (byUrl) closeGrid(); else openGrid();
+    const params = new URLSearchParams(location.search);
+    const byUrl = chars.find(x => x.id === params.get('id'));
+    const last = store.get('lastChar', {});
+    if (byUrl || embedded) {
+      const first = byUrl || chars.find(x => x.id === last.id) || chars[0];
+      if (first) { selectChar(first, byUrl ? { anim: params.get('anim') } : last); closeGrid(); }
+      else status('没有可用资源');
     } else {
-      status('没有可用资源');
+      openGrid();
+      if (params.get('id')) K.toast('没有找到该资源，请从目录重新选择', 'err');
     }
   }
+
+  $('#btnRetry').onclick = () => { if (cur) loadCutscene(Number(variantSel.value), animSel.value); else loadChars().catch(e => status(e.message)); };
+  $('#btnGlobalSearch').onclick = () => K.openSearchPalette?.();
+  $('#btnRestoreParts').onclick = () => {
+    if (!cur || !cut) return;
+    const hidden = store.get('hiddenMap', {});
+    delete hidden[cur.id + '/' + cut.variant];
+    store.set('hiddenMap', hidden);
+    loadCutscene(Number(variantSel.value), animSel.value);
+  };
+  K.observeCanvas(cv, () => {
+    K.resizeCanvas(cv, renderer);
+    K.syncRendererSize(cv, mgl, renderer);
+    if (!cut) return;
+    if (fitMode) refit(); else { computeView(); applyView(); }
+  });
 
   // ---------- PNG 导出 ----------
   function exportFrame(transparent, mode, done) {
@@ -2111,7 +2216,9 @@
         applyView();
       },
       draw(tr) {
-        K.updateWorldTransform(cut.skeleton);
+        for (const layer of cutLayers()) {
+          if (layer.active !== false) K.updateWorldTransform(layer.skeleton);
+        }
         const raw = mgl.gl || mgl;
         if (tr) raw.clearColor(0, 0, 0, 0);
         else {
@@ -2120,7 +2227,7 @@
         }
         raw.clear(raw.COLOR_BUFFER_BIT);
         renderer.begin();
-        renderer.drawSkeleton(cut.skeleton, cut.pma);
+        for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
         renderer.end();
       },
       restore() {
@@ -2376,9 +2483,23 @@
     if (!cut) return;
     const rect = cv.getBoundingClientRect();
     const dpr = devicePixelRatio || 1;
-    zoomBy(e.deltaY < 0 ? 1.1 : 0.9, (e.clientX - rect.left) * dpr - cv.width / 2, (e.clientY - rect.top) * dpr - cv.height / 2);
+    zoomBy(e.deltaY < 0 ? 1.1 : 0.9, (e.clientX - rect.left) * dpr - cv.width / 2, cv.height / 2 - (e.clientY - rect.top) * dpr);
     btn100.classList.add('active'); btnFit.classList.remove('active');
   }, { passive: false });
+
+  stage.addEventListener('pointercancel', () => { down = null; boneDrag = null; stage.classList.remove('panning'); });
+  K.bindPinch(stage, {
+    isChrome, isTap: () => !!down && !moved,
+    cancelDrag: () => { down = null; boneDrag = null; moved = true; hidePartPopup(); stage.classList.remove('panning'); },
+    zoom: (factor, x, y) => { const rect = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+      zoomBy(factor, (x - rect.left) * dpr - cv.width / 2, cv.height / 2 - (y - rect.top) * dpr); },
+    fit: () => { fitMode = true; hidePartPopup(); refit(); },
+  });
+  $('#zPct').setAttribute('role', 'button');
+  $('#zPct').tabIndex = 0;
+  $('#zPct').title = '适应窗口';
+  $('#zPct').onclick = () => { fitMode = true; refit(); };
+  $('#zPct').onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fitMode = true; refit(); } };
 
   // ---------- 调试视图 ----------
   makeStagePopup(btnDebug, (pop) => {
@@ -2431,8 +2552,7 @@
     setupDesktopBridge();
     K.initSearchPalette();
     K.captureSpine('4.1');
-    await K.loadSpineVersion('4.0', ['vendor/spine-webgl-4.0.js']);
-    await K.loadSpineVersion('4.2', ['vendor/spine-webgl-4.2.js']);
+    // Other runtime versions load only when a selected model needs them.
     // bd2mod 分类: 预载原版索引供"⇋ 原版对比"配对
     if (routeSource === 'bd2mod') {
       fetch('../../bd2/bd2_chars.json').then(r => (r.ok ? r.json() : null)).then(d => {
@@ -2442,12 +2562,11 @@
         updateCompareBtn();
       }).catch(() => {});
     }
-    loadChars().catch(e => status('数据加载失败: ' + e.message));
+    loadChars().catch(e => { status('目录加载失败: ' + e.message + ' · 点击重试'); setChrome(true); });
   })();
   requestAnimationFrame(loop);
 })();
 </script>
-
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->
