@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=9aafd8e76480">
+<link rel="stylesheet" href="../../common/kit.css?v=loading-preview-20261009">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -388,7 +388,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=9aafd8e76480"></script>
 <script src="../../common/kit.js?v=9aafd8e76480"></script>
-<script src="../../common/asset-loader.js?v=9aafd8e76480"></script>
+<script src="../../common/asset-loader.js?v=loading-preview-20261009"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -417,6 +417,7 @@
   const debugFlags = store.get('debugView', {});
 
   const status = t => K.setStatus(statusEl, t);
+  const loadingPreview = K.createLoadingPreview(stage);
 
   if (embedded) {
     document.documentElement.classList.add('arthub-embedded');
@@ -818,7 +819,10 @@
       } catch {}
     }
     renderer.end();
-    if (layers.length && layers.some(layer => layer.visible) && canvas.width > 1 && canvas.height > 1 && !raw.isContextLost()) playerDrawnSeq = loadSeq;
+    if (layers.length && layers.some(layer => layer.visible) && canvas.width > 1 && canvas.height > 1 && !raw.isContextLost()) {
+      playerDrawnSeq = loadSeq;
+      loadingPreview.ready(loadSeq);
+    }
     // 同步截取缩略图 (WebGL 需 flush 后才能 toDataURL)
     if (capturePending && curEntry) {
       try {
@@ -833,6 +837,7 @@
       } catch {}
     }
     } catch (error) {
+      loadingPreview.fail(loadSeq, error.message);
       if (embedded && playerFailedSeq !== loadSeq) {
         playerFailedSeq = loadSeq;
         playerReadySeq = -1;
@@ -957,12 +962,20 @@
     store.set('hiddenMap', hm);
   }
 
+  function stagePreviewPath(entry) {
+    const path = webThumbs['majsoul:' + entry.id];
+    if (path) return THUMB_PREFIX + path;
+    const card = [...gridView.querySelectorAll('.thumb-card')].find(node => node.dataset.id === entry.id);
+    return card?.querySelector('.ph img')?.getAttribute('src') || null;
+  }
+
   async function loadSelection(entry) {
     const seq = ++loadSeq;
     selectionRequest?.abort();
     const request = selectionRequest = new AbortController();
     let loaded = [];
     curEntry = entry;
+    loadingPreview.begin(seq, { path: stagePreviewPath(entry), label: entry.label || entry.id });
     highlightSlot = null;
     curAnimName = null;
     for (const L of layers) disposeLayer(L);
@@ -1030,6 +1043,7 @@
       loaded.forEach(disposeLayer);
       if (seq !== loadSeq || K.isAbort(e)) return;
       layers = [];
+      loadingPreview.fail(seq, e.message);
       status('加载失败: ' + e.message + ' · 可在更多中重试');
       playerPost('error', { code: 'asset-load-failed', message: e.message || String(e) });
       console.error(e);
@@ -1543,7 +1557,7 @@
 
   // ---------- 交互(拖层 / 平移 / 选层 / 滚轮) ----------
   let downPos = null, downTime = 0, moved = false, lastPos = null, panMode = false;
-  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit')));
+  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit') || t.closest('.stage-loading-preview')));
   stage.addEventListener('contextmenu', e => e.preventDefault());
   stage.addEventListener('pointerdown', (e) => {
     if (isChrome(e.target)) return;

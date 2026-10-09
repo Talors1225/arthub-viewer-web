@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=9aafd8e76480">
+<link rel="stylesheet" href="../../common/kit.css?v=loading-preview-20261009">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -394,7 +394,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=9aafd8e76480"></script>
 <script src="../../common/kit.js?v=9aafd8e76480"></script>
-<script src="../../common/asset-loader.js?v=9aafd8e76480"></script>
+<script src="../../common/asset-loader.js?v=loading-preview-20261009"></script>
 <script>
 
 (() => {
@@ -453,6 +453,7 @@
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
+  const loadingPreview = K.createLoadingPreview(stage);
 
   if (embedded) {
     document.documentElement.classList.add('arthub-embedded');
@@ -1434,7 +1435,10 @@
       if (boneEditMode) drawEditSkeleton(renderer);
       drawBoneMarker(renderer);
       renderer.end();
-      if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) playerDrawnSeq = cutLoadSeq;
+      if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
+        playerDrawnSeq = cutLoadSeq;
+        loadingPreview.ready(cutLoadSeq);
+      }
     }
     if (cut && playing) syncTimeline();
     if (embedded && cut && playerReadySeq === cutLoadSeq && t - playerLastPlayback >= 125) {
@@ -1442,6 +1446,7 @@
       playerPlayback();
     }
     } catch (error) {
+      loadingPreview.fail(cutLoadSeq, error.message);
       if (embedded && playerFailedSeq !== cutLoadSeq) {
         playerFailedSeq = cutLoadSeq;
         playerReadySeq = -1;
@@ -1930,6 +1935,14 @@
     } catch (error) { if (!reuse) K.disposeAtlas(atlas); throw error; }
   }
 
+  function stagePreviewPath(v) {
+    const path = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
+    if (path) return THUMB_PREFIX + path;
+    if (v !== cur.cutscenes[0]) return null;
+    const card = [...gridView.querySelectorAll('.thumb-card')].find(node => node.dataset.id === cur.id);
+    return card?.querySelector('.ph img')?.getAttribute('src') || null;
+  }
+
   async function loadCutscene(idx, restoreAnim) {
     const seq = ++cutLoadSeq;
     cutRequest?.abort();
@@ -1940,7 +1953,8 @@
     hidePartPopup();
     highlightSlot = null;
     const v = cur.cutscenes[idx] || cur.cutscenes[0];
-    if (!v) { status((cur.name || cur.id) + ' · 无过场'); return; }
+    if (!v) { loadingPreview.cancel(); status((cur.name || cur.id) + ' · 无过场'); return; }
+    loadingPreview.begin(seq, { path: stagePreviewPath(v), label: aliasOf(cur.id) || cur.name || cur.id });
     status('加载: ' + (cur.name || cur.id) + ' …');
     playerPost('state', { state: 'loading', message: '正在读取骨骼、Atlas 与贴图' });
     try {
@@ -2037,6 +2051,7 @@
       for (const layer of loadedLayers) K.disposeAtlas(layer.atlas);
       if (seq !== cutLoadSeq || K.isAbort(e)) return;
       if (cut) disposeCut();
+      loadingPreview.fail(seq, e.message);
       status('加载失败: ' + e.message + ' · 可在更多中重试');
       playerPost('error', { code: 'asset-load-failed', message: e.message || String(e) });
       console.error(e);
@@ -2167,6 +2182,10 @@
   async function loadChars() {
     const thumbnails = K.fetchJSON('../../thumbs/index.json').then(td => {
       webThumbs = td.items || {};
+      if (cur) {
+        const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
+        if (variant) loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
+      }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
     const data = await K.fetchJSON('../' + indexFile);
@@ -2355,7 +2374,7 @@
 
   // ---------- 平移/缩放/点选 ----------
   let down = null, moved = false;
-  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit')));
+  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit') || t.closest('.stage-loading-preview')));
   stage.addEventListener('contextmenu', (e) => {
     if (isChrome(e.target)) return;
     e.preventDefault();

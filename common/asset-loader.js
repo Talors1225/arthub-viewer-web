@@ -34,6 +34,101 @@
     }
     element.onclick = failed ? () => document.getElementById('btnRetry')?.click() : null;
   };
+  // A cached library thumbnail stays visible until the current model submits
+  // its first draw. Old loads and image callbacks cannot replace a newer one.
+  K.createLoadingPreview = stage => {
+    const root = document.createElement('div');
+    root.className = 'stage-loading-preview';
+    root.hidden = true;
+    const picture = document.createElement('div');
+    picture.className = 'stage-loading-picture';
+    const notice = document.createElement('div');
+    notice.className = 'stage-loading-notice';
+    const title = document.createElement('div');
+    title.className = 'stage-loading-title';
+    const state = document.createElement('div');
+    state.className = 'stage-loading-state';
+    state.setAttribute('role', 'status');
+    state.setAttribute('aria-live', 'polite');
+    const spinner = document.createElement('span');
+    spinner.className = 'stage-loading-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    const message = document.createElement('span');
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'ctl stage-loading-retry';
+    retry.textContent = '重试';
+    retry.hidden = true;
+    for (const name of ['pointerdown', 'pointerup']) retry.addEventListener(name, event => event.stopPropagation());
+    retry.addEventListener('click', event => {
+      event.stopPropagation();
+      document.getElementById('btnRetry')?.click();
+    });
+    state.append(spinner, message);
+    notice.append(title, state, retry);
+    root.append(picture, notice);
+    stage.appendChild(root);
+    let current = null, image = null, imagePath = null;
+    const owns = seq => current && current.seq === seq;
+    const setImage = (seq, path) => {
+      if (!owns(seq) || !path || imagePath === path) return;
+      imagePath = path;
+      const img = image = document.createElement('img');
+      img.className = 'stage-loading-image';
+      img.alt = current.label + ' · 静态预览';
+      img.loading = 'eager';
+      img.decoding = 'async';
+      img.fetchPriority = 'high';
+      root.classList.remove('has-preview');
+      img.addEventListener('load', () => {
+        if (owns(seq) && image === img) root.classList.add('has-preview');
+      }, { once: true });
+      img.addEventListener('error', () => {
+        if (owns(seq) && image === img) { root.classList.remove('has-preview'); picture.replaceChildren(); image = null; imagePath = null; }
+      }, { once: true });
+      picture.replaceChildren(img);
+      img.src = path;
+    };
+    return {
+      begin(seq, options = {}) {
+        current = { seq, label: String(options.label || '当前资源'), state: 'loading' };
+        root.dataset.state = 'loading';
+        root.dataset.load = String(seq);
+        root.hidden = false;
+        stage.classList.add('loading-preview-active');
+        stage.setAttribute('aria-busy', 'true');
+        title.textContent = current.label;
+        message.textContent = '动态加载中';
+        retry.hidden = true;
+        picture.replaceChildren(); image = null; imagePath = null;
+        root.classList.remove('has-preview');
+        setImage(seq, options.path);
+      },
+      setImage,
+      ready(seq) {
+        if (!owns(seq) || current.state !== 'loading') return;
+        this.cancel();
+      },
+      fail(seq, reason) {
+        if (!owns(seq) || current.state !== 'loading') return;
+        current.state = 'error';
+        root.dataset.state = 'error';
+        message.textContent = '动态加载失败';
+        message.title = String(reason || '请重试');
+        retry.hidden = false;
+        stage.setAttribute('aria-busy', 'false');
+      },
+      cancel() {
+        current = null;
+        root.hidden = true;
+        stage.classList.remove('loading-preview-active');
+        stage.setAttribute('aria-busy', 'false');
+        picture.replaceChildren(); image = null; imagePath = null;
+        root.classList.remove('has-preview');
+      },
+    };
+  };
+
   const abortError = () => new DOMException('加载已取消', 'AbortError');
   K.isAbort = error => error && error.name === 'AbortError';
   const scope = (parent, timeout) => {
