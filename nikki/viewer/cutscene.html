@@ -324,6 +324,7 @@
       </div>
       <div class="strip-sep"></div>
       <button id="btnParts" title="Parts panel" aria-hidden="true" tabindex="-1" style="display:none"></button>
+      <button id="btnPartEdit" type="button" title="部件编辑（关闭）" aria-label="部件编辑（关闭）" aria-pressed="false"></button>
       <button id="btnAnimTab" title="动画面板"></button>
       <button id="btnBoneEdit" title="骨骼编辑模式 (E)"></button>
       <div class="strip-sep"></div>
@@ -371,6 +372,10 @@
       <div id="animList" class="anim-list"></div>
     </div>
     <div class="rp-page" data-page="parts">
+      <div class="row" id="partEditControls" style="flex-wrap:wrap">
+        <small>部件编辑已开启：点击模型可隐藏部件，不会触发点击台词。</small>
+        <button id="exitPartEdit" class="ctl active" type="button" style="min-height:40px">结束编辑，恢复点击播放</button>
+      </div>
       <div class="row"><input id="partFilter" type="text" class="text-input" placeholder="&#x8fc7;&#x6ee4;&#x90e8;&#x4ef6;&#x540d;, &#x5982; body / hand"></div>
       <div class="parts-tools">
         <button id="partAll">&#x5168;&#x663e;</button>
@@ -395,7 +400,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/kit.js?v=17151739ade2"></script>
 <script src="../../common/asset-loader.js?v=17151739ade2"></script>
-<script src="../../common/portrait-audio.js?v=c32ec89109a8"></script>
+<script src="../../common/portrait-audio.js?v=d817b6e3832b"></script>
 <script>
 
 (() => {
@@ -438,6 +443,7 @@
   const playbarToggle = $('#playbarToggle'), playbar = $('#playbar');
   const pbSpeed = $('#pbSpeed'), pbSpeedVal = $('#pbSpeedVal');
   const btnParts = $('#btnParts'), btnAnimTab = $('#btnAnimTab');
+  const btnPartEdit = $('#btnPartEdit');
   const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg'), btnVoice = $('#btnVoice');
   const floatPanel = $('#floatPanel'), gridView = $('#gridView');
   const rail = $('#rail'), topPill = $('#topPill'), toolStrip = $('#toolStrip');
@@ -450,6 +456,8 @@
     return ['bd2', 'nikki', 'bd2mod'].includes(candidate) ? candidate : 'bd2';
   })();
   if (routeSource === 'nikki') document.title = '妮姬 · Spine 动态查看器';
+  if (routeSource === 'nikki') stage.dataset.clickMode = 'audio';
+  else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
@@ -491,6 +499,8 @@
   let partsCtl = null;
   let animCtl = null;
   let boneEditMode = false;
+  // Explicit opt-in only: missing/muted audio must never enter editing.
+  let partEditMode = false;
   let editBoneName = null;
   let boneDrag = null;
   let poseLocked = null;
@@ -552,6 +562,7 @@
   $('#btnPrev').innerHTML = I('chevL', 13);
   $('#btnNext').innerHTML = I('chevR', 13);
   btnParts.innerHTML = I('layers', 15);
+  btnPartEdit.innerHTML = I('layers', 15);
   btnAnimTab.innerHTML = I('anim', 15);
   $('#btnBoneEdit').innerHTML = I('move', 15);
   btnDebug.innerHTML = I('bone', 15);
@@ -1050,8 +1061,35 @@
     if (tab === 'anim' && animCtl) animCtl.refresh();
     if (tab === 'pose') refreshPoseList();
   }
-  btnParts.addEventListener('click', () => setFloatPanel('parts'));
-  btnAnimTab.addEventListener('click', () => setFloatPanel('anim'));
+  function setPartEditMode(enabled) {
+    if (routeSource !== 'nikki') return;
+    if (enabled && boneEditMode) btnBoneEdit.click();
+    const changed = partEditMode !== !!enabled;
+    partEditMode = !!enabled;
+    stage.dataset.clickMode = partEditMode ? 'part-editing' : 'audio';
+    btnPartEdit.classList.toggle('on', partEditMode);
+    btnPartEdit.title = '部件编辑（' + (partEditMode ? '开启' : '关闭') + '）';
+    btnPartEdit.setAttribute('aria-label', btnPartEdit.title);
+    btnPartEdit.setAttribute('aria-pressed', String(partEditMode));
+    hidePartPopup();
+    highlightSlot = null;
+    if (changed) { portraitAudio?.reset(); portraitAudio?.playbackChanged(); }
+    if (partEditMode) {
+      if (!floatPanel.classList.contains('open') || floatPanel.dataset.tab !== 'parts') setFloatPanel('parts');
+    } else if (floatPanel.dataset.tab === 'parts') {
+      floatPanel.classList.remove('open');
+      btnParts.classList.remove('on');
+    }
+    if (changed) K.toast(partEditMode ? '部件编辑已开启，点击模型可选择部件' : '已恢复点击播放语音 / 音效', 'info');
+  }
+  btnPartEdit.addEventListener('click', () => setPartEditMode(!partEditMode));
+  $('#exitPartEdit')?.addEventListener('click', () => setPartEditMode(false));
+  $('#floatPanel [data-panel-close]').addEventListener('click', () => setPartEditMode(false));
+  $('#floatPanel [data-tab="pose"]').addEventListener('click', () => {
+    if (partEditMode) { setPartEditMode(false); setFloatPanel('pose'); }
+  });
+  btnParts.addEventListener('click', () => routeSource === 'nikki' ? setPartEditMode(true) : setFloatPanel('parts'));
+  btnAnimTab.addEventListener('click', () => { setPartEditMode(false); setFloatPanel('anim'); });
 
   partsCtl = K.buildPartsPanel({
     listEl: $('#slotList'),
@@ -1155,6 +1193,7 @@
   const btnBoneEdit = $('#btnBoneEdit');
   let editWasPlaying2 = false;
   btnBoneEdit.addEventListener('click', () => {
+    if (!boneEditMode && partEditMode) setPartEditMode(false);
     boneEditMode = !boneEditMode;
     btnBoneEdit.classList.toggle('on', boneEditMode);
     if (boneEditMode) {
@@ -1619,7 +1658,7 @@
         if (!cut || !cur || !track) return null;
         return { id: cur.id, animation: track.animation.name, time: track.trackTime,
           duration: track.animation.duration, loop: track.loop, speed: Number(pbSpeed.value) || 1,
-          playing, active: (embedded || stageMode) && !boneEditMode,
+          playing, active: (embedded || stageMode) && !boneEditMode && !partEditMode,
           animations: cut.data.animations.map(a => a.name) };
       },
       talk,
@@ -2530,8 +2569,13 @@
       const dpr = devicePixelRatio || 1;
       const name = K.hitTestSlot(cut.skeleton, (tapX - rect.left) * dpr - cv.width / 2, cv.height / 2 - (tapY - rect.top) * dpr, K.getSpine(cur && cur.spineVersion));
       if (name) {
-        if (!portraitAudio?.interact()) showPartPopup(name, tapX, tapY);
-        else hidePartPopup();
+        if (partEditMode || routeSource !== 'nikki') showPartPopup(name, tapX, tapY);
+        else {
+          hidePartPopup();
+          const hint = portraitAudio ? portraitAudio.interactionHint() : '角色声音模块尚未就绪，请稍后重试';
+          if (hint) { status(hint); K.toast(hint, 'info', 3500); }
+          portraitAudio?.interact();
+        }
       }
       else hidePartPopup();
     }

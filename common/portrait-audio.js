@@ -265,6 +265,27 @@
       this.record(kind, { name, eventTime, when, offset, rate: source.playbackRate.value });
       return source;
     }
+    interactionHint() {
+      if (!this.prefs.enabled) return '声音已关闭，可在“更多 → 角色声音设置”中开启';
+      if (!this.index) return this.indexError ? '音频索引加载失败，请重新加载资源后重试' : '角色音频索引加载中，请稍后再点击';
+      if (!this.prefs.voices && !this.prefs.effects) return '点击台词和动画音效都已关闭，可在角色声音设置中开启';
+      const s = this.adapter.snapshot();
+      if (!s || !/^c\d{3}_\d{2}$/i.test(s.id)) return '当前资源暂未匹配点击语音或音效';
+      const found = voiceSetFor(this.index, s.id);
+      const touch = found?.set.touch;
+      const preferred = touch?.[this.prefs.affinity] || [];
+      const names = preferred.length ? preferred : (touch?.normal || []);
+      const hasVoice = names.some(name => this.index.clips[name]);
+      const animations = this.index.resources[s.id]?.animations || {};
+      const clickAnimation = s.animations.includes('action') ? 'action' : s.animation;
+      const hasEffects = events => (events || []).some(event => this.index.clips[event.name]?.kind === 'animation-sfx');
+      const hasClickEffect = hasEffects(animations[clickAnimation]);
+      if ((this.prefs.voices && hasVoice) || (this.prefs.effects && hasClickEffect)) return '';
+      if (hasVoice && !this.prefs.voices) return '点击台词已关闭，可在角色声音设置中开启';
+      if (hasClickEffect && !this.prefs.effects) return '动画音效已关闭，可在角色声音设置中开启';
+      if (this.prefs.effects && Object.values(animations).some(hasEffects)) return '当前点击暂无已匹配声音；其它动画音效可在动画面板播放';
+      return '当前立绘暂未匹配语音或动画音效，不代表游戏内没有声音';
+    }
     interact(category = 'touch') {
       this.syncResource();
       const snapshot = this.adapter.snapshot();
@@ -369,7 +390,7 @@
     debug() {
       const snapshot = this.adapter.snapshot();
       return { resource: this.resourceId, indexReady: !!this.index, contextState: this.context?.state || 'locked', voice: !!this.voice, reaction: this.reaction, loading: this.loading, sources: this.sources.size, prefs: { ...this.prefs }, failures: [...this.failures], history: this.history.slice(),
-        playback: snapshot ? { animation: snapshot.animation, time: snapshot.time, loop: snapshot.loop, speed: snapshot.speed, playing: snapshot.playing } : null };
+        playback: snapshot ? { animation: snapshot.animation, time: snapshot.time, loop: snapshot.loop, speed: snapshot.speed, playing: snapshot.playing, active: snapshot.active } : null };
     }
     dispose() {
       this.reset(); this.disposed = true;
