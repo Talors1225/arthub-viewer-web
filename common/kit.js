@@ -6,6 +6,7 @@
 (() => {
   'use strict';
   const K = {};
+  const displayOverrides = window.ArtHubDisplayOverrides || { get: () => null, apply: (_source, entry) => entry };
 
   // ---------- Store: localStorage 封装 ----------
   // 部件显隐只作用于当前 Skeleton，但旧版会把 hiddenMap 按资源 ID 长期保存。
@@ -87,7 +88,7 @@
   // 原始索引保持只读。发布索引自带分类；本地旧索引按文件名回退。
   const NIKKE_CATEGORY_LABEL = {
     cutscene: '过场', skill: '技能', battle: '战斗', lobby: '立绘',
-    idle: '待机', store: '客户端提取', unknown: '其他',
+    idle: '待机', store: '客户端提取', unknown: '其它',
   };
   // 保留原始文件，但不把非角色、解析失败或缩略图链路无法稳定渲染的条目放进查看器。
   const NIKKE_VIEWER_OMIT_PREFIX = /^(?:favoriteitem_|pirate_ui_deco_monkey_)/i;
@@ -106,7 +107,7 @@
   };
   K.classifyNikkeCatalog = (entry) => {
     if (!entry || entry.type !== 'catalog') return null;
-    let type = String(entry.resourceType || '').toLowerCase();
+    let type = String(displayOverrides.get('nikki', entry.id)?.resourceType || entry.resourceType || '').toLowerCase();
     if (!type) {
       const id = String(entry.id || '');
       if (/skillcut|(?:^|[_-])(?:skill|burst)(?:[_-]|$)/i.test(id)) type = 'skill';
@@ -119,7 +120,9 @@
   K.decorateNikkeIndex = (data) => {
     if (!data || !Array.isArray(data.characters)) return data;
     let changed = false;
-    const characters = data.characters.reduce((out, entry) => {
+    const characters = data.characters.reduce((out, originalEntry) => {
+      const entry = displayOverrides.apply('nikki', originalEntry);
+      if (entry !== originalEntry) changed = true;
       if (K.shouldOmitNikkeViewerEntry(entry)) {
         changed = true;
         return out;
@@ -131,7 +134,7 @@
       }
       changed = true;
       const source = String(entry.source || 'NIKKE core catalog via ndb VFS')
-        .replace(/\s+·\s+(过场|技能|战斗|立绘|待机|客户端提取|其他)$/, '');
+        .replace(/\s+·\s+(过场|技能|战斗|立绘|待机|客户端提取|其他|其它)$/, '');
       out.push({
         ...entry,
         type: category.type,
@@ -177,8 +180,8 @@
   // 不改动原始文件名、URL 或用户导出的资源；目录不存在时仍保留原页面行为。
   const ASSET_CATALOG_FALLBACK = {
     schemaVersion: 'asset-catalog/fallback',
-    typeLabels: { cutscene: '剧情 / 过场', skill: '技能动画', battle: '战斗动作', lobby: '立绘 / 大厅', idle: '待机动作', store: '客户端提取', catalog: '目录素材', unknown: '其他资源' },
-    typeOrder: { cutscene: 10, skill: 20, battle: 30, lobby: 40, idle: 50, store: 80, catalog: 90, unknown: 99 },
+    typeLabels: { cutscene: '剧情 / 过场', skill: '技能动画', battle: '战斗动作', lobby: '立绘 / 大厅', idle: '待机动作', other: '其它', store: '客户端提取', catalog: '目录素材', unknown: '其他资源' },
+    typeOrder: { cutscene: 10, skill: 20, battle: 30, lobby: 40, idle: 50, other: 60, store: 80, catalog: 90, unknown: 99 },
     spine: {},
     gallery: { tokenLabels: {}, majsoulCharacterLabels: {}, categoryGroupOrder: [] },
   };
@@ -216,14 +219,15 @@
     const embedded = embeddedSpineMeta[source] || (embeddedSpineMeta[source] = {});
     const characters = data.characters.map(entry => {
       const id = String(entry && (entry.id || entry.name) || '');
-      const meta = data.catalogNormalized ? entry : map[id];
-      if (!meta) return entry;
+      const mappedMeta = data.catalogNormalized ? entry : map[id];
+      const meta = displayOverrides.apply(source, mappedMeta || entry);
+      if (!mappedMeta && meta === entry) return entry;
       embedded[id] = meta;
-      if (data.catalogNormalized) return entry;
+      if (data.catalogNormalized) return meta;
       const originalName = String(meta.originalName || entry.originalName || entry.name || id);
       const displayName = String(meta.displayName || entry.displayName || originalName);
       const oldSource = String(entry.source || '').replace(/\s+·\s+原名：?[^\n]+$/u, '');
-      const source = oldSource && originalName !== displayName
+      const displaySource = oldSource && originalName !== displayName
         ? oldSource + ' · 原名: ' + originalName
         : oldSource;
       return {
@@ -239,7 +243,7 @@
         sortName: meta.sortName || displayName,
         sortKey: meta.sortKey || displayName,
         nameConfidence: meta.confidence || 'original-name',
-        source,
+        source: displaySource,
       };
     });
     return { ...data, characters };
