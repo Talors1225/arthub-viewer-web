@@ -49,10 +49,17 @@ const K = {};
 const retryButton = new Element('button'); let retried = 0;
 retryButton.addEventListener('click', () => retried++);
 const context = vm.createContext({window: {SpineKit: K},
+  location: {pathname: '/arthub-viewer-web/nikki/viewer/cutscene.html'},
   document: {createElement: tag => new Element(tag), getElementById: id => id === 'btnRetry' ? retryButton : null},
   DOMException, AbortController, URL, setTimeout, clearTimeout});
 const loader = fs.readFileSync(path.join(root, 'common/asset-loader.js'), 'utf8');
 new vm.Script(loader, {filename: 'asset-loader.js'}).runInContext(context);
+check(K.stagePosterPath('nikki', 'c871_01', 'Catalog'), '/arthub-viewer-web/posters/nikki/c871_01--Catalog.webp', 'direct poster URL without thumbnail manifest');
+check(K.stagePosterPath('nikki', 'c871_02', 'Catalog'), '/arthub-viewer-web/posters/nikki/c871_02--Catalog.webp', 'costume variants cannot share a poster');
+check(K.stagePosterPath('unknown', 'sample'), null, 'unknown source cannot escape poster root');
+context.location.pathname = '/bd2/viewer/cutscene.html';
+check(K.stagePosterPath('bd2', '000101'), '/posters/bd2/000101--0.webp', 'local root supported');
+context.location.pathname = '/arthub-viewer-web/nikki/viewer/cutscene.html';
 const stage = new Element('div'); stage.className = 'stage';
 const preview = K.createLoadingPreview(stage);
 const overlay = stage.children[0];
@@ -67,7 +74,8 @@ check(overlay.hidden, false, 'open before model download');
 check(stage.classList.contains('loading-preview-active'), true, 'canvas concealed while loading');
 check(stage.getAttribute('aria-busy'), 'true', 'loading state');
 check(message.textContent, '动态加载中', 'visible loading feedback');
-check(oldImage.src, '/one.webp', 'thumbnail instead of full texture');
+check(oldImage.src, '/one.webp', 'dedicated static poster instead of full texture');
+check(overlay.dataset.fit, '0.92', 'same fitted stage area as NIKKE and BD2');
 check(oldImage.fetchPriority, 'high', 'preview request priority');
 oldImage.dispatch('load');
 check(overlay.classList.contains('has-preview'), true, 'loaded static image visible');
@@ -95,7 +103,8 @@ check(retried, 1, 'retry invokes existing model loader');
 preview.ready(2);
 check(overlay.hidden, false, 'a later render cannot erase current failure');
 
-preview.begin(3, {label: 'Direct link'});
+preview.begin(3, {label: 'Direct link', fit: .85});
+check(overlay.dataset.fit, '0.85', 'same fitted stage area as multi-layer Mahjong Soul');
 check(picture.children.length, 0, 'late manifest supported');
 check(title.textContent, 'Direct link', 'resource label visible without a thumbnail');
 check(retry.hidden, true, 'retry resets for a fresh request');
@@ -148,12 +157,15 @@ for (const file of viewers) {
   const helper = html.match(/function stagePreviewPath\([^)]*\) \{[\s\S]*?\n  \}/);
   assert.ok(helper, file + ': test real variant lookup');
   const variant = {variant: 'Lobby'}, cur = {id: 'sample', cutscenes: [variant, {variant: 'Skill'}]};
-  const env = vm.createContext({webThumbs: {'nikki:sample:Lobby': 'lobby.webp', 'nikki:sample:Skill': 'skill.webp',
-    'majsoul:sample': 'layers.webp'}, routeSource: 'nikki', cur, THUMB_PREFIX: '/thumbs/', gridView: {querySelectorAll: () => []}});
+  const env = vm.createContext({K, routeSource: 'nikki', cur});
   vm.runInContext(helper[0], env);
   check(env.stagePreviewPath(file.includes('majsoul') ? {id: 'sample'} : variant),
-    file.includes('majsoul') ? '/thumbs/layers.webp' : '/thumbs/lobby.webp', file + ': matching resource thumbnail');
-  if (!file.includes('majsoul')) check(env.stagePreviewPath(cur.cutscenes[1]), '/thumbs/skill.webp', file + ': variant has its own image');
+    file.includes('majsoul') ? '/arthub-viewer-web/posters/majsoul/sample--binary.webp' : '/arthub-viewer-web/posters/nikki/sample--Lobby.webp', file + ': matching resource poster without gallery lookup');
+  if (!file.includes('majsoul')) check(env.stagePreviewPath(cur.cutscenes[1]), '/arthub-viewer-web/posters/nikki/sample--Skill.webp', file + ': variant has its own image');
+  else {
+    check(env.stagePreviewPath({id:'sample', composite:true}), '/arthub-viewer-web/posters/majsoul/sample--layers.webp', 'composite poster contains all layers');
+    check(env.stagePreviewPath({id:'sample', skel:'different.json'}), '/arthub-viewer-web/posters/majsoul/sample--json.webp', 'duplicate ID JSON variant retains separate poster');
+  }
   const chrome = html.match(/const isChrome = \(t\) =>[^\n]+/);
   assert.ok(chrome, file + ': test actual touch exclusion');
   const input = vm.createContext({});

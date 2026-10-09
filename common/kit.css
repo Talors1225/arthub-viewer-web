@@ -1733,24 +1733,24 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
   .stage-popup .col-title { line-height: 1.5; }
 }
 
-/* Library thumbnails provide a small first view while the model downloads. */
+/* Full-resolution transparent posters fit the same stage as the final model. */
 .stage-loading-preview {
   position: absolute; inset: 0; z-index: 2;
-  display: grid; grid-template-rows: minmax(0, 1fr) auto;
-  justify-items: center; gap: 16px;
-  padding: 80px 24px calc(100px + env(safe-area-inset-bottom, 0px));
+  display: block;
   pointer-events: none;
 }
 .stage-loading-preview[hidden] { display: none; }
 .stage.loading-preview-active > canvas { opacity: 0; }
-.stage-loading-picture { width: 100%; height: 100%; min-height: 0; }
+.stage-loading-picture { position: absolute; inset: 4%; }
+.stage-loading-preview[data-fit="0.85"] .stage-loading-picture { inset: 7.5%; }
 .stage-loading-image { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0; }
 .stage-loading-preview.has-preview .stage-loading-image { opacity: 1; }
 .stage-loading-notice {
+  position: absolute; left: 50%; bottom: calc(94px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 10px;
-  max-width: min(480px, 100%); padding: 12px 18px;
+  max-width: min(480px, calc(100% - 40px)); padding: 10px 15px; box-sizing: border-box;
   color: var(--text); background: var(--glass); border: 1px solid var(--border2);
-  border-radius: 16px; text-align: center;
+  border-radius: 14px; text-align: center; backdrop-filter: blur(12px);
 }
 .stage-loading-title { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .stage-loading-preview.has-preview .stage-loading-title { display: none; }
@@ -1764,8 +1764,7 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
 .stage-loading-retry[hidden] { display: none; }
 @keyframes stage-loading-spin { to { transform: rotate(360deg); } }
 @media (max-width: 720px) {
-  .stage-loading-preview { padding: 36px 18px calc(112px + env(safe-area-inset-bottom, 0px)); gap: 12px; }
-  .stage-loading-notice { max-width: calc(100% - 76px); padding: 11px 14px; }
+  .stage-loading-notice { left: calc((100% - 68px) / 2); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 90px); padding: 10px 13px; }
   .stage-loading-retry { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {

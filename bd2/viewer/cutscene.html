@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=loading-preview-20261009">
+<link rel="stylesheet" href="../../common/kit.css?v=loading-poster-20261009">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -394,7 +394,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=9aafd8e76480"></script>
 <script src="../../common/kit.js?v=9aafd8e76480"></script>
-<script src="../../common/asset-loader.js?v=loading-preview-20261009"></script>
+<script src="../../common/asset-loader.js?v=loading-poster-20261009"></script>
 <script>
 
 (() => {
@@ -1936,11 +1936,7 @@
   }
 
   function stagePreviewPath(v) {
-    const path = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
-    if (path) return THUMB_PREFIX + path;
-    if (v !== cur.cutscenes[0]) return null;
-    const card = [...gridView.querySelectorAll('.thumb-card')].find(node => node.dataset.id === cur.id);
-    return card?.querySelector('.ph img')?.getAttribute('src') || null;
+    return K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
   }
 
   async function loadCutscene(idx, restoreAnim) {
@@ -2182,10 +2178,6 @@
   async function loadChars() {
     const thumbnails = K.fetchJSON('../../thumbs/index.json').then(td => {
       webThumbs = td.items || {};
-      if (cur) {
-        const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
-        if (variant) loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
-      }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
     const data = await K.fetchJSON('../' + indexFile);

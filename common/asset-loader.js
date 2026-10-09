@@ -34,7 +34,13 @@
     }
     element.onclick = failed ? () => document.getElementById('btnRetry')?.click() : null;
   };
-  // A cached library thumbnail stays visible until the current model submits
+  // Dedicated transparent posters share a predictable URL with the offline
+  // generator. A stage preview never waits for the library thumbnail manifest.
+  K.stagePosterPath = (game, id, variant = '0') => {
+    if (!['nikki', 'bd2', 'majsoul'].includes(game) || !id) return null;
+    return K.siteRoot() + 'posters/' + game + '/' + encodeURIComponent(String(id) + '--' + String(variant)) + '.webp';
+  };
+  // A transparent poster stays visible until the current model submits
   // its first draw. Old loads and image callbacks cannot replace a newer one.
   K.createLoadingPreview = stage => {
     const root = document.createElement('div');
@@ -94,6 +100,7 @@
         current = { seq, label: String(options.label || '当前资源'), state: 'loading' };
         root.dataset.state = 'loading';
         root.dataset.load = String(seq);
+        root.dataset.fit = String(options.fit || .92);
         root.hidden = false;
         stage.classList.add('loading-preview-active');
         stage.setAttribute('aria-busy', 'true');
