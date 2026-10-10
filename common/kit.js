@@ -1203,37 +1203,40 @@
     } catch {}
   };
 
-  // ---------- 三档导出：图片尺寸与动画时间轴不依赖查看窗口 ----------
+  // ---------- 导出质量：图片三档，GIF 和视频两档 ----------
   K.exportPresets = Object.freeze([
-    Object.freeze({ id: 'medium', label: '中等质量', pngEdge: 1024, gifEdge: 768, fps: 25 }),
-    Object.freeze({ id: 'high', label: '高等质量', pngEdge: 2048, gifEdge: 1280, fps: 50 }),
+    Object.freeze({ id: 'medium', label: '中等质量', pngEdge: 1024, gifEdge: 768, fps: 25, videoEdge: 1280, videoFps: 30, videoBitrate: 5000000 }),
+    Object.freeze({ id: 'high', label: '高等质量', pngEdge: 2048, gifEdge: 1280, fps: 50, videoEdge: 1920, videoFps: 60, videoBitrate: 12000000 }),
     Object.freeze({ id: 'lossless', label: '无损质量', pngEdge: 0, gifEdge: 0, fps: 0 }),
   ]);
   K.exportPreset = value => K.exportPresets.find(p => p.id === (value?.id || value)) || K.exportPresets[1];
+  K.animationExportPresets = Object.freeze(K.exportPresets.slice(0, 2));
+  // Old saved PNG-sequence selections now export a playable high-quality animation.
+  K.animationExportPreset = value => K.animationExportPresets.find(p => p.id === (value?.id || value)) || K.animationExportPresets[1];
   K.exportDimensions = (bounds, quality, kind = 'png') => {
-    const preset = K.exportPreset(quality), padding = 16;
+    const preset = kind === 'png' ? K.exportPreset(quality) : K.animationExportPreset(quality), padding = 16;
     const spanW = bounds.maxX - bounds.minX, spanH = bounds.maxY - bounds.minY;
     if (![spanW, spanH].every(v => Number.isFinite(v) && v > 0)) throw new Error('没有可导出的可见部件');
     const nativeW = spanW + padding * 2, nativeH = spanH + padding * 2;
-    const edge = kind === 'gif' ? preset.gifEdge : preset.pngEdge;
+    const edge = kind === 'video' ? preset.videoEdge : kind === 'gif' ? preset.gifEdge : preset.pngEdge;
     const scale = edge ? edge / Math.max(nativeW, nativeH) : 1;
-    const width = Math.max(1, Math.ceil(nativeW * scale - 1e-7));
-    const height = Math.max(1, Math.ceil(nativeH * scale - 1e-7));
+    let width = Math.max(1, Math.ceil(nativeW * scale - 1e-7));
+    let height = Math.max(1, Math.ceil(nativeH * scale - 1e-7));
+    if (kind === 'video') { width += width % 2; height += height % 2; }
     if (Math.max(width, height) > 8192) throw new Error('原始尺寸超过 8192 像素，请选择高等质量');
     return { width, height, scale, centerX: (bounds.minX + bounds.maxX) / 2, centerY: (bounds.minY + bounds.maxY) / 2 };
   };
-  K.exportTimeline = (duration, quality, authoredFps) => {
-    const preset = K.exportPreset(quality), lossless = preset.id === 'lossless';
-    const sourceFps = Number(authoredFps);
-    const fps = lossless ? (sourceFps > 0 && sourceFps <= 240 ? sourceFps : 30) : preset.fps;
+  K.exportTimeline = (duration, quality, kind = 'gif') => {
+    const preset = K.animationExportPreset(quality), video = kind === 'video';
+    const fps = video ? preset.videoFps : preset.fps;
     const dur = Number.isFinite(duration) && duration > 0 ? duration : 1 / fps;
     // GIF uses centiseconds. Distribute rounding error instead of repeating
     // one rounded delay and slowing down the entire animation.
     const ticks = Math.max(2, Math.round(dur * 100));
-    const frames = lossless ? Math.max(1, Math.ceil(dur * fps - 1e-5))
+    const frames = video ? Math.max(1, Math.ceil(dur * fps - 1e-5))
       : Math.max(1, Math.min(Math.round(dur * fps), Math.floor(ticks / 2)));
-    return { fps, duration: dur, frames, lossless,
-      timeAt: k => lossless ? k / fps : k * dur / frames,
+    return { fps, duration: dur, frames,
+      timeAt: k => k * dur / frames,
       delayAt: k => (Math.round((k + 1) * ticks / frames) - Math.round(k * ticks / frames)) * 10 };
   };
   K.pngExportPose = (skeletons, quality, ns) => {
@@ -1266,13 +1269,15 @@
     };
   };
   K.mountExportOptions = (pop, options) => {
-    let quality = K.exportPreset(options.quality).id;
     const animation = options.kind === 'animation';
+    const presets = animation ? K.animationExportPresets : K.exportPresets;
+    let quality = (animation ? K.animationExportPreset(options.quality) : K.exportPreset(options.quality)).id;
+    let format = options.format === 'video' ? 'video' : 'gif';
     pop.innerHTML = '<div class="col export-options"><div class="col-title">' + (animation ? '导出动画' : '导出 PNG') + '</div>'
+      + (animation ? '<div class="export-formats" role="group" aria-label="动画文件格式"><button type="button" data-format="gif">GIF 动图</button><button type="button" data-format="video">视频</button></div>' : '')
       + '<div class="export-choices" role="radiogroup" aria-label="导出质量">'
-      + K.exportPresets.map(p => {
-        const detail = animation ? (p.id === 'lossless' ? 'PNG 帧序列 ZIP · 原始尺寸'
-          : 'GIF · 长边 ' + p.gifEdge + ' · ' + p.fps + ' 帧/秒')
+      + presets.map(p => {
+        const detail = animation ? ''
           : 'PNG · ' + (p.pngEdge ? '长边 ' + p.pngEdge + ' 像素' : '原始尺寸');
         return '<button type="button" class="export-choice" role="radio" data-quality="' + p.id + '"><strong>'
           + p.label + '</strong><small>' + detail + '</small></button>';
@@ -1281,12 +1286,20 @@
       + '<div class="export-actions"><button type="button" class="export-go"></button>'
       + (options.onCopy ? '<button type="button" class="export-copy">复制图片</button>' : '') + '</div></div>';
     const buttons = [...pop.querySelectorAll('.export-choice')], go = pop.querySelector('.export-go');
+    const formats = [...pop.querySelectorAll('[data-format]')];
     const copy = pop.querySelector('.export-copy'), detail = pop.querySelector('.export-detail');
     const update = () => {
       buttons.forEach(button => { const selected = button.dataset.quality === quality;
-        button.classList.toggle('on', selected); button.setAttribute('aria-checked', String(selected)); button.tabIndex = selected ? 0 : -1; });
-      go.textContent = animation ? (quality === 'lossless' ? '导出 PNG 帧序列' : '导出 GIF') : '导出 PNG';
-      try { detail.textContent = options.getDetail(K.exportPreset(quality)); go.disabled = false; if (copy) copy.disabled = false; }
+        button.classList.toggle('on', selected); button.setAttribute('aria-checked', String(selected)); button.tabIndex = selected ? 0 : -1;
+        if (animation) { const p = K.animationExportPreset(button.dataset.quality);
+          button.querySelector('small').textContent = format === 'video'
+            ? '视频 · 长边 ' + p.videoEdge + ' · ' + p.videoFps + ' 帧/秒'
+            : 'GIF · 长边 ' + p.gifEdge + ' · ' + p.fps + ' 帧/秒'; }
+      });
+      formats.forEach(button => { const selected = button.dataset.format === format;
+        button.classList.toggle('on', selected); button.setAttribute('aria-pressed', String(selected)); });
+      go.textContent = animation ? (format === 'video' ? '导出视频' : '导出 GIF') : '导出 PNG';
+      try { detail.textContent = options.getDetail(K.exportPreset(quality), format); go.disabled = false; if (copy) copy.disabled = false; }
       catch (error) { detail.textContent = error.message; go.disabled = true; if (copy) copy.disabled = true; }
     };
     buttons.forEach((button, index) => {
@@ -1298,8 +1311,9 @@
         const next = buttons[(index + step + buttons.length) % buttons.length]; next.click(); next.focus();
       };
     });
+    formats.forEach(button => { button.onclick = () => { format = button.dataset.format; options.onFormatChange?.(format); update(); }; });
     const transparent = () => !!pop.querySelector('.png-alpha')?.checked;
-    go.onclick = () => options.onExport(quality, transparent());
+    go.onclick = () => options.onExport(quality, transparent(), format);
     if (copy) copy.onclick = () => options.onCopy(quality, transparent());
     update();
   };
@@ -1334,38 +1348,125 @@
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 15000);
   };
-  K.canvasPNGBlob = canvas => new Promise((resolve, reject) => canvas.toBlob(blob => {
-    if (blob) resolve(blob); else reject(new Error('PNG 帧捕获失败'));
-  }, 'image/png'));
-  // PNG is already compressed. A stored ZIP keeps every frame byte-for-byte
-  // and avoids loading a second compression library or recompressing images.
-  const ZIP_CRC_TABLE = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) { let c = i; for (let bit = 0; bit < 8; bit++) c = (c >>> 1) ^ ((c & 1) ? 0xedb88320 : 0); ZIP_CRC_TABLE[i] = c >>> 0; }
-  K.pngSequenceZip = () => {
-    const rows = [], parts = []; let offset = 0;
-    return {
-      async add(name, blob) {
-        const data = new Uint8Array(await blob.arrayBuffer()), filename = new TextEncoder().encode(name);
-        if (offset + data.length > 512 * 1024 * 1024 || rows.length >= 65535) throw new Error('无损帧序列超过本机打包范围，请选择高等质量');
-        let crc = 0xffffffff; for (const byte of data) crc = ZIP_CRC_TABLE[(crc ^ byte) & 255] ^ (crc >>> 8); crc = (crc ^ 0xffffffff) >>> 0;
-        const header = new Uint8Array(30), h = new DataView(header.buffer);
-        h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x800, true); h.setUint16(12, 0x21, true);
-        h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, filename.length, true);
-        rows.push({ filename, crc, size: data.length, offset }); parts.push(header, filename, blob); offset += header.length + filename.length + data.length;
-      },
-      finish() {
-        const central = []; let size = 0;
-        for (const row of rows) {
-          const header = new Uint8Array(46), h = new DataView(header.buffer);
-          h.setUint32(0, 0x02014b50, true); h.setUint16(4, 20, true); h.setUint16(6, 20, true); h.setUint16(8, 0x800, true); h.setUint16(14, 0x21, true);
-          h.setUint32(16, row.crc, true); h.setUint32(20, row.size, true); h.setUint32(24, row.size, true); h.setUint16(28, row.filename.length, true); h.setUint32(42, row.offset, true);
-          central.push(header, row.filename); size += header.length + row.filename.length;
-        }
-        const end = new Uint8Array(22), e = new DataView(end.buffer);
-        e.setUint32(0, 0x06054b50, true); e.setUint16(8, rows.length, true); e.setUint16(10, rows.length, true); e.setUint32(12, size, true); e.setUint32(16, offset, true);
-        return new Blob([...parts, ...central, end], { type: 'application/zip' });
-      },
-    };
+  K.awaitExportTask = (promise, signal) => {
+    if (!signal) return promise;
+    return new Promise((resolve, reject) => {
+      const abort = () => reject(new DOMException('已取消导出', 'AbortError'));
+      signal.addEventListener('abort', abort, { once: true });
+      if (signal.aborted) abort();
+      promise.then(value => { signal.removeEventListener('abort', abort); resolve(value); },
+        error => { signal.removeEventListener('abort', abort); reject(error); });
+    });
+  };
+  K.writeCanvasVideo = async ({ canvas, duration, quality, draw, signal, onProgress }, codec) => {
+    const { Output, Mp4OutputFormat, BufferTarget, CanvasSource, Quality } = codec;
+    const preset = K.animationExportPreset(quality), plan = K.exportTimeline(duration, quality, 'video');
+    const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
+    const check = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
+    const abort = () => { output.cancel().catch(() => {}); };
+    let finished = false;
+    signal?.addEventListener('abort', abort, { once: true });
+    try {
+      check();
+      const source = new CanvasSource(canvas, { codec: 'avc', quality: new Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality' });
+      output.addVideoTrack(source, { frameRate: plan.fps }); await output.start();
+      const step = plan.duration / plan.frames;
+      // Every planned frame is encoded; timestamps come from the animation,
+      // independent of device speed and the viewer's playback speed.
+      for (let k = 0; k < plan.frames; k++) {
+        check(); const time = plan.timeAt(k); draw(time);
+        await source.add(time, step, { keyFrame: k % (plan.fps * 2) === 0 });
+        await onProgress?.((k + 1) / plan.frames, time + step);
+      }
+      check(); await output.finalize(); finished = true; check();
+      const blob = new Blob([output.target.buffer], { type: 'video/mp4' });
+      if (!blob.size) throw new Error('视频文件为空，请重试');
+      return { blob, extension: 'mp4', label: 'MP4' };
+    } catch (error) { check(); throw error; }
+    finally { signal?.removeEventListener('abort', abort); if (!finished) await output.cancel().catch(() => {}); }
+  };
+  K.encodeCanvasVideo = async options => {
+    const preset = K.animationExportPreset(options.quality);
+    if (window.VideoEncoder && window.VideoFrame && K.videoExportFormat().extension === 'mp4') {
+      let codec;
+      try {
+        // Only video export loads this locally bundled encoder/muxer adapter.
+        const candidate = await K.awaitExportTask(import('./vendor/mediabunny-1.61.0.esm.js'), options.signal);
+        const supported = await K.awaitExportTask(candidate.canEncodeVideo('avc', { width: options.canvas.width, height: options.canvas.height,
+          frameRate: preset.videoFps, quality: new candidate.Quality({ bitrate: preset.videoBitrate }) }), options.signal);
+        if (supported) codec = candidate;
+      } catch (error) { if (error.name === 'AbortError') throw error; console.warn('逐帧视频编码不可用，使用浏览器录制', error); }
+      if (codec) return K.writeCanvasVideo(options, codec);
+    }
+    return K.recordCanvasVideo(options);
+  };
+  K.videoExportFormat = (Recorder = window.MediaRecorder) => {
+    if (!Recorder?.isTypeSupported) throw new Error('当前浏览器不支持视频导出，请使用 GIF');
+    // Probe recording support, not merely whether an existing file can play.
+    for (const mimeType of ['video/mp4;codecs=avc1.64002A', 'video/mp4',
+      'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
+      if (Recorder.isTypeSupported(mimeType)) {
+        const mp4 = mimeType.startsWith('video/mp4');
+        return { mimeType, extension: mp4 ? 'mp4' : 'webm', label: mp4 ? 'MP4' : 'WebM' };
+      }
+    }
+    throw new Error('当前浏览器没有可用的视频编码格式，请使用 GIF');
+  };
+  K.recordCanvasVideo = async ({ canvas, duration, quality, draw, signal, onProgress }) => {
+    const preset = K.animationExportPreset(quality), format = K.videoExportFormat();
+    if (!canvas.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
+    const totalMs = (Number.isFinite(duration) && duration > 0 ? duration : 1 / preset.videoFps) * 1000;
+    const checkAbort = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
+    checkAbort(); draw(0);
+    let stream = canvas.captureStream(0), track = stream.getVideoTracks()[0];
+    const manualFrames = typeof track?.requestFrame === 'function';
+    if (!manualFrames) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = canvas.captureStream(preset.videoFps); track = stream.getVideoTracks()[0];
+    }
+    let recorder, stopTimer, recorderError;
+    try {
+      recorder = new window.MediaRecorder(stream, { mimeType: format.mimeType, videoBitsPerSecond: preset.videoBitrate });
+      const chunks = [];
+      let finish;
+      const stopped = new Promise(resolve => { finish = resolve; });
+      recorder.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
+      recorder.onerror = event => { recorderError = event.error || new Error('视频编码失败'); finish(); };
+      recorder.onstop = () => finish();
+      recorder.start();
+      const started = performance.now(), interval = 1000 / preset.videoFps;
+      for (;;) {
+        checkAbort();
+        if (recorderError) throw recorderError;
+        if (recorder.state !== 'recording') throw new Error('视频录制被中断，请重试');
+        if (document.hidden) throw new Error('视频导出时请保持页面在前台，然后重试');
+        const elapsed = performance.now() - started;
+        if (elapsed >= totalMs) break;
+        // Sample by elapsed time. A slower device may drop video frames but
+        // must not stretch the animation or export only its beginning.
+        draw(elapsed / 1000);
+        if (manualFrames) track.requestFrame();
+        await onProgress?.(Math.min(1, elapsed / totalMs), elapsed / 1000);
+        const next = started + (Math.floor(elapsed / interval) + 1) * interval;
+        await new Promise(resolve => setTimeout(resolve, Math.max(1, Math.ceil(Math.min(next, started + totalMs) - performance.now()))));
+      }
+      recorder.stop();
+      await Promise.race([stopped, new Promise((_, reject) => {
+        stopTimer = setTimeout(() => reject(new Error('视频编码没有完成，请重试或使用 GIF')), 10000);
+      })]);
+      checkAbort();
+      if (recorderError) throw recorderError;
+      const mimeType = recorder.mimeType || format.mimeType;
+      const blob = new Blob(chunks, { type: mimeType });
+      if (!blob.size) throw new Error('视频文件为空，请重试或使用 GIF');
+      const mp4 = mimeType.startsWith('video/mp4');
+      return { blob, extension: mp4 ? 'mp4' : 'webm', label: mp4 ? 'MP4' : 'WebM' };
+    } finally {
+      clearTimeout(stopTimer);
+      if (recorder && recorder.state !== 'inactive') { try { recorder.stop(); } catch (_) {} }
+      for (const track of stream.getTracks()) track.stop();
+      if (recorder) recorder.ondataavailable = recorder.onerror = recorder.onstop = null;
+    }
   };
 
   // ---------- PNG 导出 ----------

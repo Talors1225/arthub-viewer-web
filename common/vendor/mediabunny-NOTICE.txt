@@ -1,0 +1,8 @@
+Mediabunny 1.61.0
+Copyright Vanilagy and contributors.
+License: Mozilla Public License 2.0, see mediabunny-LICENSE.txt.
+Unmodified ESM browser build from the official npm package.
+The MPL-covered source is available at:
+https://registry.npmjs.org/mediabunny/-/mediabunny-1.61.0.tgz
+https://github.com/Vanilagy/mediabunny/tree/0f91fe768e7ee42703f15e2b8845551b0f1028b3
+No remote conversion service or account is used.

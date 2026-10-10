@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=f8465db6f3e5">
+<link rel="stylesheet" href="../../common/kit.css?v=79bc22f172c0">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -268,8 +268,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=3534aaecd123"></script>
-  <script src="../../arthub-cos.js?v=f8465db6f3e5"></script>
+  <script src="../../arthub-cos-config.js?v=c7f59f989683"></script>
+  <script src="../../arthub-cos.js?v=79bc22f172c0"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -397,10 +397,10 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=f8465db6f3e5"></script>
-<script src="../../common/kit.js?v=f8465db6f3e5"></script>
-<script src="../../common/asset-loader.js?v=f8465db6f3e5"></script>
-<script src="../../common/portrait-audio.js?v=f8465db6f3e5"></script>
+<script src="../../common/asset-display-overrides.js?v=79bc22f172c0"></script>
+<script src="../../common/kit.js?v=79bc22f172c0"></script>
+<script src="../../common/asset-loader.js?v=79bc22f172c0"></script>
+<script src="../../common/portrait-audio.js?v=79bc22f172c0"></script>
 <script>
 
 (() => {
@@ -513,7 +513,8 @@
   let gridQuery = '';
   let immersive = false;
   let exportQuality = K.exportPreset(store.get('pngExportQuality', 'high')).id;
-  let animationExportQuality = K.exportPreset(store.get('animationExportQuality', 'high')).id;
+  let animationExportQuality = K.animationExportPreset(store.get('animationExportQuality', 'high')).id;
+  let animationExportFormat = store.get('animationExportFormat', 'gif') === 'video' ? 'video' : 'gif';
   let animationExportRunning = false;
 
   // ---------- 弹窗基建 ----------
@@ -2149,15 +2150,15 @@
     }
   }
 
-  // ---------- 动画导出：GIF 两档与原始尺寸的逐帧 PNG ----------
-  async function exportAnimation(quality) {
+  // ---------- 动画导出：GIF 和视频均为两档 ----------
+  async function exportAnimation(quality, format = 'gif') {
     if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     const animName = animSel.value;
     const anim = cut.data.animations.find(a => a.name === animName);
     if (!anim) { K.toast('动画不存在', 'err'); return; }
-    const authoredFps = cut.data.fps;
-    const timeline = K.exportTimeline(anim.duration, quality, authoredFps);
+    const video = format === 'video';
+    const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
     const hiddenSlots = new Set(cut.hiddenSlots);
@@ -2168,7 +2169,7 @@
     const job = K.exportProgress();
     animationExportRunning = true;
     try {
-      const codec = timeline.lossless ? null : await import('../../common/vendor/gifenc.esm.js');
+      const codec = video ? null : await import('../../common/vendor/gifenc.esm.js');
       const cv2 = document.createElement('canvas');
       cv2.width = 1; cv2.height = 1;
       const raw2 = cv2.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
@@ -2227,7 +2228,7 @@
         if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
       }
       if (!isFinite(bMinX)) throw new Error('空包围盒');
-      const size = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, quality, timeline.lossless ? 'png' : 'gif');
+      const size = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, quality, video ? 'video' : 'gif');
       const W = size.width, H = size.height, scale = size.scale;
       if (Math.max(W, H) > raw2.getParameter(raw2.MAX_TEXTURE_SIZE)) throw new Error('原始尺寸超过设备支持，请选择高等质量');
       cv2.width = W; cv2.height = H; K.syncRendererSize(cv2, mgl2, r2);
@@ -2237,42 +2238,42 @@
         L.state.clearTracks(); L.skeleton.setToSetupPose();
         const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, false);
       }
-      const cvRgb = timeline.lossless ? null : document.createElement('canvas');
-      if (cvRgb) { cvRgb.width = W; cvRgb.height = H; }
-      const ctx2d = cvRgb?.getContext('2d', { willReadFrequently: true });
-      const gif = codec?.GIFEncoder(), zip = timeline.lossless ? K.pngSequenceZip() : null;
-      for (let k = 0; k < frames; k++) {
-        job.check();
-        applyExportFrame(timeline.timeAt(k), scale, cx * scale, cy * scale);
+      const cvRgb = document.createElement('canvas');
+      cvRgb.width = W; cvRgb.height = H;
+      const ctx2d = cvRgb.getContext('2d', { willReadFrequently: !video });
+      if (!ctx2d) throw new Error('导出画布不可用');
+      const drawFrame = time => {
+        applyExportFrame(time, scale, cx * scale, cy * scale);
         raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT);
         r2.begin();
         for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
         r2.end();
-        if (zip) {
-          await zip.add('frames/' + String(k).padStart(6, '0') + '.png', await K.canvasPNGBlob(cv2));
-        } else {
-          ctx2d.clearRect(0, 0, W, H); ctx2d.drawImage(cv2, 0, 0);
+        if (video) { ctx2d.fillStyle = '#000'; ctx2d.fillRect(0, 0, W, H); }
+        else ctx2d.clearRect(0, 0, W, H);
+        ctx2d.drawImage(cv2, 0, 0);
+      };
+      let blob, extension = 'gif', label = 'GIF';
+      if (video) {
+        const output = await K.encodeCanvasVideo({ canvas: cvRgb, duration: timeline.duration, quality, draw: drawFrame, signal: job.signal,
+          onProgress: (progress, time) => job.update(.25 + .75 * progress, `导出视频 ${time.toFixed(1)} / ${timeline.duration.toFixed(1)} 秒 · ${W}×${H}`) });
+        ({ blob, extension, label } = output);
+      } else {
+        const gif = codec.GIFEncoder();
+        for (let k = 0; k < frames; k++) {
+          job.check(); drawFrame(timeline.timeAt(k));
           const rgba = ctx2d.getImageData(0, 0, W, H).data;
           const colors = codec.quantize(rgba, 255, { format: 'rgb565' });
           const index = codec.applyPalette(rgba, colors, 'rgb565');
           // An opaque palette color must never become transparent by accident.
           for (let i = 0; i < index.length; i++) index[i] = rgba[i * 4 + 3] < 128 ? 0 : index[i] + 1;
           gif.writeFrame(index, W, H, { palette: [[0, 0, 0], ...colors], delay: timeline.delayAt(k), transparent: true, transparentIndex: 0 });
+          await job.update(.25 + .75 * (k + 1) / frames, `导出 ${k + 1} / ${frames} 帧 · ${W}×${H}`);
         }
-        await job.update(.25 + .75 * (k + 1) / frames, `导出 ${k + 1} / ${frames} 帧 · ${W}×${H}`);
+        gif.finish(); blob = new Blob([gif.bytes()], { type: 'image/gif' });
       }
       job.check();
-      let blob;
-      if (zip) {
-        const metadata = { animation: animName, width: W, height: H, fps: timeline.fps, durationSeconds: timeline.duration,
-          frameCount: frames, framePattern: 'frames/000000.png', firstFrameTimeSeconds: 0, timeStepSeconds: 1 / timeline.fps,
-          authoredFps: authoredFps || null, fpsFallback: !authoredFps };
-        await zip.add('animation.json', new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' }));
-        await zip.add('说明.txt', new Blob(['逐帧 PNG，无损保存，保留透明背景。\n按照 frames 文件夹内的编号顺序导入。\n帧率和原动画时长见 animation.json。\n'], { type: 'text/plain;charset=utf-8' }));
-        job.check(); blob = zip.finish();
-      } else { gif.finish(); blob = new Blob([gif.bytes()], { type: 'image/gif' }); }
-      K.downloadBlob(blob, (exportName + '_' + animName).replace(/[\\/:*?"<>|]+/g, '_') + (zip ? '_逐帧PNG.zip' : '.gif'));
-      K.toast((zip ? 'PNG 帧序列' : 'GIF') + ' 已导出：' + W + '×' + H + ' · ' + frames + ' 帧', 'ok');
+      K.downloadBlob(blob, (exportName + '_' + animName).replace(/[\\/:*?"<>|]+/g, '_') + '.' + extension);
+      K.toast(label + ' 已导出：' + W + '×' + H + ' · ' + (video ? timeline.duration.toFixed(2) + ' 秒' : frames + ' 帧'), 'ok');
     } catch (e) {
       if (K.isAbort(e)) K.toast('已取消导出', 'info');
       else { console.error(e); K.toast('动画导出失败: ' + e.message, 'err'); }
@@ -2283,16 +2284,21 @@
     }
   }
   makeStagePopup($('#btnGif'), pop => K.mountExportOptions(pop, {
-    kind: 'animation', quality: animationExportQuality,
+    kind: 'animation', quality: animationExportQuality, format: animationExportFormat,
     onChange: quality => { animationExportQuality = quality; store.set('animationExportQuality', quality); },
-    getDetail: preset => {
+    onFormatChange: format => { animationExportFormat = format; store.set('animationExportFormat', format); },
+    getDetail: (preset, format) => {
       if (!cut) throw new Error('请先加载一个资源');
       const anim = cut.data.animations.find(a => a.name === animSel.value);
       if (!anim) throw new Error('没有可导出的动画');
-      const plan = K.exportTimeline(anim.duration, preset, cut.data.fps);
+      const plan = K.exportTimeline(anim.duration, preset, format);
+      if (format === 'video') {
+        if (!HTMLCanvasElement.prototype.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
+        return K.videoExportFormat().label + ' · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 黑底无声。导出时请保持页面在前台。';
+      }
       return plan.frames + ' 帧 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒';
     },
-    onExport: quality => { closePopups(); exportAnimation(quality); },
+    onExport: (quality, _, format) => { closePopups(); exportAnimation(quality, format); },
   }));
 
   // ---------- 数据加载 ----------

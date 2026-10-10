@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=f8465db6f3e5">
+<link rel="stylesheet" href="../../common/kit.css?v=79bc22f172c0">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -261,8 +261,8 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=3534aaecd123"></script>
-  <script src="../../arthub-cos.js?v=f8465db6f3e5"></script>
+  <script src="../../arthub-cos-config.js?v=c7f59f989683"></script>
+  <script src="../../arthub-cos.js?v=79bc22f172c0"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -316,6 +316,7 @@
       <div class="strip-sep"></div>
       <button id="btnDebug" title="骨骼 / 网格 / 包围盒 调试视图">🦴</button>
       <button id="btnPng" title="导出当前画面为 PNG">📷</button>
+      <button id="btnGif" title="导出动画">🎞</button>
       <div class="strip-sep"></div>
       <button id="btnPresetImmersive" title="沉浸模式 (Tab / I)">⛶</button>
     </div>
@@ -386,9 +387,9 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=f8465db6f3e5"></script>
-<script src="../../common/kit.js?v=f8465db6f3e5"></script>
-<script src="../../common/asset-loader.js?v=f8465db6f3e5"></script>
+<script src="../../common/asset-display-overrides.js?v=79bc22f172c0"></script>
+<script src="../../common/kit.js?v=79bc22f172c0"></script>
+<script src="../../common/asset-loader.js?v=79bc22f172c0"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -921,8 +922,8 @@
   }
 
   let selectionRequest = null;
-  async function loadLayerModel(entry, signal) {
-    const files = await K.loadSpineFiles(spine, gl, {
+  async function loadLayerModel(entry, signal, context = gl) {
+    const files = await K.loadSpineFiles(spine, context, {
       atlasURL: '../' + entry.atlas, skeletonURL: '../' + entry.skel, signal,
     });
     const atlas = files.atlas;
@@ -1662,6 +1663,118 @@
       }
     });
   });
+
+  // ---------- 动画导出：使用独立画布，保留可见图层、皮肤和隐藏部件 ----------
+  let animationExportRunning = false;
+  function animationExportSelection() {
+    const selected = layers.filter(L => L.visible).map(L => ({ entry: L.entry, hiddenSlots: new Set(L.hiddenSlots),
+      skinName: L.skeleton.skin?.name, ox: L.ox, oy: L.oy, rot: L.rot, opacity: L.opacity,
+      animation: L.data.animations.some(a => a.name === curAnimName) ? curAnimName : L.state.getCurrent(0)?.animation?.name || L.idleAnim,
+      animations: L.data.animations }));
+    if (!selected.length) throw new Error('请先加载可见资源');
+    return { selected, duration: Math.max(0, ...selected.map(L => L.animations.find(a => a.name === L.animation)?.duration || 0)) };
+  }
+  async function exportAnimation(quality, format) {
+    if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
+    let selection;
+    try { selection = animationExportSelection(); } catch (e) { K.toast(e.message, 'err'); return; }
+    const video = format === 'video', plan = K.exportTimeline(selection.duration, quality, format);
+    const exportName = curEntry?.label || 'spine', animationName = curAnimName || selection.selected[0].animation || 'animation';
+    const job = K.exportProgress(), models = [];
+    let raw;
+    animationExportRunning = true;
+    try {
+      const codec = video ? null : await import('../../common/vendor/gifenc.esm.js');
+      const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+      raw = cv.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
+      if (!raw) throw new Error('离屏 WebGL 不可用');
+      const context = new spine.ManagedWebGLRenderingContext(raw), outputRenderer = new spine.SceneRenderer(cv, context);
+      for (const source of selection.selected) {
+        const model = await loadLayerModel(source.entry, job.signal, context); models.push(model);
+        Object.assign(model, source);
+        if (model.skinName) model.skeleton.setSkinByName(model.skinName);
+        model.skeleton.setToSetupPose(); model.state.clearTracks();
+        if (model.animation) model.state.setAnimation(0, model.animation, false);
+      }
+      const pose = (time, scale = 1, cx = 0, cy = 0) => {
+        for (const L of models) {
+          const track = L.state.getCurrent(0); if (track) track.trackTime = time;
+          L.state.apply(L.skeleton); L.skeleton.scaleX = L.skeleton.scaleY = scale;
+          L.skeleton.x = (L.ox - cx) * scale; L.skeleton.y = (L.oy - cy) * scale;
+          L.skeleton.rotation = L.rot || 0; L.skeleton.color.a = L.opacity;
+          K.updateWorldTransform(L.skeleton, spine.Physics?.pose); K.applyHiddenSlots(L.skeleton, L.hiddenSlots);
+        }
+      };
+      const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      for (let k = 0; k < plan.frames; k++) {
+        job.check(); pose(plan.timeAt(k));
+        for (const L of models) {
+          const b = K.measureBounds(L.skeleton, spine); if (!b) continue;
+          bounds.minX = Math.min(bounds.minX, b.minX); bounds.minY = Math.min(bounds.minY, b.minY);
+          bounds.maxX = Math.max(bounds.maxX, b.maxX); bounds.maxY = Math.max(bounds.maxY, b.maxY);
+        }
+        if (k % 8 === 0 || k === plan.frames - 1) await job.update(.25 * (k + 1) / plan.frames, `计算完整画面 ${k + 1} / ${plan.frames}`);
+      }
+      const size = K.exportDimensions(bounds, quality, video ? 'video' : 'gif'), W = size.width, H = size.height;
+      if (Math.max(W, H) > raw.getParameter(raw.MAX_TEXTURE_SIZE)) throw new Error('导出尺寸超过设备支持，请选择中等质量');
+      cv.width = W; cv.height = H; K.syncRendererSize(cv, context, outputRenderer);
+      for (const L of models) {
+        L.state.clearTracks(); L.skeleton.setToSetupPose();
+        if (L.animation) L.state.setAnimation(0, L.animation, false);
+      }
+      const outputCanvas = document.createElement('canvas'); outputCanvas.width = W; outputCanvas.height = H;
+      const ctx = outputCanvas.getContext('2d', { willReadFrequently: !video });
+      if (!ctx) throw new Error('导出画布不可用');
+      const draw = time => {
+        pose(time, size.scale, size.centerX, size.centerY);
+        raw.clearColor(0, 0, 0, 0); raw.clear(raw.COLOR_BUFFER_BIT); outputRenderer.begin();
+        for (const L of models) outputRenderer.drawSkeleton(L.skeleton, false);
+        outputRenderer.end();
+        if (video) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); } else ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(cv, 0, 0);
+      };
+      let blob, extension = 'gif', label = 'GIF';
+      if (video) {
+        const output = await K.encodeCanvasVideo({ canvas: outputCanvas, duration: plan.duration, quality, draw, signal: job.signal,
+          onProgress: (progress, time) => job.update(.25 + .75 * progress, `导出视频 ${time.toFixed(1)} / ${plan.duration.toFixed(1)} 秒 · ${W}×${H}`) });
+        ({ blob, extension, label } = output);
+      } else {
+        const gif = codec.GIFEncoder();
+        for (let k = 0; k < plan.frames; k++) {
+          job.check(); draw(plan.timeAt(k));
+          const rgba = ctx.getImageData(0, 0, W, H).data, colors = codec.quantize(rgba, 255, { format: 'rgb565' });
+          const index = codec.applyPalette(rgba, colors, 'rgb565');
+          for (let i = 0; i < index.length; i++) index[i] = rgba[i * 4 + 3] < 128 ? 0 : index[i] + 1;
+          gif.writeFrame(index, W, H, { palette: [[0, 0, 0], ...colors], delay: plan.delayAt(k), transparent: true, transparentIndex: 0 });
+          await job.update(.25 + .75 * (k + 1) / plan.frames, `导出 ${k + 1} / ${plan.frames} 帧 · ${W}×${H}`);
+        }
+        gif.finish(); blob = new Blob([gif.bytes()], { type: 'image/gif' });
+      }
+      job.check();
+      K.downloadBlob(blob, (exportName + '_' + animationName).replace(/[\\/:*?"<>|\[\]]/g, '_') + '.' + extension);
+      K.toast(label + ' 已导出：' + W + '×' + H, 'ok');
+    } catch (e) {
+      if (K.isAbort(e)) K.toast('已取消导出', 'info');
+      else { console.error(e); K.toast('动画导出失败: ' + e.message, 'err'); }
+    } finally {
+      models.forEach(disposeLayer); raw?.getExtension('WEBGL_lose_context')?.loseContext();
+      job.close(); animationExportRunning = false;
+    }
+  }
+  makeStagePopup($('#btnGif'), pop => K.mountExportOptions(pop, {
+    kind: 'animation', quality: store.get('animationExportQuality', 'high'), format: store.get('animationExportFormat', 'gif'),
+    onChange: quality => store.set('animationExportQuality', quality),
+    onFormatChange: format => store.set('animationExportFormat', format),
+    getDetail: (quality, format) => {
+      const plan = K.exportTimeline(animationExportSelection().duration, quality, format);
+      if (format === 'video') {
+        if (!HTMLCanvasElement.prototype.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
+        return K.videoExportFormat().label + ' · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 黑底无声。导出时请保持页面在前台。';
+      }
+      return plan.frames + ' 帧 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒';
+    },
+    onExport: (quality, _, format) => { closePopups(); exportAnimation(quality, format); },
+  }));
 
   // ---------- PNG 导出弹窗 ----------
   makeStagePopup(btnPng, (pop) => {
