@@ -618,12 +618,12 @@
   // drawing, meshes and clipping all consume the same transformed bone matrices.
   // Only active bones are updated by Spine and drawn by the renderer — re-scale
   // inactive bones too and their stale world matrices get multiplied again.
-  K.updateWorldTransform = (skeleton) => {
+  K.updateWorldTransform = (skeleton, physics) => {
     const { x, y, scaleX, scaleY } = skeleton;
     try {
       skeleton.x = skeleton.y = 0;
       skeleton.scaleX = skeleton.scaleY = 1;
-      skeleton.updateWorldTransform();
+      skeleton.updateWorldTransform(physics);
     } finally {
       skeleton.x = x; skeleton.y = y;
       skeleton.scaleX = scaleX; skeleton.scaleY = scaleY;
@@ -964,7 +964,7 @@
       add('btnAnimTab', '打开动画面板', '');
       add('pbPlay', '播放 / 暂停', 'Space');
       add('btnPng', '导出当前画面 PNG', '');
-      add('btnGif', '导出当前动画 GIF', '');
+      add('btnGif', '导出动画', '');
       add('btnPresetImmersive', '切换沉浸模式', 'I');
       add('btnTheme', '切换主题', '');
       return commands;
@@ -1203,6 +1203,171 @@
     } catch {}
   };
 
+  // ---------- 三档导出：图片尺寸与动画时间轴不依赖查看窗口 ----------
+  K.exportPresets = Object.freeze([
+    Object.freeze({ id: 'medium', label: '中等质量', pngEdge: 1024, gifEdge: 768, fps: 25 }),
+    Object.freeze({ id: 'high', label: '高等质量', pngEdge: 2048, gifEdge: 1280, fps: 50 }),
+    Object.freeze({ id: 'lossless', label: '无损质量', pngEdge: 0, gifEdge: 0, fps: 0 }),
+  ]);
+  K.exportPreset = value => K.exportPresets.find(p => p.id === (value?.id || value)) || K.exportPresets[1];
+  K.exportDimensions = (bounds, quality, kind = 'png') => {
+    const preset = K.exportPreset(quality), padding = 16;
+    const spanW = bounds.maxX - bounds.minX, spanH = bounds.maxY - bounds.minY;
+    if (![spanW, spanH].every(v => Number.isFinite(v) && v > 0)) throw new Error('没有可导出的可见部件');
+    const nativeW = spanW + padding * 2, nativeH = spanH + padding * 2;
+    const edge = kind === 'gif' ? preset.gifEdge : preset.pngEdge;
+    const scale = edge ? edge / Math.max(nativeW, nativeH) : 1;
+    const width = Math.max(1, Math.ceil(nativeW * scale - 1e-7));
+    const height = Math.max(1, Math.ceil(nativeH * scale - 1e-7));
+    if (Math.max(width, height) > 8192) throw new Error('原始尺寸超过 8192 像素，请选择高等质量');
+    return { width, height, scale, centerX: (bounds.minX + bounds.maxX) / 2, centerY: (bounds.minY + bounds.maxY) / 2 };
+  };
+  K.exportTimeline = (duration, quality, authoredFps) => {
+    const preset = K.exportPreset(quality), lossless = preset.id === 'lossless';
+    const sourceFps = Number(authoredFps);
+    const fps = lossless ? (sourceFps > 0 && sourceFps <= 240 ? sourceFps : 30) : preset.fps;
+    const dur = Number.isFinite(duration) && duration > 0 ? duration : 1 / fps;
+    // GIF uses centiseconds. Distribute rounding error instead of repeating
+    // one rounded delay and slowing down the entire animation.
+    const ticks = Math.max(2, Math.round(dur * 100));
+    const frames = lossless ? Math.max(1, Math.ceil(dur * fps - 1e-5))
+      : Math.max(1, Math.min(Math.round(dur * fps), Math.floor(ticks / 2)));
+    return { fps, duration: dur, frames, lossless,
+      timeAt: k => lossless ? k / fps : k * dur / frames,
+      delayAt: k => (Math.round((k + 1) * ticks / frames) - Math.round(k * ticks / frames)) * 10 };
+  };
+  K.pngExportPose = (skeletons, quality, ns) => {
+    const transform = skeleton => K.updateWorldTransform(skeleton, (ns || window.spine)?.Physics?.pose);
+    const saved = skeletons.map(skeleton => ({ skeleton, scaleX: skeleton.scaleX, scaleY: skeleton.scaleY, x: skeleton.x, y: skeleton.y }));
+    const reference = Math.abs(saved[0]?.scaleX) || 1;
+    const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    for (const skeleton of skeletons) {
+      transform(skeleton);
+      const b = K.measureBounds(skeleton, ns);
+      if (!b) continue;
+      bounds.minX = Math.min(bounds.minX, b.minX); bounds.minY = Math.min(bounds.minY, b.minY);
+      bounds.maxX = Math.max(bounds.maxX, b.maxX); bounds.maxY = Math.max(bounds.maxY, b.maxY);
+    }
+    const native = Object.fromEntries(Object.entries(bounds).map(([key, value]) => [key, value / reference]));
+    const size = K.exportDimensions(native, quality);
+    const factor = size.scale / reference;
+    const centerX = size.centerX * reference, centerY = size.centerY * reference;
+    return { size,
+      apply() { for (const item of saved) {
+        const sk = item.skeleton;
+        sk.scaleX = item.scaleX * factor; sk.scaleY = item.scaleY * factor;
+        sk.x = (item.x - centerX) * factor; sk.y = (item.y - centerY) * factor;
+        transform(sk);
+      } },
+      restore() { for (const item of saved) {
+        Object.assign(item.skeleton, { scaleX: item.scaleX, scaleY: item.scaleY, x: item.x, y: item.y });
+        transform(item.skeleton);
+      } },
+    };
+  };
+  K.mountExportOptions = (pop, options) => {
+    let quality = K.exportPreset(options.quality).id;
+    const animation = options.kind === 'animation';
+    pop.innerHTML = '<div class="col export-options"><div class="col-title">' + (animation ? '导出动画' : '导出 PNG') + '</div>'
+      + '<div class="export-choices" role="radiogroup" aria-label="导出质量">'
+      + K.exportPresets.map(p => {
+        const detail = animation ? (p.id === 'lossless' ? 'PNG 帧序列 ZIP · 原始尺寸'
+          : 'GIF · 长边 ' + p.gifEdge + ' · ' + p.fps + ' 帧/秒')
+          : 'PNG · ' + (p.pngEdge ? '长边 ' + p.pngEdge + ' 像素' : '原始尺寸');
+        return '<button type="button" class="export-choice" role="radio" data-quality="' + p.id + '"><strong>'
+          + p.label + '</strong><small>' + detail + '</small></button>';
+      }).join('') + '</div><div class="export-detail" role="status"></div>'
+      + (animation ? '' : '<label><input type="checkbox" class="png-alpha" checked> 透明背景</label>')
+      + '<div class="export-actions"><button type="button" class="export-go"></button>'
+      + (options.onCopy ? '<button type="button" class="export-copy">复制图片</button>' : '') + '</div></div>';
+    const buttons = [...pop.querySelectorAll('.export-choice')], go = pop.querySelector('.export-go');
+    const copy = pop.querySelector('.export-copy'), detail = pop.querySelector('.export-detail');
+    const update = () => {
+      buttons.forEach(button => { const selected = button.dataset.quality === quality;
+        button.classList.toggle('on', selected); button.setAttribute('aria-checked', String(selected)); button.tabIndex = selected ? 0 : -1; });
+      go.textContent = animation ? (quality === 'lossless' ? '导出 PNG 帧序列' : '导出 GIF') : '导出 PNG';
+      try { detail.textContent = options.getDetail(K.exportPreset(quality)); go.disabled = false; if (copy) copy.disabled = false; }
+      catch (error) { detail.textContent = error.message; go.disabled = true; if (copy) copy.disabled = true; }
+    };
+    buttons.forEach((button, index) => {
+      button.onclick = () => { quality = button.dataset.quality; options.onChange?.(quality); update(); };
+      button.onkeydown = event => {
+        if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault(); event.stopPropagation();
+        const step = ['ArrowDown', 'ArrowRight'].includes(event.key) ? 1 : -1;
+        const next = buttons[(index + step + buttons.length) % buttons.length]; next.click(); next.focus();
+      };
+    });
+    const transparent = () => !!pop.querySelector('.png-alpha')?.checked;
+    go.onclick = () => options.onExport(quality, transparent());
+    if (copy) copy.onclick = () => options.onCopy(quality, transparent());
+    update();
+  };
+  K.exportProgress = () => {
+    const controller = new AbortController(), node = document.createElement('div');
+    node.className = 'export-progress'; node.setAttribute('role', 'dialog'); node.setAttribute('aria-label', '动画导出进度'); node.setAttribute('aria-modal', 'true');
+    node.innerHTML = '<div class="export-progress-card"><strong>正在导出动画</strong><div class="export-progress-text" role="status">准备资源…</div>'
+      + '<progress max="1" value="0"></progress><button type="button">取消导出</button></div>';
+    document.body.appendChild(node);
+    const cancel = node.querySelector('button'), previousFocus = document.activeElement;
+    cancel.onclick = () => controller.abort(); cancel.focus();
+    const keydown = event => {
+      if (event.key === 'Escape') { event.preventDefault(); controller.abort(); }
+      if (event.key === 'Tab') { event.preventDefault(); cancel.focus(); }
+      // Keep viewer shortcuts and focus inside the export dialog until it closes.
+      event.stopImmediatePropagation();
+    };
+    document.addEventListener('keydown', keydown, true);
+    return { signal: controller.signal,
+      check() { if (controller.signal.aborted) throw new DOMException('已取消导出', 'AbortError'); },
+      async update(value, text) {
+        if (controller.signal.aborted) throw new DOMException('已取消导出', 'AbortError');
+        node.querySelector('progress').value = value; node.querySelector('.export-progress-text').textContent = text;
+        await new Promise(resolve => setTimeout(resolve, 0));
+        if (controller.signal.aborted) throw new DOMException('已取消导出', 'AbortError');
+      },
+      close() { document.removeEventListener('keydown', keydown, true); node.remove(); previousFocus?.focus?.(); },
+    };
+  };
+  K.downloadBlob = (blob, filename) => {
+    const a = document.createElement('a'), url = URL.createObjectURL(blob);
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+  };
+  K.canvasPNGBlob = canvas => new Promise((resolve, reject) => canvas.toBlob(blob => {
+    if (blob) resolve(blob); else reject(new Error('PNG 帧捕获失败'));
+  }, 'image/png'));
+  // PNG is already compressed. A stored ZIP keeps every frame byte-for-byte
+  // and avoids loading a second compression library or recompressing images.
+  const ZIP_CRC_TABLE = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) { let c = i; for (let bit = 0; bit < 8; bit++) c = (c >>> 1) ^ ((c & 1) ? 0xedb88320 : 0); ZIP_CRC_TABLE[i] = c >>> 0; }
+  K.pngSequenceZip = () => {
+    const rows = [], parts = []; let offset = 0;
+    return {
+      async add(name, blob) {
+        const data = new Uint8Array(await blob.arrayBuffer()), filename = new TextEncoder().encode(name);
+        if (offset + data.length > 512 * 1024 * 1024 || rows.length >= 65535) throw new Error('无损帧序列超过本机打包范围，请选择高等质量');
+        let crc = 0xffffffff; for (const byte of data) crc = ZIP_CRC_TABLE[(crc ^ byte) & 255] ^ (crc >>> 8); crc = (crc ^ 0xffffffff) >>> 0;
+        const header = new Uint8Array(30), h = new DataView(header.buffer);
+        h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x800, true); h.setUint16(12, 0x21, true);
+        h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, filename.length, true);
+        rows.push({ filename, crc, size: data.length, offset }); parts.push(header, filename, blob); offset += header.length + filename.length + data.length;
+      },
+      finish() {
+        const central = []; let size = 0;
+        for (const row of rows) {
+          const header = new Uint8Array(46), h = new DataView(header.buffer);
+          h.setUint32(0, 0x02014b50, true); h.setUint16(4, 20, true); h.setUint16(6, 20, true); h.setUint16(8, 0x800, true); h.setUint16(14, 0x21, true);
+          h.setUint32(16, row.crc, true); h.setUint32(20, row.size, true); h.setUint32(24, row.size, true); h.setUint16(28, row.filename.length, true); h.setUint32(42, row.offset, true);
+          central.push(header, row.filename); size += header.length + row.filename.length;
+        }
+        const end = new Uint8Array(22), e = new DataView(end.buffer);
+        e.setUint32(0, 0x06054b50, true); e.setUint16(8, rows.length, true); e.setUint16(10, rows.length, true); e.setUint32(12, size, true); e.setUint32(16, offset, true);
+        return new Blob([...parts, ...central, end], { type: 'application/zip' });
+      },
+    };
+  };
+
   // ---------- PNG 导出 ----------
   // o: { canvas, scale=1, transparent=false, bg=[r,g,b],
   //      filename, resize(k), draw(transparent), restore() }
@@ -1213,9 +1378,11 @@
     const w0 = canvas.width, h0 = canvas.height;
     const maxDim = Math.max(w0, h0) * k;
     const kk = maxDim > 8192 ? 8192 / Math.max(w0, h0) : k;
+    let blob, width, height;
     try {
-      canvas.width = Math.round(w0 * kk);
-      canvas.height = Math.round(h0 * kk);
+      canvas.width = o.size ? o.size.width : Math.round(w0 * kk);
+      canvas.height = o.size ? o.size.height : Math.round(h0 * kk);
+      if (Math.max(canvas.width, canvas.height) > 8192) throw new Error('导出尺寸超过本机范围');
       if (o.resize) o.resize(kk);
       o.draw(!!o.transparent);
       // 同步捕获(WebGL 绘制缓冲在合成后可能被清空,toDataURL 立即抓取)
@@ -1224,35 +1391,30 @@
       const bin = atob(url.split(',')[1]);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: 'image/png' });
-      // copy 模式: 写入剪贴板而非下载
-      if (o.copy) {
-        if (!navigator.clipboard || !window.ClipboardItem) {
-          throw new Error('浏览器不支持剪贴板图片(需 https 或 localhost)');
-        }
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        } catch (e) {
-          // 后台标签页可能失焦导致失败,聚焦后重试一次
-          window.focus();
-          await new Promise(r => setTimeout(r, 120));
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        }
-        return { w: canvas.width, h: canvas.height, size: blob.size, copied: true };
-      }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = o.filename || ('spine-' + Date.now() + '.png');
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 8000);
-      return { w: canvas.width, h: canvas.height, size: blob.size };
+      blob = new Blob([bytes], { type: 'image/png' });
+      width = canvas.width; height = canvas.height;
     } finally {
       canvas.width = w0;
       canvas.height = h0;
       if (o.restore) o.restore();
     }
+    // copy 模式: 写入剪贴板而非下载
+    if (o.copy) {
+      if (!navigator.clipboard || !window.ClipboardItem) {
+        throw new Error('浏览器不支持剪贴板图片(需 https 或 localhost)');
+      }
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      } catch (e) {
+        // 后台标签页可能失焦导致失败,聚焦后重试一次
+        window.focus();
+        await new Promise(r => setTimeout(r, 120));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      }
+      return { w: width, h: height, size: blob.size, copied: true };
+    }
+    K.downloadBlob(blob, o.filename || ('spine-' + Date.now() + '.png'));
+    return { w: width, h: height, size: blob.size };
   };
 
   // ---------- 杂项 ----------

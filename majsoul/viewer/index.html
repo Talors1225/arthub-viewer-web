@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=loading-poster-20261009">
+<link rel="stylesheet" href="../../common/kit.css?v=f8465db6f3e5">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -261,8 +261,8 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=114d015399fa"></script>
-  <script src="../../arthub-cos.js?v=9aafd8e76480"></script>
+  <script src="../../arthub-cos-config.js?v=3534aaecd123"></script>
+  <script src="../../arthub-cos.js?v=f8465db6f3e5"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -386,9 +386,9 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=9aafd8e76480"></script>
-<script src="../../common/kit.js?v=9aafd8e76480"></script>
-<script src="../../common/asset-loader.js?v=loading-poster-20261009"></script>
+<script src="../../common/asset-display-overrides.js?v=f8465db6f3e5"></script>
+<script src="../../common/kit.js?v=f8465db6f3e5"></script>
+<script src="../../common/asset-loader.js?v=f8465db6f3e5"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -1665,68 +1665,32 @@
 
   // ---------- PNG 导出弹窗 ----------
   makeStagePopup(btnPng, (pop) => {
-    let scaleK = 1;
-    pop.innerHTML = '<div class="col">'
-      + '<div class="col-title" id="pngSize">倍率</div>'
-      + '<div class="opt-row"><button data-k="1" class="on">1x</button><button data-k="2">2x</button><button data-k="4">4x</button></div>'
-      + '<label><input type="checkbox" class="png-alpha"> 透明背景(不包含背景色)</label>'
-      + '<button class="png-go">导出 PNG</button>'
-      + '</div>';
-    const sizeEl = pop.querySelector('#pngSize');
-    const syncSize = () => {
-      sizeEl.textContent = '当前画布 ' + canvas.width + '×' + canvas.height + 'px · 导出 '
-        + Math.round(canvas.width * scaleK) + '×' + Math.round(canvas.height * scaleK) + 'px';
-    };
-    syncSize();
-    pop.querySelectorAll('.opt-row button').forEach(b => {
-      b.addEventListener('click', () => {
-        pop.querySelectorAll('.opt-row button').forEach(x => x.classList.remove('on'));
-        b.classList.add('on');
-        scaleK = Number(b.dataset.k);
-        syncSize();
-      });
-    });
-    pop.querySelector('.png-go').addEventListener('click', async () => {
-      closePopups();
-      if (!layers.length) { K.toast('没有可导出的图层', 'err'); return; }
-      const transparent = pop.querySelector('.png-alpha').checked;
-      status('导出 PNG 中…');
-      const zoomBak = globalZoom;
-      try {
-        const r = await K.exportPNG({
-          canvas,
-          scale: scaleK,
-          transparent,
-          filename: (curEntry ? String(curEntry.label).replace(/[\\/:*?"<>|\[\]]/g, '') : 'spine')
-            + (transparent ? '-透明' : '') + '.png',
-          resize(kk) {
-            K.syncRendererSize(canvas, gl, renderer);
-            globalZoom = zoomBak * kk;
-            applyAllTransforms();
-          },
-          draw(tr) {
-            const raw = gl.gl || gl;
-            if (tr) raw.clearColor(0, 0, 0, 0);
-            else {
-              const c = K.parseColor(bgInput.value, [0.09, 0.1, 0.13]);
-              raw.clearColor(c[0], c[1], c[2], 1);
-            }
-            raw.clear(raw.COLOR_BUFFER_BIT);
-            renderer.begin();
-            for (const L of layers) if (L.visible) renderer.drawSkeleton(L.skeleton, false);
-            renderer.end();
-          },
-          restore() {
-            globalZoom = zoomBak;
-            K.resizeCanvas(canvas, renderer);
-            applyAllTransforms();
-          },
-        });
-        K.toast('已导出 PNG: ' + r.w + '×' + r.h + 'px', 'ok');
-      } catch (e) {
-        K.toast('导出失败: ' + e.message, 'err');
-        console.error(e);
-      }
+    const poseFor = quality => K.pngExportPose(layers.filter(L => L.visible).map(L => L.skeleton), quality, spine);
+    K.mountExportOptions(pop, {
+      kind: 'png', quality: store.get('pngExportQuality', 'high'),
+      onChange: quality => store.set('pngExportQuality', quality),
+      getDetail: quality => { const pose = poseFor(quality); return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素'; },
+      onExport: async (quality, transparent) => {
+        closePopups();
+        try {
+          const pose = poseFor(quality);
+          const r = await K.exportPNG({
+            canvas, size: pose.size, transparent,
+            filename: (curEntry ? String(curEntry.label).replace(/[\\/:*?"<>|\[\]]/g, '') : 'spine') + (transparent ? '-透明' : '') + '.png',
+            resize() { K.syncRendererSize(canvas, gl, renderer); pose.apply(); },
+            draw(tr) {
+              const raw = gl.gl || gl;
+              if (tr) raw.clearColor(0, 0, 0, 0);
+              else { const c = K.parseColor(bgInput.value, [0.09, 0.1, 0.13]); raw.clearColor(c[0], c[1], c[2], 1); }
+              raw.clear(raw.COLOR_BUFFER_BIT); renderer.begin();
+              for (const L of layers) if (L.visible) renderer.drawSkeleton(L.skeleton, false);
+              renderer.end();
+            },
+            restore() { pose.restore(); K.resizeCanvas(canvas, renderer); applyAllTransforms(); },
+          });
+          K.toast('已导出 PNG: ' + r.w + '×' + r.h + 'px', 'ok');
+        } catch (e) { K.toast('导出失败: ' + e.message, 'err'); console.error(e); }
+      },
     });
   });
 

@@ -325,6 +325,25 @@ input[type="color"] {
 .stage-popup label { font-size: 12px; color: var(--text); display: flex; align-items: center; gap: 5px; cursor: pointer; }
 .stage-popup input[type="checkbox"] { accent-color: var(--accent); }
 
+/* Three understandable presets, with no separate size/frame-rate selectors. */
+.stage-popup .export-options { width: min(260px, calc(100vw - 44px)); white-space: normal; gap: 10px; }
+.export-choices { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.stage-popup .export-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; min-height: 52px; padding: 9px 12px; text-align: left; }
+.export-choice strong { font-size: 13px; }
+.export-choice small { font-size: 11px; color: var(--text-dim); line-height: 1.45; }
+.stage-popup .export-choice.on { background: var(--accent-bg); border-color: var(--accent); }
+.export-choice.on strong { color: var(--accent); }
+.export-detail { color: var(--text-dim); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.export-actions { display: flex; gap: 6px; width: 100%; }
+.stage-popup .export-actions button { flex: 1; min-height: 40px; }
+.stage-popup .export-go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.stage-popup .export-go:hover { color: var(--accent-ink); }
+.export-progress { position: fixed; inset: 0; z-index: 5000; background: rgba(0,0,0,.48); display: grid; place-items: center; padding: 20px; }
+.export-progress-card { box-sizing: border-box; width: min(320px,100%); display: flex; flex-direction: column; gap: 16px; padding: 22px; border: 1px solid var(--border2); border-radius: 16px; background: var(--panel); color: var(--text); box-shadow: var(--shadow-2); }
+.export-progress-text { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.export-progress progress { width: 100%; height: 8px; accent-color: var(--accent); }
+.export-progress button { min-height: 42px; border: 1px solid var(--border2); border-radius: 8px; background: var(--panel2); color: var(--text); cursor: pointer; font: inherit; }
+
 /* ---------- 主题调色板 ---------- */
 .theme-palette {
   position: fixed; z-index: 1200; width: 254px;

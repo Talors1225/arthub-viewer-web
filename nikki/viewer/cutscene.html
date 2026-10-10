@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=loading-poster-20261009">
+<link rel="stylesheet" href="../../common/kit.css?v=f8465db6f3e5">
 <style>
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
@@ -268,8 +268,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=114d015399fa"></script>
-  <script src="../../arthub-cos.js?v=9aafd8e76480"></script>
+  <script src="../../arthub-cos-config.js?v=3534aaecd123"></script>
+  <script src="../../arthub-cos.js?v=f8465db6f3e5"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -330,9 +330,8 @@
       <div class="strip-sep"></div>
       <button id="btnDebug" title="骨骼 / 网格 / 包围盒 调试视图"></button>
       <button id="btnPng" title="导出当前画面为 PNG"></button>
-      <button id="btnGif" title="导出当前动画为 GIF">🎞</button>
+      <button id="btnGif" title="导出动画">🎞</button>
       <button id="btnBg" title="背景颜色 / 预设">◐</button>
-      <button id="btnVoice" title="点击立绘播放角色语音" aria-label="点击立绘播放角色语音" aria-pressed="true"></button>
       <div class="strip-sep"></div>
       <button id="btnPresetImmersive" title="沉浸模式 (I)"></button>
     </div>
@@ -398,10 +397,10 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=9aafd8e76480"></script>
-<script src="../../common/kit.js?v=9aafd8e76480"></script>
-<script src="../../common/asset-loader.js?v=loading-poster-20261009"></script>
-<script src="../../common/portrait-audio.js?v=9aafd8e76480"></script>
+<script src="../../common/asset-display-overrides.js?v=f8465db6f3e5"></script>
+<script src="../../common/kit.js?v=f8465db6f3e5"></script>
+<script src="../../common/asset-loader.js?v=f8465db6f3e5"></script>
+<script src="../../common/portrait-audio.js?v=f8465db6f3e5"></script>
 <script>
 
 (() => {
@@ -418,7 +417,6 @@
       loop: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
       bone: '<path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"/>',
       camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
-      volume: '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>',
       layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
       minus: '<path d="M5 12h14"/>',
       plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
@@ -445,7 +443,7 @@
   const pbSpeed = $('#pbSpeed'), pbSpeedVal = $('#pbSpeedVal');
   const btnParts = $('#btnParts'), btnAnimTab = $('#btnAnimTab');
   const btnPartEdit = $('#btnPartEdit');
-  const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg'), btnVoice = $('#btnVoice');
+  const btnDebug = $('#btnDebug'), btnPng = $('#btnPng'), btnBg = $('#btnBg');
   const floatPanel = $('#floatPanel'), gridView = $('#gridView');
   const rail = $('#rail'), topPill = $('#topPill'), toolStrip = $('#toolStrip');
   // GitHub Pages 使用 /项目名/游戏名/viewer/ 的路径；本地服务则是 /游戏名/viewer/。
@@ -514,7 +512,9 @@
   let sortDirection = store.get('sortDirection', 'asc');
   let gridQuery = '';
   let immersive = false;
-  let exportScale = 1;
+  let exportQuality = K.exportPreset(store.get('pngExportQuality', 'high')).id;
+  let animationExportQuality = K.exportPreset(store.get('animationExportQuality', 'high')).id;
+  let animationExportRunning = false;
 
   // ---------- 弹窗基建 ----------
   const allPopups = [];
@@ -569,7 +569,6 @@
   $('#btnBoneEdit').innerHTML = I('move', 15);
   btnDebug.innerHTML = I('bone', 15);
   btnPng.innerHTML = I('camera', 15);
-  btnVoice.innerHTML = I('volume', 15);
   $('#btnPresetImmersive').innerHTML = I('collapse', 13);
   $('#zOut').innerHTML = I('minus', 12);
   $('#zIn').innerHTML = I('plus', 12);
@@ -2150,28 +2149,28 @@
     }
   }
 
-  // ---------- GIF 导出 (当前动画, 离屏逐帧渲染) ----------
-  $('#btnGif').onclick = async () => {
+  // ---------- 动画导出：GIF 两档与原始尺寸的逐帧 PNG ----------
+  async function exportAnimation(quality) {
+    if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     const animName = animSel.value;
     const anim = cut.data.animations.find(a => a.name === animName);
     if (!anim) { K.toast('动画不存在', 'err'); return; }
-    const fps = 15;
-    const dur = Math.max(anim.duration || 1, 0.1);
-    const frames = Math.min(Math.ceil(dur * fps), 120);
-    const dt = dur / frames;
+    const authoredFps = cut.data.fps;
+    const timeline = K.exportTimeline(anim.duration, quality, authoredFps);
+    const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
     const SP = K.getSpine(cur && cur.spineVersion);
     const exportAtlases = new Set();
     let exportGL = null;
-    K.toast(`正在渲染 GIF: ${frames} 帧…`, 'info', 10000);
+    const job = K.exportProgress();
+    animationExportRunning = true;
     try {
-      const { GIFEncoder, quantize, applyPalette } = await import('../../common/vendor/gifenc.esm.js');
-      const W = 640, H = 640;
+      const codec = timeline.lossless ? null : await import('../../common/vendor/gifenc.esm.js');
       const cv2 = document.createElement('canvas');
-      cv2.width = W; cv2.height = H;
+      cv2.width = 1; cv2.height = 1;
       const raw2 = cv2.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
       if (!raw2) throw new Error('离屏 WebGL 不可用');
       exportGL = raw2;
@@ -2185,7 +2184,7 @@
         const base = '../' + source.dir, key = base + source.atlas + '|' + source.skel;
         let model = models.get(key);
         if (!model) {
-          const files = await K.loadSpineFiles(SP, mgl2, { atlasURL: base + source.atlas, skeletonURL: base + encodeURIComponent(source.skel) });
+          const files = await K.loadSpineFiles(SP, mgl2, { atlasURL: base + source.atlas, skeletonURL: base + encodeURIComponent(source.skel), signal: job.signal });
           exportAtlases.add(files.atlas);
           const loader = new SP.AtlasAttachmentLoader(files.atlas);
           const data = source.format === 'json' || /\.json$/i.test(source.skel)
@@ -2215,7 +2214,8 @@
       // 第一遍: 推进并求动画全程包围盒
       let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
       for (let k = 0; k < frames; k++) {
-        applyExportFrame(k * dt);
+        job.check();
+        applyExportFrame(timeline.timeAt(k));
         for (const L of exportLayers) {
           if (!L.active) continue;
           const b = K.measureBounds(L.skeleton, SP);
@@ -2224,51 +2224,76 @@
             bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
           }
         }
+        if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
       }
       if (!isFinite(bMinX)) throw new Error('空包围盒');
-      const spanW = bMaxX - bMinX, spanH = bMaxY - bMinY;
-      const scale = Math.min(W * 0.92 / spanW, H * 0.92 / spanH);
-      const cx = -(bMinX + spanW / 2), cy = -(bMinY + spanH / 2);
+      const size = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, quality, timeline.lossless ? 'png' : 'gif');
+      const W = size.width, H = size.height, scale = size.scale;
+      if (Math.max(W, H) > raw2.getParameter(raw2.MAX_TEXTURE_SIZE)) throw new Error('原始尺寸超过设备支持，请选择高等质量');
+      cv2.width = W; cv2.height = H; K.syncRendererSize(cv2, mgl2, r2);
+      const cx = -size.centerX, cy = -size.centerY;
       // 第二遍: 逐帧渲染
       for (const L of exportLayers) {
         L.state.clearTracks(); L.skeleton.setToSetupPose();
         const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, false);
       }
-      const cvRgb = document.createElement('canvas');
-      cvRgb.width = W; cvRgb.height = H;
-      const ctx2d = cvRgb.getContext('2d', { willReadFrequently: true });
-      const gif = GIFEncoder();
+      const cvRgb = timeline.lossless ? null : document.createElement('canvas');
+      if (cvRgb) { cvRgb.width = W; cvRgb.height = H; }
+      const ctx2d = cvRgb?.getContext('2d', { willReadFrequently: true });
+      const gif = codec?.GIFEncoder(), zip = timeline.lossless ? K.pngSequenceZip() : null;
       for (let k = 0; k < frames; k++) {
-        applyExportFrame(k * dt, scale, cx * scale, cy * scale);
+        job.check();
+        applyExportFrame(timeline.timeAt(k), scale, cx * scale, cy * scale);
         raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT);
         r2.begin();
         for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
         r2.end();
-        const img = new Image();
-        await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('帧捕获失败')); img.src = cv2.toDataURL('image/png'); });
-        ctx2d.clearRect(0, 0, W, H);
-        ctx2d.drawImage(img, 0, 0);
-        const rgba = ctx2d.getImageData(0, 0, W, H).data;
-        const palette = quantize(rgba, 256, { format: 'rgba4444' });
-        const index = applyPalette(rgba, palette, 'rgba4444');
-        gif.writeFrame(index, W, H, { palette, delay: Math.max(Math.round(dt * 1000), 20), transparent: true });
+        if (zip) {
+          await zip.add('frames/' + String(k).padStart(6, '0') + '.png', await K.canvasPNGBlob(cv2));
+        } else {
+          ctx2d.clearRect(0, 0, W, H); ctx2d.drawImage(cv2, 0, 0);
+          const rgba = ctx2d.getImageData(0, 0, W, H).data;
+          const colors = codec.quantize(rgba, 255, { format: 'rgb565' });
+          const index = codec.applyPalette(rgba, colors, 'rgb565');
+          // An opaque palette color must never become transparent by accident.
+          for (let i = 0; i < index.length; i++) index[i] = rgba[i * 4 + 3] < 128 ? 0 : index[i] + 1;
+          gif.writeFrame(index, W, H, { palette: [[0, 0, 0], ...colors], delay: timeline.delayAt(k), transparent: true, transparentIndex: 0 });
+        }
+        await job.update(.25 + .75 * (k + 1) / frames, `导出 ${k + 1} / ${frames} 帧 · ${W}×${H}`);
       }
-      gif.finish();
-      const a = document.createElement('a');
-      const blob = new Blob([gif.bytes()], { type: 'image/gif' });
-      a.href = URL.createObjectURL(blob);
-      a.download = (exportName + '_' + animName).replace(/[^\w.-]+/g, '_') + '.gif';
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-      K.toast('GIF 已导出 (' + frames + ' 帧)', 'ok');
+      job.check();
+      let blob;
+      if (zip) {
+        const metadata = { animation: animName, width: W, height: H, fps: timeline.fps, durationSeconds: timeline.duration,
+          frameCount: frames, framePattern: 'frames/000000.png', firstFrameTimeSeconds: 0, timeStepSeconds: 1 / timeline.fps,
+          authoredFps: authoredFps || null, fpsFallback: !authoredFps };
+        await zip.add('animation.json', new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' }));
+        await zip.add('说明.txt', new Blob(['逐帧 PNG，无损保存，保留透明背景。\n按照 frames 文件夹内的编号顺序导入。\n帧率和原动画时长见 animation.json。\n'], { type: 'text/plain;charset=utf-8' }));
+        job.check(); blob = zip.finish();
+      } else { gif.finish(); blob = new Blob([gif.bytes()], { type: 'image/gif' }); }
+      K.downloadBlob(blob, (exportName + '_' + animName).replace(/[\\/:*?"<>|]+/g, '_') + (zip ? '_逐帧PNG.zip' : '.gif'));
+      K.toast((zip ? 'PNG 帧序列' : 'GIF') + ' 已导出：' + W + '×' + H + ' · ' + frames + ' 帧', 'ok');
     } catch (e) {
-      console.error(e);
-      K.toast('GIF 导出失败: ' + e.message, 'err');
+      if (K.isAbort(e)) K.toast('已取消导出', 'info');
+      else { console.error(e); K.toast('动画导出失败: ' + e.message, 'err'); }
     } finally {
       for (const atlas of exportAtlases) disposeAtlas(atlas);
       exportGL?.getExtension('WEBGL_lose_context')?.loseContext();
+      job.close(); animationExportRunning = false;
     }
-  };
+  }
+  makeStagePopup($('#btnGif'), pop => K.mountExportOptions(pop, {
+    kind: 'animation', quality: animationExportQuality,
+    onChange: quality => { animationExportQuality = quality; store.set('animationExportQuality', quality); },
+    getDetail: preset => {
+      if (!cut) throw new Error('请先加载一个资源');
+      const anim = cut.data.animations.find(a => a.name === animSel.value);
+      if (!anim) throw new Error('没有可导出的动画');
+      const plan = K.exportTimeline(anim.duration, preset, cut.data.fps);
+      return plan.frames + ' 帧 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒';
+    },
+    onExport: quality => { closePopups(); exportAnimation(quality); },
+  }));
 
   // ---------- 数据加载 ----------
   async function loadChars() {
@@ -2311,17 +2336,17 @@
   });
 
   // ---------- PNG 导出 ----------
-  function exportFrame(transparent, mode, done) {
+  function exportFrame(transparent, mode, done, quality = exportQuality) {
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
-    const bak = { fit: fitMode, scale: userScale, px: panX, py: panY };
+    let pose;
+    try { pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)); }
+    catch (error) { K.toast('导出失败: ' + error.message, 'err'); return; }
     K.exportPNG({
-      canvas: cv, scale: exportScale, transparent, copy: mode === 'copy',
+      canvas: cv, size: pose.size, transparent, copy: mode === 'copy',
       filename: routeSource + '-' + (cur.name || cur.id) + '.png',
-      resize(kk) {
+      resize() {
         K.syncRendererSize(cv, mgl, renderer);
-        const base = bak.fit ? cut.fitScale : bak.scale;
-        fitMode = false; userScale = base * kk; panX = bak.px * kk; panY = bak.py * kk;
-        applyView();
+        pose.apply();
       },
       draw(tr) {
         for (const layer of cutLayers()) {
@@ -2339,7 +2364,7 @@
         renderer.end();
       },
       restore() {
-        fitMode = bak.fit; userScale = bak.scale; panX = bak.px; panY = bak.py;
+        pose.restore();
         K.resizeCanvas(cv, renderer);
         applyView();
       },
@@ -2384,29 +2409,17 @@
     });
   });
   makeStagePopup(btnPng, (pop) => {
-    pop.innerHTML = '<div class="col">'
-      + '<div class="col-title" id="pngSize">倍率</div>'
-      + '<div class="opt-row"><button data-k="1" class="on">1x</button><button data-k="2">2x</button><button data-k="4">4x</button></div>'
-      + '<label><input type="checkbox" class="png-alpha"> 透明背景</label>'
-      + '<button class="png-go">' + I('camera', 13) + ' 导出 PNG</button>'
-      + '<button class="png-copy">' + I('copy', 13) + ' 复制到剪贴板</button>'
-      + '</div>';
-    const sizeEl = pop.querySelector('#pngSize');
-    const syncSize = () => {
-      sizeEl.textContent = '当前画布 ' + cv.width + '×' + cv.height + 'px · 导出 '
-        + Math.round(cv.width * exportScale) + '×' + Math.round(cv.height * exportScale) + 'px';
-    };
-    syncSize();
-    pop.querySelectorAll('.opt-row button').forEach(b => {
-      b.addEventListener('click', () => {
-        pop.querySelectorAll('.opt-row button').forEach(x => x.classList.remove('on'));
-        b.classList.add('on');
-        exportScale = Number(b.dataset.k);
-        syncSize();
-      });
+    K.mountExportOptions(pop, {
+      kind: 'png', quality: exportQuality,
+      onChange: quality => { exportQuality = quality; store.set('pngExportQuality', quality); },
+      getDetail: quality => {
+        if (!cut) throw new Error('请先加载一个资源');
+        const pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion));
+        return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素';
+      },
+      onExport: (quality, transparent) => exportFrame(transparent, 'download', () => closePopups(), quality),
+      onCopy: (quality, transparent) => exportFrame(transparent, 'copy', () => closePopups(), quality),
     });
-    pop.querySelector('.png-go').addEventListener('click', () => exportFrame(pop.querySelector('.png-alpha').checked, 'download', () => closePopups()));
-    pop.querySelector('.png-copy').addEventListener('click', () => exportFrame(pop.querySelector('.png-alpha').checked, 'copy', () => closePopups()));
   });
 
   // ---------- 重命名 ----------
@@ -2468,7 +2481,7 @@
     e.preventDefault();
     K.showMenu([
       { label: '复制 PNG 到剪贴板', fn: () => exportFrame(true, 'copy') },
-      { label: '导出 PNG', fn: () => exportFrame(false, 'download') },
+      { label: '导出 PNG', fn: () => btnPng.click() },
       { sep: true },
       { label: '重命名', fn: () => $('#btnEditName').click() },
       { label: '资源库 (G)', fn: () => openGrid() },
@@ -2588,8 +2601,7 @@
           if (hint) { status(hint); K.toast(hint, 'info', 3500); }
           portraitAudio?.interact();
         }
-      }
-      else hidePartPopup();
+      } else hidePartPopup();
     }
   });
   stage.addEventListener('wheel', (e) => {
@@ -2655,7 +2667,7 @@
       ['空格', '播放 / 暂停'], ['L', '循环'], [', / .', '后退 / 前进 1 帧'],
       ['← / →', '切换资源'], ['G', '资源库 / 舞台'], ['I', '沉浸模式'],
       ['E', '骨骼编辑模式'], ['F', '适应窗口'], ['+ / -', '缩放'], ['S', '收藏'], ['Esc', '关闭弹窗'],
-      ['↔ / 按钮', '原版对比 (Mod 分类)'], ['🎞 按钮', '导出当前动画 GIF'], ['Ctrl+K', '全局搜索'],
+      ['↔ / 按钮', '原版对比 (Mod 分类)'], ['🎞 按钮', '导出动画'], ['Ctrl+K', '全局搜索'],
     ]),
     'Escape': () => { closePopups(); hidePartPopup(); },
   });
