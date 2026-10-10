@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-accent="gold">
+<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=79bc22f172c0">
+<link rel="stylesheet" href="../../common/kit.css?v=d54e4ecbf2f7">
 <style>
+  /* Keep legacy controls out of the first paint while shared scripts initialize. */
+  html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
 
@@ -268,8 +273,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=c7f59f989683"></script>
-  <script src="../../arthub-cos.js?v=79bc22f172c0"></script>
+  <script src="../../arthub-cos-config.js?v=698fcc134bb5"></script>
+  <script src="../../arthub-cos.js?v=d54e4ecbf2f7"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -397,10 +402,10 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=79bc22f172c0"></script>
-<script src="../../common/kit.js?v=79bc22f172c0"></script>
-<script src="../../common/asset-loader.js?v=79bc22f172c0"></script>
-<script src="../../common/portrait-audio.js?v=79bc22f172c0"></script>
+<script src="../../common/asset-display-overrides.js?v=d54e4ecbf2f7"></script>
+<script src="../../common/kit.js?v=d54e4ecbf2f7"></script>
+<script src="../../common/asset-loader.js?v=d54e4ecbf2f7"></script>
+<script src="../../common/portrait-audio.js?v=d54e4ecbf2f7"></script>
 <script>
 
 (() => {

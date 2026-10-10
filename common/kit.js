@@ -1626,14 +1626,20 @@
       }
     }
     const toolStrip = document.querySelector('.tool-strip');
-    if (!toolStrip || toolStrip.dataset.kitClean === '1') return;
+    if (!toolStrip || toolStrip.dataset.kitClean === '1') {
+      root.dataset.gavChrome = 'ready';
+      return;
+    }
     toolStrip.dataset.kitClean = '1';
 
     const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel']);
     const secondary = [...toolStrip.querySelectorAll('button')]
       .filter(button => button.parentElement === toolStrip)
       .filter(button => !primary.has(button.id));
-    if (!secondary.length) return;
+    if (!secondary.length) {
+      root.dataset.gavChrome = 'ready';
+      return;
+    }
 
     const labelOf = (button) => {
       const raw = button.getAttribute('title') || button.getAttribute('aria-label') || button.textContent || '操作';
@@ -1678,6 +1684,8 @@
       })), rect.left, rect.bottom + 6);
     });
     toolStrip.appendChild(more);
+    // Reveal navigation and tools together only after the compact menu is ready.
+    root.dataset.gavChrome = 'ready';
   };
 
   // ---------- 主题切换 ----------

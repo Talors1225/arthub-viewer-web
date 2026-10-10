@@ -1,12 +1,17 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-accent="blue">
+<html lang="zh-CN" data-accent="blue" data-gav-ui="clean">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=79bc22f172c0">
+<link rel="stylesheet" href="../../common/kit.css?v=d54e4ecbf2f7">
 <style>
+  /* Keep legacy controls out of the first paint while shared scripts initialize. */
+  html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
   html, body { height: 100%; }
   .stage { position: fixed; inset: 0; z-index: 0; }
 
@@ -261,8 +266,8 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=c7f59f989683"></script>
-  <script src="../../arthub-cos.js?v=79bc22f172c0"></script>
+  <script src="../../arthub-cos-config.js?v=698fcc134bb5"></script>
+  <script src="../../arthub-cos.js?v=d54e4ecbf2f7"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -387,9 +392,9 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=79bc22f172c0"></script>
-<script src="../../common/kit.js?v=79bc22f172c0"></script>
-<script src="../../common/asset-loader.js?v=79bc22f172c0"></script>
+<script src="../../common/asset-display-overrides.js?v=d54e4ecbf2f7"></script>
+<script src="../../common/kit.js?v=d54e4ecbf2f7"></script>
+<script src="../../common/asset-loader.js?v=d54e4ecbf2f7"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
