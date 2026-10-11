@@ -42933,20 +42933,20 @@
       "EventScene_littlewitchtrick_01": {
         "id": "EventScene_littlewitchtrick_01",
         "originalName": "EventScene_littlewitchtrick_01 · 目录重组提取",
-        "displayName": "阿尼斯 · 剧情 / 过场",
+        "displayName": "LITTLE WITCH TRICK · 剧情 / 过场",
         "portraitName": "EventScene_littlewitchtrick_01 · 目录重组提取",
-        "characterName": "阿尼斯",
-        "characterNameEn": "Anis",
+        "characterName": "",
+        "characterNameEn": "",
         "characterCode": "",
         "resourceType": "cutscene",
         "typeLabel": "剧情 / 过场",
         "style": "",
         "author": "game",
-        "searchText": "阿尼斯 · 剧情 / 过场 EventScene_littlewitchtrick_01 · 目录重组提取 EventScene_littlewitchtrick_01  阿尼斯 NIKKE spineeventscenesgroup(hd)_assets_spine/events/eventscene_littlewitchtrick_01_682fa30f4e92b6752e0c2e4372270344.bundle",
-        "sortName": "阿尼斯",
-        "sortKey": "010|阿尼斯|EventScene littlewitchtrick 01|EventScene_littlewitchtrick_01",
-        "confidence": "name-from-local-index",
-        "nameSource": "local-index-alias",
+        "searchText": "LITTLE WITCH TRICK · 剧情 / 过场 EventScene_littlewitchtrick_01 · 目录重组提取 EventScene_littlewitchtrick_01   NIKKE spineeventscenesgroup(hd)_assets_spine/events/eventscene_littlewitchtrick_01_682fa30f4e92b6752e0c2e4372270344.bundle",
+        "sortName": "EventScene_littlewitchtrick_01",
+        "sortKey": "010|EventScene_littlewitchtrick_01|EventScene littlewitchtrick 01|EventScene_littlewitchtrick_01",
+        "confidence": "code-only",
+        "nameSource": "resource-code",
         "nameEvidence": "",
         "classificationEvidence": "spineeventscenesgroup(hd)_assets_spine/events/eventscene_littlewitchtrick_01_682fa30f4e92b6752e0c2e4372270344.bundle"
       },
@@ -43194,7 +43194,7 @@
   },
   "stats": {
     "total": 2271,
-    "resolvedCharacterNames": 1214,
+    "resolvedCharacterNames": 1213,
     "bySource": {
       "bd2": {
         "total": 167,
@@ -43202,7 +43202,7 @@
       },
       "nikki": {
         "total": 2104,
-        "resolvedCharacterNames": 1047
+        "resolvedCharacterNames": 1046
       }
     }
   }
