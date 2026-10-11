@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-08T11:34:21Z",
+  "generatedAt": "2026-10-11T05:48:35.264Z",
   "bucketRoot": "https://pub-bdd986c6ec274f53b01df62ac49e02e2.r2.dev",
   "note": "网页代码和小索引保存在网站；大资源目录上传到 Cloudflare R2，保持远程前缀不变。",
   "indexesKeptOnWebsite": true,
@@ -8,19 +8,19 @@
     {
       "key": "nikki",
       "index": {
-        "local": "data/nikki/index/nikki_chars.json",
+        "local": "data/nikke/original/index/nikki_chars.json",
         "web": "nikki/nikki_chars.json",
         "remote": null
       },
       "assets": [
         {
-          "local": "data/nikke/spine_carved",
+          "local": "data/nikke/original/spine",
           "remote": "nikki/spine_carved/",
           "exists": true,
-          "files": 6357
+          "files": 6396
         },
         {
-          "local": "data/nikki/audio",
+          "local": "data/nikke/original/audio",
           "remote": "nikki/audio/",
           "exists": true,
           "files": 4334,
@@ -29,7 +29,7 @@
         }
       ],
       "audioLogic": {
-        "local": "data/nikki/index/nikke-audio-logic.json",
+        "local": "data/nikke/original/index/nikke-audio-logic.json",
         "web": "nikki/audio-logic.json",
         "remote": null
       }

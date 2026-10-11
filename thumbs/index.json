@@ -2284,6 +2284,19 @@
     "nikki:tcr_ultskill_cutscene_guilty:Catalog": "nikki/8d7eb789776e83e86836.webp",
     "nikki:tcr_ultskill_cutscene_sin:Catalog": "nikki/b72ac54876a38c3eb687.webp",
     "nikki:tcr_ultskill_cutscene_sugar:Catalog": "nikki/c3e16ee9345a364c1b99.webp",
-    "nikki:c103_00_bg:Catalog": "nikki/9db9cdadc2d79d47846e.webp"
+    "nikki:c103_00_bg:Catalog": "nikki/9db9cdadc2d79d47846e.webp",
+    "nikki:EventScene_littlewitchtrick_01:Catalog": "nikki/f22980b1ae52a12d83e7.webp",
+    "nikki:c511_03_skillcut:Catalog": "nikki/bc8d8faaad1b651b816f.webp",
+    "nikki:c511_aim_03:Catalog": "nikki/8247fbb76c2e97a0ca06.webp",
+    "nikki:c511_cover_03:Catalog": "nikki/ef014e508e9e6e38da44.webp",
+    "nikki:c582_aim_01:Catalog": "nikki/f432430e630141f5f1bb.webp",
+    "nikki:c582_cover_01:Catalog": "nikki/c5d3eeb493c1091d5535.webp",
+    "nikki:c511_03:Catalog": "nikki/d93084106f500e0f6df4.webp",
+    "nikki:c582_01:Catalog": "nikki/5aaf08ba5df04592a6e1.webp",
+    "nikki:c9042_00:Catalog": "nikki/c4ded713c7d7b5273f85.webp",
+    "nikki:c949_00:Catalog": "nikki/c07184b39b23418b1288.webp",
+    "nikki:c511_03_bg:Catalog": "nikki/7b295cc3a7a59d8349e0.webp",
+    "nikki:c582_01_fg:Catalog": "nikki/84e671691f545ee625a4.webp",
+    "nikki:c582_01_bg:Catalog": "nikki/9ecaa62ac1993a29685a.webp"
   }
 }
