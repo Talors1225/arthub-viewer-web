@@ -693,7 +693,7 @@
       };
       grid.appendChild(card);
       const ph = card.querySelector('.ph');
-      const thumbPath = webThumbs['majsoul:' + c.id];
+      const thumbPath = libraryThumbnail(c);
       if (thumbPath) K.setPreview(ph, THUMB_PREFIX + thumbPath);
     });
     $('#gridSub').textContent = arr.length
@@ -702,7 +702,7 @@
     renderPagination(arr.length);
     for (const c of pageArr) {
       const phEl = grid.querySelector('.thumb-card[data-id="' + c.id + '"] .ph');
-      if (!phEl || webThumbs['majsoul:' + c.id]) continue;
+      if (!phEl || libraryThumbnail(c)) continue;
       ThumbStore.get('majsoul:' + c.id).then(url => {
         if (url && phEl.isConnected) phEl.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain">';
       });
@@ -719,7 +719,7 @@
   let gridScroll = 0;
   function openGrid() {
     // 截取当前画布帧作为缩略图 (必须在 grid 覆盖前)
-    if (curEntry && gl && layers.length) {
+    if (curEntry && gl && layers.length && !libraryThumbnail(curEntry)) {
       try {
         const raw = gl.gl || gl;
         const c = K.parseColor(bgInput.value, [0.09, 0.1, 0.13]);
@@ -982,6 +982,11 @@
     const keys = Object.keys(hm);
     if (keys.length > 50) for (const k of keys.slice(0, keys.length - 50)) delete hm[k];
     store.set('hiddenMap', hm);
+  }
+
+  function libraryThumbnail(entry) {
+    const variant = entry.composite ? 'layers' : /\.json$/i.test(entry.skel) ? 'json' : 'binary';
+    return webThumbs['majsoul:' + entry.id + ':' + variant] || webThumbs['majsoul:' + entry.id];
   }
 
   function stagePreviewPath(entry) {
@@ -1860,7 +1865,7 @@
   setupDesktopBridge();
   K.initSearchPalette();
   Promise.all([
-    K.fetchJSON('../../thumbs/index.json').catch(() => ({ items: {} })),
+    K.fetchJSON('../../thumbs/index.json' + '?v=majsoul-rendered-20261016').catch(() => ({ items: {} })),
     K.fetchJSON('../characters.json'),
   ]).then(([thumbData, data]) => {
     webThumbs = thumbData.items || {};
