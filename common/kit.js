@@ -6,6 +6,41 @@
 (() => {
   'use strict';
   const K = {};
+  // One vector grid for navigation and playback; no platform-dependent glyphs.
+  const uiIconPaths = {
+    home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
+    back: '<path d="m9 5-7 7 7 7M2 12h20"/>',
+    search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+    palette: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/>',
+    heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>',
+    star: '<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z"/>',
+    sort: '<path d="M8 3v18m-4-4 4 4 4-4M16 21V3m-4 4 4-4 4 4"/>',
+    up: '<path d="M12 21V3m-6 6 6-6 6 6"/>',
+    down: '<path d="M12 3v18m-6-6 6 6 6-6"/>',
+    chevL: '<path d="m15 18-6-6 6-6"/>',
+    chevR: '<path d="m9 18 6-6-6-6"/>',
+    chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    controls: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="var(--panel, #111318)"/><circle cx="15" cy="12" r="2" fill="var(--panel, #111318)"/><circle cx="9" cy="18" r="2" fill="var(--panel, #111318)"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    play: '<path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/>',
+    anim: '<path d="m8 5 11 7-11 7Z"/>',
+    pause: '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
+    loop: '<path d="m17 3 4 4-4 4M3 11V9a2 2 0 0 1 2-2h16M7 21l-4-4 4-4m14 0v2a2 2 0 0 1-2 2H3"/>',
+    minus: '<path d="M5 12h14"/>',
+    plus: '<path d="M5 12h14M12 5v14"/>',
+    more: '<circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/>',
+    close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  };
+  K.uiIcon = (name, size = 18, filled = false) => uiIconPaths[name]
+    ? '<svg class="arthub-icon" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + (filled ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + uiIconPaths[name] + '</svg>' : '';
+  K.setUiIcon = (node, name, label = '') => {
+    if (!node) return;
+    const key = name + ':' + label;
+    if (node.dataset.uiIcon !== key || !node.querySelector('svg.arthub-icon') || (label && node.querySelector('.arthub-action-label')?.textContent !== label)) {
+      node.innerHTML = K.uiIcon(name) + (label ? '<span class="arthub-action-label">' + K.esc(label) + '</span>' : '');
+      node.dataset.uiIcon = key;
+    }
+  };
   const displayOverrides = window.ArtHubDisplayOverrides || { get: () => null, apply: (_source, entry) => entry };
 
   // ---------- Store: localStorage 封装 ----------
@@ -1522,7 +1557,19 @@
   K.esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
   // ---------- Toast 通知 ----------
-  K.toast = (msg, type = 'info', ms = 2600) => {
+  const toastChannels = new Map();
+  const removeToast = t => {
+    clearTimeout(t._expiry); clearTimeout(t._fade);
+    if (toastChannels.get(t.dataset.channel) === t) toastChannels.delete(t.dataset.channel);
+    t.remove();
+  };
+  K.clearToasts = channel => {
+    if (channel) { const t = toastChannels.get(channel); if (t) removeToast(t); }
+    else document.querySelectorAll('.toast').forEach(removeToast);
+  };
+  K.toast = (msg, type = 'info', ms = 2600, channel = '') => {
+    if (!channel && /部件编辑|骨骼编辑|恢复点击|点击播放语音|姿势锁定|锁定当前姿势/.test(String(msg))) channel = 'mode';
+    if (channel) K.clearToasts(channel);
     let wrap = document.querySelector('.toast-wrap');
     if (!wrap) {
       wrap = document.createElement('div');
@@ -1531,26 +1578,40 @@
     }
     const t = document.createElement('div');
     t.className = 'toast ' + type;
+    t.dataset.channel = channel;
     t.textContent = msg;
     wrap.appendChild(t);
-    setTimeout(() => {
+    if (channel) toastChannels.set(channel, t);
+    while (wrap.children.length > 3) removeToast(wrap.firstElementChild);
+    t._expiry = setTimeout(() => {
       t.style.transition = 'opacity .25s, transform .25s';
       t.style.opacity = '0';
       t.style.transform = 'translateX(16px)';
-      setTimeout(() => t.remove(), 260);
+      t._fade = setTimeout(() => removeToast(t), 260);
     }, ms);
   };
 
   // ---------- 右键菜单 ----------
   // items: [{label, fn, danger?, sep?}] —— 在 (x,y) 显示,点选或点外关闭
+  let menuDismiss = null;
   K.showMenu = (items, x, y) => {
     K.hideMenu();
     const menu = document.createElement('div');
     menu.className = 'ctx-menu';
+    menu.setAttribute('role', 'menu');
     for (const it of items) {
       if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; menu.appendChild(s); continue; }
+      if (it.heading) { const h = document.createElement('div'); h.className = 'menu-heading'; h.textContent = it.heading; menu.appendChild(h); continue; }
       const b = document.createElement('button');
-      b.textContent = it.label;
+      b.type = 'button';
+      const text = document.createElement('span'); text.textContent = it.label; b.appendChild(text);
+      b.setAttribute('role', typeof it.checked === 'boolean' ? 'menuitemcheckbox' : 'menuitem');
+      if (typeof it.checked === 'boolean') {
+        b.setAttribute('aria-checked', String(it.checked));
+        const mark = document.createElement('span'); mark.className = 'menu-mark'; mark.textContent = it.checked ? '✓' : ''; b.appendChild(mark);
+      }
+      if (it.shortcut) { const hint = document.createElement('span'); hint.className = 'menu-shortcut'; hint.textContent = it.shortcut; b.appendChild(hint); }
+      b.disabled = !!it.disabled;
       if (it.danger) b.className = 'danger';
       b.onclick = (event) => {
         event.stopPropagation();
@@ -1561,19 +1622,24 @@
     }
     document.body.appendChild(menu);
     const r = menu.getBoundingClientRect();
-    menu.style.left = Math.min(x, window.innerWidth - r.width - 8) + 'px';
-    menu.style.top = Math.min(y, window.innerHeight - r.height - 8) + 'px';
+    menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+    menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
     const close = (event) => {
       // 菜单内部点击先交给菜单项自身处理，不能被“点击外部关闭”抢先移除。
       if (event && menu.contains(event.target)) return;
       menu.remove();
       document.removeEventListener('click', close, true);
       window.removeEventListener('blur', close);
+      document.removeEventListener('keydown', escape);
+      if (menuDismiss === close) menuDismiss = null;
     };
-    setTimeout(() => document.addEventListener('click', close, true), 0);
+    const escape = event => { if (event.key === 'Escape') { event.stopPropagation(); close(); } };
+    menuDismiss = close;
+    setTimeout(() => { if (menu.isConnected) document.addEventListener('click', close, true); }, 0);
     window.addEventListener('blur', close);
+    document.addEventListener('keydown', escape);
   };
-  K.hideMenu = () => { const m = document.querySelector('.ctx-menu'); if (m) m.remove(); };
+  K.hideMenu = () => { if (menuDismiss) menuDismiss(); else document.querySelector('.ctx-menu')?.remove(); };
 
   // ---------- 清爽界面层 ----------
   // 不改变具体查看器的业务逻辑，只把低频工具收进统一的“更多”菜单。
@@ -1632,7 +1698,7 @@
     }
     toolStrip.dataset.kitClean = '1';
 
-    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel']);
+    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'stageClickMode']);
     const secondary = [...toolStrip.querySelectorAll('button')]
       .filter(button => button.parentElement === toolStrip)
       .filter(button => !primary.has(button.id));
@@ -1643,13 +1709,13 @@
 
     const labelOf = (button) => {
       const raw = button.getAttribute('title') || button.getAttribute('aria-label') || button.textContent || '操作';
-      return raw.replace(/\s*\([^)]*\)\s*$/, '').trim() || '操作';
+      return raw.replace(/\s*[（(][^）)]*[）)]\s*$/, '').trim() || '操作';
     };
     secondary.forEach(button => button.classList.add('kit-secondary-tool'));
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'kit-more-tool';
-    more.textContent = '⋯';
+    more.innerHTML = K.uiIcon('more');
     more.title = '更多操作';
     more.setAttribute('aria-label', '更多操作');
     const invokeSecondary = (button) => {
@@ -1918,7 +1984,7 @@
     const searchToggle = document.createElement('button');
     searchToggle.type = 'button';
     searchToggle.className = 'kit-search-toggle';
-    searchToggle.textContent = '\u2315';
+    searchToggle.innerHTML = K.uiIcon('search');
     searchToggle.setAttribute('aria-label', '\u5c55\u5f00\u641c\u7d22');
     searchToggle.title = '\u5c55\u5f00\u641c\u7d22';
     if (searchCollapsible) wrap.insertBefore(searchToggle, search);
@@ -1941,7 +2007,7 @@
     const clear = document.createElement('button');
     clear.type = 'button';
     clear.className = 'kit-search-clear';
-    clear.textContent = '×';
+    clear.innerHTML = K.uiIcon('close', 16);
     clear.title = '清空搜索';
     clear.setAttribute('aria-label', '清空搜索');
     wrap.appendChild(clear);
@@ -2026,21 +2092,27 @@
       thumbGrid.dataset.density = ['compact', 'standard', 'large'].includes(density) ? density : 'standard';
     }
 
-    // Mobile scrolling collapses the resource-library controls and restores them after the gesture.
+    // Phones keep controls hidden while reading cards; scrolling up reveals them.
     const scrollHost = document.getElementById('gridView');
     if (scrollHost && scrollHost.dataset.kitScrollChrome !== '1') {
       scrollHost.dataset.kitScrollChrome = '1';
-      let scrollTimer = 0;
+      let previousScroll = scrollHost.scrollTop;
       scrollHost.addEventListener('scroll', () => {
-        if (window.matchMedia && !window.matchMedia('(max-width: 720px)').matches) return;
-        if (scrollHost.scrollTop <= 2) {
+        const currentScroll = scrollHost.scrollTop;
+        if (window.matchMedia && !window.matchMedia('(max-width: 720px)').matches) {
           scrollHost.classList.remove('kit-grid-scrolling');
+          previousScroll = currentScroll;
           return;
         }
-        scrollHost.classList.add('kit-grid-scrolling');
-        clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(() => scrollHost.classList.remove('kit-grid-scrolling'), 420);
+        const delta = currentScroll - previousScroll;
+        if (currentScroll <= 24 || delta < -4) scrollHost.classList.remove('kit-grid-scrolling');
+        else if (delta > 4) scrollHost.classList.add('kit-grid-scrolling');
+        previousScroll = currentScroll;
       }, { passive: true });
+      window.addEventListener('resize', () => {
+        if (!matchMedia('(max-width: 720px)').matches) scrollHost.classList.remove('kit-grid-scrolling');
+        previousScroll = scrollHost.scrollTop;
+      });
     }
 
     if (!isGallery && route === 'majsoul' && !document.getElementById('filterChips')) {

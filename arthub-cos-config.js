@@ -1,5 +1,5 @@
 window.ARTHUB_COS_CONFIG = {
   "root": "https://pub-bdd986c6ec274f53b01df62ac49e02e2.r2.dev",
   "staticCatalog": true,
-  "release": "d54e4ecbf2f7"
+  "release": "717ec528e4b9"
 };

@@ -1,0 +1,264 @@
+/* Library-only layout. Stage/preview controls use their independent layouts. */
+html[data-gav-ui="clean"] body #gridView.library-ui .grid-head {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  padding: 12px 20px 10px !important;
+}
+#gridView.library-ui .library-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+#gridView.library-ui .library-top-row > .kit-home-action,
+#gridView.library-ui .library-top-row > .library-title-block,
+#gridView.library-ui .library-top-row > #btnTheme,
+#gridView.library-ui .library-top-row > #gridClose,
+#gridView.library-ui .library-top-row > .library-return-action,
+#gridView.library-ui .library-top-row > .grid-sponsor { flex: 0 0 auto; }
+#gridView.library-ui .library-title-block .grid-title {
+  font-size: 18px !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+}
+#gridView.library-ui .library-title-block { flex: 0 0 auto; min-width: 0; }
+#gridView.library-ui .library-mobile-total { display: none; }
+#gridView.library-ui .library-sort-trigger { display: none; }
+#gridView.library-ui .library-group-filter { display: flex; min-width: 0; }
+#gridView.library-ui .library-group-filter .kit-facet-select { margin-left: 0; }
+#gridView.library-ui .library-top-row > .grid-sub {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+#gridView.library-ui .library-top-row > .kit-grid-search {
+  flex: 0 1 280px !important;
+  width: min(280px, 100%) !important;
+  min-width: 160px !important;
+  margin-left: 0 !important;
+}
+#gridView.library-ui .library-top-row > .kit-grid-search.is-collapsed {
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+}
+#gridView.library-ui .library-top-row > .grid-sponsor {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 0 !important;
+  min-height: 34px !important;
+  height: auto !important;
+  padding: 5px 8px !important;
+  margin: 0 0 0 3px !important;
+  gap: 4px !important;
+  border: 1px solid rgba(226, 194, 136, .4) !important;
+  border-radius: 8px !important;
+  background: rgba(226, 194, 136, .08) !important;
+  box-shadow: none !important;
+  color: #e2c288 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-decoration: none;
+  white-space: nowrap;
+}
+#gridView.library-ui .library-top-row > .grid-sponsor::before { content: none !important; }
+#gridView.library-ui .library-top-row > .grid-sponsor:hover {
+  color: var(--accent) !important;
+  border-color: var(--border2) !important;
+  transform: none !important;
+}
+#gridView.library-ui .library-top-row > .kit-home-action,
+#gridView.library-ui .library-top-row > #gridClose,
+#gridView.library-ui .library-top-row > .library-return-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px !important;
+  padding: 5px 9px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--text-dim) !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+#gridView.library-ui .library-top-row > [hidden] { display: none !important; }
+html[data-gav-ui="clean"] body #gridView.library-ui .grid-head > #filterChips {
+  display: flex !important;
+  flex: none !important;
+  align-items: center !important;
+  justify-content: space-between;
+  flex-wrap: nowrap !important;
+  width: 100%;
+  min-width: 0;
+  gap: 8px !important;
+  padding: 6px 0 0 !important;
+  border-top: 1px solid var(--border) !important;
+  overflow: visible !important;
+}
+#gridView.library-ui .library-category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#gridView.library-ui .library-category-tabs::-webkit-scrollbar { display: none; }
+#gridView.library-ui .library-category-tabs .filter-chip {
+  flex: 0 0 auto;
+  min-height: 32px;
+  white-space: nowrap;
+  writing-mode: horizontal-tb;
+}
+#gridView.library-ui .library-category-tabs .library-favorites {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 5px 8px !important;
+}
+#gridView.library-ui .library-favorites .n[hidden] { display: none !important; }
+#gridView.library-ui .library-sort-tools {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 5px;
+  margin-left: auto;
+}
+#gridView.library-ui .library-sort-tools .sort-sel,
+#gridView.library-ui .library-sort-tools .kit-facet-select,
+#gridView.library-ui .library-sort-tools .sort-dir-toggle {
+  min-height: 32px !important;
+  max-width: 160px;
+  margin-left: 0 !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+#gridView.library-ui .library-sort-tools .sort-dir-toggle {
+  width: auto !important;
+  min-width: 64px !important;
+  padding: 4px 8px !important;
+}
+#gridView.library-ui .grid-pagination {
+  box-sizing: border-box;
+  width: 100%;
+  flex-wrap: wrap;
+}
+#gridView.library-ui .grid-page-btn {
+  min-width: 32px;
+  min-height: 32px;
+}
+#gridView.library-ui.library-single-category .thumb-card .tt { display: none !important; }
+#gridView.library-ui .thumb-card .tn {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal !important;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.5 !important;
+  min-height: 3em;
+  max-height: 3em;
+}
+#gridView.library-ui #gridPaginationTop:not([hidden]) {
+  display: flex !important;
+  justify-content: flex-end;
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 8px 22px 0;
+}
+#gridView.library-ui :is(a, button, select):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"] body #gridView.library-ui .grid-head {
+    padding: calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left)) !important;
+    gap: 6px !important;
+  }
+  html[data-gav-ui="clean"] body #gridView.library-ui.kit-grid-scrolling .grid-head {
+    visibility: hidden;
+    max-height: none;
+    transform: translateY(-105%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  #gridView.library-ui .library-top-row {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 40px 40px auto;
+    gap: 6px 4px;
+    align-items: center;
+  }
+  #gridView.library-ui .library-top-row > .kit-home-action { grid-column: 1; grid-row: 1; }
+  #gridView.library-ui .library-top-row > .library-title-block { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 2px; }
+  #gridView.library-ui .library-title-block .grid-title { font-size: 14px !important; line-height: 18px; overflow: hidden; text-overflow: ellipsis; }
+  #gridView.library-ui .library-mobile-total { display: block; color: var(--text-faint); font-size: 11px; line-height: 14px; }
+  #gridView.library-ui .library-top-row > .grid-sub { display: none !important; }
+  #gridView.library-ui .library-top-row > .grid-sponsor { grid-column: 5; grid-row: 1; margin: 0 !important; }
+  #gridView.library-ui .library-top-row > .kit-grid-search.is-collapsed { grid-column: 3; grid-row: 1; }
+  #gridView.library-ui .library-top-row > #btnTheme { grid-column: 4; grid-row: 1; }
+  #gridView.library-ui .library-top-row > #gridClose,
+  #gridView.library-ui .library-top-row > .library-return-action { grid-column: 2; grid-row: 1; }
+  #gridView.library-ui .library-top-row:has(#gridClose:not([hidden]), .library-return-action:not([hidden])) { grid-template-columns: 40px 40px minmax(0, 1fr) 40px 40px auto; }
+  #gridView.library-ui .library-top-row:has(#gridClose:not([hidden]), .library-return-action:not([hidden])) > .library-title-block { grid-column: 3; }
+  #gridView.library-ui .library-top-row:has(#gridClose:not([hidden]), .library-return-action:not([hidden])) > .kit-grid-search.is-collapsed { grid-column: 4; }
+  #gridView.library-ui .library-top-row:has(#gridClose:not([hidden]), .library-return-action:not([hidden])) > #btnTheme { grid-column: 5; }
+  #gridView.library-ui .library-top-row:has(#gridClose:not([hidden]), .library-return-action:not([hidden])) > .grid-sponsor { grid-column: 6; }
+  #gridView.library-ui .library-top-row > .kit-grid-search:not(.is-collapsed),
+  #gridView.library-ui .library-top-row > #gridSearch { grid-column: 1 / -1; grid-row: 2; width: 100% !important; min-width: 0 !important; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .library-top-row > :is(.kit-home-action, #gridClose, .library-return-action, #btnTheme),
+  html[data-gav-ui="clean"] body #gridView.library-ui .kit-search-toggle {
+    width: 40px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  html[data-gav-ui="clean"] body #gridView.library-ui .kit-grid-search { height: 40px !important; min-height: 40px !important; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .kit-grid-search.is-collapsed { width: 40px !important; min-width: 40px !important; }
+  #gridView.library-ui .kit-search-clear { width: 32px; height: 32px; right: 4px; }
+  #gridView.library-ui .kit-grid-search input { padding-right: 40px; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .library-top-row > .grid-sponsor { height: 40px !important; min-height: 40px !important; padding: 4px 6px !important; font-size: 11px !important; }
+  #gridView.library-ui .library-top-row > :is(.kit-home-action, #gridClose, .library-return-action) .arthub-action-label { display: none; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .grid-head > #filterChips {
+    position: relative;
+    flex-wrap: nowrap !important;
+    border-top: 0 !important;
+    padding-top: 0 !important;
+    gap: 8px !important;
+  }
+  #gridView.library-ui .library-category-tabs { flex: 1 1 auto; width: auto; gap: 4px; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .library-category-tabs .filter-chip { min-height: 40px !important; min-width: 40px; padding: 6px 8px !important; font-size: 13px; }
+  #gridView.library-ui .library-category-tabs .filter-chip .n { display: none; }
+  #gridView.library-ui .library-group-filter { flex: 1 1 auto; }
+  #gridView.library-ui .library-group-filter .kit-facet-select { width: 100%; max-width: none; min-width: 0; min-height: 40px; }
+  #gridView.library-ui .library-sort-trigger {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px;
+    width: 40px; height: 40px; padding: 0; border: 1px solid var(--border2);
+    border-radius: 9px; background: var(--panel2); color: var(--text-dim); cursor: pointer;
+  }
+  #gridView.library-ui .library-sort-trigger[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+  #gridView.library-ui .library-sort-tools { display: none; }
+  #gridView.library-ui.library-sort-open .library-sort-tools {
+    display: flex; position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    z-index: 4; padding: 10px; gap: 8px; border: 1px solid var(--border2); border-radius: 12px;
+    background: var(--panel); box-shadow: 0 8px 24px rgba(0, 0, 0, .3); margin: 0;
+  }
+  html[data-gav-ui="clean"] body #gridView.library-ui .library-sort-tools .sort-sel { flex: 1 1 auto; min-width: 0; max-width: none; min-height: 40px !important; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .library-sort-tools .sort-dir-toggle { min-height: 40px !important; gap: 6px; }
+  #gridView.library-ui .kit-majsoul-filters { overflow: visible !important; }
+  #gridView.library-ui #gridPaginationTop:not([hidden]) {
+    justify-content: center;
+    padding: 6px 8px 0;
+    min-height: 44px;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  #gridView.library-ui .grid-page-btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; min-width: 32px; }
+  #gridView.library-ui .grid-page-gap { min-width: 14px; }
+}

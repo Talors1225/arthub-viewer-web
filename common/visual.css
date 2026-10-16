@@ -1,0 +1,133 @@
+/* ArtHub visual alignment. Colors of user-selected viewer backgrounds stay intact. */
+:root {
+  --arthub-font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --arthub-control-radius: 9px;
+  --arthub-panel-radius: 14px;
+  --arthub-edge: 16px;
+  --arthub-gold: #e2c288;
+}
+body { font-family: var(--arthub-font); }
+button, input, select { font-family: inherit; }
+button, select { line-height: 1.4; }
+.arthub-icon { display: block; flex: 0 0 auto; width: 18px; height: 18px; pointer-events: none; vertical-align: middle; }
+.arthub-action-label { line-height: 1.4; }
+#gridView.library-ui :is(.kit-home-action, .library-return-action, #gridClose, .sort-dir-toggle, .grid-sponsor) { gap: 6px; }
+#gridView.library-ui .grid-sponsor .arthub-icon { width: 14px; height: 14px; }
+html[data-gav-ui="clean"] body :is(.rail button, .tool-strip button, .playbar button, .thumb-card .tstar, #btnTheme) { display: inline-flex; align-items: center; justify-content: center; }
+html[data-gav-ui="clean"] body :is(.rail button, .tool-strip button, .playbar button) > svg { width: 18px; height: 18px; display: block; flex: 0 0 auto; }
+html[data-gav-ui="clean"] body .thumb-card .tstar:hover { transform: none !important; }
+html[data-gav-ui="clean"] body :is(.rail, .tool-strip, .playbar, .rp-panel, .ctx-menu) {
+  border-radius: var(--arthub-panel-radius) !important;
+}
+html[data-gav-ui="clean"] body :is(.rail button, .tool-strip button, .playbar button, .rp-close, .rp-tab button) {
+  border-radius: var(--arthub-control-radius) !important;
+}
+html[data-gav-ui="clean"] body .rail .rail-sep { display: none !important; }
+html[data-gav-ui="clean"] body .playbar.collapsed {
+  left: var(--arthub-edge) !important;
+  right: auto !important;
+  bottom: var(--arthub-edge) !important;
+  transform: none !important;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 0 !important;
+  padding: 5px !important;
+}
+html[data-gav-ui="clean"] body .playbar.collapsed .playbar-toggle {
+  width: 36px !important;
+  height: 36px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+#gridView.library-ui .library-top-row > :is(.kit-home-action, .grid-sponsor, #gridClose, .library-return-action, #btnTheme),
+#gridView.library-ui .library-sort-tools :is(.sort-sel, .sort-dir-toggle, .kit-facet-select),
+#gridView.library-ui .kit-grid-search {
+  height: 36px !important;
+  min-height: 36px !important;
+  border-radius: var(--arthub-control-radius) !important;
+  box-sizing: border-box;
+}
+#gridView.library-ui .library-top-row > .grid-sponsor,
+#gridView.library-ui .library-top-row > .grid-sponsor:hover {
+  color: var(--arthub-gold) !important;
+  border-color: rgba(226, 194, 136, .4) !important;
+  background: rgba(226, 194, 136, .08) !important;
+}
+#gridView.library-ui .thumb-card { border-radius: var(--arthub-panel-radius); }
+#gridView.library-ui .thumb-card .tm { padding: 12px 14px; }
+html[data-gav-ui="clean"] body #gridView.library-ui .thumb-card .tn {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  min-height: 1.5em !important;
+  max-height: 3em !important;
+  text-wrap: balance;
+}
+#gridView.library-ui .grid-pagination {
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+#gridView.library-ui .grid-page-btn { border-radius: var(--arthub-control-radius); }
+#floatPanel .rp-header { align-items: center; gap: 8px; }
+#floatPanel .anim-row, #floatPanel .slot-row { min-height: 38px; }
+#floatPanel .parts-tools { gap: 8px; }
+body.arthub-home {
+  background: #090b0f;
+  color: #e8e9ed;
+  font-family: var(--arthub-font);
+  line-height: 1.6;
+}
+body.arthub-home .wrap { max-width: 1180px; padding: 48px 32px 40px; }
+body.arthub-home h1 { font-size: 30px; line-height: 1.3; letter-spacing: -.02em; }
+body.arthub-home h1 em { color: var(--arthub-gold); }
+body.arthub-home .home-layout { margin-top: 28px; }
+body.arthub-home .cards { gap: 16px; }
+body.arthub-home :is(.card, .notice, .support, .updates) {
+  background: #111318;
+  border-color: #282b32;
+  border-radius: var(--arthub-panel-radius);
+}
+body.arthub-home .card {
+  align-items: center;
+  padding: 20px;
+  gap: 16px;
+  min-height: 106px;
+}
+body.arthub-home .card:hover { background: #17191f; border-color: rgba(226, 194, 136, .6); }
+body.arthub-home .icon { width: 48px; height: 48px; background: #1c1f26; border-radius: 12px; }
+body.arthub-home .card h2 { font-size: 16px; line-height: 1.5; margin: 0; }
+body.arthub-home .card span { color: var(--arthub-gold); margin-top: 8px; font-size: 12px; }
+body.arthub-home :is(.notice, .support) { padding: 20px; line-height: 1.8; }
+body.arthub-home .notice { margin-top: 24px; }
+body.arthub-home .support { margin-top: 16px; }
+body.arthub-home :is(.notice h2, .support h2) { font-size: 18px; margin: 4px 0 8px; }
+body.arthub-home :is(.notice-kicker, .support-kicker, .updates-kicker) { color: var(--arthub-gold); }
+body.arthub-home :is(.notice p, .support p, .feedback, .updates small) { color: #9b9ea9; }
+body.arthub-home .support-btn { background: var(--arthub-gold); color: #201806; border-radius: var(--arthub-control-radius); }
+body.arthub-home .feedback a { color: var(--arthub-gold); }
+body.arthub-home .updates-toggle { background: #111318; border-color: #282b32; color: #bfc2cb; }
+body.arthub-home .updates-toggle:hover { background: #1c1f26; color: var(--arthub-gold); }
+body.arthub-home .updates li { border-color: #282b32; }
+body.arthub-home .updates time { color: #9094a0; }
+body.arthub-home :is(.updates h2, .updates strong) { color: #e8e9ed; }
+body.arthub-home :is(a, button):focus-visible { outline: 2px solid var(--arthub-gold); outline-offset: 3px; }
+@media (max-width: 720px) {
+  :root { --arthub-edge: 8px; }
+  html[data-gav-ui="clean"] body .playbar.collapsed {
+    width: 52px !important;
+    height: 52px !important;
+    bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+    left: calc(8px + env(safe-area-inset-left)) !important;
+  }
+  html[data-gav-ui="clean"] body .playbar.collapsed .playbar-toggle { width: 40px !important; height: 40px !important; }
+  #gridView.library-ui .thumb-card .tm { padding: 10px; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .thumb-card .tn { font-size: 13px !important; }
+  #gridView.library-ui .library-top-row > #btnTheme { min-height: 36px !important; }
+  #gridView.library-ui .library-category-tabs .filter-chip { padding: 6px 10px !important; }
+  body.arthub-home .wrap { padding: 32px 56px 32px 20px; }
+  body.arthub-home h1 { font-size: 26px; }
+  body.arthub-home .home-layout { margin-top: 24px; }
+  body.arthub-home .card { padding: 16px; min-height: 96px; }
+  body.arthub-home .card h2 { text-wrap: balance; }
+  body.arthub-home :is(.notice, .support) { padding: 16px; }
+}

@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=d54e4ecbf2f7">
+<link rel="stylesheet" href="../../common/kit.css?v=717ec528e4b9">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=717ec528e4b9">
+<link rel="stylesheet" href="../../common/library-ui.css?v=717ec528e4b9">
+<link rel="stylesheet" href="../../common/visual.css?v=717ec528e4b9">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -273,8 +276,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=698fcc134bb5"></script>
-  <script src="../../arthub-cos.js?v=d54e4ecbf2f7"></script>
+  <script src="../../arthub-cos-config.js?v=d8282e2ac904"></script>
+  <script src="../../arthub-cos.js?v=717ec528e4b9"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -402,10 +405,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=d54e4ecbf2f7"></script>
-<script src="../../common/kit.js?v=d54e4ecbf2f7"></script>
-<script src="../../common/asset-loader.js?v=d54e4ecbf2f7"></script>
-<script src="../../common/portrait-audio.js?v=d54e4ecbf2f7"></script>
+<script src="../../common/asset-display-overrides.js?v=717ec528e4b9"></script>
+<script src="../../common/kit.js?v=717ec528e4b9"></script>
+<script src="../../common/asset-loader.js?v=717ec528e4b9"></script>
+<script src="../../common/portrait-audio.js?v=717ec528e4b9"></script>
+<script src="../../common/stage-ui.js?v=717ec528e4b9"></script>
+<script src="../../common/library-ui.js?v=717ec528e4b9"></script>
 <script>
 
 (() => {
@@ -435,7 +440,7 @@
       anim: '<path d="M7 4.5v15a1 1 0 0 0 1.54.84l11.2-7.5a1 1 0 0 0 0-1.68L8.54 3.66A1 1 0 0 0 7 4.5z"/>',
       move: '<path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>',
     }[name] || '';
-    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+    return K.uiIcon(name, size) || '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + p + '</svg>';
   };
 
   const cv = $('#cv'), stage = $('#stage');
@@ -457,10 +462,11 @@
     const parts = location.pathname.split('/').filter(Boolean);
     const viewerAt = parts.lastIndexOf('viewer');
     const candidate = viewerAt > 0 ? parts[viewerAt - 1] : parts[0];
-    return ['bd2', 'nikki', 'bd2mod'].includes(candidate) ? candidate : 'bd2';
+    return ['bd2', 'nikki', 'bd2mod', 'nikke', 'crosscore'].includes(candidate) ? candidate : 'bd2';
   })();
   if (routeSource === 'nikki') document.title = '妮姬 · Spine 动态查看器';
-  if (routeSource === 'nikki') stage.dataset.clickMode = 'audio';
+  if (routeSource === 'crosscore') document.title = '交错战线 · Spine 动态查看器';
+  if (routeSource === 'nikki' || routeSource === 'crosscore') stage.dataset.clickMode = 'audio';
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
@@ -509,10 +515,11 @@
   let editBoneName = null;
   let boneDrag = null;
   let poseLocked = null;
+  let panelUI = null, viewerUiReady = false, editBaseline = null, dragPoseBefore = null;
   let editWasPlaying = false;
   let hoverBoneName = null;
   const editOrig = {};   // 编辑过的骨骼在动画暂停帧的原始姿态, 右键恢复用
-  let filterType = store.get('filterType', 'all');
+  let filterType = store.get('filterType', 'lobby');
   let sortMode = store.get('sortMode', 'default');
   let sortDirection = store.get('sortDirection', 'asc');
   let gridQuery = '';
@@ -589,7 +596,7 @@
     playbarCollapsed = !!collapsed;
     playbar.classList.toggle('collapsed', playbarCollapsed);
     playbarToggle.setAttribute('aria-expanded', String(!playbarCollapsed));
-    playbarToggle.textContent = playbarCollapsed ? '\u2261' : '\u00d7';
+    K.setUiIcon(playbarToggle, playbarCollapsed ? 'controls' : 'chevronDown');
     playbarToggle.title = playbarCollapsed ? '展开播放控制' : '收起播放控制';
     store.set('playbarCollapsed', playbarCollapsed);
   };
@@ -633,9 +640,9 @@
     for (const c of chars) { const t = displayType(c); counts[t] = (counts[t] || 0) + 1; }
     const types = Object.keys(counts).sort((a, b) => (TYPE_ORDER[a] ?? 8) - (TYPE_ORDER[b] ?? 8));
     const starred = new Set(store.get('stars', []));
-    const chips = [['all', '全部', chars.length], ['star', '★', starred.size],
+    const chips = [['star', '★', starred.size],
       ...types.map(t => [t, TYPE_LABEL[t] || t, counts[t]])];
-    if (!chips.some(c => c[0] === filterType)) filterType = 'all';
+    if (!chips.some(c => c[0] === filterType)) filterType = counts.lobby ? 'lobby' : types[0] || 'other';
     row.innerHTML = '';
     for (const [val, label, n] of chips) {
       const b = document.createElement('button');
@@ -708,7 +715,7 @@
     });
     buildFilterChips();
     renderGrid();
-    if (cur && cur.id === id) $('#railStar').textContent = starred.includes(id) ? '★' : '☆';
+    if (cur && cur.id === id) $('#railStar').innerHTML = K.uiIcon('star', 18, starred.includes(id));
     K.toast(starred.includes(id) ? '已收藏' : '已取消收藏', 'ok');
   }
 
@@ -903,10 +910,18 @@
     statusEl.classList.toggle('hide', !onStage);
   }
   // Fixed pagination: render one page at a time and never append cards on scroll.
-  const GRID_PAGE = K.libraryPageSize();
+  let GRID_PAGE = K.libraryPageSize();
   let gridArr = [];
   let gridShown = 0;
   let gridPage = 1;
+  matchMedia('(max-width: 720px)').addEventListener('change', () => {
+    const size = K.libraryPageSize();
+    if (size === GRID_PAGE) return;
+    const firstIndex = (gridPage - 1) * GRID_PAGE;
+    GRID_PAGE = size;
+    gridPage = Math.floor(firstIndex / size) + 1;
+    if (gridView.classList.contains('open')) renderGrid();
+  });
 
   function buildCard(grid, starred, c) {
     const alias = aliasOf(c.id);
@@ -918,15 +933,15 @@
       + '<div class="tm"><div class="tn">' + K.esc(alias || c.name || c.id) + '</div>'
       + '<div class="ts">' + K.esc(alias ? c.name || '' : (c.source || '')) + '</div></div>'
       + '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '其它') + '</span>'
-      + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + (starred.has(c.id) ? '★' : '☆') + '</button>';
+      + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + K.uiIcon('star', 18, starred.has(c.id)) + '</button>';
     card.onclick = () => { selectChar(c); closeGrid(); };
     card.querySelector('.tstar').onclick = (e) => {
       e.stopPropagation();
       toggleStarById(c.id);
       const on = store.get('stars', []).includes(c.id);
-      e.target.classList.toggle('on', on);
-      e.target.textContent = on ? '★' : '☆';
-      e.target.setAttribute('aria-pressed', String(on));
+      e.currentTarget.classList.toggle('on', on);
+      e.currentTarget.innerHTML = K.uiIcon('star', 18, on);
+      e.currentTarget.setAttribute('aria-pressed', String(on));
     };
     card.querySelector('.tstar').setAttribute('aria-pressed', String(starred.has(c.id)));
     const ph = card.querySelector('.ph');
@@ -963,8 +978,9 @@
     addButton('\u2039', gridPage - 1, { disabled: gridPage <= 1 });
     const pages = [];
     const push = p => { if (!pages.includes(p)) pages.push(p); };
+    const radius = matchMedia('(max-width: 720px)').matches ? 1 : 2;
     push(1);
-    for (let p = Math.max(2, gridPage - 2); p <= Math.min(totalPages - 1, gridPage + 2); p++) push(p);
+    for (let p = Math.max(2, gridPage - radius); p <= Math.min(totalPages - 1, gridPage + radius); p++) push(p);
     if (totalPages > 1) push(totalPages);
     let previous = 0;
     for (const page of pages) {
@@ -1069,7 +1085,6 @@
     if (tab === 'pose') refreshPoseList();
   }
   function setPartEditMode(enabled) {
-    if (routeSource !== 'nikki') return;
     if (enabled && boneEditMode) btnBoneEdit.click();
     const changed = partEditMode !== !!enabled;
     partEditMode = !!enabled;
@@ -1087,7 +1102,8 @@
       floatPanel.classList.remove('open');
       btnParts.classList.remove('on');
     }
-    if (changed) K.toast(partEditMode ? '部件编辑已开启，点击模型可选择部件' : '已恢复点击播放语音 / 音效', 'info');
+    if (changed) K.toast(partEditMode ? '部件编辑已开启' : '部件编辑已关闭', 'info', 1800, 'mode');
+    panelUI?.refresh(); K.refreshStageUI?.();
   }
   btnPartEdit.addEventListener('click', () => setPartEditMode(!partEditMode));
   $('#exitPartEdit')?.addEventListener('click', () => setPartEditMode(false));
@@ -1095,8 +1111,8 @@
   $('#floatPanel [data-tab="pose"]').addEventListener('click', () => {
     if (partEditMode) { setPartEditMode(false); setFloatPanel('pose'); }
   });
-  btnParts.addEventListener('click', () => routeSource === 'nikki' ? setPartEditMode(true) : setFloatPanel('parts'));
-  btnAnimTab.addEventListener('click', () => { setPartEditMode(false); setFloatPanel('anim'); });
+  btnParts.addEventListener('click', () => setPartEditMode(true));
+  btnAnimTab.addEventListener('click', () => { if (boneEditMode) btnBoneEdit.click(); setPartEditMode(false); setFloatPanel('anim'); });
 
   partsCtl = K.buildPartsPanel({
     listEl: $('#slotList'),
@@ -1204,19 +1220,23 @@
     boneEditMode = !boneEditMode;
     btnBoneEdit.classList.toggle('on', boneEditMode);
     if (boneEditMode) {
-      setFloatPanel('pose');
+      if (cut && !editBaseline) editBaseline = capturePose();
+      if (!floatPanel.classList.contains('open') || floatPanel.dataset.tab !== 'pose') setFloatPanel('pose');
       // 暂停动画: 否则每帧 state.apply 会覆盖手动编辑
       editWasPlaying2 = playing;
       if (playing) { playing = false; setPlayBtn(); }
       hoverBoneName = null;
-      K.toast('骨骼编辑: 点击骨骼选中 · 拖本体平移 · 拖末端旋转 · 右键恢复', 'ok', 4200);
+      K.toast('姿势编辑已开启', 'ok', 1800, 'mode');
     } else {
       editBoneName = null;
       boneDrag = null;
       hoverBoneName = null;
       if (editWasPlaying2) { playing = true; setPlayBtn(); editWasPlaying2 = false; }
-      K.toast('骨骼编辑已关闭', 'ok');
+      K.toast('姿势编辑已关闭', 'ok', 1800, 'mode');
     }
+    btnBoneEdit.setAttribute('aria-pressed', String(boneEditMode));
+    stage.dataset.clickMode = boneEditMode ? 'pose' : partEditMode ? 'part-editing' : 'audio';
+    panelUI?.refresh(); K.refreshStageUI?.();
   });
 
   // 画布坐标(与部件点选同一世界坐标系)
@@ -1258,8 +1278,13 @@
       const isHov = bone.data.name === hoverBoneName;
       const col = isSel ? selCol : (isHov ? hovCol : normCol);
       renderer.line(bone.worldX, bone.worldY, tx, ty, col);
+      // Many portrait rigs use zero-length bones; keep their edit handles visible.
+      const point = (isSel || isHov ? 4 : 2) * (devicePixelRatio || 1);
+      renderer.quad(true, bone.worldX - point, bone.worldY - point,
+        bone.worldX + point, bone.worldY - point, bone.worldX + point, bone.worldY + point,
+        bone.worldX - point, bone.worldY + point, col);
       if (len > 0 && (isSel || isHov)) {
-        const s = 4 / (cut.skeleton.scaleX || 1);
+        const s = 4 * (devicePixelRatio || 1);
         renderer.quad(true, tx - s, ty - s, tx + s, ty - s, tx + s, ty + s, tx - s, ty + s, col);
       }
     }
@@ -1273,7 +1298,7 @@
     const tx = bone.worldX + bone.a * len;
     const ty = bone.worldY + bone.c * len;
     renderer.line(bone.worldX, bone.worldY, tx, ty, col);
-    const s = 6 / (cut.skeleton.scaleX || 1);
+    const s = 6 * (devicePixelRatio || 1);
     renderer.quad(true,
       bone.worldX - s, bone.worldY - s,
       bone.worldX + s, bone.worldY - s,
@@ -1314,9 +1339,11 @@
       b.title = '点击应用该姿势';
       b.onclick = () => {
         if (!cut) return;
+        const previousPose = capturePose();
         applyPoseToSkeleton(cut.skeleton, snaps[name].bones);
         K.updateWorldTransform(cut.skeleton);
         poseLocked = snaps[name].bones;
+        panelUI?.recordEdit(previousPose, capturePose()); panelUI?.refresh();
         $('#poseLock').classList.add('on');
         K.toast('已应用姿势: ' + name + ' (已锁定)', 'ok');
         refreshPoseList();
@@ -1461,8 +1488,8 @@
       for (const layer of cutLayers()) {
         if (layer.active === false) continue;
         if (playing && layer.state) layer.state.update(dt);
-        if (layer.state) layer.state.apply(layer.skeleton);
-        if (poseLocked && layer === cutLayers()[0]) applyPoseToSkeleton(layer.skeleton, poseLocked);
+        if (layer.state && !boneEditMode) layer.state.apply(layer.skeleton);
+        if (poseLocked && !boneEditMode && layer === cutLayers()[0]) applyPoseToSkeleton(layer.skeleton, poseLocked);
         K.updateWorldTransform(layer.skeleton);
         K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
       }
@@ -1495,6 +1522,10 @@
       if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
         playerDrawnSeq = cutLoadSeq;
         loadingPreview.ready(cutLoadSeq);
+        if (!viewerUiReady) {
+          viewerUiReady = true;
+          K.setLibraryStageReady?.(true); panelUI?.refresh(); K.refreshStageUI?.();
+        }
       }
     }
     if (cut && playing) syncTimeline();
@@ -1518,7 +1549,9 @@
     const b = cut.bounds;
     cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
     cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
-    cut.fitScale = Math.min((cv.width * 0.92) / (b.maxX - b.minX), (cv.height * 0.92) / (b.maxY - b.minY));
+    const area = K.stageViewArea(cv);
+    cut.fitScale = Math.min((area.pixelWidth * 0.96) / Math.max(1, b.maxX - b.minX), (area.pixelHeight * 0.96) / Math.max(1, b.maxY - b.minY));
+    cut.fitOffsetX = area.offsetX; cut.fitOffsetY = area.offsetY;
   }
   function applyView() {
     if (!cut) return;
@@ -1526,8 +1559,8 @@
     for (const layer of cutLayers()) {
       layer.skeleton.scaleX = scale;
       layer.skeleton.scaleY = scale;
-      layer.skeleton.x = panX + cut.centerX * scale - (cmpOn && cmp ? cmp.sepMain * scale : 0);
-      layer.skeleton.y = panY + cut.centerY * scale;
+      layer.skeleton.x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
+      layer.skeleton.y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
     }
     if (cmpOn && cmp) {
       cmp.skeleton.scaleX = scale;
@@ -1539,12 +1572,17 @@
   }
   function refit() { if (!cut) return; panX = 0; panY = 0; if (cmpOn && cmp) computeCompareView(); computeView(); applyView(); }
   function set100() { if (!cut) return; fitMode = false; userScale = 1; panX = 0; panY = 0; applyView(); }
-  function resetViewForLoad() { fitMode = true; userScale = 1; panX = 0; panY = 0; }
+  function resetViewForLoad() {
+    fitMode = true; userScale = 1; panX = 0; panY = 0;
+    viewerUiReady = false; editBaseline = null; dragPoseBefore = null;
+    K.setLibraryStageReady?.(false); K.clearToasts?.(); panelUI?.resourceChanged();
+  }
   function zoomBy(factor, anchorX, anchorY) {
     if (!cut) return;
     const old = fitMode ? cut.fitScale : userScale;
     const next = Math.min(8, Math.max(0.05, old * factor));
     if (anchorX === undefined) { anchorX = 0; anchorY = 0; }
+    if (fitMode) { panX += cut.fitOffsetX || 0; panY += cut.fitOffsetY || 0; }
     panX = anchorX - (anchorX - panX) * (next / old);
     panY = anchorY - (anchorY - panY) * (next / old);
     fitMode = false;
@@ -1644,7 +1682,7 @@
 
   // The adapter keeps audio out of exporters, thumbnails, comparison rigs and bone editing.
   function initPortraitAudio() {
-    if (routeSource !== 'nikki' || !window.ArtHubPortraitAudio) return;
+    if (!['nikki', 'crosscore'].includes(routeSource) || !window.ArtHubPortraitAudio) return;
     const talk = speaking => {
       if (!cut) return;
       const name = speaking ? 'talk_start' : 'talk_end';
@@ -1654,7 +1692,10 @@
       }
     };
     portraitAudio = new ArtHubPortraitAudio.Controller({
-      store, popup: makeStagePopup, status, embedded,
+      store, popup: makeStagePopup, status: text => {
+        const message = /^角色台词/.test(text) ? (routeSource === 'crosscore' ? '正在播放角色语音' : '正在播放角色台词') : text;
+        K.toast(message, /^角色声音加载失败/.test(text) ? 'error' : 'voice', 2600, 'voice');
+      }, embedded,
       duration: name => cut?.data.animations.find(a => a.name === name)?.duration || 0,
       advance: delta => {
         if (!cut) return;
@@ -1829,7 +1870,7 @@
     const alias = aliasOf(c.id);
     mName.textContent = alias || c.name || c.id;
     mId.textContent = (alias ? ((chars.find(x => x.id === c.id) || {}).name + ' · ') : '') + c.id;
-    $('#railStar').textContent = store.get('stars', []).includes(c.id) ? '★' : '☆';
+    $('#railStar').innerHTML = K.uiIcon('star', 18, store.get('stars', []).includes(c.id));
     const rt = $('#railThumb');
     rt.innerHTML = '';
     const preview = webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
@@ -2510,6 +2551,7 @@
       if (hit) {
         const [swx, swy] = wpt(e.clientX, e.clientY);
         editBoneName = hit.bone.data.name;
+        dragPoseBefore = capturePose(); panelUI?.refresh();
         if (!(editBoneName in editOrig)) {
           editOrig[editBoneName] = { rotation: hit.bone.rotation, x: hit.bone.x, y: hit.bone.y };
         }
@@ -2534,7 +2576,6 @@
       const nm = hit ? hit.bone.data.name : null;
       if (nm !== hoverBoneName) {
         hoverBoneName = nm;
-        if (nm) status('骨骼: ' + nm + (hit.mode === 'rotate' ? ' · 拖末端旋转' : ' · 拖本体平移'));
       }
     }
     if (boneDrag && cut) {
@@ -2544,7 +2585,6 @@
       if (boneDrag.mode === 'rotate') {
         const a = Math.atan2(wy - boneDrag.oy, wx - boneDrag.ox);
         bone.rotation = boneDrag.startRot + (a - boneDrag.startAngle) * 180 / Math.PI;
-        status('骨骼 ' + boneDrag.boneName + ' · 旋转 ' + (bone.rotation - boneDrag.startRot).toFixed(1) + '° (右键恢复)');
       } else {
         const dx = wx - boneDrag.lastWX, dy = wy - boneDrag.lastWY;
         const pa = bone.parent ? bone.parent.a : 1, pb = bone.parent ? bone.parent.b : 0;
@@ -2553,7 +2593,6 @@
         if (det) { bone.x += (dx * pd - dy * pb) / det; bone.y += (dy * pa - dx * pc) / det; }
         boneDrag.lastWX = wx;
         boneDrag.lastWY = wy;
-        status('骨骼 ' + boneDrag.boneName + ' · 位移 x ' + bone.x.toFixed(1) + ' y ' + bone.y.toFixed(1) + ' (右键恢复)');
       }
       K.updateWorldTransform(cut.skeleton);
       return;
@@ -2565,18 +2604,19 @@
     panX += (e.clientX - down.x) * dpr;
     panY -= (e.clientY - down.y) * dpr;
     down = { x: e.clientX, y: e.clientY };
-    if (fitMode) { fitMode = false; userScale = cut.fitScale; btn100.classList.add('active'); btnFit.classList.remove('active'); }
+    if (fitMode) { panX += cut.fitOffsetX || 0; panY += cut.fitOffsetY || 0; fitMode = false; userScale = cut.fitScale; btn100.classList.add('active'); btnFit.classList.remove('active'); }
     applyView();
   });
   stage.addEventListener('contextmenu', (e) => {
     if (!boneEditMode || !cut) return;
     e.preventDefault();
+    const previousPose = capturePose();
     const hit = hitBoneAt(e.clientX, e.clientY);
     if (hit && (hit.bone.data.name in editOrig)) {
       const b = hit.bone, o = editOrig[hit.bone.data.name];
       b.rotation = o.rotation; b.x = o.x; b.y = o.y;
       K.updateWorldTransform(cut.skeleton);
-      status('已恢复骨骼: ' + hit.bone.data.name);
+      K.toast('已恢复骨骼: ' + hit.bone.data.name, 'info', 1800, 'pose');
     } else {
       const keys = Object.keys(editOrig);
       for (const k of keys) {
@@ -2584,11 +2624,16 @@
         if (b) { b.rotation = editOrig[k].rotation; b.x = editOrig[k].x; b.y = editOrig[k].y; }
       }
       K.updateWorldTransform(cut.skeleton);
-      status(keys.length ? '已恢复 ' + keys.length + ' 根骨骼' : '没有编辑过的骨骼');
+      K.toast(keys.length ? '已恢复 ' + keys.length + ' 根骨骼' : '没有编辑过的骨骼', 'info', 1800, 'pose');
     }
+    panelUI?.recordEdit(previousPose, capturePose()); if (poseLocked) poseLocked = capturePose(); panelUI?.refresh();
   });
   stage.addEventListener('pointerup', (e) => {
-    if (boneDrag) { boneDrag = null; return; }
+    if (boneDrag) {
+      boneDrag = null;
+      if (dragPoseBefore && cut) { const after = capturePose(); panelUI?.recordEdit(dragPoseBefore, after); if (poseLocked) poseLocked = after; }
+      dragPoseBefore = null; panelUI?.refresh(); return;
+    }
     if (down && e.pointerId !== undefined) { try { stage.releasePointerCapture(e.pointerId); } catch (err) {} }
     const wasTap = down && !moved && e.button === 0;
     const tapX = e.clientX, tapY = e.clientY;
@@ -2598,18 +2643,18 @@
       if (boneEditMode) {
         const hit = hitBoneAt(tapX, tapY);
         editBoneName = hit ? hit.bone.data.name : null;
-        status(editBoneName ? '已选中骨骼: ' + editBoneName : '未选中骨骼(点击骨骼本体或末端)');
+        panelUI?.refresh();
         return;
       }
       const rect = cv.getBoundingClientRect();
       const dpr = devicePixelRatio || 1;
       const name = K.hitTestSlot(cut.skeleton, (tapX - rect.left) * dpr - cv.width / 2, cv.height / 2 - (tapY - rect.top) * dpr, K.getSpine(cur && cur.spineVersion));
       if (name) {
-        if (partEditMode || routeSource !== 'nikki') showPartPopup(name, tapX, tapY);
-        else {
+        if (partEditMode) showPartPopup(name, tapX, tapY);
+        else if (routeSource === 'nikki' || routeSource === 'crosscore') {
           hidePartPopup();
           const hint = portraitAudio ? portraitAudio.interactionHint() : '角色声音模块尚未就绪，请稍后重试';
-          if (hint) { status(hint); K.toast(hint, 'info', 3500); }
+          if (hint) K.toast(hint, 'info', 3500, 'voice');
           portraitAudio?.interact();
         }
       } else hidePartPopup();
@@ -2684,6 +2729,8 @@
   });
 
   // ---------- 启动 ----------
+  // Enhanced panel experiment is paused; original panel handlers stay active.
+  K.initStageUI({ canvas: cv, refit: () => { if (cut && fitMode) { computeView(); applyView(); } } });
   window.onerror = (msg) => { status('脚本错误: ' + msg); };
   window.onunhandledrejection = (e) => { status('异步错误: ' + (e.reason && e.reason.message || e.reason)); };
   // 多版本运行时: 静态脚本已载入 4.1, 这里再捕获并补载 4.0/4.2

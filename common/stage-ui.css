@@ -1,0 +1,23 @@
+/* Keep the existing desktop/mobile layout and original speed slider. */
+.rail.hide, .top-pill.hide, .tool-strip.hide, .playbar.hide, .status.hide { visibility: hidden !important; }
+#floatPanel .rp-page { min-height: 0; overscroll-behavior: contain; }
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"] body .playbar:not(.collapsed) { padding: 6px !important; gap: 6px !important; align-items: center !important; }
+  html[data-gav-ui="clean"] body .playbar-toggle { flex: 0 0 40px !important; width: 40px !important; height: 40px !important; }
+  html[data-gav-ui="clean"] body .playbar .playbar-controls {
+    grid-template-columns: 40px minmax(24px, 1fr) 64px !important;
+    grid-template-rows: 40px 40px !important;
+    gap: 6px 8px !important;
+    align-items: center;
+  }
+  html[data-gav-ui="clean"] body .playbar .playbar-controls > .ctl { width: 40px !important; height: 40px !important; }
+  html[data-gav-ui="clean"] body .playbar input[type="range"] { height: 40px; }
+  html[data-gav-ui="clean"] body .playbar :is(.pb-time, .pb-speed-val) { font-variant-numeric: tabular-nums; text-align: center; }
+  html[data-gav-ui="clean"] body .playbar .pb-time { font-size: 11px !important; }
+  html[data-gav-ui="clean"] body .playbar.playbar-speed-only .playbar-controls { grid-template-columns: 40px minmax(24px, 1fr) 40px !important; grid-template-rows: 40px !important; }
+  .playbar.playbar-speed-only #pbSpeed { grid-row: 1; }
+  .playbar.playbar-speed-only #pbSpeedVal { grid-row: 1; }
+  .playbar.playbar-speed-only .playbar-controls > span:empty { display: none; }
+  /* The same panel is already available in the right-hand tools. */
+  .playbar.playbar-speed-only #btnPanel { display: none !important; }
+}

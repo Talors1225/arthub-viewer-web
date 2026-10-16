@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=d54e4ecbf2f7">
+<link rel="stylesheet" href="../../common/kit.css?v=717ec528e4b9">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=717ec528e4b9">
+<link rel="stylesheet" href="../../common/library-ui.css?v=717ec528e4b9">
+<link rel="stylesheet" href="../../common/visual.css?v=717ec528e4b9">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -266,8 +269,8 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=698fcc134bb5"></script>
-  <script src="../../arthub-cos.js?v=d54e4ecbf2f7"></script>
+  <script src="../../arthub-cos-config.js?v=d8282e2ac904"></script>
+  <script src="../../arthub-cos.js?v=717ec528e4b9"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -293,10 +296,8 @@
       <button id="playbarToggle" class="playbar-toggle" type="button" aria-expanded="false" title="&#x5c55;&#x5f00;&#x64ad;&#x653e;&#x63a7;&#x5236;">&#x2261;</button>
       <div class="playbar-controls">
         <button id="pbPlay" class="ctl active" title="&#x64ad;&#x653e;/&#x6682;&#x505c; (Space)"></button>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)">&#x901f;&#x5ea6;
-          <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1">
-          <span class="pb-speed-val" id="pbSpeedVal">1x</span>
-        </label>
+        <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1">
+        <span class="pb-speed-val" id="pbSpeedVal">1x</span>
         <span style="flex:1"></span>
         <button id="btnPanel" class="ctl active" title="&#x663e;&#x793a;/&#x9690;&#x85cf;&#x9762;&#x677f; (T)">&#x9762;&#x677f;</button>
       </div>
@@ -392,9 +393,11 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=d54e4ecbf2f7"></script>
-<script src="../../common/kit.js?v=d54e4ecbf2f7"></script>
-<script src="../../common/asset-loader.js?v=d54e4ecbf2f7"></script>
+<script src="../../common/asset-display-overrides.js?v=717ec528e4b9"></script>
+<script src="../../common/kit.js?v=717ec528e4b9"></script>
+<script src="../../common/asset-loader.js?v=717ec528e4b9"></script>
+<script src="../../common/stage-ui.js?v=717ec528e4b9"></script>
+<script src="../../common/library-ui.js?v=717ec528e4b9"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -446,7 +449,7 @@
     playbarCollapsed = !!collapsed;
     playbar.classList.toggle('collapsed', playbarCollapsed);
     playbarToggle.setAttribute('aria-expanded', String(!playbarCollapsed));
-    playbarToggle.textContent = playbarCollapsed ? '\u2261' : '\u00d7';
+    K.setUiIcon(playbarToggle, playbarCollapsed ? 'controls' : 'chevronDown');
     playbarToggle.title = playbarCollapsed ? '\u5c55\u5f00\u64ad\u653e\u63a7\u5236' : '\u6536\u8d77\u64ad\u653e\u63a7\u5236';
     store.set('playbarCollapsed', playbarCollapsed);
   };
@@ -467,7 +470,7 @@
       chevR: '<path d="m9 18 6-6-6-6"/>',
       grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
     }[name] || '';
-    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+    return K.uiIcon(name, size) || '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + p + '</svg>';
   };
   $('#railGrid').innerHTML = I('grid', 16);
   $('#btnPrev').innerHTML = I('chevL', 13);
@@ -487,10 +490,10 @@
   btnDebug.classList.toggle('active', K.debugActive(debugFlags));
   setPbPlay();
   pbSpeed.value = String(speedAll);
-  pbSpeedVal.textContent = Number(speedAll).toFixed(2).replace(/0+$/, '').replace(/.$/, '') + 'x';
+  pbSpeedVal.textContent = Number(speedAll).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'x';
   pbSpeed.addEventListener('input', () => {
     speedAll = Number(pbSpeed.value);
-    pbSpeedVal.textContent = Number(speedAll).toFixed(2).replace(/0+$/, '').replace(/.$/, '') + 'x';
+    pbSpeedVal.textContent = Number(speedAll).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'x';
     store.set('speed', speedAll);
   });
   pbPlay.addEventListener('click', () => { pausedAll = !pausedAll; setPbPlay(); });
@@ -570,6 +573,7 @@
   let curEntry = null;
   let layers = [];
   let groupOX = 0, groupOY = 0, globalZoom = 1;
+  let stageFitMode = true, viewerUiReady = false;
   let selIdx = -1;
   let lastManual = 0;
   let loadSeq = 0;
@@ -583,7 +587,15 @@
   let sortMode = store.get('sortMode', 'default');
   let sortDirection = store.get('sortDirection', 'asc');
   let gridPage = 1;
-  const GRID_PAGE = K.libraryPageSize();
+  let GRID_PAGE = K.libraryPageSize();
+  matchMedia('(max-width: 720px)').addEventListener('change', () => {
+    const size = K.libraryPageSize();
+    if (size === GRID_PAGE) return;
+    const firstIndex = (gridPage - 1) * GRID_PAGE;
+    GRID_PAGE = size;
+    gridPage = Math.floor(firstIndex / size) + 1;
+    if (gridView.classList.contains('open')) renderGrid();
+  });
 
   function setChrome(onStage) {
     rail.classList.toggle('hide', !onStage);
@@ -616,8 +628,9 @@
     addButton('\u2039', gridPage - 1, { disabled: gridPage <= 1 });
     const pages = [];
     const push = p => { if (!pages.includes(p)) pages.push(p); };
+    const radius = matchMedia('(max-width: 720px)').matches ? 1 : 2;
     push(1);
-    for (let p = Math.max(2, gridPage - 2); p <= Math.min(totalPages - 1, gridPage + 2); p++) push(p);
+    for (let p = Math.max(2, gridPage - radius); p <= Math.min(totalPages - 1, gridPage + radius); p++) push(p);
     if (totalPages > 1) push(totalPages);
     let previous = 0;
     for (const page of pages) {
@@ -668,14 +681,15 @@
         + '<div class="tm"><div class="tn">' + K.esc(label) + '</div>'
         + '<div class="ts">' + K.esc(c.group || '') + '</div></div>'
         + '<span class="tt">' + (c.composite ? c.layers.length + ' \u5c42' : '\u5355\u6a21') + '</span>'
-        + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="\u6536\u85cf/\u53d6\u6d88\u6536\u85cf">' + (starred.has(c.id) ? '\u2605' : '\u2606') + '</button>';
+        + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="\u6536\u85cf/\u53d6\u6d88\u6536\u85cf">' + K.uiIcon('star', 18, starred.has(c.id)) + '</button>';
       card.onclick = () => { loadSelection(c); };
       card.querySelector('.tstar').onclick = (e) => {
         e.stopPropagation();
         toggleStarById(c.id);
         const on = store.get('stars', []).includes(c.id);
-        e.target.classList.toggle('on', on);
-        e.target.textContent = on ? '\u2605' : '\u2606';
+        e.currentTarget.classList.toggle('on', on);
+        e.currentTarget.innerHTML = K.uiIcon('star', 18, on);
+        e.currentTarget.setAttribute('aria-pressed', String(on));
       };
       grid.appendChild(card);
       const ph = card.querySelector('.ph');
@@ -828,6 +842,7 @@
     if (layers.length && layers.some(layer => layer.visible) && canvas.width > 1 && canvas.height > 1 && !raw.isContextLost()) {
       playerDrawnSeq = loadSeq;
       loadingPreview.ready(loadSeq);
+      if (!viewerUiReady) { viewerUiReady = true; K.setLibraryStageReady?.(true); }
     }
     // 同步截取缩略图 (WebGL 需 flush 后才能 toDataURL)
     if (capturePending && curEntry) {
@@ -912,11 +927,12 @@
       maxY = Math.max(maxY, b.maxY);
     }
     const w = maxX - minX, h = maxY - minY;
-    let fit = (w > 0 && h > 0) ? Math.min((canvas.width * 0.85) / w, (canvas.height * 0.85) / h) : 1;
+    const area = K.stageViewArea(canvas);
+    let fit = (w > 0 && h > 0) ? Math.min((area.pixelWidth * 0.96) / w, (area.pixelHeight * 0.96) / h) : 1;
     if (!isFinite(fit) || fit <= 0) fit = 1;
     for (const L of layers) L.fitScale = fit;
-    groupOX = -(minX + w / 2);
-    groupOY = -(minY + h / 2);
+    groupOX = -(minX + w / 2) + area.offsetX / fit;
+    groupOY = -(minY + h / 2) + area.offsetY / fit;
     applyAllTransforms();
   }
 
@@ -975,6 +991,7 @@
 
   async function loadSelection(entry) {
     const seq = ++loadSeq;
+    viewerUiReady = false; K.setLibraryStageReady?.(false); K.clearToasts?.();
     selectionRequest?.abort();
     const request = selectionRequest = new AbortController();
     let loaded = [];
@@ -1028,6 +1045,7 @@
       layers = loaded;
 
       globalZoom = 1;
+      stageFitMode = true;
       groupOX = 0;
       groupOY = 0;
       refitAll();
@@ -1038,7 +1056,7 @@
       buildSkinChips();
       status('就绪: ' + entry.label + ' · ' + layers.length + ' 层');
       lastManual = Date.now();
-      $('#railStar').textContent = store.get('stars', []).includes(entry.id) ? '★' : '☆';
+      $('#railStar').innerHTML = K.uiIcon('star', 18, store.get('stars', []).includes(entry.id));
       // 在下一帧渲染循环里截取缩略图 (WebGL 需同步截取)
       capturePending = entry.id;
       playerReady(seq);
@@ -1350,6 +1368,7 @@
     });
     renderGrid();
     const entry2 = characters.find(x => x.id === id);
+    if (curEntry?.id === id) $('#railStar').innerHTML = K.uiIcon('star', 18, starred.includes(id));
     K.toast(starred.includes(id) ? '已收藏: ' + (entry2 ? entry2.label : id) : '已取消收藏', 'ok');
   }
   function nav(delta) {
@@ -1525,6 +1544,7 @@
   // ---------- 视图控制 ----------
   function zoomBy(factor, anchorX, anchorY) {
     if (!layers.length) return;
+    stageFitMode = false;
     const z1 = globalZoom;
     const z2 = Math.min(4, Math.max(0.1, z1 * factor));
     if (anchorX === undefined) {
@@ -1538,6 +1558,7 @@
     applyAllTransforms();
   }
   const doFit = () => {
+    stageFitMode = true;
     globalZoom = 1;
     groupOX = 0;
     groupOY = 0;
@@ -1550,13 +1571,14 @@
   $('#btnFit2').addEventListener('click', doFit);
   $('#btnReset2').addEventListener('click', doFit);
   zoomRange.addEventListener('input', () => {
+    stageFitMode = false;
     globalZoom = parseFloat(zoomRange.value);
     applyAllTransforms();
   });
   K.observeCanvas(canvas, () => {
     K.resizeCanvas(canvas, renderer);
     K.syncRendererSize(canvas, gl, renderer);
-    if (globalZoom === 1) refitAll(); else applyAllTransforms();
+    if (stageFitMode) refitAll(); else applyAllTransforms();
   });
 
   // ---------- 交互(拖层 / 平移 / 选层 / 滚轮) ----------
@@ -1582,6 +1604,7 @@
     lastPos = { x: e.clientX, y: e.clientY };
     if (Math.abs(e.clientX - downPos.x) + Math.abs(e.clientY - downPos.y) > 5) moved = true;
     if (!moved) return;
+    stageFitMode = false;
     if (panMode) {
       groupOX += dx;
       groupOY += dy;
@@ -1833,6 +1856,7 @@
   });
 
   // ---------- 角色数据 ----------
+  K.initStageUI({ canvas, refit: () => { if (stageFitMode) refitAll(); } });
   setupDesktopBridge();
   K.initSearchPalette();
   Promise.all([
