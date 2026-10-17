@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>交错战线 · 互动立绘 | ArtHub</title>
-<link rel="stylesheet" href="../../common/kit.css?v=fb448152053a">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=fb448152053a">
-<link rel="stylesheet" href="../../common/library-ui.css?v=fb448152053a">
-<link rel="stylesheet" href="../../common/visual.css?v=fb448152053a">
+<link rel="stylesheet" href="../../common/kit.css?v=38532727576b">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=38532727576b">
+<link rel="stylesheet" href="../../common/library-ui.css?v=38532727576b">
+<link rel="stylesheet" href="../../common/visual.css?v=38532727576b">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261017-sound1">
 <link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261017-sound1">
-  <script src="../../arthub-cos-config.js?v=d0c16aae92ba"></script>
-  <script src="../../arthub-cos.js?v=fb448152053a"></script>
+  <script src="../../arthub-cos-config.js?v=b9a47335fdb7"></script>
+  <script src="../../arthub-cos.js?v=38532727576b"></script>
 </head>
 <body class="game-interaction-viewer crosscore-interaction-viewer" data-pose-tools="disabled">
   <main id="stage" class="stage" aria-label="交错战线互动立绘舞台">
@@ -59,7 +59,7 @@
   <div id="gridView" class="library-ui" aria-label="互动立绘资源库">
     <div class="grid-head">
       <a class="kit-home-action" href="../../index.html" aria-label="返回 ArtHub 首页" title="ArtHub 首页"></a>
-      <span class="grid-title">交错战线 · 互动立绘</span>
+      <span class="grid-title">资源库</span>
       <span class="grid-sub" id="gridSub"></span>
       <div id="filterChips" aria-label="资源分类">
         <a class="filter-chip crosscore-resource-mode on" role="button" data-crosscore-mode="interaction" href="../../crosscore/index.html?mode=interaction">互动立绘</a>
@@ -69,13 +69,17 @@
         <button class="filter-chip" type="button" data-group="角色皮肤" aria-pressed="false">角色皮肤</button>
         <button class="filter-chip" type="button" data-group="多人场景" aria-pressed="false">多人场景</button>
         <button class="filter-chip" type="button" data-group="剧情互动" aria-pressed="false">剧情互动</button>
+        <select id="crosscoreSort" class="sort-sel" aria-label="资源排序方式"><option value="name">名称</option><option value="group">分组 / 名称</option><option value="default">默认顺序</option></select>
+        <button id="crosscoreSortDir" class="sort-dir-toggle" type="button" aria-label="切换排序方向"></button>
       </div>
       <input id="gridSearch" class="kit-grid-search text-input" type="search" placeholder="搜索角色 / 皮肤 / 场景 / 编号" aria-label="搜索互动立绘">
       <button id="btnTheme" class="edit-btn" type="button" title="打开主题调色板" aria-label="打开主题调色板">◐</button>
+      <a class="grid-sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer" aria-label="爱发电 · 支持 ArtHub 维护">爱发电</a>
       <button id="gridClose" class="ctl" type="button">返回舞台</button>
       <select id="model" hidden aria-hidden="true" tabindex="-1"></select>
     </div>
     <div id="thumbGrid" class="thumb-grid"></div>
+    <nav id="gridPagination" class="grid-pagination" aria-label="资源库分页"></nav>
   </div>
 
   <aside id="floatPanel" aria-label="互动与规则面板">
@@ -151,11 +155,11 @@
     window.addEventListener('unhandledrejection', event => window.__crosscoreBootError(event.reason));
   })();
   </script>
-  <script src="../../common/asset-display-overrides.js?v=fb448152053a"></script>
-  <script src="../../common/kit.js?v=fb448152053a"></script>
-  <script src="../../common/asset-loader.js?v=fb448152053a"></script>
-  <script src="../../common/stage-ui.js?v=fb448152053a"></script>
-  <script src="../../common/library-ui.js?v=fb448152053a"></script>
+  <script src="../../common/asset-display-overrides.js?v=38532727576b"></script>
+  <script src="../../common/kit.js?v=38532727576b"></script>
+  <script src="../../common/asset-loader.js?v=38532727576b"></script>
+  <script src="../../common/stage-ui.js?v=38532727576b"></script>
+  <script src="../../common/library-ui.js?v=38532727576b"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261017-sound1"></script>
   <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
   <script src="../vendor/spine-webgl-4.2.js?v=20261015-2"></script>

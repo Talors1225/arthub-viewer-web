@@ -5,7 +5,7 @@
   if (!K) return;
   let ui = null;
   let stageReady = false;
-  const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'azurlane-interaction'].includes(part)) || 'viewer';
+  const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'azurlane-interaction', 'crosscore-interaction', 'crosscore'].includes(part)) || 'viewer';
   const setText = (node, text) => { if (node && node.textContent !== text) node.textContent = text; };
   const setAttribute = (node, name, value) => { if (node && node.getAttribute(name) !== value) node.setAttribute(name, value); };
   const make = (tag, className) => {

@@ -10,12 +10,19 @@ const sourceRoot = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const response = await fetch(`${sourceRoot}/catalog/catalog.json`);
 if (!response.ok) throw new Error(`立绘目录读取失败（${response.status}）`);
 const catalog = await response.json();
-const models = catalog.models, modelById = new Map(models.map(model => [Number(model.id), model]));
+const models = catalog.models.filter(model => model.available), modelById = new Map(models.map(model => [Number(model.id), model]));
 let model, scene, controller, transition, transitionUntil = 0, requestId = 0, last = performance.now() / 1000;
 let audio = new Audio(), audioResult = null, cueName = null, pointer = null, lastFailure = null, lastActionState = '';
 let callbacks = [], specialMode = false, searchTimer, pendingFit = null, modelGroupFilter = 'all';
 const playback = { playing: true, speed: 1, loop: true, time: 0 };
 let animationPreview = null, activeTrack = 0;
+let gridPage = 1, gridPageSize = K.libraryPageSize();
+const libraryPrefs = K.Store('crosscore-interaction');
+let sortMode = libraryPrefs.get('sortMode', 'name'), sortDirection = libraryPrefs.get('sortDirection', 'asc');
+const thumbnailManifest = await fetch('../../thumbs/index.json').then(r => r.ok ? r.json() : null).catch(() => null);
+const libraryThumbs = thumbnailManifest?.items || {};
+const thumbnailFor = row => libraryThumbs['crosscore-interaction:' + row.id];
+
 let editor = null, exporting = false, volume = Number(localStorage.getItem('arthub:crosscore:volume') ?? .65);
 audio.volume = volume;
 const PREVIEW_TRACK = 50;
@@ -26,10 +33,15 @@ $('#coverage').textContent = `${catalog.summary.availableCount} 套可互动 · 
 
 function fillModels() {
   const select = $('#model'), selected = select.value || String(model?.id || ''), query = $('#gridSearch').value.trim().toLocaleLowerCase();
-  const matches = models.filter(m => (modelGroupFilter === 'favorite' ? K.favs.has(favoriteEntry(m).k) : modelGroupFilter === 'all' || m.group === modelGroupFilter) && `${m.name} ${m.title} ${m.id} ${m.group}`.toLocaleLowerCase().includes(query));
+  let matches = models.filter(m => (modelGroupFilter === 'favorite' ? K.favs.has(favoriteEntry(m).k) : modelGroupFilter === 'all' || m.group === modelGroupFilter) && `${m.name} ${m.title} ${m.id} ${m.group}`.toLocaleLowerCase().includes(query));
+  const direction = sortDirection === 'desc' ? -1 : 1;
+  const byName = (a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true, sensitivity: 'base' });
+  if (sortMode === 'name') matches = matches.slice().sort((a, b) => direction * byName(a, b));
+  else if (sortMode === 'group') matches = matches.slice().sort((a, b) => direction * (a.group.localeCompare(b.group, 'zh-CN') || byName(a, b)));
+  else if (sortDirection === 'desc') matches = matches.slice().reverse();
   select.replaceChildren();
   for (const groupName of ['角色皮肤', '多人场景', '剧情互动']) {
-    const rows = matches.filter(m => m.group === groupName).sort((a, b) => a.id - b.id);
+    const rows = matches.filter(m => m.group === groupName);
     if (!rows.length) continue;
     const group = document.createElement('optgroup'); group.label = `${groupName}（${rows.filter(m => m.available).length}）`;
     for (const row of rows) { const option = new Option(`${row.name}${row.available ? '' : '（资源未配置）'}`, row.id); option.disabled = !row.available; group.append(option); }
@@ -38,8 +50,12 @@ function fillModels() {
   if (matches.some(m => String(m.id) === selected)) select.value = selected;
   else select.value = String(matches.find(m => m.available)?.id || '');
   $('#modelMeta').textContent = `${matches.filter(m => m.available).length} 套匹配 · 共 ${catalog.summary.availableCount} 套可互动`;
-  $('#gridSub').textContent = `${matches.length} 套 · ${matches.filter(m => m.available).length} 套可互动`;
-  renderModelCards(matches);
+  gridPageSize = K.libraryPageSize();
+  const pageCount = Math.max(1, Math.ceil(matches.length / gridPageSize));
+  gridPage = Math.min(Math.max(1, gridPage), pageCount);
+  $('#gridSub').textContent = matches.length + ' 个资源 · 第 ' + gridPage + ' / ' + pageCount + ' 页';
+  renderModelCards(matches.slice((gridPage - 1) * gridPageSize, gridPage * gridPageSize));
+  renderPagination(pageCount); updateLibraryCounts();
   $('#btnPrev').disabled = $('#btnNext').disabled = !matches.some(m => m.available);
   const starred = !!model && K.favs.has(favoriteEntry(model).k);
   $('#railStar').disabled = !model;
@@ -50,12 +66,12 @@ function renderModelCards(rows) {
   const current = String(model?.id || '');
   const fragment = document.createDocumentFragment();
   for (const row of rows) {
-    const card = document.createElement('button');
-    card.type = 'button';
+    const card = document.createElement('div');
+    card.setAttribute('role', 'button'); card.tabIndex = 0; card.dataset.id = String(row.id);
     card.className = `thumb-card${String(row.id) === current ? ' active' : ''}`;
-    card.disabled = !row.available;
+
     card.setAttribute('aria-label', `${row.name}${row.available ? '' : '，本地资源未配置'}`);
-    card.title = row.available ? `${row.name} · ${row.id}` : `${row.name} · ${row.unavailableReason || '本地资源未配置'}`;
+    card.title = row.name;
     const picture = document.createElement('span');
     picture.className = 'ph';
     const mark = document.createElement('span');
@@ -64,7 +80,7 @@ function renderModelCards(rows) {
     const type = document.createElement('span');
     type.className = 'tt';
     type.textContent = row.group || '互动立绘';
-    picture.append(mark);
+    const thumb = thumbnailFor(row); K.setPreview(picture, thumb ? '../../thumbs/' + thumb : null);
     const text = document.createElement('span');
     text.className = 'tm';
     const name = document.createElement('span');
@@ -72,9 +88,14 @@ function renderModelCards(rows) {
     name.textContent = row.name;
     const meta = document.createElement('span');
     meta.className = 'ts';
-    meta.textContent = `${row.title || row.group} · ${row.id}${row.available ? '' : ' · 本地资源未配置'}`;
+    meta.textContent = row.title && row.title !== row.name ? row.title : '';
     text.append(name, meta);
-    card.append(type, picture, text);
+    const star = document.createElement('button'); star.type = 'button'; star.className = 'tstar';
+    const favorite = K.favs.has(favoriteEntry(row).k); star.classList.toggle('on', favorite);
+    star.title = favorite ? '取消收藏' : '收藏'; star.setAttribute('aria-label', star.title); star.setAttribute('aria-pressed', String(favorite)); star.innerHTML = K.uiIcon('star', 18, favorite);
+    star.addEventListener('click', event => { event.stopPropagation(); K.favs.toggle(favoriteEntry(row)); fillModels(); });
+    card.append(type, picture, text, star);
+    card.addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('.tstar')) { event.preventDefault(); card.click(); } });
     card.addEventListener('click', () => {
       setPanelOpen('library', false);
       loadModel(row.id).catch(fail);
@@ -83,6 +104,31 @@ function renderModelCards(rows) {
   }
   $('#thumbGrid').replaceChildren(fragment);
 }
+
+function updateLibraryCounts() {
+ for (const button of document.querySelectorAll('[data-group]')) {
+  const group = button.dataset.group;
+  const count = models.filter(row => group === 'all' || group === 'favorite' ? group === 'all' || K.favs.has(favoriteEntry(row).k) : row.group === group).length;
+  button.hidden = group !== 'favorite' && group !== 'all' && count === 0;
+  if (group === 'favorite') { button.classList.add('library-favorites'); button.innerHTML = K.uiIcon('star', 18); button.setAttribute('aria-label', '收藏资源，' + count + ' 项'); }
+  else { button.replaceChildren(document.createTextNode(group === 'all' ? '全部 ' : group + ' ')); const n = document.createElement('span'); n.className = 'n'; n.textContent = count; button.append(n); }
+ }
+ const button = $('#crosscoreSortDir'), desc = sortDirection === 'desc';
+ K.setUiIcon(button, desc ? 'down' : 'up', desc ? '降序' : '升序');
+
+ button.setAttribute('aria-label', '当前' + (desc ? '降序' : '升序') + '；点击切换');
+}
+function renderPagination(totalPages){
+ for(const nav of K.paginationHosts($('#gridView'))){nav.replaceChildren();nav.hidden=totalPages<=1;if(totalPages<=1)continue;
+  const add=(label,page,{current=false,disabled=false,gap=false}={})=>{const button=document.createElement(gap?'span':'button');button.className=gap?'grid-page-gap':'grid-page-btn'+(current?' on':'');button.textContent=label;if(!gap){button.type='button';button.disabled=disabled;if(current)button.setAttribute('aria-current','page');button.setAttribute('aria-label',label==='‹'?'上一页':label==='›'?'下一页':'第 '+label+' 页');if(!disabled)button.onclick=()=>{gridPage=page;fillModels();$('#gridView').scrollTo({top:0,behavior:'smooth'});};}nav.append(button);};
+  add('‹',gridPage-1,{disabled:gridPage<=1});const radius=matchMedia('(max-width: 720px)').matches?1:2,pages=[...new Set([1,...Array.from({length:Math.max(0,Math.min(totalPages-1,gridPage+radius)-Math.max(2,gridPage-radius)+1)},(_,i)=>Math.max(2,gridPage-radius)+i),totalPages])].sort((a,b)=>a-b);let previous=0;for(const page of pages){if(previous&&page-previous>1)add('…',undefined,{gap:true});add(String(page),page,{current:page===gridPage});previous=page;}add('›',gridPage+1,{disabled:gridPage>=totalPages});
+ }
+}
+$('#crosscoreSort').value = sortMode;
+$('#crosscoreSort').addEventListener('change', event => { sortMode = event.target.value; libraryPrefs.set('sortMode', sortMode); gridPage = 1; fillModels(); });
+$('#crosscoreSortDir').addEventListener('click', () => { sortDirection = sortDirection === 'desc' ? 'asc' : 'desc'; libraryPrefs.set('sortDirection', sortDirection); gridPage = 1; fillModels(); });
+matchMedia('(max-width: 720px)').addEventListener('change', () => { const first = (gridPage - 1) * gridPageSize; gridPageSize = K.libraryPageSize(); gridPage = Math.floor(first / gridPageSize) + 1; fillModels(); });
+
 function step(direction) {
   const options = [...$('#model').options].filter(option => !option.disabled);
   if (!options.length) return;
@@ -245,6 +291,8 @@ async function loadModel(identity) {
   controller = new InteractionController({ ...model, idle: loaded.idle }, handleInteraction, track => scene?.trackStatus(track));
   $('#loading').hidden = true; K.setLibraryStageReady(true);
   $('#stage-info').textContent = `${model.name} · ${model.actions.length} 条互动配置`;
+  const thumb = thumbnailFor(model); K.setPreview($('#railThumb'), thumb ? '../../thumbs/' + thumb : null);
+  document.title = model.name + ' · ArtHub';
   const gestures = [...new Set(model.actions.filter(a => a.gesture).map(a => gestureNames[a.gesture]))];
   $('#hint').textContent = `点击热点播放对应反应。${gestures.length ? `本套还支持：${gestures.join('、')}。` : '可打开热点显示，查看可点击位置。'}`;
   $('#feedback').textContent = `${model.name} 已就绪`; $('#detail').textContent = `${model.group} · ${model.id} · ${model.actions.length} 条交互配置`;
@@ -405,9 +453,7 @@ function releasePointer(event, cancelled = false) {
 }
 stage.addEventListener('pointerup', event => releasePointer(event)); stage.addEventListener('pointercancel', event => releasePointer(event, true));
 $('#gridSearch').addEventListener('input', () => {
-  fillModels(); clearTimeout(searchTimer);
-  const identity = $('#model').value;
-  if (identity && identity !== String(model?.id)) searchTimer = setTimeout(() => { if ($('#model').value === identity) loadModel(identity).catch(fail); }, 180);
+  gridPage = 1; fillModels();
 });
 $('#model').addEventListener('change', () => { clearTimeout(searchTimer); loadModel($('#model').value).catch(fail); });
 $('#btnPrev').addEventListener('click', () => step(-1)); $('#btnNext').addEventListener('click', () => step(1));
@@ -442,7 +488,7 @@ document.querySelectorAll('[data-panel-tab]').forEach(tab => tab.addEventListene
   document.querySelectorAll('[data-panel-page]').forEach(page => page.classList.toggle('on', page.dataset.panelPage === pageName));
 }));
 document.querySelectorAll('[data-group]').forEach(button => button.addEventListener('click', () => {
-  modelGroupFilter = button.dataset.group;
+  modelGroupFilter = button.dataset.group; gridPage = 1;
   document.querySelectorAll('[data-group]').forEach(chip => {
     const active = chip === button;
     chip.classList.toggle('on', active);

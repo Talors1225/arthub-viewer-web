@@ -212,3 +212,13 @@
     display: none;
   }
 }
+
+/* Match the standard ArtHub resource cards and compact mobile header. */
+.crosscore-interaction-viewer #gridView .thumb-card { position:relative; display:block; color:var(--text); }
+.crosscore-interaction-viewer #gridView .thumb-card .ph { aspect-ratio:5 / 4; overflow:hidden; }
+.crosscore-interaction-viewer #gridView .thumb-card .ph img { display:block; width:100%; height:100%; max-width:none; max-height:none; padding:10px; object-fit:contain; }
+.crosscore-interaction-viewer #gridView .thumb-card .tt { position:absolute; top:8px; left:8px; padding:3px 7px; border:1px solid rgba(255,255,255,.12); border-radius:999px; background:rgba(10,14,20,.72); color:#dfe5ef; font-size:10px; pointer-events:none; }
+.crosscore-interaction-viewer #gridView .thumb-card .tstar { position:absolute; top:7px; right:7px; z-index:1; width:32px; height:32px; padding:6px; border:0; border-radius:8px; background:transparent; color:var(--text-faint); cursor:pointer; }
+.crosscore-interaction-viewer #gridView .thumb-card .tstar:hover { color:var(--text); }
+.crosscore-interaction-viewer #gridView .thumb-card .tstar.on { color:var(--star); }
+.crosscore-interaction-viewer #gridView .thumb-card .ts:empty { display:none !important; }
