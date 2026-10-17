@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b0f">
+  <title>交错战线 · 资源库 | ArtHub</title>
+  <link rel="stylesheet" href="../common/kit.css?v=f8554a466c01">
+  <link rel="stylesheet" href="../common/visual.css?v=f8554a466c01">
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #090b0f;
+    }
+    body.arthub-home.arthub-crosscore-library { min-height: 0; }
+    .crosscore-library-shell {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+    .viewer-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #090b0f;
+    }
+    .viewer-frame[hidden] { display: none; }
+  </style>
+</head>
+<body class="arthub-home arthub-crosscore-library">
+  <main class="crosscore-library-shell" aria-label="交错战线资源库">
+    <iframe id="spineViewer" class="viewer-frame" src="viewer/cutscene.html" title="交错战线 Spine 资源库"></iframe>
+    <iframe id="interactionViewer" class="viewer-frame" data-src="../crosscore-interaction/viewer/index.html" title="交错战线互动立绘资源库" hidden></iframe>
+  </main>
+  <script>
+    (() => {
+      const frames = {
+        spine: document.getElementById('spineViewer'),
+        interaction: document.getElementById('interactionViewer')
+      };
+      const homePath = new URL('../index.html', location.href).pathname;
+      let currentMode = null;
+
+      function setMode(mode, updateHistory = true) {
+        if (!frames[mode]) return;
+        const changed = currentMode !== mode;
+        currentMode = mode;
+        for (const key of Object.keys(frames)) frames[key].hidden = key !== mode;
+        const activeFrame = frames[mode];
+        if (mode === 'interaction' && !activeFrame.hasAttribute('src')) {
+          activeFrame.src = activeFrame.dataset.src;
+        }
+        if (changed && updateHistory) {
+          const next = new URL(location.href);
+          if (mode === 'interaction') next.searchParams.set('mode', 'interaction');
+          else next.searchParams.delete('mode');
+          history.pushState({ crosscoreMode: mode }, '', next);
+        }
+        requestAnimationFrame(() => {
+          try {
+            activeFrame.contentWindow.dispatchEvent(new activeFrame.contentWindow.Event('resize'));
+          } catch (_) {}
+        });
+      }
+
+      function bindViewerNavigation(frame) {
+        const attach = () => {
+          let doc;
+          try { doc = frame.contentDocument; } catch (_) { return; }
+          if (!doc || doc.__crosscoreLibraryNavigationBound) return;
+          doc.__crosscoreLibraryNavigationBound = true;
+          doc.addEventListener('click', event => {
+            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            const target = event.target;
+            const anchor = target && typeof target.closest === 'function' ? target.closest('a[href]') : null;
+            if (!anchor || (anchor.target && anchor.target.toLowerCase() !== '_self') || anchor.hasAttribute('download')) return;
+            const mode = anchor.dataset.crosscoreMode;
+            if (mode === 'spine' || mode === 'interaction') {
+              event.preventDefault();
+              setMode(mode);
+              return;
+            }
+            let destination;
+            try { destination = new URL(anchor.href, frame.contentWindow.location.href); } catch (_) { return; }
+            if (destination.origin !== location.origin) return;
+            if (destination.pathname === homePath) {
+              event.preventDefault();
+              location.assign(destination.href);
+            } else if (destination.pathname.endsWith('/crosscore/index.html')) {
+              event.preventDefault();
+              setMode(destination.searchParams.get('mode') === 'interaction' ? 'interaction' : 'spine');
+            } else if (destination.pathname.endsWith('/crosscore/viewer/cutscene.html')) {
+              event.preventDefault();
+              setMode('spine');
+            }
+          }, true);
+        };
+        frame.addEventListener('load', attach);
+        attach();
+      }
+
+      for (const frame of Object.values(frames)) bindViewerNavigation(frame);
+      window.addEventListener('popstate', () => {
+        const mode = new URLSearchParams(location.search).get('mode') === 'interaction' ? 'interaction' : 'spine';
+        setMode(mode, false);
+      });
+      const initialMode = new URLSearchParams(location.search).get('mode') === 'interaction' ? 'interaction' : 'spine';
+      history.replaceState({ crosscoreMode: initialMode }, '', location.href);
+      setMode(initialMode, false);
+    })();
+  </script>
+  <!-- Cloudflare Web Analytics -->
+  <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
+  <!-- End Cloudflare Web Analytics -->
+</body>
+</html>

@@ -1,4 +1,4 @@
-/* Original NIKKE lobby dialogue + extracted animation event timing.
+/* Portrait audio playback for NIKKE event timing and CrossCore voice banks.
  * Audio stays outside Spine files. Unknown events/other resource kinds are silent.
  */
 (function (root) {
@@ -20,12 +20,18 @@
     return out.sort((a, b) => a.at - b.at);
   }
   function voiceSetFor(index, id) {
-    const match = /^(c\d{3})_(\d{2})$/i.exec(String(id || ''));
-    if (!match || !index) return null;
+    if (!index) return null;
+    const key = String(id || '');
+    const direct = index.voiceSets && index.voiceSets[key];
+    if (direct) return { id: key, set: direct, inherited: false };
+    const mapped = index.resourceVoiceSets && index.resourceVoiceSets[key];
+    if (mapped && index.voiceSets && index.voiceSets[mapped]) return { id: String(mapped), set: index.voiceSets[mapped], inherited: true };
+    const match = /^(c\d{3})_(\d{2})$/i.exec(key);
+    if (!match) return null;
     const exact = match[1].toLowerCase() + '_' + match[2];
-    if (index.voiceSets[exact]) return { id: exact, set: index.voiceSets[exact], inherited: false };
+    if (index.voiceSets && index.voiceSets[exact]) return { id: exact, set: index.voiceSets[exact], inherited: false };
     const base = match[1].toLowerCase();
-    return index.voiceSets[base] ? { id: base, set: index.voiceSets[base], inherited: true } : null;
+    return index.voiceSets && index.voiceSets[base] ? { id: base, set: index.voiceSets[base], inherited: true } : null;
   }
   function chooseVoice(clips, last, random = Math.random) {
     const candidates = clips.length > 1 ? clips.filter(name => name !== last) : clips;
@@ -99,14 +105,20 @@
     menu(popup) {
       // This settings surface must be above the fixed mobile playback/toolbars.
       popup.style.zIndex = '250';
-      popup.innerHTML = '<div class="col" style="min-width:220px;max-width:calc(100vw - 32px)"><strong>角色声音 · 日语</strong>'
-        + '<label><input type="checkbox" data-pref="enabled"> 开启声音</label>'
-        + '<label><input type="checkbox" data-pref="voices"> 点击台词</label>'
-        + '<label><input type="checkbox" data-pref="effects"> 动画音效</label>'
-        + '<label>台词组 <select data-pref="affinity"><option value="normal">普通</option><option value="love">好感度</option></select></label>'
-        + '<label><input type="checkbox" data-pref="idle"> 闲置台词（查看器每30秒）</label>'
-        + '<small style="opacity:.65">同一时刻一句台词；点击会触发反应动画。<br>音效时间来自游戏；台词随机规则为查看器近似。</small>'
-        + '<small class="audio-availability" style="opacity:.65"></small></div>';
+      popup.innerHTML = this.index?.voiceOnly
+        ? '<div class="col" style="min-width:220px;max-width:calc(100vw - 32px)"><strong>交错战线角色语音</strong>'
+          + '<label><input type="checkbox" data-pref="enabled"> 开启声音</label>'
+          + '<label><input type="checkbox" data-pref="voices"> 点击立绘播放</label>'
+          + '<small style="opacity:.65">点击角色立绘随机播放一条基础语音。</small>'
+          + '<small class="audio-availability" style="opacity:.65"></small></div>'
+        : '<div class="col" style="min-width:220px;max-width:calc(100vw - 32px)"><strong>角色声音 · 日语</strong>'
+          + '<label><input type="checkbox" data-pref="enabled"> 开启声音</label>'
+          + '<label><input type="checkbox" data-pref="voices"> 点击台词</label>'
+          + '<label><input type="checkbox" data-pref="effects"> 动画音效</label>'
+          + '<label>台词组 <select data-pref="affinity"><option value="normal">普通</option><option value="love">好感度</option></select></label>'
+          + '<label><input type="checkbox" data-pref="idle"> 闲置台词（查看器每30秒）</label>'
+          + '<small style="opacity:.65">同一时刻一句台词；点击会触发反应动画。<br>音效时间来自游戏；台词随机规则为查看器近似。</small>'
+          + '<small class="audio-availability" style="opacity:.65"></small></div>';
       popup.querySelectorAll('[data-pref]').forEach(input => {
         const key = input.dataset.pref;
         if (input.type === 'checkbox') input.checked = !!this.prefs[key]; else input.value = this.prefs[key];
@@ -122,8 +134,8 @@
       });
       const found = voiceSetFor(this.index, this.resourceId);
       popup.querySelector('.audio-availability').textContent = this.indexError || (found
-        ? '当前台词组：' + found.id + (found.inherited ? '（角色共用）' : '（服装专属）')
-        : '当前资源没有已确认的大厅台词，不跨角色配音。');
+        ? (this.index?.voiceOnly ? '当前角色已匹配基础声线' : '当前台词组：' + found.id + (found.inherited ? '（角色共用）' : '（服装专属）'))
+        : (this.index?.voiceOnly ? '当前角色暂无基础语音匹配' : '当前资源没有已确认的大厅台词，不跨角色配音。'));
     }
     audioURL(clip) {
       const url = new URL(clip.url, this.adapter.indexURL).href;
@@ -165,7 +177,7 @@
     warm() { return Promise.all(this.relevantNames().map(name => this.buffer(name))); }
     async unlock() {
       if (this.disposed) return;
-      if (this.unlocked) { this.warm(); this.syncPause(); return; }
+      if (this.unlocked) { if (!this.index?.lazy) this.warm(); this.syncPause(); return; }
       try {
         if (!this.context) {
           const AudioContext = root.AudioContext || root.webkitAudioContext;
@@ -174,7 +186,7 @@
         }
         await this.context.resume();
         this.unlocked = this.context.state === 'running';
-        this.warm();
+        if (!this.index?.lazy) this.warm();
         this.syncPause();
       } catch (error) { this.record('unlock-error', { error: error.message }); }
     }
@@ -186,7 +198,7 @@
       this.resourceId = id;
       // Keep decoding memory bounded as users page through hundreds of models.
       this.raw.clear(); this.buffers.clear(); this.pending.clear(); this.failures.clear();
-      if (id && this.index && (this.unlocked || !this.adapter.embedded)) this.warm();
+      if (id && this.index && !this.index.lazy && (this.unlocked || !this.adapter.embedded)) this.warm();
     }
     stopSource(source) {
       source.onended = null;
@@ -268,10 +280,15 @@
     interactionHint() {
       if (!this.prefs.enabled) return '声音已关闭，可在“更多 → 角色声音设置”中开启';
       if (!this.index) return this.indexError ? '音频索引加载失败，请重新加载资源后重试' : '角色音频索引加载中，请稍后再点击';
-      if (!this.prefs.voices && !this.prefs.effects) return '点击台词和动画音效都已关闭，可在角色声音设置中开启';
       const s = this.adapter.snapshot();
-      if (!s || !/^c\d{3}_\d{2}$/i.test(s.id)) return '当前资源暂未匹配点击语音或音效';
+      if (!s) return '当前资源暂未匹配点击语音或音效';
       const found = voiceSetFor(this.index, s.id);
+      if (this.index.voiceOnly) {
+        if (!found) return '当前立绘暂未匹配到基础语音';
+        return this.prefs.voices ? '' : '点击立绘播放已关闭，可在角色声音设置中开启';
+      }
+      if (!this.prefs.voices && !this.prefs.effects) return '点击台词和动画音效都已关闭，可在角色声音设置中开启';
+      if (!/^c\d{3}_\d{2}$/i.test(s.id)) return '当前资源暂未匹配点击语音或音效';
       const touch = found?.set.touch;
       const preferred = touch?.[this.prefs.affinity] || [];
       const names = preferred.length ? preferred : (touch?.normal || []);
@@ -289,32 +306,34 @@
     interact(category = 'touch') {
       this.syncResource();
       const snapshot = this.adapter.snapshot();
-      if (!snapshot || !/^c\d{3}_\d{2}$/i.test(snapshot.id) || !snapshot.active || !this.prefs.enabled || !this.index) return false;
-      const hasReaction = snapshot.animations.includes('action');
+      if (!snapshot || !snapshot.active || !this.prefs.enabled || !this.index) return false;
       const voiceSet = voiceSetFor(this.index, snapshot.id);
+      const hasReaction = !this.index.voiceOnly && snapshot.animations.includes('action');
       if (!hasReaction && !voiceSet) return false;
       if (this.loading || this.voice || this.reaction) return true;
       const token = this.generation;
       const intent = this.intentVersion || 0;
       this.loading = true;
       this.idleFor = 0;
-      this.unlock().then(() => this.warm()).then(() => {
+      this.unlock().then(() => this.index.lazy ? null : this.warm()).then(async () => {
         if (token !== this.generation || snapshot.id !== this.adapter.snapshot()?.id) return;
-        this.loading = false;
-        if (intent !== (this.intentVersion || 0)) return;
-        let names = voiceSet ? voiceSet.set[category][this.prefs.affinity] : [];
+        if (intent !== (this.intentVersion || 0)) { this.loading = false; return; }
+        let names = voiceSet ? (voiceSet.set[category]?.[this.prefs.affinity] || []) : [];
         // A missing affection set may use that same character's normal set, never another costume/character.
-        if (!names.length && voiceSet) names = voiceSet.set[category].normal;
-        names = names.filter(name => this.buffers.has(name));
+        if (!names.length && voiceSet) names = voiceSet.set[category]?.normal || [];
+        names = names.filter(name => this.index.clips[name] && (this.index.lazy || this.buffers.has(name)));
         const cursorKey = (voiceSet && voiceSet.id) + ':' + category + ':' + this.prefs.affinity;
         const name = this.prefs.voices ? chooseVoice(names, this.previous.get(cursorKey)) : null;
+        if (name && this.index.lazy) await this.buffer(name);
+        if (token !== this.generation || snapshot.id !== this.adapter.snapshot()?.id) return;
+        this.loading = false;
         if (category === 'touch' && hasReaction) {
           this.reaction = true;
           this.adapter.react('action');
         }
         this.adapter.play();
         this.syncPause();
-        if (name && this.context && this.unlocked && !document.hidden) {
+        if (name && this.buffers.has(name) && this.context && this.unlocked && !document.hidden) {
           this.previous.set(cursorKey, name);
           this.voice = this.playBuffer(name, 'voice', this.context.currentTime, 0, 1, 0);
           this.adapter.talk(true);
@@ -345,7 +364,7 @@
         if (idle) this.adapter.idle(idle);
         return;
       }
-      if (this.prefs.idle && this.prefs.voices && this.prefs.enabled && !this.loading && !this.voice && !this.reaction && this.idleFor >= 30) this.interact('stay');
+      if (!this.index?.voiceOnly && this.prefs.idle && this.prefs.voices && this.prefs.enabled && !this.loading && !this.voice && !this.reaction && this.idleFor >= 30) this.interact('stay');
       this.scheduleEffects(s);
     }
     scheduleEffects(s) {

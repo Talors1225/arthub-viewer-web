@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>碧蓝航线 · ArtHub 互动立绘</title>
+<link rel="stylesheet" href="../../common/kit.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/library-ui.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/visual.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261017-sound1">
+<link rel="stylesheet" href="azurlane.css">
+  <script src="../../arthub-cos-config.js?v=8fe99e72ec28"></script>
+  <script src="../../arthub-cos.js?v=f8554a466c01"></script>
+</head>
+<body class="game-interaction-viewer azurlane-viewer" data-pose-tools="disabled">
+  <main class="stage" id="stage" aria-label="碧蓝航线动态立绘舞台">
+    <canvas id="canvas"></canvas>
+    <svg id="hit-overlay" aria-hidden="true"></svg>
+    <div class="status" id="status" role="status">正在读取资源…</div>
+    <div class="hint" id="touch-hint">点击或拖动立绘互动 · 按住空格拖动画面 · Esc 关闭面板</div>
+  </main>
+
+  <nav class="rail" id="rail" aria-label="ArtHub 查看器导航">
+    <button id="railGrid" type="button" title="资源库 (G)" aria-label="资源库 (G)"></button>
+    <span class="rail-sep"></span>
+    <button id="btnPrev" type="button" title="上一个 (←)" aria-label="上一个 (←)"></button>
+    <button id="btnNext" type="button" title="下一个 (→)" aria-label="下一个 (→)"></button>
+    <button id="railThumb" class="rail-thumb" type="button" title="适应窗口 (F)" aria-label="适应窗口 (F)"><span>预览暂缺</span></button>
+    <span class="rail-sep"></span>
+    <button id="railStar" type="button" title="收藏 (S)" aria-label="收藏 (S)">☆</button>
+  </nav>
+
+  <div class="top-pill" id="topPill" aria-label="当前立绘信息">
+    <span class="game-top-name">碧蓝航线 · Live2D / Spine</span>
+    <strong id="active-name">正在读取立绘…</strong>
+    <small id="counts" class="game-top-meta">正在读取资源</small>
+  </div>
+
+  <div id="toolStrip" class="tool-strip" aria-label="舞台工具">
+    <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
+    <button id="fit" type="button" title="适应窗口">适应</button>
+  </div>
+
+  <footer class="playbar collapsed" id="playbar" aria-label="播放控制">
+    <button id="playbarToggle" class="playbar-toggle" type="button" aria-expanded="false" title="展开播放控制"></button>
+    <div class="playbar-controls">
+      <button id="pbPlay" class="ctl active" type="button" title="暂停" aria-label="暂停"></button>
+      <button id="pbStepB" class="ctl" type="button" title="后退 1 帧" aria-label="后退 1 帧">«</button>
+      <input id="pbRange" type="range" min="0" max="1000" value="0" aria-label="动画进度">
+      <button id="pbStepF" class="ctl" type="button" title="前进 1 帧" aria-label="前进 1 帧">»</button>
+      <span class="pb-time" id="pbTime">0.00 / 0.00s</span>
+      <button id="pbLoop" class="ctl active" type="button" title="循环" aria-label="循环" aria-pressed="true"></button>
+      <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="播放速度" aria-label="播放速度">
+      <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+    </div>
+  </footer>
+
+  <div class="viewer-legacy-controls" hidden aria-hidden="true">
+    <select id="animation" disabled></select><button id="play" type="button" disabled>暂停</button><input type="checkbox" id="loop" checked>
+    <select id="speed"><option value="1" selected>1</option></select>
+  </div>
+  <div id="gridView" class="library-ui" aria-label="立绘资源库">
+    <div class="grid-head">
+      <a class="kit-home-action" href="../../index.html" aria-label="返回 ArtHub 首页" title="ArtHub 首页"></a>
+      <span class="grid-title">碧蓝航线 · 动态立绘</span>
+      <span class="grid-sub" id="gridSub"></span>
+      <div id="filterChips" aria-label="资源类型筛选">
+        <button class="filter-chip on" type="button" data-filter="all" aria-pressed="true">全部</button>
+        <button class="filter-chip" type="button" data-filter="live2d" aria-pressed="false">Live2D</button>
+        <button class="filter-chip" type="button" data-filter="spine" aria-pressed="false">Spine</button>
+        <button class="filter-chip library-favorites" type="button" data-filter="favorite" aria-pressed="false">☆ 收藏</button>
+      </div>
+      <input id="filter" class="kit-grid-search text-input" type="search" placeholder="搜索角色 / 皮肤 / 编号" aria-label="搜索动态立绘">
+      <button id="btnTheme" class="edit-btn" type="button" title="打开主题调色板" aria-label="打开主题调色板">◐</button>
+      <button id="gridClose" class="ctl" type="button">返回舞台</button>
+    </div>
+    <div class="thumb-grid" id="thumbGrid"></div>
+  </div>
+
+  <aside id="floatPanel" aria-label="立绘互动面板">
+    <div class="rp-panel-head">
+      <div class="rp-tabs" role="tablist" aria-label="互动面板分类">
+        <button class="on" type="button" data-panel-tab="anim" aria-selected="true">动画</button>
+        <button type="button" data-panel-tab="interaction" aria-selected="false">互动</button>
+        <button type="button" data-panel-tab="voice" aria-selected="false">声音</button>
+      </div>
+      <button class="rp-panel-close" id="panel-close" type="button" title="关闭面板" aria-label="关闭面板">×</button>
+    </div>
+        <div class="rp-page on" data-panel-page="anim">
+      <div class="row"><input id="animFilter" class="text-input" type="search" placeholder="过滤动画名" aria-label="过滤动画名"></div>
+      <div id="animList" class="anim-list"></div>
+    </div>
+    <div class="rp-page" data-panel-page="interaction">
+      <div id="interaction-panel" class="interaction-content">
+        <details class="section">
+          <summary>舞台控制</summary>
+          <div class="stage-control-row">
+            <button id="zoom-out" type="button" aria-label="缩小" title="缩小">−</button>
+            <output id="zoom" aria-live="polite">100%</output>
+            <button id="zoom-in" type="button" aria-label="放大" title="放大">+</button>
+          </div>
+          <label for="pointer-mode" class="field-label">鼠标模式
+            <select id="pointer-mode" aria-label="鼠标模式" title="鼠标模式">
+              <option value="interact">触摸互动</option><option value="pan">拖动画面</option>
+            </select>
+          </label>
+        </details>
+        <h2>触摸与互动</h2>
+        <div id="touch-actions"></div>
+        <label for="favor" class="field-label">好感阶段
+          <select id="favor"><option value="0">陌生 · 0</option><option value="50">友好 · 50</option><option value="90">喜欢 · 90</option><option value="100">爱 · 100</option><option value="1100">誓约 · 100</option><option value="1200" selected>誓约 · 200</option></select>
+        </label>
+        <p id="game-state" role="status"></p>
+        <button id="reset-state" type="button">重置当前立绘状态</button>
+        <button id="show-hits" type="button">显示触摸区域</button>
+        <div id="drag-controls"></div>
+        <p id="interaction-note"></p>
+        <details>
+          <summary>其他互动区域</summary>
+          <select id="hit-area" aria-label="选择互动区域"></select>
+          <button id="hit-trigger" type="button">触发区域动作</button>
+          <p>触摸判断遵循当前动作中的原始区域，拖动、长按和连点会随姿态变化。</p>
+        </details>
+      </div>
+    </div>
+    <div class="rp-page" data-panel-page="voice">
+      <div class="interaction-content">
+        <h2>当前皮肤台词</h2>
+        <button id="sound" type="button" aria-label="切换声音">声音：开</button>
+        <label for="voice">选择台词</label>
+        <select id="voice" aria-label="选择台词"></select>
+        <div class="voice-actions"><button id="voice-play" type="button">播放台词</button><button id="voice-stop" type="button">停止</button></div>
+        <p id="voice-status" role="status">点击立绘或播放按钮启用声音</p>
+        <p id="dialogue"></p>
+      </div>
+    </div>
+  </aside>
+
+  <script src="../../common/asset-display-overrides.js?v=f8554a466c01"></script>
+  <script src="../../common/kit.js?v=f8554a466c01"></script>
+  <script src="../../common/asset-loader.js?v=f8554a466c01"></script>
+  <script src="../../common/stage-ui.js?v=f8554a466c01"></script>
+  <script src="../../common/library-ui.js?v=f8554a466c01"></script>
+  <script src="../../common/interaction-viewer-tools.js?v=20261017-sound1"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
+  <script src="vendor/spine-player.js"></script>
+  <script src="vendor/live2d/live2dcubismcore.min.js"></script>
+  <script src="vendor/live2d/pixi-6.5.10.min.js"></script>
+  <script src="vendor/live2d/cubism4-0.4.0.min.js"></script>
+  <script type="module" src="viewer.mjs?v=20261017-sound1"></script>
+<!-- Cloudflare Web Analytics -->
+<script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
+<!-- End Cloudflare Web Analytics -->
+</body>
+</html>

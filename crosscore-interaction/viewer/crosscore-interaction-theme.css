@@ -1,0 +1,151 @@
+:root {
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--arthub-font, "Segoe UI", system-ui, "Microsoft YaHei", sans-serif);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--arthub-font, "Segoe UI", system-ui, "Microsoft YaHei", sans-serif);
+}
+
+header {
+  min-height: 68px;
+  padding: 10px 20px;
+  border-color: var(--border2);
+  background: var(--panel);
+}
+
+header h1 {
+  color: var(--text);
+  font-size: 18px;
+  letter-spacing: -.01em;
+}
+
+header p { color: var(--text-dim); }
+nav { gap: 8px; }
+
+nav a.nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--border2);
+  border-radius: var(--arthub-control-radius, 9px);
+  background: var(--panel2);
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color .14s, background .14s, border-color .14s;
+}
+
+nav a.nav-link:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim-bg);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.badge {
+  border: 1px solid var(--border2);
+  border-radius: var(--arthub-control-radius, 9px);
+  background: var(--accent-dim-bg);
+  color: var(--accent-hi);
+}
+
+main {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+}
+
+#stage {
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, .035), transparent 70%), var(--bg);
+}
+
+#loading {
+  border: 1px solid var(--border2);
+  border-radius: var(--arthub-control-radius, 9px);
+  background: var(--glass);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+}
+
+aside {
+  border-color: var(--border2);
+  background: var(--panel);
+}
+
+label { color: var(--text); }
+
+input[type="search"], select, button {
+  border-color: var(--border2);
+  border-radius: var(--arthub-control-radius, 9px);
+  background: var(--panel2);
+  color: var(--text);
+  font-family: inherit;
+  transition: background .14s, border-color .14s, color .14s;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--panel3);
+}
+
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input { accent-color: var(--accent); }
+.hint, .muted { color: var(--text-dim); }
+#feedback, details.section { border-color: var(--border2); }
+#subtitle { color: var(--accent-hi); }
+#detail, .rule-actions pre { color: var(--text-faint); }
+summary { color: var(--text); }
+
+#actions button.active, .special-actions button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#special {
+  border-color: var(--accent);
+  background: var(--accent-dim-bg);
+}
+
+.rule-actions details {
+  border-color: var(--border2);
+  background: var(--panel2);
+}
+
+dialog {
+  border-color: var(--border2);
+  border-radius: var(--arthub-panel-radius, 14px);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow-2);
+}
+
+dialog::backdrop { background: rgba(0, 0, 0, .72); }
+
+@media (max-width: 760px) {
+  header {
+    min-height: 76px;
+    padding: 12px 16px;
+  }
+
+  nav { gap: 7px; }
+  nav a.nav-link { min-height: 34px; padding: 6px 9px; }
+
+  main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(55dvh, 60dvh) auto;
+    height: auto;
+    min-height: calc(100dvh - 76px);
+  }
+
+  aside {
+    border-left: 0;
+    border-top: 1px solid var(--border2);
+  }
+}

@@ -1,0 +1,6 @@
+Source: https://github.com/EsotericSoftware/spine-runtimes/tree/3.8/spine-ts
+Commit: 8b4844bd4b193ba9e54487ed397a777993cbad56
+Original spine-player.js SHA256: 2E375E85E98EDDDCED3B82A8A352F64996D9B23F810DF8A9D8346355DF990509
+Local compatibility patches: spine-compatibility-patches.json
+Patched spine-player.js SHA256: a560d06ea1855ad82337b1e9b8c7f68a94646df882d2e361df6b0f1b0ccde8e9
+spine-player.css SHA256: cdade32ebe78146a24f4215051ca8fa590d92b8407f30465a15f1f2b9bb1009a

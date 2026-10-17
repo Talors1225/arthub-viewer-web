@@ -1,0 +1,214 @@
+/* CrossCore-specific controls inside the shared ArtHub viewer shell. */
+.crosscore-interaction-viewer #scene,
+.crosscore-interaction-viewer #overlay {
+  touch-action: none;
+}
+
+.crosscore-interaction-viewer #overlay {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.crosscore-interaction-viewer #gridView #filterChips {
+  flex-basis: 100%;
+}
+
+.crosscore-interaction-viewer #gridView .thumb-card {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-grad);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.crosscore-interaction-viewer #gridView .thumb-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2), var(--accent-glow);
+}
+
+.crosscore-interaction-viewer #gridView .thumb-card:disabled {
+  opacity: .52;
+  cursor: not-allowed;
+}
+
+.crosscore-interaction-viewer #gridView .thumb-card .ph {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(170px 170px at 50% 40%, rgba(255, 255, 255, .035), transparent 70%),
+    var(--panel2);
+}
+
+.crosscore-interaction-viewer .crosscore-mark {
+  color: var(--accent-hi);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.crosscore-interaction-viewer #gridView .thumb-card .tm {
+  padding: 9px 11px 10px;
+}
+
+.crosscore-interaction-viewer #gridView .thumb-card .ts {
+  display: block !important;
+  margin-top: 3px;
+}
+
+.crosscore-interaction-viewer .game-top-nav {
+  border-left: 1px solid var(--border);
+  padding-left: 8px;
+}
+
+.crosscore-interaction-viewer #toolStrip .tool-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.crosscore-interaction-viewer #toolStrip .tool-toggle input {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.crosscore-interaction-viewer #floatPanel .interaction-content > .muted:first-child {
+  margin-top: 0;
+}
+
+.crosscore-interaction-viewer #modelMeta {
+  margin: 7px 0;
+}
+
+.crosscore-interaction-viewer #subtitle {
+  min-height: 18px;
+  margin: 10px 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.crosscore-interaction-viewer #detail {
+  margin: 8px 0;
+  color: var(--text-faint);
+  font: 10px/1.65 Consolas, "Cascadia Mono", monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.crosscore-interaction-viewer #special {
+  display: none;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  background: var(--panel2);
+}
+
+.crosscore-interaction-viewer #special.visible {
+  display: block;
+}
+
+.crosscore-interaction-viewer #special h2 {
+  margin: 0 0 7px;
+  color: var(--accent-hi);
+  font-size: 13px;
+}
+
+.crosscore-interaction-viewer .special-actions,
+.crosscore-interaction-viewer #actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.crosscore-interaction-viewer .special-actions button,
+.crosscore-interaction-viewer #actions button {
+  min-width: 0;
+  padding: 8px;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: normal;
+}
+
+.crosscore-interaction-viewer #actions button.active {
+  border-color: var(--accent);
+  background: var(--accent-dim-bg);
+}
+
+.crosscore-interaction-viewer #floatPanel #voice {
+  width: 100%;
+  margin: 8px 0;
+}
+.crosscore-interaction-viewer #floatPanel #dialogue {
+  min-height: 20px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.crosscore-interaction-viewer #floatPanel #voice-status {
+  min-height: 18px;
+  margin: 8px 0;
+}
+.crosscore-interaction-viewer .playbar-message {
+  max-width: min(56vw, 440px);
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crosscore-interaction-viewer dialog {
+  width: min(540px, 92vw);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 22px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow-2);
+}
+
+.crosscore-interaction-viewer dialog::backdrop {
+  background: rgba(0, 0, 0, .64);
+}
+
+.crosscore-interaction-viewer dialog h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.crosscore-interaction-viewer dialog select,
+.crosscore-interaction-viewer dialog audio {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.crosscore-interaction-viewer dialog button {
+  margin-top: 14px;
+}
+
+@media (max-width: 480px) {
+  .crosscore-interaction-viewer .special-actions,
+  .crosscore-interaction-viewer #actions {
+    grid-template-columns: 1fr;
+  }
+
+  .crosscore-interaction-viewer .game-top-nav {
+    display: none;
+  }
+}

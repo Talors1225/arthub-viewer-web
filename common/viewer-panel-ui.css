@@ -1,0 +1,115 @@
+/* Scoped to the Spine animation/parts/pose panel; desktop and touch targets differ. */
+#floatPanel.viewer-panel-ui [hidden] { display: none !important; }
+#floatPanel.viewer-panel-ui .vp-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 9px;
+  flex-wrap: nowrap !important;
+}
+#floatPanel.viewer-panel-ui .vp-button {
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  background: var(--panel2);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#floatPanel.viewer-panel-ui .vp-button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+#floatPanel.viewer-panel-ui .vp-button:disabled {
+  cursor: default;
+  opacity: .42;
+}
+#floatPanel.viewer-panel-ui .vp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+#floatPanel.viewer-panel-ui .vp-toggle::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+#floatPanel.viewer-panel-ui .vp-button.on {
+  color: var(--accent-hi);
+  border-color: var(--accent);
+  background: var(--accent-dim-bg);
+}
+#floatPanel.viewer-panel-ui .vp-toggle.on::before { background: var(--accent); }
+#floatPanel.viewer-panel-ui .vp-mode-state {
+  color: var(--text-faint);
+  font-size: 11px;
+  white-space: nowrap;
+}
+#floatPanel.viewer-panel-ui .vp-part-selection,
+#floatPanel.viewer-panel-ui .vp-selected-bone {
+  margin: 0 0 9px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.5;
+}
+#floatPanel.viewer-panel-ui .vp-history-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.35fr;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+#floatPanel.viewer-panel-ui .vp-part-selected { background: var(--accent-dim-bg); }
+#floatPanel.viewer-panel-ui .slot-row .sn {
+  cursor: pointer;
+  padding: 4px 0;
+}
+#floatPanel.viewer-panel-ui .slot-row .sn:focus-visible,
+#floatPanel.viewer-panel-ui button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+#floatPanel.viewer-panel-ui .vp-animation-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: inherit;
+}
+#floatPanel.viewer-panel-ui .vp-animation-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#floatPanel.viewer-panel-ui .vp-animation-original {
+  color: var(--text-faint);
+  font: 10.5px/1.35 Consolas, 'Cascadia Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#floatPanel.viewer-panel-ui .anim-row.on .vp-animation-original { color: var(--text-dim); }
+#floatPanel.viewer-panel-ui #poseName { flex: 1 1 0; min-width: 80px; }
+#floatPanel.viewer-panel-ui #poseSave { flex: 0 0 auto; }
+#floatPanel.viewer-panel-ui .parts-tools { flex-wrap: wrap; }
+#floatPanel.viewer-panel-ui #poseLock { flex: 1 1 100%; }
+
+@media (max-width: 720px) {
+  #floatPanel.viewer-panel-ui .vp-button,
+  #floatPanel.viewer-panel-ui .slot-row .eye {
+    min-height: 42px;
+  }
+  #floatPanel.viewer-panel-ui .slot-row .eye { min-width: 42px; }
+  #floatPanel.viewer-panel-ui .slot-row .sn { padding: 10px 0; }
+  #floatPanel.viewer-panel-ui .vp-animation-row { min-height: 44px !important; }
+  #floatPanel.viewer-panel-ui .vp-history-tools { gap: 6px; }
+  #floatPanel.viewer-panel-ui .vp-part-selection,
+  #floatPanel.viewer-panel-ui .vp-selected-bone { padding: 7px 9px; }
+}

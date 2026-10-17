@@ -1,0 +1,2 @@
+/* Keep the Azur Lane stage art intact while using ArtHub's shared accent token. */
+:root { --gold: var(--arthub-gold, #e2c288); }

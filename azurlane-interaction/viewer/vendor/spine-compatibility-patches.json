@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "8b4844bd4b193ba9e54487ed397a777993cbad56",
+  "originalSha256": "2e375e85e98edddced3b82a8a352f64996d9b23f810df8a9d8346355df990509",
+  "patchedSha256": "a560d06ea1855ad82337b1e9b8c7f68a94646df882d2e361df6b0f1b0ccde8e9",
+  "originalBackup": "../_diagnostics/before-full-dynamic-recovery-20261012/spine-player.js",
+  "patches": [
+    "Read UTF-8 leading bytes as unsigned in BinaryInput.readString.",
+    "Fall back to a unique atlas region matching trimmed whitespace after exact lookup fails."
+  ],
+  "verifiedUniqueSkeletons": 294
+}

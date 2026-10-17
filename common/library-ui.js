@@ -87,7 +87,7 @@
   }
 
   function selectedCategory() {
-    const selected = ui.head.querySelector('.filter-chip.on');
+    const selected = ui.head.querySelector('.filter-chip.on:not([data-crosscore-mode])');
     if (!selected) return false;
     if (selected.classList.contains('library-favorites')) return false;
     const label = selected.firstChild && selected.firstChild.textContent || selected.textContent;

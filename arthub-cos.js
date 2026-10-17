@@ -3,16 +3,28 @@
   'use strict';
   const cfg = window.ARTHUB_COS_CONFIG || {};
   const root = String(cfg.root || '').replace(/\/+$/, '');
+  const gameRoot = String(cfg.gameAssetsRoot || '').replace(/\/+$/, '');
   if (!root) return;
 
   const ASSET_MARKERS = [
     '/bd2/spine/', '/nikki/spine/', '/nikki/spine_carved/', '/nikki/audio/',
     '/majsoul/assets_raw/', '/majsoul/web_illustrations/',
+
+    '/azurlane-interaction/animators/', '/azurlane-interaction/assets/live2d/', '/azurlane-interaction/assets/spinepainting/',
+    '/azurlane-interaction/audio/', '/azurlane-interaction/catalog/', '/azurlane-interaction/model-audio/', '/azurlane-interaction/models/',
+    '/crosscore/spine/', '/crosscore/audio/', '/crosscore-interaction/audio/', '/crosscore-interaction/catalog/',
+    '/crosscore-interaction/spine/', '/crosscore-interaction/voices/',
+  ];
+
+  const GAME_ASSET_MARKERS = [
+    '/azurlane-interaction/animators/', '/azurlane-interaction/assets/live2d/', '/azurlane-interaction/assets/spinepainting/',
+    '/azurlane-interaction/audio/', '/azurlane-interaction/catalog/', '/azurlane-interaction/model-audio/', '/azurlane-interaction/models/',
   ];
 
   const PATH_REWRITES = {
     // 页面索引沿用本地的 spine/ 相对路径；COS 里已上传的妮姬目录名是 spine_carved。
     '/nikki/spine/': '/nikki/spine_carved/',
+    '/crosscore-interaction/spine/': '/crosscore/spine/',
   };
 
   function markerPath(pathname) {
@@ -33,7 +45,8 @@
     if (url.origin !== location.origin) return url.href;
     const remotePath = markerPath(url.pathname);
     if (!remotePath) return url.href;
-    return root + remotePath + url.search + url.hash;
+    const gameAsset = GAME_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);
+    return (gameAsset && gameRoot ? gameRoot : root) + remotePath + url.search + url.hash;
   }
 
   window.ARTHUB_COS_ROOT = root;
@@ -78,4 +91,31 @@
     }
   }
 
+
+  if (window.HTMLMediaElement && window.HTMLMediaElement.prototype && !window.HTMLMediaElement.prototype.__arthubCosPatched) {
+    const descriptor = Object.getOwnPropertyDescriptor(window.HTMLMediaElement.prototype, 'src');
+    if (descriptor && typeof descriptor.set === 'function') {
+      const nativeSet = descriptor.set;
+      const patchedSet = function(value) {
+        let target = value;
+        if (value !== null && value !== undefined) {
+          try { target = resolve(value); } catch {}
+        }
+        return nativeSet.call(this, target);
+      };
+      Object.defineProperty(window.HTMLMediaElement.prototype, 'src', { ...descriptor, set: patchedSet });
+      window.HTMLMediaElement.prototype.__arthubCosPatched = true;
+    }
+  }
+
+  if (typeof window.Audio === 'function' && !window.Audio.__arthubCosPatched) {
+    const NativeAudio = window.Audio;
+    const PatchedAudio = function(source) {
+      return new NativeAudio(source === undefined ? undefined : resolve(source));
+    };
+    PatchedAudio.prototype = NativeAudio.prototype;
+    Object.setPrototypeOf(PatchedAudio, NativeAudio);
+    PatchedAudio.__arthubCosPatched = true;
+    window.Audio = PatchedAudio;
+  }
 })();

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>交错战线 · 互动立绘 | ArtHub</title>
+<link rel="stylesheet" href="../../common/kit.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/library-ui.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/visual.css?v=f8554a466c01">
+<link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261017-sound1">
+<link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261017-sound1">
+  <script src="../../arthub-cos-config.js?v=8fe99e72ec28"></script>
+  <script src="../../arthub-cos.js?v=f8554a466c01"></script>
+</head>
+<body class="game-interaction-viewer crosscore-interaction-viewer" data-pose-tools="disabled">
+  <main id="stage" class="stage" aria-label="交错战线互动立绘舞台">
+    <canvas id="scene"></canvas>
+    <canvas id="overlay" aria-hidden="true"></canvas>
+    <div id="stage-info" class="status stage-info" role="status">交错战线 · 互动立绘</div>
+    <div id="loading" class="status" role="status">正在读取立绘库…</div>
+  </main>
+
+  <nav class="rail" id="rail" aria-label="ArtHub 查看器导航">
+    <button id="railGrid" type="button" title="资源库 (G)" aria-label="资源库 (G)" aria-expanded="true"></button>
+    <span class="rail-sep"></span>
+    <button id="btnPrev" type="button" title="上一个 (←)" aria-label="上一个 (←)"></button>
+    <button id="btnNext" type="button" title="下一个 (→)" aria-label="下一个 (→)"></button>
+    <button id="railThumb" class="rail-thumb" type="button" title="适应窗口 (F)" aria-label="适应窗口 (F)"><span>预览暂缺</span></button>
+    <span class="rail-sep"></span>
+    <button id="railStar" type="button" title="收藏 (S)" aria-label="收藏 (S)">☆</button>
+  </nav>
+
+  <div class="top-pill" id="topPill" aria-label="当前互动立绘信息">
+    <span class="game-top-name">交错战线 · 互动立绘</span>
+    <strong id="active-name">正在读取…</strong>
+    <small id="coverage" class="game-top-meta">正在读取资源</small>
+  </div>
+
+  <div id="toolStrip" class="tool-strip" aria-label="舞台工具">
+    <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
+    <button id="fit" type="button" title="适应窗口" aria-label="适应窗口">适应</button>
+    <button id="reset" type="button" title="恢复当前立绘初始状态" aria-label="恢复初始状态">重置</button>
+  </div>
+
+  <footer class="playbar collapsed" id="playbar" aria-label="播放控制">
+    <button id="playbarToggle" class="playbar-toggle" type="button" aria-expanded="false" title="展开播放控制"></button>
+    <div class="playbar-controls">
+      <button id="pbPlay" class="ctl active" type="button" title="暂停" aria-label="暂停"></button>
+      <button id="pbStepB" class="ctl" type="button" title="后退 1 帧" aria-label="后退 1 帧">«</button>
+      <input id="pbRange" type="range" min="0" max="1000" value="0" aria-label="动画进度">
+      <button id="pbStepF" class="ctl" type="button" title="前进 1 帧" aria-label="前进 1 帧">»</button>
+      <span class="pb-time" id="pbTime">0.00 / 0.00s</span>
+      <button id="pbLoop" class="ctl active" type="button" title="循环" aria-label="循环" aria-pressed="true"></button>
+      <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="播放速度" aria-label="播放速度">
+      <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+    </div>
+  </footer>
+
+  <div id="gridView" class="library-ui" aria-label="互动立绘资源库">
+    <div class="grid-head">
+      <a class="kit-home-action" href="../../index.html" aria-label="返回 ArtHub 首页" title="ArtHub 首页"></a>
+      <span class="grid-title">交错战线 · 互动立绘</span>
+      <span class="grid-sub" id="gridSub"></span>
+      <div id="filterChips" aria-label="资源分类">
+        <a class="filter-chip crosscore-resource-mode on" role="button" data-crosscore-mode="interaction" href="../../crosscore/index.html?mode=interaction">互动立绘</a>
+        <a class="filter-chip crosscore-resource-mode" role="button" data-crosscore-mode="spine" href="../../crosscore/index.html?mode=spine">Spine</a>
+        <button class="filter-chip on" type="button" data-group="all" aria-pressed="true">全部</button>
+        <button class="filter-chip" type="button" data-group="favorite" aria-pressed="false">☆ 收藏</button>
+        <button class="filter-chip" type="button" data-group="角色皮肤" aria-pressed="false">角色皮肤</button>
+        <button class="filter-chip" type="button" data-group="多人场景" aria-pressed="false">多人场景</button>
+        <button class="filter-chip" type="button" data-group="剧情互动" aria-pressed="false">剧情互动</button>
+      </div>
+      <input id="gridSearch" class="kit-grid-search text-input" type="search" placeholder="搜索角色 / 皮肤 / 场景 / 编号" aria-label="搜索互动立绘">
+      <button id="btnTheme" class="edit-btn" type="button" title="打开主题调色板" aria-label="打开主题调色板">◐</button>
+      <button id="gridClose" class="ctl" type="button">返回舞台</button>
+      <select id="model" hidden aria-hidden="true" tabindex="-1"></select>
+    </div>
+    <div id="thumbGrid" class="thumb-grid"></div>
+  </div>
+
+  <aside id="floatPanel" aria-label="互动与规则面板">
+    <div class="rp-panel-head">
+      <div class="rp-tabs" role="tablist" aria-label="面板分类">
+        <button class="on" type="button" data-panel-tab="anim" aria-selected="true">动画</button>
+        <button type="button" data-panel-tab="interaction" aria-selected="false">互动</button>
+        <button type="button" data-panel-tab="voice" aria-selected="false">声音</button>
+      </div>
+      <button id="panel-close" class="rp-panel-close" type="button" title="关闭面板" aria-label="关闭面板">×</button>
+    </div>
+        <div class="rp-page on" data-panel-page="anim">
+      <div class="row"><input id="animFilter" class="text-input" type="search" placeholder="过滤动画名" aria-label="过滤动画名"></div>
+      <div id="animList" class="anim-list"></div>
+    </div>
+    <div class="rp-page" data-panel-page="interaction">
+      <div id="interaction-panel" class="interaction-content">
+        <section class="stage-options" aria-label="舞台设置">
+          <div class="stage-options-title">舞台</div>
+          <label class="tool-toggle" title="显示原配置热点"><input id="regions" type="checkbox">显示热点</label>
+        </section>
+        <div class="interaction-actions"><button id="entrance" type="button" title="播放入场动作">入场动作</button></div>
+        <p id="feedback" role="status">等待加载</p>
+        <p id="intro" class="muted">点击、拖动或按住立绘热点，查看原配置反应。</p>
+        <div class="muted" id="modelMeta"></div>
+        <p class="hint" id="hint">点击热点播放对应反应；带手势的热点支持拖动。</p>
+        <p id="subtitle" aria-live="polite"></p>
+        <pre id="detail"></pre>
+        <div id="special">
+          <h2>特别互动</h2>
+          <p class="muted">可以继续触发该场景的互动动作，或恢复初始状态。</p>
+          <div id="specialActions" class="special-actions"></div>
+        </div>
+        <details class="section">
+          <summary>动作预览</summary>
+          <p class="muted">可直接预览当前立绘状态的动作。画面热点仍按原配置处理点击条件。</p>
+          <div id="actions"></div>
+        </details>
+      </div>
+    </div>
+    <div class="rp-page" data-panel-page="voice">
+      <div class="interaction-content">
+        <h2>当前立绘台词</h2>
+        <button id="sound" type="button" aria-label="切换声音" aria-pressed="true">声音：开</button>
+        <label for="voice">选择台词</label>
+        <select id="voice" aria-label="选择台词"></select>
+        <div class="voice-actions"><button id="voice-play" type="button">播放台词</button><button id="voice-stop" type="button">停止</button></div>
+        <p id="voice-status" role="status">点击立绘或播放按钮启用声音</p>
+        <p id="dialogue" aria-live="polite"></p>
+      </div>
+    </div>
+  </aside>
+
+  <dialog id="asmrDialog">
+    <h2 id="asmrTitle">关联音声</h2>
+    <div class="muted" id="asmrInfo"></div>
+    <select id="asmrTrack" aria-label="音声版本"></select>
+    <audio id="asmrPlayer" controls></audio>
+    <button id="closeAsmr" type="button">关闭</button>
+  </dialog>
+
+  <script>
+  (() => { let failed = false;
+    window.__crosscoreBootError = error => {
+      console.error('[crosscore-interaction]', error);
+      if (failed) return;
+      failed = true;
+      const loading = document.getElementById('loading');
+      loading.hidden = false;
+      loading.textContent = `启动失败：${error?.message || String(error || '浏览器未提供错误详情')}`;
+    };
+    window.addEventListener('error', event => window.__crosscoreBootError(event.error || event.message || `资源加载失败：${event.target?.src || event.target?.href || '未知地址'}`), true);
+    window.addEventListener('unhandledrejection', event => window.__crosscoreBootError(event.reason));
+  })();
+  </script>
+  <script src="../../common/asset-display-overrides.js?v=f8554a466c01"></script>
+  <script src="../../common/kit.js?v=f8554a466c01"></script>
+  <script src="../../common/asset-loader.js?v=f8554a466c01"></script>
+  <script src="../../common/stage-ui.js?v=f8554a466c01"></script>
+  <script src="../../common/library-ui.js?v=f8554a466c01"></script>
+  <script src="../../common/interaction-viewer-tools.js?v=20261017-sound1"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
+  <script src="../vendor/spine-webgl-4.2.js?v=20261015-2"></script>
+  <script>import('./app.mjs?v=20261017-sound1').catch(window.__crosscoreBootError);</script>
+<!-- Cloudflare Web Analytics -->
+<script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
+<!-- End Cloudflare Web Analytics -->
+</body>
+</html>
