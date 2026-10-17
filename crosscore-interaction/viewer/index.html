@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>交错战线 · 互动立绘 | ArtHub</title>
-<link rel="stylesheet" href="../../common/kit.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/library-ui.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/visual.css?v=38532727576b">
+<link rel="stylesheet" href="../../common/kit.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/library-ui.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/visual.css?v=8ee8ea18ebb5">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261017-sound1">
 <link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261017-sound1">
-  <script src="../../arthub-cos-config.js?v=b9a47335fdb7"></script>
-  <script src="../../arthub-cos.js?v=38532727576b"></script>
+  <script src="../../arthub-cos-config.js?v=97d197056b20"></script>
+  <script src="../../arthub-cos.js?v=8ee8ea18ebb5"></script>
 </head>
 <body class="game-interaction-viewer crosscore-interaction-viewer" data-pose-tools="disabled">
   <main id="stage" class="stage" aria-label="交错战线互动立绘舞台">
@@ -37,6 +37,11 @@
   </div>
 
   <div id="toolStrip" class="tool-strip" aria-label="舞台工具">
+    <div class="zoom-bar tool-zoom" aria-label="视图缩放">
+      <button id="zOut" type="button" title="缩小" aria-label="缩小" disabled></button>
+      <button id="zPct" class="zoom-pct" type="button" title="适应窗口" aria-label="适应窗口" disabled>100%</button>
+      <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
+    </div>
     <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
     <button id="fit" type="button" title="适应窗口" aria-label="适应窗口">适应</button>
     <button id="reset" type="button" title="恢复当前立绘初始状态" aria-label="恢复初始状态">重置</button>
@@ -145,6 +150,7 @@
   (() => { let failed = false;
     window.__crosscoreBootError = error => {
       console.error('[crosscore-interaction]', error);
+      window.__crosscorePreviewFailure?.(error?.message || String(error));
       if (failed) return;
       failed = true;
       const loading = document.getElementById('loading');
@@ -155,11 +161,11 @@
     window.addEventListener('unhandledrejection', event => window.__crosscoreBootError(event.reason));
   })();
   </script>
-  <script src="../../common/asset-display-overrides.js?v=38532727576b"></script>
-  <script src="../../common/kit.js?v=38532727576b"></script>
-  <script src="../../common/asset-loader.js?v=38532727576b"></script>
-  <script src="../../common/stage-ui.js?v=38532727576b"></script>
-  <script src="../../common/library-ui.js?v=38532727576b"></script>
+  <script src="../../common/asset-display-overrides.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/kit.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/asset-loader.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/stage-ui.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/library-ui.js?v=8ee8ea18ebb5"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261017-sound1"></script>
   <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
   <script src="../vendor/spine-webgl-4.2.js?v=20261015-2"></script>

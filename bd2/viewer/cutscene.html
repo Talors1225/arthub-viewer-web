@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/library-ui.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/visual.css?v=38532727576b">
+<link rel="stylesheet" href="../../common/kit.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/library-ui.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/visual.css?v=8ee8ea18ebb5">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -276,8 +276,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=b9a47335fdb7"></script>
-  <script src="../../arthub-cos.js?v=38532727576b"></script>
+  <script src="../../arthub-cos-config.js?v=97d197056b20"></script>
+  <script src="../../arthub-cos.js?v=8ee8ea18ebb5"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -405,12 +405,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=38532727576b"></script>
-<script src="../../common/kit.js?v=38532727576b"></script>
-<script src="../../common/asset-loader.js?v=38532727576b"></script>
-<script src="../../common/portrait-audio.js?v=38532727576b"></script>
-<script src="../../common/stage-ui.js?v=38532727576b"></script>
-<script src="../../common/library-ui.js?v=38532727576b"></script>
+<script src="../../common/asset-display-overrides.js?v=8ee8ea18ebb5"></script>
+<script src="../../common/kit.js?v=8ee8ea18ebb5"></script>
+<script src="../../common/asset-loader.js?v=8ee8ea18ebb5"></script>
+<script src="../../common/portrait-audio.js?v=8ee8ea18ebb5"></script>
+<script src="../../common/stage-ui.js?v=8ee8ea18ebb5"></script>
+<script src="../../common/library-ui.js?v=8ee8ea18ebb5"></script>
 <script>
 
 (() => {
@@ -2089,6 +2089,10 @@
   }
 
   function stagePreviewPath(v) {
+    if (routeSource === 'crosscore') {
+      const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
+      return thumbnail ? THUMB_PREFIX + thumbnail : null;
+    }
     return K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
   }
 
@@ -2103,7 +2107,7 @@
     highlightSlot = null;
     const v = cur.cutscenes[idx] || cur.cutscenes[0];
     if (!v) { loadingPreview.cancel(); status((cur.name || cur.id) + ' · 无过场'); return; }
-    loadingPreview.begin(seq, { path: stagePreviewPath(v), label: aliasOf(cur.id) || cur.name || cur.id });
+    loadingPreview.begin(seq, { path: stagePreviewPath(v), label: aliasOf(cur.id) || cur.name || cur.id, trimImage: routeSource === 'crosscore' });
     status('加载: ' + (cur.name || cur.id) + ' …');
     playerPost('state', { state: 'loading', message: '正在读取骨骼、Atlas 与贴图' });
     try {
@@ -2362,6 +2366,10 @@
   async function loadChars() {
     const thumbnails = K.fetchJSON('../../thumbs/index.json').then(td => {
       webThumbs = td.items || {};
+      if (routeSource === 'crosscore' && cur) {
+        const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
+        if (variant) loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
+      }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
     const data = await K.fetchJSON('../' + indexFile);

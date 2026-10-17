@@ -3,6 +3,11 @@ import { SpineScene } from './scene.mjs?v=20261015-2';
 
 const $ = selector => document.querySelector(selector), SP = window.spine, K = window.SpineKit;
 const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint = overlay.getContext('2d');
+const loadingPreview = K.createLoadingPreview(stage);
+let previewSequence = 0, previewScene = null, previewPending = false;
+window.__crosscorePreviewFailure = reason => loadingPreview.fail(previewSequence, reason);
+const initialPreviewId = new URL(location.href).searchParams.get('model');
+if (/^\d+$/.test(initialPreviewId || '')) loadingPreview.begin(0, { path: K.siteRoot() + 'thumbs/crosscore/interaction-' + initialPreviewId + '.webp', label: '当前立绘', trimImage: true });
 const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
 if (!gl) throw new Error('WebGL 不可用，请在本机浏览器开启硬件加速后重试。');
 const context = new SP.ManagedWebGLRenderingContext(gl), renderer = new SP.SceneRenderer(canvas, context);
@@ -14,6 +19,7 @@ const models = catalog.models.filter(model => model.available), modelById = new 
 let model, scene, controller, transition, transitionUntil = 0, requestId = 0, last = performance.now() / 1000;
 let audio = new Audio(), audioResult = null, cueName = null, pointer = null, lastFailure = null, lastActionState = '';
 let callbacks = [], specialMode = false, searchTimer, pendingFit = null, modelGroupFilter = 'all';
+let viewZoom = 1;
 const playback = { playing: true, speed: 1, loop: true, time: 0 };
 let animationPreview = null, activeTrack = 0;
 let gridPage = 1, gridPageSize = K.libraryPageSize();
@@ -137,12 +143,28 @@ function step(direction) {
   $('#model').value = options[next].value;
   loadModel($('#model').value).catch(fail);
 }
-function fit() {
-  if (!scene) return;
-  const bounds = scene.bounds, ratio = stage.clientWidth / Math.max(1, stage.clientHeight), width = bounds.width * 1.08, height = bounds.height * 1.08;
-  renderer.camera.viewportWidth = Math.max(width, height * ratio); renderer.camera.viewportHeight = Math.max(height, width / ratio);
-  renderer.camera.position.set(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, 0); renderer.camera.update();
+function updateZoomControls() {
+ for (const id of ['zOut', 'zPct', 'zIn']) $( '#' + id ).disabled = !scene;
+ $('#zPct').textContent = Math.round(viewZoom * 100) + '%';
 }
+function fit() {
+ if (!scene) return;
+ const bounds = scene.bounds, area = K.stageViewArea(canvas), rect = canvas.getBoundingClientRect();
+ const units = Math.max(bounds.width / area.width, bounds.height / area.height) * 1.08 / viewZoom;
+ renderer.camera.viewportWidth = units * rect.width; renderer.camera.viewportHeight = units * rect.height;
+ const offsetX = area.left + area.width / 2 - rect.left - rect.width / 2;
+ const offsetY = rect.top + rect.height / 2 - area.top - area.height / 2;
+ renderer.camera.position.set(bounds.x + bounds.width / 2 - offsetX * units, bounds.y + bounds.height / 2 - offsetY * units, 0);
+ renderer.camera.update(); updateZoomControls();
+}
+function setZoom(value) {
+ if (!scene || !Number.isFinite(value)) return;
+ viewZoom = Math.max(.1, Math.min(8, value)); pendingFit = null; fit();
+}
+$('#zOut').addEventListener('click', () => setZoom(viewZoom / 1.25));
+$('#zIn').addEventListener('click', () => setZoom(viewZoom * 1.25));
+$('#zPct').addEventListener('click', () => { viewZoom = 1; fit(); });
+stage.addEventListener('wheel', event => { if (!scene || ![canvas, overlay].includes(event.target)) return; event.preventDefault(); setZoom(viewZoom * Math.exp(-event.deltaY * .0015)); }, { passive: false });
 function fitVisiblePixels() {
   if (!scene) return false;
   const pixels = new Uint8Array(canvas.width * canvas.height * 4);
@@ -280,7 +302,11 @@ async function loadPrefab(key, ownerRequest) {
 async function loadModel(identity) {
   const selected = modelById.get(Number(identity));
   if (!selected?.available) throw new Error(selected?.unavailableReason || '该立绘暂无完整本地资源');
+  viewerUI.tools.prepareLoad(); editor = null;
   const request = ++requestId;
+  previewSequence = request; previewPending = true; previewScene = null; viewZoom = 1;
+  const previewThumb = thumbnailFor(selected);
+  loadingPreview.begin(request, { path: previewThumb ? K.siteRoot() + 'thumbs/' + previewThumb : null, label: selected.name, trimImage: true });
   pointer = null; controller = null; callbacks = []; playback.playing = true; pendingFit = null; stopAudio(); transition?.dispose(); transition = null; specialMode = false; lastActionState = '';
   model = selected; fillVoiceOptions(); lastFailure = null; $('#loading').hidden = false; $('#loading').textContent = `正在加载 ${model.name}…`;
   $('#model').value = String(model.id); $('#active-name').textContent = model.name; $('#stage-info').textContent = `${model.name} · 正在加载`; fillModels(); $('#subtitle').textContent = ''; $('#feedback').textContent = '正在加载…';
@@ -288,6 +314,7 @@ async function loadModel(identity) {
   try { loaded = await loadPrefab(model.prefab, request); }
   catch (error) { if (request !== requestId) return; throw error; }
   if (!loaded || request !== requestId) return;
+  previewScene = loaded;
   controller = new InteractionController({ ...model, idle: loaded.idle }, handleInteraction, track => scene?.trackStatus(track));
   $('#loading').hidden = true; K.setLibraryStageReady(true);
   $('#stage-info').textContent = `${model.name} · ${model.actions.length} 条互动配置`;
@@ -428,6 +455,7 @@ function render() {
       else if (current >= pendingFit.expires) pendingFit = null;
     }
     if (transition) { if (current >= transitionUntil) { transition.dispose(); transition = null; } else { transition.update(animationPreview ? 0 : step, current); transition.draw(renderer, viewport); } }
+    if (previewPending && previewSequence === requestId && scene === previewScene && controller && !pendingFit && !gl.isContextLost() && canvas.width > 1 && canvas.height > 1) { loadingPreview.ready(previewSequence); previewPending = false; }
     drawRegions(); updateActions(); viewerUI.update();
   } catch (error) { if (lastFailure !== error.message) fail(error); }
   requestAnimationFrame(render);
@@ -457,7 +485,7 @@ $('#gridSearch').addEventListener('input', () => {
 });
 $('#model').addEventListener('change', () => { clearTimeout(searchTimer); loadModel($('#model').value).catch(fail); });
 $('#btnPrev').addEventListener('click', () => step(-1)); $('#btnNext').addEventListener('click', () => step(1));
-$('#reset').addEventListener('click', () => loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { fit(); if (scene) pendingFit = { scene, at: now(), expires: now() + 2 }; });
+$('#reset').addEventListener('click', () => model && loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { viewZoom = 1; fit(); if (scene) pendingFit = { scene, at: now(), expires: now() + 2 }; });
 $('#railThumb').addEventListener('click', () => $('#fit').click());
 $('#railStar').addEventListener('click', () => { if (model) { K.favs.toggle(favoriteEntry(model)); fillModels(); } });
 
@@ -499,7 +527,7 @@ document.querySelectorAll('[data-group]').forEach(button => button.addEventListe
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') { setPanelOpen('library', false); setPanelOpen('interaction', false); }
 });
-function fail(error) { lastFailure = error.message; $('#loading').hidden = false; $('#loading').textContent = `加载失败：${error.message}`; console.error(error); }
+function fail(error) { loadingPreview.fail(previewSequence, error.message); lastFailure = error.message; $('#loading').hidden = false; $('#loading').textContent = `加载失败：${error.message}`; console.error(error); }
 window.__crosscoreTest = {
   snapshot: () => ({ ready: !!scene && !!controller && !controller.switching && $('#loading').hidden, modelId: model?.id, prefab: scene?.definition.name, idle: controller?.idle, ...controller?.snapshot(), tracks: scene?.main.state.tracks.filter(Boolean).map(entry => ({ track: entry.trackIndex, name: entry.animation?.name, time: entry.trackTime, timeScale: entry.timeScale })), audio: audioResult, error: lastFailure, view: scene && { bounds: scene.bounds, x: renderer.camera.position.x, y: renderer.camera.position.y, width: renderer.camera.viewportWidth, height: renderer.camera.viewportHeight, fitting: !!pendingFit } }),
   screenForArea: index => {

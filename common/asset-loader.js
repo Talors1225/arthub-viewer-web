@@ -87,7 +87,28 @@
       img.fetchPriority = 'high';
       root.classList.remove('has-preview');
       img.addEventListener('load', () => {
-        if (owns(seq) && image === img) root.classList.add('has-preview');
+        if (!owns(seq) || image !== img) return;
+        if (current.trimImage) {
+          try {
+            const source = document.createElement('canvas');
+            source.width = img.naturalWidth; source.height = img.naturalHeight;
+            const context = source.getContext('2d'); context.drawImage(img, 0, 0);
+            const pixels = context.getImageData(0, 0, source.width, source.height).data;
+            let left = source.width, top = source.height, right = -1, bottom = -1;
+            for (let y = 0; y < source.height; y++) for (let x = 0; x < source.width; x++) {
+              if (pixels[(y * source.width + x) * 4 + 3] > 8) {
+                left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x); bottom = Math.max(bottom, y);
+              }
+            }
+            if (right >= left && bottom >= top) {
+              const cropped = document.createElement('canvas');
+              cropped.width = right - left + 1; cropped.height = bottom - top + 1;
+              cropped.getContext('2d').drawImage(source, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height);
+              img.src = cropped.toDataURL('image/png');
+            }
+          } catch (_) { /* Keep the original preview when pixel access is unavailable. */ }
+        }
+        root.classList.add('has-preview');
       }, { once: true });
       img.addEventListener('error', () => {
         if (owns(seq) && image === img) { root.classList.remove('has-preview'); picture.replaceChildren(); image = null; imagePath = null; }
@@ -97,7 +118,7 @@
     };
     return {
       begin(seq, options = {}) {
-        current = { seq, label: String(options.label || '当前资源'), state: 'loading' };
+        current = { seq, label: String(options.label || '当前资源'), state: 'loading', trimImage: !!options.trimImage };
         root.dataset.state = 'loading';
         root.dataset.load = String(seq);
         root.dataset.fit = String(options.fit || .92);

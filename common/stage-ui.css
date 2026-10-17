@@ -21,3 +21,13 @@
   /* The same panel is already available in the right-hand tools. */
   .playbar.playbar-speed-only #btnPanel { display: none !important; }
 }
+
+/* CrossCore offers visible zoom controls on desktop as well as mobile. */
+html[data-gav-ui="clean"] body:is(.crosscore-viewer,.crosscore-interaction-viewer,.azurlane-viewer) .tool-strip .tool-zoom {
+ display:flex !important; position:static !important; align-items:center; gap:2px; margin:0; padding:0; border:0; background:transparent; box-shadow:none;
+}
+body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom button { display:inline-flex; align-items:center; justify-content:center; min-width:32px; min-height:38px; padding:5px; border:0; border-radius:9px; color:var(--text-dim); background:transparent; cursor:pointer; font:inherit; }
+body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom .zoom-pct { min-width:46px; font-size:11px; font-variant-numeric:tabular-nums; }
+body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom button:hover { color:var(--accent); background:var(--accent-dim-bg); }
+
+html[data-gav-ui="clean"] body:is(.crosscore-viewer,.crosscore-interaction-viewer,.azurlane-viewer) .tool-strip .tool-zoom :is(#zOut,#zPct,#zIn) { display:inline-flex !important; align-items:center; justify-content:center; }

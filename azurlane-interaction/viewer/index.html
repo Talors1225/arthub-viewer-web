@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>碧蓝航线 · ArtHub 互动立绘</title>
-<link rel="stylesheet" href="../../common/kit.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/library-ui.css?v=38532727576b">
-<link rel="stylesheet" href="../../common/visual.css?v=38532727576b">
+<link rel="stylesheet" href="../../common/kit.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/library-ui.css?v=8ee8ea18ebb5">
+<link rel="stylesheet" href="../../common/visual.css?v=8ee8ea18ebb5">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261017-sound1">
 <link rel="stylesheet" href="azurlane.css">
-  <script src="../../arthub-cos-config.js?v=b9a47335fdb7"></script>
-  <script src="../../arthub-cos.js?v=38532727576b"></script>
+  <script src="../../arthub-cos-config.js?v=97d197056b20"></script>
+  <script src="../../arthub-cos.js?v=8ee8ea18ebb5"></script>
 </head>
 <body class="game-interaction-viewer azurlane-viewer" data-pose-tools="disabled">
   <main class="stage" id="stage" aria-label="碧蓝航线动态立绘舞台">
@@ -37,6 +37,11 @@
   </div>
 
   <div id="toolStrip" class="tool-strip" aria-label="舞台工具">
+    <div class="zoom-bar tool-zoom" aria-label="视图缩放">
+      <button id="zOut" type="button" title="缩小" aria-label="缩小" disabled></button>
+      <button id="zPct" class="zoom-pct" type="button" title="适应窗口" aria-label="适应窗口" disabled>100%</button>
+      <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
+    </div>
     <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
     <button id="fit" type="button" title="适应窗口">适应</button>
   </div>
@@ -102,11 +107,6 @@
       <div id="interaction-panel" class="interaction-content">
         <details class="section">
           <summary>舞台控制</summary>
-          <div class="stage-control-row">
-            <button id="zoom-out" type="button" aria-label="缩小" title="缩小">−</button>
-            <output id="zoom" aria-live="polite">100%</output>
-            <button id="zoom-in" type="button" aria-label="放大" title="放大">+</button>
-          </div>
           <label for="pointer-mode" class="field-label">鼠标模式
             <select id="pointer-mode" aria-label="鼠标模式" title="鼠标模式">
               <option value="interact">触摸互动</option><option value="pan">拖动画面</option>
@@ -144,11 +144,11 @@
     </div>
   </aside>
 
-  <script src="../../common/asset-display-overrides.js?v=38532727576b"></script>
-  <script src="../../common/kit.js?v=38532727576b"></script>
-  <script src="../../common/asset-loader.js?v=38532727576b"></script>
-  <script src="../../common/stage-ui.js?v=38532727576b"></script>
-  <script src="../../common/library-ui.js?v=38532727576b"></script>
+  <script src="../../common/asset-display-overrides.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/kit.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/asset-loader.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/stage-ui.js?v=8ee8ea18ebb5"></script>
+  <script src="../../common/library-ui.js?v=8ee8ea18ebb5"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261017-sound1"></script>
   <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
   <script src="vendor/spine-player.js"></script>
