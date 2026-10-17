@@ -4,6 +4,7 @@
   const cfg = window.ARTHUB_COS_CONFIG || {};
   const root = String(cfg.root || '').replace(/\/+$/, '');
   const gameRoot = String(cfg.gameAssetsRoot || '').replace(/\/+$/, '');
+  const crosscoreRoot = String(cfg.crosscoreAssetsRoot || '').replace(/\/+$/, '');
   if (!root) return;
 
   const ASSET_MARKERS = [
@@ -19,6 +20,11 @@
   const GAME_ASSET_MARKERS = [
     '/azurlane-interaction/animators/', '/azurlane-interaction/assets/live2d/', '/azurlane-interaction/assets/spinepainting/',
     '/azurlane-interaction/audio/', '/azurlane-interaction/catalog/', '/azurlane-interaction/model-audio/', '/azurlane-interaction/models/',
+  ];
+
+  const CROSSCORE_ASSET_MARKERS = [
+    '/crosscore/spine/', '/crosscore/audio/', '/crosscore-interaction/audio/', '/crosscore-interaction/catalog/',
+    '/crosscore-interaction/spine/', '/crosscore-interaction/voices/',
   ];
 
   const PATH_REWRITES = {
@@ -46,7 +52,9 @@
     const remotePath = markerPath(url.pathname);
     if (!remotePath) return url.href;
     const gameAsset = GAME_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);
-    return (gameAsset && gameRoot ? gameRoot : root) + remotePath + url.search + url.hash;
+    const crosscoreAsset = CROSSCORE_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);
+    const targetRoot = crosscoreAsset && crosscoreRoot ? crosscoreRoot : gameAsset && gameRoot ? gameRoot : root;
+    return targetRoot + remotePath + url.search + url.hash;
   }
 
   window.ARTHUB_COS_ROOT = root;
