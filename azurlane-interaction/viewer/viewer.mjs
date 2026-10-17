@@ -21,11 +21,18 @@ function preserveSimulation(root){
 const nativeFromMoc=Live2DCubismCore.Model.fromMoc;
 Live2DCubismCore.Model.fromMoc=function(moc){const model=nativeFromMoc.call(this,moc);if(model){mocOwners.set(model,moc);createdMocs++;}return model;};
 const evidenceNode=document.createElement('script');evidenceNode.type='application/json';evidenceNode.id='pilot-evidence';document.body.append(evidenceNode);
-const look={x:0,y:0,targetX:0,targetY:0};let pointer,libraryFilter='all';
+const look={x:0,y:0,targetX:0,targetY:0};let pointer,libraryFilter='all',gridPage=1,gridPageSize=K.libraryPageSize(),libraryThumbs={},sortMode='name',sortDirection='asc';
+const libraryPrefs=K.Store('azurlane-interaction');sortMode=libraryPrefs.get('sortMode','name');sortDirection=libraryPrefs.get('sortDirection','asc');
+let retiredModels={};
+const canonicalModelId=id=>retiredModels[id]||id;
+const THUMB_PREFIX='../../thumbs/';
 const enc=path=>path.split('/').map(encodeURIComponent).join('/');
 const labels={touch_1:'普通触摸',touch_2:'特殊触摸',touch_head:'摸头',login:'登录',home:'回港',task:'任务',mission_complete:'任务完成',main_1:'主界面 1',main_2:'主界面 2',main_3:'主界面 3',propose:'誓约'};
 function fail(error){const message=error.message||String(error);$('status').textContent='加载失败：'+message;evidence.errors.push(message);}
-function entry(m){const url=new URL(BASE+'/viewer/index.html?id='+encodeURIComponent(m.id),location.href);return {k:'azurlane:'+m.id,src:'azurlane-interaction',t:m.characterName,s:m.skinName,u:url.pathname+url.search};}
+function portraitName(m){const character=String(m.characterName||'').trim(),skin=String(m.skinName||'').trim();return character&&skin&&skin!==character&&!/\{namecode:\d+\}/i.test(skin)?character+' · '+skin:character||String(m.name||m.id||'');}
+function variantLabel(m){return /_hx$/.test(m.id)?'HX版':/_asmr$/.test(m.id)?'ASMR版':'';}
+function stageName(m){const variant=variantLabel(m);return portraitName(m)+(variant?'（'+variant+'）':'');}
+function entry(m){const url=new URL(BASE+'/viewer/index.html?id='+encodeURIComponent(m.id),location.href);return {k:'azurlane:'+m.id,src:'azurlane-interaction',t:stageName(m),s:m.type==='live2d'?'Live2D':'Spine',u:url.pathname+url.search};}
 function zoomTo(next,x,y){if(!Number.isFinite(next)||next<=0)return;next=Math.max(.01,next);if(Number.isFinite(x)){const r=canvas.getBoundingClientRect(),f=next/view.zoom;view.panX=f*view.panX+(1-f)*(x-r.left-r.width/2);view.panY=f*view.panY+(1-f)*(y-r.top-r.height/2);}view.zoom=next;$('zoom').textContent=next<100?Math.round(next*100)+'%':next.toPrecision(3)+'×';}
 $('zoom-in').onclick=()=>zoomTo(view.zoom*1.25);$('zoom-out').onclick=()=>zoomTo(view.zoom/1.25);$('fit').onclick=()=>{view.panX=view.panY=0;zoomTo(1);};
 stage.addEventListener('wheel',e=>{if(e.target!==canvas)return;e.preventDefault();zoomTo(view.zoom*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY);},{passive:false});
@@ -49,16 +56,35 @@ async function playSound(bank,cue,options={}){
 function sound(bank,cue,options){playSound(bank,cue,options).catch(e=>{evidence.audio.error=e.message;$('voice-status').textContent='声音读取失败：'+e.message;});}
 function updateAudio(dt){let rms=0;if(voiceAnalyser&&ctx?.state==='running'){const pcm=new Float32Array(voiceAnalyser.fftSize);voiceAnalyser.getFloatTimeDomainData(pcm);rms=Math.sqrt(pcm.reduce((s,v)=>s+v*v,0)/pcm.length);}evidence.audio.rms=rms;evidence.audio.maxRms=Math.max(rms,evidence.audio.maxRms);const smooth=selected?.skinConfig?.lip_smoothing||selected?.interaction?.mouth?.Smoothing||.08;mouth+=(rms-mouth)*(1-Math.exp(-dt/Math.max(.01,smooth)));}
 function fold(value){document.body.classList.toggle('fold',value);}
-function populate(){
- const filter=$('filter').value.trim().toLowerCase(),cards=$('thumbGrid');const items=allModels.filter(m=>(m.name+' '+m.characterName+' '+m.skinName+' '+m.id).toLowerCase().includes(filter)&&(libraryFilter==='all'||libraryFilter===m.type||libraryFilter==='favorite'&&K.favs.has(entry(m).k)));
- const fragment=document.createDocumentFragment();for(const m of items){const a=document.createElement('a');a.href='?id='+encodeURIComponent(m.id);a.className='thumb-card'+(m.id===selected?.id?' active':'');a.dataset.id=m.id;
- const ph=document.createElement('div');ph.className='ph';const type=document.createElement('span');type.className='type-pill';type.textContent=m.type==='live2d'?'Live2D':'Spine';ph.append(type);
- const text=document.createElement('div');text.className='tm';const name=document.createElement('div'),skin=document.createElement('div'),tag=document.createElement('span');name.className='tn';skin.className='ts';tag.className='tt';name.textContent=m.characterName;skin.textContent=m.skinName;tag.textContent=m.type==='live2d'?'Live2D':'Spine';text.append(name,skin);a.append(tag,ph,text);a.onclick=e=>{e.preventDefault();setPanelOpen('library',false);loadModel(m.id).catch(fail);};fragment.append(a);}cards.replaceChildren(fragment);
- $('gridSub').textContent=`${items.length} / ${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;
- $('btnPrev').disabled=$('btnNext').disabled=!selected;
- const starred=!!selected&&K.favs.has(entry(selected).k);$('railStar').disabled=!selected;$('railStar').setAttribute('aria-pressed',String(starred));$('railStar').innerHTML=K.uiIcon('star',18,starred);
+function updateCategoryCounts(){
+ const counts={all:allModels.length,live2d:allModels.filter(m=>m.type==='live2d').length,spine:allModels.filter(m=>m.type==='spine').length,favorite:allModels.filter(m=>K.favs.has(entry(m).k)).length};
+ for(const chip of document.querySelectorAll('#filterChips [data-filter]')){const count=chip.querySelector('.n');if(count)count.textContent=String(counts[chip.dataset.filter]||0);}
 }
-$('filter').oninput=populate;document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{libraryFilter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(v=>v.classList.toggle('on',v===b));populate();});
+function updateSortDirection(){const button=$('azurlaneSortDir'),descending=sortDirection==='desc';button.title=descending?'当前降序，点击切换为升序':'当前升序，点击切换为降序';button.setAttribute('aria-label',button.title);K.setUiIcon(button,descending?'down':'up',descending?'降序':'升序');}
+function renderPagination(totalPages){
+ for(const nav of K.paginationHosts($('gridView'))){nav.replaceChildren();nav.hidden=totalPages<=1;if(totalPages<=1)continue;
+  const add=(label,page,{current=false,disabled=false,gap=false}={})=>{const button=document.createElement(gap?'span':'button');button.className=gap?'grid-page-gap':'grid-page-btn'+(current?' on':'');button.textContent=label;if(!gap){button.type='button';button.disabled=disabled;if(current)button.setAttribute('aria-current','page');button.setAttribute('aria-label',label==='‹'?'上一页':label==='›'?'下一页':'第 '+label+' 页');if(!disabled)button.onclick=()=>{gridPage=page;populate();$('gridView').scrollTo({top:0,behavior:'smooth'});};}nav.append(button);};
+  add('‹',gridPage-1,{disabled:gridPage<=1});const radius=matchMedia('(max-width: 720px)').matches?1:2,pages=[...new Set([1,...Array.from({length:Math.max(0,Math.min(totalPages-1,gridPage+radius)-Math.max(2,gridPage-radius)+1)},(_,i)=>Math.max(2,gridPage-radius)+i),totalPages])].sort((a,b)=>a-b);let previous=0;for(const page of pages){if(previous&&page-previous>1)add('…',undefined,{gap:true});add(String(page),page,{current:page===gridPage});previous=page;}add('›',gridPage+1,{disabled:gridPage>=totalPages});
+ }
+}
+function populate(){
+ const query=$('gridSearch').value.trim().toLocaleLowerCase(),cards=$('thumbGrid');let items=allModels.filter(m=>(m.name+' '+m.characterName+' '+m.skinName+' '+m.id).toLocaleLowerCase().includes(query)&&(libraryFilter==='all'||libraryFilter===m.type||libraryFilter==='favorite'&&K.favs.has(entry(m).k)));
+ const direction=sortDirection==='desc'?-1:1;
+ if(sortMode==='name')items=[...items].sort((a,b)=>direction*portraitName(a).localeCompare(portraitName(b),'zh-CN',{numeric:true,sensitivity:'base'}));
+ else if(sortMode==='type')items=[...items].sort((a,b)=>direction*(String(a.type).localeCompare(String(b.type))||portraitName(a).localeCompare(portraitName(b),'zh-CN',{numeric:true,sensitivity:'base'})));
+ else if(sortDirection==='desc')items=[...items].reverse();
+ gridPageSize=K.libraryPageSize();const pageCount=Math.max(1,Math.ceil(items.length/gridPageSize));gridPage=Math.min(Math.max(1,gridPage),pageCount);const pageItems=items.slice((gridPage-1)*gridPageSize,gridPage*gridPageSize),fragment=document.createDocumentFragment();
+ for(const m of pageItems){const card=document.createElement('div');card.className='thumb-card'+(m.id===selected?.id?' active':'');card.dataset.id=m.id;card.setAttribute('role','button');card.tabIndex=0;card.setAttribute('aria-label',portraitName(m));
+  const preview=document.createElement('div');preview.className='ph';const text=document.createElement('div');text.className='tm';const name=document.createElement('div'),tag=document.createElement('span'),star=document.createElement('button');name.className='tn';tag.className='tt';star.className='tstar'+(K.favs.has(entry(m).k)?' on':'');name.textContent=portraitName(m);tag.textContent=m.type==='live2d'?'Live2D':'Spine';star.type='button';star.title=K.favs.has(entry(m).k)?'取消收藏':'收藏';star.setAttribute('aria-label',star.title);star.setAttribute('aria-pressed',String(K.favs.has(entry(m).k)));star.innerHTML=K.uiIcon('star',18,K.favs.has(entry(m).k));text.append(name);card.append(preview,text,tag,star);const thumb=libraryThumbs['azurlane:'+m.id];K.setPreview(preview,thumb?THUMB_PREFIX+thumb:null);
+  const variant=variantLabel(m);if(variant){const badge=document.createElement('span');badge.className='tv';badge.textContent=variant;badge.title=variant==='HX版'?'原游戏 HX 变体，模型或动作配置与标准版存在差异':variant;card.append(badge);}
+  card.addEventListener('click',event=>{if(event.target.closest('.tstar'))return;setPanelOpen('library',false);loadModel(m.id).catch(fail);});card.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&!event.target.closest('.tstar')){event.preventDefault();setPanelOpen('library',false);loadModel(m.id).catch(fail);}});star.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();K.favs.toggle(entry(m));populate();});fragment.append(card);
+ }
+ cards.replaceChildren(fragment);$('gridSub').textContent=`${items.length} 个资源 · 第 ${gridPage} / ${pageCount} 页`;renderPagination(pageCount);updateCategoryCounts();updateSortDirection();
+ $('btnPrev').disabled=$('btnNext').disabled=!selected;const starred=!!selected&&K.favs.has(entry(selected).k);$('railStar').disabled=!selected;$('railStar').setAttribute('aria-pressed',String(starred));$('railStar').innerHTML=K.uiIcon('star',18,starred);
+}
+$('gridSearch').oninput=()=>{gridPage=1;populate();};document.querySelectorAll('#filterChips [data-filter]').forEach(button=>button.onclick=()=>{libraryFilter=button.dataset.filter;gridPage=1;document.querySelectorAll('#filterChips [data-filter]').forEach(chip=>{const active=chip===button;chip.classList.toggle('on',active);chip.setAttribute('aria-pressed',String(active));});populate();});
+$('azurlaneSort').value=sortMode;$('azurlaneSort').onchange=event=>{sortMode=event.target.value;libraryPrefs.set('sortMode',sortMode);gridPage=1;populate();};$('azurlaneSortDir').onclick=()=>{sortDirection=sortDirection==='desc'?'asc':'desc';libraryPrefs.set('sortDirection',sortDirection);gridPage=1;populate();};
+matchMedia('(max-width: 720px)').addEventListener('change',()=>{const firstIndex=(gridPage-1)*gridPageSize;gridPageSize=K.libraryPageSize();gridPage=Math.floor(firstIndex/gridPageSize)+1;populate();});
 function setPanelOpen(name,open){document.body.classList.toggle(name+'-open',open);$(name==='library'?'gridView':'floatPanel').classList.toggle('open',open);$(name==='library'?'railGrid':'btnAnimTab').setAttribute('aria-expanded',String(open));}
 $('railGrid').onclick=()=>{const open=!document.body.classList.contains('library-open');setPanelOpen('library',open);if(open&&innerWidth<=760)setPanelOpen('interaction',false);};
 $('btnAnimTab').onclick=()=>{const open=!document.body.classList.contains('interaction-open');if(open)viewerUI.showTab('anim');setPanelOpen('interaction',open);if(open&&innerWidth<=760)setPanelOpen('library',false);};
@@ -211,15 +237,16 @@ async function spinePortrait(model,generation){
 }
 async function getJson(url,required=true){const r=await fetch(url);if(!r.ok){if(!required&&r.status===404)return null;throw Error(r.status+' '+url);}return r.json();}
 async function loadModel(id,{history=true}={}){
+ const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
  const generation=++loadGeneration;view.ready=evidence.ready=false;render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
  const next=canvas.cloneNode(false);canvas.replaceWith(next);canvas=next;Object.assign(view,{zoom:1,panX:0,panY:0,playing:true,frames:0});look.x=look.y=look.targetX=look.targetY=0;portraitTime=0;zoomTo(1);$('status').textContent=id+' · 正在读取模型和交互…';
  const data=await Promise.all([getJson(BASE+'/catalog/'+encodeURIComponent(id)+'.json'),getJson(BASE+'/model-audio/'+encodeURIComponent(id)+'.json',false),allModels.find(m=>m.id===id)?.type==='live2d'?getJson(BASE+'/animators/'+encodeURIComponent(id)+'.json',false):null]).catch(e=>{if(generation!==loadGeneration)return null;throw e;});
  if(!data)return false;const [model,audio,animator]=data;
- if(generation!==loadGeneration)return false;selected=model;if(audio)Object.assign(model,audio);if(animator)model.animator=animator;evidence.selected=model;$('active-name').textContent=model.characterName+' · '+model.skinName;populate();
+ if(generation!==loadGeneration)return false;selected=model;if(audio)Object.assign(model,audio);if(animator)model.animator=animator;evidence.selected=model;$('active-name').textContent=stageName(model);populate();
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
  controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:Number($('favor').value)}):new SpineController(model,adapter,{storage:localStorage,favor:Number($('favor').value)});evidence.controller=controller;evidence.adapter=adapter;controls();controller.playIdle();
- view.ready=evidence.ready=true;document.title=model.name+' · ArtHub';$('status').textContent=model.characterName+' · '+model.skinName+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
+ view.ready=evidence.ready=true;document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
  if(history){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);K.history.push(entry(model));}return true;
 }
 function record(){
@@ -230,8 +257,8 @@ function record(){
  $('game-state').textContent='当前姿态：'+(selected.type==='live2d'?controller.state.idleIndex:controller.state.idle)+' · '+(controller.state.busy?'动作中':'可交互');
  if(showHits){const polygons=adapter.polygons?.()||[];$('hit-overlay').setAttribute('viewBox',`0 0 ${stage.clientWidth} ${stage.clientHeight}`);$('hit-overlay').replaceChildren(...polygons.map(h=>{const polygon=document.createElementNS('http://www.w3.org/2000/svg','polygon');polygon.setAttribute('points',h.vertices.map(p=>p.join(',')).join(' '));polygon.setAttribute('fill','#ffce6e22');polygon.setAttribute('stroke','#ffce6e');polygon.setAttribute('stroke-width','1');return polygon;}));}else $('hit-overlay').replaceChildren();
 }
-window.__loadAzurLane=loadModel;window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('id'),match=allModels.find(m=>m.id===id);if(match){setPanelOpen('library',false);loadModel(match.id,{history:false}).catch(fail);}else setPanelOpen('library',true);});window.addEventListener('pagehide',()=>{loadGeneration++;controller?.dispose();disposeRenderer?.();ctx?.close().catch(()=>{});});
+window.__loadAzurLane=loadModel;window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('id'),match=allModels.find(m=>m.id===canonicalModelId(id));if(match){setPanelOpen('library',false);loadModel(id,{history:false}).catch(fail);}else setPanelOpen('library',true);});window.addEventListener('pagehide',()=>{loadGeneration++;controller?.dispose();disposeRenderer?.();ctx?.close().catch(()=>{});});
 let previous=performance.now(),nextEvidence=0;
 function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;try{if(!exporting&&view.ready&&controller){updateAudio(dt);if(view.playing){portraitTime+=dt*view.speed;const d=1-Math.exp(-dt/(selected.interaction.settings?.DampingTime||.3));look.x+=(look.targetX-look.x)*d;look.y+=(look.targetY-look.y)*d;controller.tick(dt*view.speed);}render?.(dt);view.frames++;viewerUI.update();if(now>=nextEvidence){record();nextEvidence=now+250;}}}catch(e){view.ready=evidence.ready=false;fail(e);}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
-try{const listing=await getJson(BASE+'/characters.json');allModels=listing.characters;evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${listing.summary.live2d} Live2D / ${listing.summary.spine} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===id);if(initial)await loadModel(initial.id);else setPanelOpen('library',true);}catch(e){fail(e);}
+try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json'),getJson(THUMB_PREFIX+'index.json',false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}

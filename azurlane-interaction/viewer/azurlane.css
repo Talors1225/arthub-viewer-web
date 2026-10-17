@@ -15,6 +15,8 @@
   min-width: 0;
   color: var(--text);
   text-decoration: none;
+  border: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .azurlane-viewer #gridView .thumb-card .ph {
@@ -25,15 +27,67 @@
     var(--panel2);
 }
 
-.azurlane-viewer .type-pill {
+.azurlane-viewer #gridView .thumb-card { position: relative; cursor: pointer; }
+
+.azurlane-viewer #gridView .thumb-card .ph {
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+}
+
+.azurlane-viewer #gridView .thumb-card .ph img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 10px;
+  object-fit: contain;
+}
+
+.azurlane-viewer #gridView .thumb-card .tt {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  background: rgba(10, 14, 20, .72);
+  color: #dfe5ef;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.azurlane-viewer #gridView .thumb-card .tstar {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.azurlane-viewer #gridView .thumb-card .tstar:hover { color: var(--text); }
+.azurlane-viewer #gridView .thumb-card .tstar.on { color: var(--star); }
+
+.azurlane-viewer #gridView .thumb-card .tv {
+  position: absolute;
+  top: 8px;
+  left: 64px;
+  padding: 3px 7px;
   border: 1px solid var(--border2);
   border-radius: 999px;
-  padding: 5px 9px;
   background: var(--glass);
   color: var(--text-dim);
   font-size: 10px;
-  font-weight: 700;
+  line-height: 1.5;
+  pointer-events: none;
 }
+.azurlane-viewer #gridView.library-single-category .thumb-card .tv { left: 8px; }
 
 .azurlane-viewer #interaction-panel h2 {
   margin: 0 0 13px;

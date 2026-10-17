@@ -6,7 +6,7 @@
 
   K.siteRoot = () => {
     const parts = location.pathname.split('/').filter(Boolean);
-    const at = parts.findIndex(p => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'gallery'].includes(p));
+    const at = parts.findIndex(p => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'azurlane-interaction', 'gallery'].includes(p));
     return '/' + (at > 0 ? parts.slice(0, at).join('/') + '/' : '');
   };
   K.libraryPageSize = () => window.matchMedia('(max-width: 720px)').matches ? 36 : 120;

@@ -5,7 +5,7 @@
   if (!K) return;
   let ui = null;
   let stageReady = false;
-  const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul'].includes(part)) || 'viewer';
+  const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'azurlane-interaction'].includes(part)) || 'viewer';
   const setText = (node, text) => { if (node && node.textContent !== text) node.textContent = text; };
   const setAttribute = (node, name, value) => { if (node && node.getAttribute(name) !== value) node.setAttribute(name, value); };
   const make = (tag, className) => {
@@ -200,7 +200,8 @@
     if (!name) return;
     const fullName = name.textContent.trim();
     setAttribute(name, 'title', fullName);
-    setAttribute(card, 'aria-label', fullName);
+    const variant = card.querySelector('.tv')?.textContent.trim();
+    setAttribute(card, 'aria-label', fullName + (variant ? ' · ' + variant : ''));
     const star = card.querySelector('.tstar');
     if (star && !star.querySelector('svg.arthub-icon')) star.innerHTML = K.uiIcon('star', 18, star.classList.contains('on'));
   }

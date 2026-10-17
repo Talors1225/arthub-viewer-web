@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-17T10:38:51.842Z",
+  "generatedAt": "2026-10-17T13:12:38.065Z",
   "bucketRoot": "https://pub-bdd986c6ec274f53b01df62ac49e02e2.r2.dev",
   "note": "网页代码和小索引在 build/web/current/ 中；以下大目录对应 R2 资源，并保持远程前缀不变。",
   "indexesKeptOnWebsite": true,

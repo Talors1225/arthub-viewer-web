@@ -370,7 +370,7 @@
     if (!spineGrid && !galleryGrid) return;
     document.documentElement.dataset.gavAssetNamingReady = '1';
 
-    const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikke', 'nikki', 'majsoul', 'gallery'].includes(part)) || '';
+    const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikke', 'nikki', 'majsoul', 'azurlane-interaction', 'gallery'].includes(part)) || '';
     const sourceMap = () => ({ ...(assetCatalog.spine && assetCatalog.spine[route] || {}), ...(embeddedSpineMeta[route] || {}) });
     const galleryContext = () => {
       const params = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -384,7 +384,7 @@
       const savedMode = K.Store(route).get('sortMode', null);
       const mode = select ? select.value : (savedMode || 'default');
       // MaJsoul handles its own page ordering; do not rewrite the visible page.
-      if (route === 'majsoul' || mode === 'name') return;
+      if (route === 'majsoul' || route === 'azurlane-interaction' || mode === 'name') return;
       const direction = K.Store(route).get('sortDirection', 'asc') === 'desc' ? -1 : 1;
       const map = sourceMap();
       const cards = [...spineGrid.querySelectorAll('.thumb-card')];
@@ -1973,7 +1973,7 @@
     document.documentElement.dataset.gavLibraryReady = '1';
 
     const isGallery = !!gallerySearch;
-    const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikke', 'nikki', 'majsoul', 'gallery'].includes(part)) || 'viewer';
+    const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikke', 'nikki', 'majsoul', 'azurlane-interaction', 'gallery'].includes(part)) || 'viewer';
     const store = K.Store('gav:library:' + route);
     const oldParent = search.parentElement;
     const wrap = document.createElement('div');
@@ -2064,7 +2064,7 @@
       ? document.querySelector('.tb-right')
       : document.querySelector('#gridView .grid-head');
     const homePath = (() => {
-      const routeNames = new Set(['bd2', 'nikki', 'majsoul']);
+      const routeNames = new Set(['bd2', 'nikki', 'majsoul', 'azurlane-interaction', 'gallery']);
       const parts = location.pathname.split('/').filter(Boolean);
       const routeIndex = parts.findIndex((part) => routeNames.has(part));
       return routeIndex > 0 ? '/' + parts.slice(0, routeIndex).join('/') + '/' : '/';
