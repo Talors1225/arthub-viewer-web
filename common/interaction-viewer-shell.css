@@ -630,3 +630,35 @@ body.game-interaction-viewer.fold :is(.rail, .status, .tool-strip, .playbar, .hi
     transform: none;
   }
 }
+
+/* Phone tools use one compact bottom drawer, leaving the portrait visible. */
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"] body.game-interaction-viewer #floatPanel {
+    top: auto !important; bottom: calc(62px + env(safe-area-inset-bottom)) !important;
+    height: clamp(230px, 36dvh, 300px) !important;
+    max-height: calc(100dvh - 100px) !important;
+    transform: none !important; border-radius: 14px !important;
+  }
+  body.game-interaction-viewer #floatPanel .rp-panel-head { padding: 7px 8px 0; gap: 5px; }
+  body.game-interaction-viewer #floatPanel .rp-tabs { display: flex !important; gap: 4px; }
+  html[data-gav-ui="clean"] body.game-interaction-viewer #floatPanel .rp-tabs button {
+    flex: 1; min-width: 0; min-height: 34px; padding: 4px 5px; font-size: 11px;
+  }
+  body.game-interaction-viewer #floatPanel .rp-panel-close { flex-basis: 32px; width: 32px; height: 34px; min-height: 34px; }
+  body.game-interaction-viewer .rp-extra-tabs:empty { display: none; }
+  body.game-interaction-viewer #floatPanel .rp-page { padding: 8px; }
+  body.game-interaction-viewer #floatPanel [data-panel-page="parts"].on {
+    display: grid !important; grid-template-columns: auto minmax(0,1fr);
+    grid-template-rows: 34px 34px minmax(0,1fr); gap: 6px; padding: 8px; overflow: hidden;
+  }
+  body.game-interaction-viewer #partEditHint { display: none; }
+  body.game-interaction-viewer #floatPanel #exitPartEdit { grid-row: 1; grid-column: 1; width: auto; margin: 0; padding: 5px 9px; font-size: 12px; }
+  body.game-interaction-viewer #floatPanel [data-panel-page="parts"] > .row { grid-row: 1; grid-column: 2; margin: 0; min-width: 0; }
+  body.game-interaction-viewer #partFilter { width: 100%; height: 34px; min-height: 34px; padding: 5px 9px; font-size: 12px; }
+  body.game-interaction-viewer #floatPanel [data-panel-page="parts"] > .opt-row { grid-row: 2; grid-column: 1 / -1; display: flex; gap: 6px; }
+  body.game-interaction-viewer #floatPanel [data-panel-page="parts"] > .opt-row button { flex: 1; padding: 5px 8px; min-height: 34px; font-size: 12px; }
+  body.game-interaction-viewer #slotList { grid-row: 3; grid-column: 1 / -1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  body.game-interaction-viewer .viewer-part-row { min-height: 34px; padding: 1px 0; }
+  body.game-interaction-viewer .viewer-part-row .eye { width: 32px; height: 32px; }
+  html[data-gav-ui="clean"] body.game-interaction-viewer.interaction-open :is(#toolStrip,#playbar) { display: none !important; }
+}

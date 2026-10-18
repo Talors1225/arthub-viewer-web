@@ -1,7 +1,13 @@
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip} from './controller.mjs';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
-K.initStageUI({canvas});
+let stageFrameCache=null;
+K.initStageUI({canvas,refit:()=>{stageFrameCache=null;}});
+function stageFrame(){
+ if(stageFrameCache?.canvas===canvas&&stageFrameCache.w===stage.clientWidth&&stageFrameCache.h===stage.clientHeight)return stageFrameCache;
+ const rect=canvas.getBoundingClientRect(),area=K.stageViewArea(canvas);
+ return stageFrameCache={canvas,w:stage.clientWidth,h:stage.clientHeight,width:area.width,height:area.height,x:area.left-rect.left+area.width/2,y:area.top-rect.top+area.height/2};
+}
 const loadingPreview=K.createLoadingPreview(stage);
 let previewPending=false,nextPreviewCheck=0;
 const previewSample=document.createElement('canvas');previewSample.width=previewSample.height=64;
@@ -39,7 +45,7 @@ function portraitName(m){const character=String(m.characterName||'').trim(),skin
 function variantLabel(m){return /_hx$/.test(m.id)?'HX版':/_asmr$/.test(m.id)?'ASMR版':'';}
 function stageName(m){const variant=variantLabel(m);return portraitName(m)+(variant?'（'+variant+'）':'');}
 function entry(m){const url=new URL(BASE+'/viewer/index.html?id='+encodeURIComponent(m.id),location.href);return {k:'azurlane:'+m.id,src:'azurlane-interaction',t:stageName(m),s:m.type==='live2d'?'Live2D':'Spine',u:url.pathname+url.search};}
-function zoomTo(next,x,y){if(!Number.isFinite(next)||next<=0)return;next=Math.max(.1,Math.min(8,next));if(Number.isFinite(x)){const r=canvas.getBoundingClientRect(),f=next/view.zoom;view.panX=f*view.panX+(1-f)*(x-r.left-r.width/2);view.panY=f*view.panY+(1-f)*(y-r.top-r.height/2);}view.zoom=next;for(const id of ['zOut','zPct','zIn'])$(id).disabled=!view.ready;$('zPct').textContent=next<100?Math.round(next*100)+'%':next.toPrecision(3)+'×';}
+function zoomTo(next,x,y){if(!Number.isFinite(next)||next<=0)return;next=Math.max(.1,Math.min(8,next));if(Number.isFinite(x)){const r=canvas.getBoundingClientRect(),frame=stageFrame(),f=next/view.zoom;view.panX=f*view.panX+(1-f)*(x-r.left-frame.x);view.panY=f*view.panY+(1-f)*(y-r.top-frame.y);}view.zoom=next;for(const id of ['zOut','zPct','zIn'])$(id).disabled=!view.ready;$('zPct').textContent=next<100?Math.round(next*100)+'%':next.toPrecision(3)+'×';}
 $('zIn').onclick=()=>zoomTo(view.zoom*1.25);$('zOut').onclick=()=>zoomTo(view.zoom/1.25);$('fit').onclick=()=>{view.panX=view.panY=0;zoomTo(1);};$('zPct').onclick=()=>$('fit').click();
 stage.addEventListener('wheel',e=>{if(e.target!==canvas)return;e.preventDefault();zoomTo(view.zoom*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY);},{passive:false});
 let ctx,muted=false,audioSerial=0,audioScope=0,voiceAnalyser,mouth=0;const channels=new Map(),buffers=new Map();
@@ -213,7 +219,7 @@ async function live2dPortrait(model,generation){
   return {draw:(time,size)=>{editor.before();app.renderer.resolution=size.width/stage.clientWidth;app.renderer.resize(stage.clientWidth,stage.clientHeight);if(time!==null){live.elapsedTime=elapsed+time*1000;effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;}else app.render();return canvas;},
    dispose:()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=nativeSaved;internal.coreModel.update();app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
- render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const scale=Math.min(w/natural.width,h/natural.height)*.93*view.zoom;live.scale.set(scale);live.position.set(w/2+view.panX,h/2+view.panY);if(view.playing){effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();};
+ render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const frame=stageFrame(),scale=Math.min(frame.width/natural.width,frame.height/natural.height)*.93*view.zoom;live.scale.set(scale);live.position.set(frame.x+view.panX,frame.y+view.panY);if(view.playing){effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();};
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
 }
 async function spinePortrait(model,generation){
@@ -231,9 +237,9 @@ async function spinePortrait(model,generation){
   duration:name=>Math.max(0,...layers.map(layer=>layer.data.findAnimation(name)?.duration||0)),
   timeline:()=>{const item=layers[mainLayer]?.state.getCurrent(0),duration=item?.animation?.duration||0,elapsed=Math.max(0,item?.trackTime||0);return {name:item?.animation?.name,time:duration?(item.loop?elapsed%duration:Math.min(duration,elapsed)):0,duration,loop:!!item?.loop};},
   seek:seconds=>{for(const layer of layers){const item=layer.state.getCurrent(0);if(!item)continue;const time=Math.max(0,Math.min(item.animation.duration-.0001,seconds));item.trackTime=item.trackLast=item.nextTrackLast=time;item.animationLast=item.nextAnimationLast=time;layer.state.apply(layer.skeleton);layer.skeleton.updateWorldTransform();}},
-  world:(x,y)=>{const w=stage.clientWidth,h=stage.clientHeight,units=Math.max(bounds.width/w,bounds.height/h)*1.1/view.zoom;return {x:bounds.x+(x-w/2-view.panX)*units,y:bounds.y-(y-h/2-view.panY)*units};},
+  world:(x,y)=>{const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;return {x:bounds.x+(x-frame.x-view.panX)*units,y:bounds.y-(y-frame.y-view.panY)*units};},
   hits:(x,y)=>{const p=api.world(x,y);return array(model.interaction.hitAreas).filter(h=>polygonContains(p.x,p.y,h.vertices)).map(h=>h.id);},
-  polygons:()=>{const w=stage.clientWidth,h=stage.clientHeight,units=Math.max(bounds.width/w,bounds.height/h)*1.1/view.zoom;return array(model.interaction.hitAreas).map(area=>({id:area.id,vertices:area.vertices.map(p=>[(p[0]-bounds.x)/units+w/2+view.panX,(bounds.y-p[1])/units+h/2+view.panY])}));}
+  polygons:()=>{const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;return array(model.interaction.hitAreas).map(area=>({id:area.id,vertices:area.vertices.map(p=>[(p[0]-bounds.x)/units+frame.x+view.panX,(bounds.y-p[1])/units+frame.y+view.panY])}));}
  };
  for(const l of layers){const a=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(a)l.state.setAnimation(0,a.name,true);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}
  const rectangles=[];
@@ -242,7 +248,7 @@ async function spinePortrait(model,generation){
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
  api.capture=animation=>window.createInteractionSpineCapture({layers,ns:spine,canvas,renderer:scene,gl,editor,animation,restore:()=>render(0)});
- render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight),density=Math.min(Math.max(2,devicePixelRatio||1),maxBuffer/Math.max(w,h)),bw=Math.round(w*density),bh=Math.round(h*density);if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}gl.viewport(0,0,bw,bh);scene.camera.setViewport(bw,bh);const units=Math.max(bounds.width/w,bounds.height/h)*1.1/view.zoom;scene.camera.zoom=units/density;scene.camera.position.x=bounds.x-view.panX*units;scene.camera.position.y=bounds.y+view.panY*units;scene.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);for(const l of layers){if(view.playing){l.state.update(dt*view.speed);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}}viewerUI.tools.after();scene.begin();for(const l of layers)scene.drawSkeleton(l.skeleton,true);scene.end();};
+ render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight),density=Math.min(Math.max(2,devicePixelRatio||1),maxBuffer/Math.max(w,h)),bw=Math.round(w*density),bh=Math.round(h*density);if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}gl.viewport(0,0,bw,bh);scene.camera.setViewport(bw,bh);const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;scene.camera.zoom=units/density;scene.camera.position.x=bounds.x-(view.panX+frame.x-w/2)*units;scene.camera.position.y=bounds.y+(view.panY+frame.y-h/2)*units;scene.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);for(const l of layers){if(view.playing){l.state.update(dt*view.speed);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}}viewerUI.tools.after();scene.begin();for(const l of layers)scene.drawSkeleton(l.skeleton,true);scene.end();};
  disposeRenderer=dispose;return api;
 }
 async function getJson(url,required=true){const r=await fetch(url);if(!r.ok){if(!required&&r.status===404)return null;throw Error(r.status+' '+url);}return r.json();}

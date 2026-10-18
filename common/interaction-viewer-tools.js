@@ -47,6 +47,34 @@
     const d = [cross(a, b), cross(b, c), cross(c, a)];
     return !(d.some(v => v < 0) && d.some(v => v > 0));
   }
+  let pickCanvas, pickContext;
+  const unreadableImages = new WeakSet();
+  function partHit(x, y, geometry) {
+    if (!geometry?.triangles) return false;
+    const { points, triangles, uvs, image } = geometry;
+    for (let i = 0; i < triangles.length; i += 3) {
+      const ids = Array.from(triangles.slice(i, i + 3)), [a, b, c] = ids.map(index => points[index]);
+      if (!triangleHit(x, y, a, b, c)) continue;
+      if (!image || !uvs || unreadableImages.has(image)) return true;
+      const det = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+      const wa = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / det;
+      const wb = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / det;
+      const weights = [wa, wb, 1 - wa - wb];
+      const u = ids.reduce((sum, index, n) => sum + weights[n] * uvs[index * 2], 0);
+      const v = ids.reduce((sum, index, n) => sum + weights[n] * uvs[index * 2 + 1], 0);
+      try {
+        if (!pickCanvas) { pickCanvas = document.createElement('canvas'); pickCanvas.width = pickCanvas.height = 1; pickContext = pickCanvas.getContext('2d', { willReadFrequently: true }); }
+        pickContext.clearRect(0, 0, 1, 1);
+        const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
+        pickContext.drawImage(image, Math.max(0, Math.min(width - 1, Math.floor(u * width))), Math.max(0, Math.min(height - 1, Math.floor(v * height))), 1, 1, 0, 0, 1, 1);
+        if (pickContext.getImageData(0, 0, 1, 1).data[3] > 8) return true;
+      } catch (_) {
+        unreadableImages.add(image); if (pickCanvas) pickCanvas.width = 1;
+        return true;
+      }
+    }
+    return false;
+  }
 
   // Each runtime owns its native objects. Overrides are restored before its
   // next animation update so visibility and bone edits never accumulate.
@@ -77,11 +105,12 @@
       const points = [];
       for (let i = 0; i < vertices.length; i += 2) { const p = project(vertices[i], vertices[i + 1]); points.push([p.x, p.y]); }
       const mesh = attachment instanceof ns.MeshAttachment;
-      return { points, triangles, mesh, hull: mesh && attachment.hullLength ? points.slice(0, attachment.hullLength / 2) : points,
+      return { points, triangles, uvs: attachment.uvs, image: (attachment.region?.texture || attachment.region?.page?.texture)?.getImage?.(), mesh, hull: mesh && attachment.hullLength ? points.slice(0, attachment.hullLength / 2) : points,
         kind: ns.PathAttachment && attachment instanceof ns.PathAttachment ? 'paths' : ns.ClippingAttachment && attachment instanceof ns.ClippingAttachment ? 'clipping' : 'regions' };
     }
     return {
       type: 'spine', hidden, poses, parts: () => parts, bones: () => bones, geometry,
+      drawOrder: part => parts.length * layers.indexOf(part.layer) + part.layer.skeleton.drawOrder.indexOf(part.slot),
       before() {
         for (const [slot, alpha] of savedAlpha) slot.color.a = alpha;
         for (const [bone, pose] of savedPose) Object.assign(bone, pose);
@@ -211,6 +240,9 @@
   for (const [name, label] of [['parts', '部件'], ...(poseTools ? [['pose', '姿势']] : [])]) {
     const tab = document.createElement('button'); tab.type = 'button'; tab.dataset.panelTab = name; tab.textContent = label; tab.setAttribute('aria-selected', 'false'); tabs.append(tab);
   }
+  const extraTabs = [...extras.children], phonePanel = matchMedia('(max-width: 720px)');
+  const arrangeTabs = () => { const target = phonePanel.matches ? tabs : extras; for (const tab of extraTabs) target.append(tab); };
+  phonePanel.addEventListener('change', arrangeTabs); arrangeTabs();
   $('floatPanel').insertAdjacentHTML('beforeend', `
     <div class="rp-page" data-panel-page="parts">
       <p id="partEditHint" class="muted">开启动画部件编辑后，点击画面可选择隐藏部件。</p>
@@ -232,7 +264,7 @@
 
   window.createInteractionViewerTools = (driver, ui) => {
     const cfg = driver.tools, storeKey = 'arthub:interaction-tools:' + location.pathname;
-    let editor, identity, mode = '', lastRefresh = 0, selectedPart = null, dragBone = null, resumeEdit = false, poseLocked = false, popup = null, exporting = false;
+    let editor, identity, mode = '', lastRefresh = 0, selectedPart = null, dragBone = null, partPress = null, partTap = null, resumeEdit = false, poseLocked = false, popup = null, exporting = false;
     let background = localStorage.getItem(storeKey + ':background') || '#000000', exportUrl = null;
     const debug = {}, paint = editOverlay.getContext('2d');
     const toast = (message, type = 'info') => K.toast(message, type);
@@ -264,12 +296,14 @@
       if (next) requireEditor();
       if (poseTools && next === 'pose' && mode !== 'pose') { resumeEdit = driver.playback().playing; driver.setPlaying(false); cfg.stopAudio?.(); }
       if (poseTools && mode === 'pose' && next !== 'pose') { if (!poseLocked) { editor?.resetPose(); renderBoneFields(); } if (resumeEdit) { driver.setPlaying(true); resumeEdit = false; } }
-      mode = next; dragBone = null; selectedPart = null;
+      mode = next; dragBone = null; partPress = partTap = null; selectedPart = null;
       $('stage').dataset.clickMode = mode === 'parts' ? 'part-editing' : mode === 'pose' ? 'pose' : 'audio';
       const modeButtons = [['btnPartEdit', 'parts']];
       if (poseTools) modeButtons.push(['btnBoneEdit', 'pose']);
       for (const [id, value] of modeButtons) { const button = $(id); if (!button) continue; button.classList.toggle('on', mode === value); button.setAttribute('aria-pressed', String(mode === value)); }
-      $('exitPartEdit').textContent = mode === 'parts' ? '结束编辑，恢复点击互动' : '开启部件编辑';
+      $('exitPartEdit').textContent = mode === 'parts' ? '结束点选' : '开启点选';
+      $('exitPartEdit').title = mode === 'parts' ? '结束部件点选，恢复拖动画面和点击互动' : '在画面中点选需要隐藏的部件';
+      $('exitPartEdit').setAttribute('aria-pressed', String(mode === 'parts'));
       $('partEditHint').textContent = mode === 'parts' ? '部件编辑已开启：点击画面选择部件，确认后隐藏。' : '部件列表可切换显示；开启编辑后可在画面点选。';
       if (poseTools) $('poseEditToggle').textContent = mode === 'pose' ? '结束编辑，恢复点击互动' : '开启姿势编辑';
       if (next) { const tab = next === 'parts' ? 'parts' : 'pose'; if ($('floatPanel').dataset.tab === tab) cfg.openPanel(true); else openTab(tab); }
@@ -456,18 +490,36 @@
         let nearest = null, distance = 22;
         for (const item of editor.bones()) { const p = editor.bonePoint(item), d = Math.hypot(p.x - x, p.y - y); if (d < distance) { nearest = item; distance = d; } }
         if (nearest) { dragBone = { id: nearest.id, pointer: event.pointerId }; $('boneFilter').value = ''; renderBones(); $('boneSelect').value = nearest.id; renderBoneFields(); $('stage').setPointerCapture(event.pointerId); }
-      } else if (mode === 'parts') {
-        const candidates = editor.parts().slice().reverse();
-        if (editor.type === 'live2d') candidates.sort((a, b) => cfg.drawableOrder(b) - cfg.drawableOrder(a));
-        const part = candidates.find(part => { if (editor.pickable?.(part) === false) return false; const g = editor.geometry(part); if (!g?.triangles) return false; for (let i = 0; i < g.triangles.length; i += 3) if (triangleHit(x, y, ...Array.from(g.triangles.slice(i, i + 3), index => g.points[index]))) return true; return false; });
-        if (part) { selectedPart = part; K.showMenu([{ heading: part.name }, { label: '隐藏此部件', fn: () => { editor.hidden.add(part.id); selectedPart = null; renderParts(); } }, { label: '取消', fn: () => { selectedPart = null; } }], event.clientX, event.clientY); }
-      }
+      } else if (mode === 'parts') { partTap = null; partPress = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false }; }
     }, true);
     $('stage').addEventListener('pointermove', event => {
       if (!mode && !exporting) return; if (!dragBone && !event.target.matches('canvas, svg')) return; event.stopImmediatePropagation();
+      if (partPress?.id === event.pointerId && Math.hypot(event.clientX - partPress.x, event.clientY - partPress.y) >= 6) partPress.moved = true;
       if (dragBone?.pointer === event.pointerId) { const rect = $('stage').getBoundingClientRect(); editor.moveBone(dragBone.id, event.clientX - rect.left, event.clientY - rect.top); renderBoneFields(); }
     }, true);
-    for (const type of ['pointerup', 'pointercancel']) $('stage').addEventListener(type, event => { if (mode || exporting) { if (event.target.matches('canvas, svg') || dragBone) event.stopImmediatePropagation(); dragBone = null; } }, true);
+    for (const type of ['pointerup', 'pointercancel']) $('stage').addEventListener(type, event => {
+      if (mode || exporting) {
+        if (event.target.matches('canvas, svg') || dragBone) event.stopImmediatePropagation();
+        if (partPress?.id === event.pointerId) {
+          partTap = type === 'pointerup' && !partPress.moved && Math.hypot(event.clientX - partPress.x, event.clientY - partPress.y) < 6 ? { x: event.clientX, y: event.clientY } : null;
+          partPress = null;
+        }
+        dragBone = null;
+      }
+    }, true);
+    // Open after the completed click: a pointerdown menu is dismissed by that
+    // same gesture's document click handler before the user can choose an item.
+    $('stage').addEventListener('click', event => {
+      const tap = partTap; partTap = null;
+      if (mode !== 'parts' || exporting || !tap || !event.target.matches('canvas, svg')) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      const rect = $('stage').getBoundingClientRect(), x = tap.x - rect.left, y = tap.y - rect.top;
+      const candidates = editor.parts().slice().reverse();
+      if (editor.type === 'live2d') candidates.sort((a, b) => cfg.drawableOrder(b) - cfg.drawableOrder(a));
+      else if (editor.drawOrder) candidates.sort((a, b) => editor.drawOrder(b) - editor.drawOrder(a));
+      const part = candidates.find(part => editor.pickable?.(part) !== false && partHit(x, y, editor.geometry(part)));
+      if (part) { selectedPart = part; K.showMenu([{ heading: part.name }, { label: '隐藏此部件', fn: () => { editor.hidden.add(part.id); selectedPart = null; renderParts(); } }, { label: '取消', fn: () => { selectedPart = null; } }], tap.x, tap.y); }
+    }, true);
     function drawOverlay() {
       const width = $('stage').clientWidth, height = $('stage').clientHeight, dpr = Math.min(devicePixelRatio || 1, 2);
       if (editOverlay.width !== Math.round(width * dpr) || editOverlay.height !== Math.round(height * dpr)) { editOverlay.width = Math.round(width * dpr); editOverlay.height = Math.round(height * dpr); }
