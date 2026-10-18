@@ -6,6 +6,26 @@ html[data-gav-ui="clean"] body #gridView.library-ui .grid-head {
   gap: 10px !important;
   padding: 12px 20px 10px !important;
 }
+
+/* Density must override the viewer shells and the fixed two-column phone grid. */
+html[data-gav-ui="clean"] body #gridView.library-ui .thumb-grid[data-density="compact"] {
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)) !important;
+  gap: 10px !important; padding: 14px !important;
+}
+html[data-gav-ui="clean"] body #gridView.library-ui .thumb-grid[data-density="large"] {
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)) !important;
+  gap: 18px !important; padding: 24px !important;
+}
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"] body #gridView.library-ui .thumb-grid[data-density="compact"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important; padding: 10px !important;
+  }
+  html[data-gav-ui="clean"] body #gridView.library-ui .thumb-grid[data-density="large"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important; padding: 12px !important;
+  }
+}
 #gridView.library-ui .library-top-row {
   display: flex;
   align-items: center;
