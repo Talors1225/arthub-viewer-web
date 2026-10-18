@@ -470,6 +470,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
+  const indexUrl = '../' + indexFile + (routeSource === 'crosscore' ? '?v=3d25e0f795d0' : '');
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
@@ -693,7 +694,7 @@
     });
     const direction = sortDirection === 'desc' ? -1 : 1;
     if (sortMode === 'name') {
-      arr = [...arr].sort((a, b) => direction * String(aliasOf(a.id) || a.name || a.id).localeCompare(String(aliasOf(b.id) || b.name || b.id), 'zh'));
+      arr = [...arr].sort((a, b) => direction * String(aliasOf(a.id) || a.displayName || a.name || a.id).localeCompare(String(aliasOf(b.id) || b.displayName || b.name || b.id), 'zh'));
     } else if (sortMode === 'type') {
       arr = [...arr].sort((a, b) => {
         const typeCmp = (TYPE_ORDER[displayType(a)] ?? 9) - (TYPE_ORDER[displayType(b)] ?? 9);
@@ -720,8 +721,8 @@
     const c = chars.find(x => x.id === id);
     K.favs.toggle({
       k: routeSource + ':' + id, src: routeSource,
-      t: (aliasOf(id) || (c && c.name) || id),
-      s: (c && c.name && aliasOf(id)) ? c.name : ((c && c.source) || ''),
+      t: (aliasOf(id) || (c && (c.displayName || c.name)) || id),
+      s: routeSource === 'crosscore' ? '' : (c && aliasOf(id) ? (c.displayName || c.name || '') : ((c && c.source) || '')),
       u: location.pathname + '?id=' + encodeURIComponent(id),
     });
     buildFilterChips();
@@ -941,8 +942,8 @@
     card.dataset.id = c.id;
     card.style.setProperty('--i', Math.min(gridShown % GRID_PAGE, 16));
     card.innerHTML = '<div class="ph">预览暂缺</div>'
-      + '<div class="tm"><div class="tn">' + K.esc(alias || c.name || c.id) + '</div>'
-      + '<div class="ts">' + K.esc(alias ? c.name || '' : (c.source || '')) + '</div></div>'
+      + '<div class="tm"><div class="tn">' + K.esc(alias || c.displayName || c.name || c.id) + '</div>'
+      + '<div class="ts">' + K.esc(routeSource === 'crosscore' ? '' : (alias ? c.name || '' : (c.source || ''))) + '</div></div>'
       + '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '其它') + '</span>'
       + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + K.uiIcon('star', 18, starred.has(c.id)) + '</button>';
     card.onclick = () => { selectChar(c); closeGrid(); };
@@ -1014,8 +1015,8 @@
     let arr = getFilteredChars();
     if (q) arr = arr.filter(c => {
       const alias = aliasOf(c.id);
-      return (alias || c.name || '').toLowerCase().includes(q)
-        || (c.source || '').toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
+      return [alias, c.displayName, c.name, c.originalName, c.sourceBundle, c.source, c.id]
+        .filter(Boolean).join(' ').toLowerCase().includes(q);
     });
     grid.innerHTML = '';
     const starred = new Set(store.get('stars', []));
@@ -1879,8 +1880,8 @@
     for (const k in editOrig) delete editOrig[k];
     $('#poseLock').classList.remove('on');
     const alias = aliasOf(c.id);
-    mName.textContent = alias || c.name || c.id;
-    mId.textContent = (alias ? ((chars.find(x => x.id === c.id) || {}).name + ' · ') : '') + c.id;
+    mName.textContent = alias || c.displayName || c.name || c.id;
+    mId.textContent = routeSource === 'crosscore' ? '' : (alias ? ((chars.find(x => x.id === c.id) || {}).name + ' · ') : '') + c.id;
     $('#railStar').innerHTML = K.uiIcon('star', 18, store.get('stars', []).includes(c.id));
     const rt = $('#railThumb');
     rt.innerHTML = '';
@@ -2372,7 +2373,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const data = await K.fetchJSON('../' + indexFile);
+    const data = await K.fetchJSON(indexUrl);
     chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
     chars.sort((a, b) => a.id.localeCompare(b.id));
     $('#gridSub').textContent = chars.length + ' 个资源';
@@ -2504,8 +2505,8 @@
     pop.style.position = 'fixed';
     pop.innerHTML = '<div class="col" style="min-width:250px">'
       + '<div class="col-title">重命名(仅本机显示)</div>'
-      + '<input class="text-input alias-input" id="aliasInput" placeholder="输入显示名称,留空恢复原名" value="' + K.esc(aliasOf(id)) + '">'
-      + '<div class="opt-row"><button id="aliasSave">保存</button><button id="aliasClear">恢复原名</button></div></div>';
+      + '<input class="text-input alias-input" id="aliasInput" placeholder="输入显示名称,留空恢复默认名称" value="' + K.esc(aliasOf(id)) + '">'
+      + '<div class="opt-row"><button id="aliasSave">保存</button><button id="aliasClear">恢复默认名称</button></div></div>';
     document.body.appendChild(pop);
     const r = e.currentTarget.getBoundingClientRect();
     pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 290)) + 'px';
@@ -2520,9 +2521,9 @@
       store.set('aliasMap', aliasMap);
       renderGrid();
       const alias = aliasOf(id);
-      mName.textContent = alias || cur.name || id;
-      mId.textContent = (alias ? ((chars.find(x => x.id === id) || {}).name + ' · ') : '') + id;
-      K.toast(alias ? '已重命名为: ' + alias : '已恢复原名', 'ok');
+      mName.textContent = alias || cur.displayName || cur.name || id;
+      mId.textContent = routeSource === 'crosscore' ? '' : (alias ? ((chars.find(x => x.id === id) || {}).name + ' · ') : '') + id;
+      K.toast(alias ? '已重命名为: ' + alias : '已恢复默认名称', 'ok');
       pop.remove();
     };
     pop.querySelector('#aliasSave').onclick = () => save(false);

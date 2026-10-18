@@ -20,15 +20,15 @@
     const extra = [
       { key: 'azurlane', group: '碧蓝航线', index: 'azurlane-interaction/characters.json', page: 'azurlane-interaction/viewer/index.html?id=' },
       { key: 'crosscore-interaction', group: '交错战线 · 互动', index: 'crosscore-interaction/catalog/catalog.json', page: 'crosscore-interaction/viewer/index.html?model=' },
-      { key: 'crosscore', group: '交错战线 · Spine', index: 'crosscore/crosscore_chars.json', page: 'crosscore/viewer/cutscene.html?id=' },
+      { key: 'crosscore', group: '交错战线 · Spine', index: 'crosscore/crosscore_chars.json?v=3d25e0f795d0', page: 'crosscore/viewer/cutscene.html?id=' },
     ];
     const results = await Promise.allSettled(extra.map(async game => {
       if (!searchIndexes.has(game.key)) {
         const pending = K.fetchJSON(siteRoot + game.index).then(data => data.characters || data.models || []);
         searchIndexes.set(game.key, pending); pending.catch(() => searchIndexes.delete(game.key));
       }
-      return (await searchIndexes.get(game.key)).filter(row => row.available !== false && [row.id, row.name, row.displayName, row.characterName, row.skinName, row.title, row.group].filter(Boolean).join(' ').toLocaleLowerCase().includes(q)).slice(0, 15)
-        .map(row => ({ group: game.group, title: row.displayName || row.name || row.id, sub: row.skinName || String(row.id), url: siteRoot + game.page + encodeURIComponent(row.id) }));
+      return (await searchIndexes.get(game.key)).filter(row => row.available !== false && [row.id, row.name, row.displayName, row.originalName, row.sourceBundle, row.characterName, row.skinName, row.title, row.group].filter(Boolean).join(' ').toLocaleLowerCase().includes(q)).slice(0, 15)
+        .map(row => ({ group: game.group, title: row.displayName || row.name || row.id, sub: game.key === 'crosscore' ? (row.category || 'Spine') : (row.skinName || String(row.id)), url: siteRoot + game.page + encodeURIComponent(row.id) }));
     }));
     return [...results.flatMap(result => result.status === 'fulfilled' ? result.value : []), ...await standardSearch(query).catch(() => [])];
   };
