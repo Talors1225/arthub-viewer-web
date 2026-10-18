@@ -470,7 +470,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const indexUrl = '../' + indexFile + (routeSource === 'crosscore' ? '?v=3d25e0f795d0' : '');
+  const indexUrl = '../' + indexFile + (routeSource === 'crosscore' ? '?v=cc12a6a0e12a' : '');
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
