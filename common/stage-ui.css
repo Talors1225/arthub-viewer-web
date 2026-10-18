@@ -31,3 +31,7 @@ body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom .zoom-pct { m
 body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom button:hover { color:var(--accent); background:var(--accent-dim-bg); }
 
 html[data-gav-ui="clean"] body:is(.crosscore-viewer,.crosscore-interaction-viewer,.azurlane-viewer) .tool-strip .tool-zoom :is(#zOut,#zPct,#zIn) { display:inline-flex !important; align-items:center; justify-content:center; }
+body.game-interaction-viewer #btnStagePan { display:inline-flex; align-items:center; justify-content:center; }
+body.game-interaction-viewer #btnStagePan[aria-pressed="true"] { color:var(--accent); background:var(--accent-dim-bg); }
+body.game-interaction-viewer > .stage[data-pan-mode="pan"] > canvas { cursor:grab; }
+body.game-interaction-viewer > .stage[data-pan-dragging="true"] > canvas { cursor:grabbing; }

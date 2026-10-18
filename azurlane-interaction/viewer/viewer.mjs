@@ -110,6 +110,10 @@ $('voice-play').onclick=()=>{const c=selected?.voice?.activeClips?.find(c=>c.nam
 $('voice-stop').onclick=()=>stopChannel('voice');$('reset-state').onclick=()=>{stopAudio();controller?.reset();};$('show-hits').onclick=()=>{showHits=!showHits;$('show-hits').textContent=showHits?'隐藏触摸区域':'显示触摸区域';};
 $('favor').onchange=()=>{if(controller)controller.state.favor=Number($('favor').value);};
 function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+const stagePan=K.createStagePan({stage,button:$('btnStagePan'),modeSelect:$('pointer-mode'),accepts:target=>target===canvas,ready:()=>view.ready&&!exporting,
+ move:(dx,dy)=>{view.panX+=dx;view.panY+=dy;},
+ tap:event=>{unlockAudio().catch(()=>{});const p=localPoint(event),hits=adapter.hits(p.x,p.y);evidence.interaction.hits=hits;if(selected.type==='live2d'){controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));controller.end(p.x,p.y);}else{const hit=hits[0];if(!hit||!controller.touch(hit,{drag:false}))spineBasic(hit);}}
+});
 stage.addEventListener('pointerdown',e=>{
  if(e.target!==canvas||e.button!==0||!view.ready)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
  if(!pan&&selected.type==='live2d')controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));
@@ -243,6 +247,7 @@ async function spinePortrait(model,generation){
 }
 async function getJson(url,required=true){const r=await fetch(url);if(!r.ok){if(!required&&r.status===404)return null;throw Error(r.status+' '+url);}return r.json();}
 async function loadModel(id,{history=true}={}){
+ stagePan.cancel();
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
  const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp',label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];

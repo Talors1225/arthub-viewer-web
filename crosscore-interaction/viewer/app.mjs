@@ -20,6 +20,7 @@ let model, scene, controller, transition, transitionUntil = 0, requestId = 0, la
 let audio = new Audio(), audioResult = null, cueName = null, pointer = null, lastFailure = null, lastActionState = '';
 let callbacks = [], specialMode = false, searchTimer, pendingFit = null, modelGroupFilter = 'all';
 let viewZoom = 1;
+const viewPan = { x: 0, y: 0 };
 const playback = { playing: true, speed: 1, loop: true, time: 0 };
 let animationPreview = null, activeTrack = 0;
 let gridPage = 1, gridPageSize = K.libraryPageSize();
@@ -152,8 +153,8 @@ function fit() {
  const bounds = scene.bounds, area = K.stageViewArea(canvas), rect = canvas.getBoundingClientRect();
  const units = Math.max(bounds.width / area.width, bounds.height / area.height) * 1.08 / viewZoom;
  renderer.camera.viewportWidth = units * rect.width; renderer.camera.viewportHeight = units * rect.height;
- const offsetX = area.left + area.width / 2 - rect.left - rect.width / 2;
- const offsetY = rect.top + rect.height / 2 - area.top - area.height / 2;
+ const offsetX = area.left + area.width / 2 - rect.left - rect.width / 2 + viewPan.x;
+ const offsetY = rect.top + rect.height / 2 - area.top - area.height / 2 - viewPan.y;
  renderer.camera.position.set(bounds.x + bounds.width / 2 - offsetX * units, bounds.y + bounds.height / 2 - offsetY * units, 0);
  renderer.camera.update(); updateZoomControls();
 }
@@ -163,7 +164,7 @@ function setZoom(value) {
 }
 $('#zOut').addEventListener('click', () => setZoom(viewZoom / 1.25));
 $('#zIn').addEventListener('click', () => setZoom(viewZoom * 1.25));
-$('#zPct').addEventListener('click', () => { viewZoom = 1; fit(); });
+$('#zPct').addEventListener('click', () => $('#fit').click());
 stage.addEventListener('wheel', event => { if (!scene || ![canvas, overlay].includes(event.target)) return; event.preventDefault(); setZoom(viewZoom * Math.exp(-event.deltaY * .0015)); }, { passive: false });
 function fitVisiblePixels() {
   if (!scene) return false;
@@ -300,6 +301,7 @@ async function loadPrefab(key, ownerRequest) {
   viewerUI.refreshAnimations(); fit(); pendingFit = { scene: loaded, at: now() + 0.1, expires: now() + 2 }; return loaded;
 }
 async function loadModel(identity) {
+  stagePan.cancel(); viewPan.x = viewPan.y = 0;
   const selected = modelById.get(Number(identity));
   if (!selected?.available) throw new Error(selected?.unavailableReason || '该立绘暂无完整本地资源');
   viewerUI.tools.prepareLoad(); editor = null;
@@ -460,6 +462,11 @@ function render() {
   } catch (error) { if (lastFailure !== error.message) fail(error); }
   requestAnimationFrame(render);
 }
+const stagePan = K.createStagePan({ stage, button: $('#btnStagePan'), accepts: target => target === canvas || target === overlay,
+  ready: () => !!scene && !!controller && !previewPending && !exporting,
+  move: (dx, dy) => { pendingFit = null; viewPan.x += dx; viewPan.y += dy; fit(); },
+  tap: event => { const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (action && (!action.gesture || controller.restoreObjects.has(action.index))) { endAnimationPreview(); playback.playing = true; controller.trigger(action.index, now()); } }
+});
 stage.addEventListener('pointerdown', event => {
   if (!scene || !controller || event.button !== 0 || (event.target !== canvas && event.target !== overlay)) return;
   endAnimationPreview(); playback.playing = true;
@@ -485,7 +492,7 @@ $('#gridSearch').addEventListener('input', () => {
 });
 $('#model').addEventListener('change', () => { clearTimeout(searchTimer); loadModel($('#model').value).catch(fail); });
 $('#btnPrev').addEventListener('click', () => step(-1)); $('#btnNext').addEventListener('click', () => step(1));
-$('#reset').addEventListener('click', () => model && loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { viewZoom = 1; fit(); if (scene) pendingFit = { scene, at: now(), expires: now() + 2 }; });
+$('#reset').addEventListener('click', () => model && loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { stagePan.cancel(); viewPan.x = viewPan.y = 0; viewZoom = 1; fit(); if (scene) pendingFit = { scene, at: now(), expires: now() + 2 }; });
 $('#railThumb').addEventListener('click', () => $('#fit').click());
 $('#railStar').addEventListener('click', () => { if (model) { K.favs.toggle(favoriteEntry(model)); fillModels(); } });
 

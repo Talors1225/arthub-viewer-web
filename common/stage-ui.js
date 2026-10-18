@@ -2,6 +2,57 @@
 (() => {
   'use strict';
   const K = window.SpineKit;
+  // Stage movement is separate from game gestures. A short tap still reaches the model.
+  K.createStagePan = ({ stage, button, modeSelect, accepts, ready, move, tap }) => {
+    let mode = 'pan', pointer = null;
+    const consume = event => { event.preventDefault(); event.stopImmediatePropagation(); };
+    const cancel = () => {
+      const down = pointer; pointer = null; delete stage.dataset.panDragging;
+      if (down && stage.hasPointerCapture(down.id)) stage.releasePointerCapture(down.id);
+    };
+    const setMode = value => {
+      cancel(); mode = value === 'interact' ? 'interact' : 'pan';
+      stage.dataset.panMode = mode;
+      if (modeSelect) modeSelect.value = mode;
+      button.setAttribute('aria-pressed', String(mode === 'pan'));
+      button.title = mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面';
+      button.setAttribute('aria-label', button.title);
+      K.setUiIcon(button, 'move');
+    };
+    button.addEventListener('click', () => setMode(mode === 'pan' ? 'interact' : 'pan'));
+    modeSelect?.addEventListener('change', () => setMode(modeSelect.value));
+    stage.addEventListener('pointerdown', event => {
+      if (!accepts(event.target) || mode !== 'pan' || event.button !== 0 || !ready() || ['part-editing', 'pose'].includes(stage.dataset.clickMode)) return;
+      consume(event);
+      if (pointer) return;
+      pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, at: performance.now(), moved: false };
+      stage.setPointerCapture(event.pointerId);
+    }, true);
+    const update = event => {
+      if (!pointer || pointer.id !== event.pointerId) return;
+      if (!pointer.moved && Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) < 6) return;
+      pointer.moved = true; stage.dataset.panDragging = 'true';
+      if (event.clientX !== pointer.x || event.clientY !== pointer.y) move(event.clientX - pointer.x, event.clientY - pointer.y);
+      pointer.x = event.clientX; pointer.y = event.clientY;
+    };
+    stage.addEventListener('pointermove', event => {
+      if (!pointer || pointer.id !== event.pointerId) return;
+      consume(event); if (ready()) update(event); else cancel();
+    }, true);
+    stage.addEventListener('pointerup', event => {
+      if (!pointer || pointer.id !== event.pointerId) return;
+      consume(event); if (ready()) update(event);
+      const down = pointer; cancel();
+      if (ready() && !down.moved && performance.now() - down.at < 500) tap(event);
+    }, true);
+    stage.addEventListener('pointercancel', event => {
+      if (pointer?.id === event.pointerId) { consume(event); cancel(); }
+    }, true);
+    stage.addEventListener('lostpointercapture', event => { if (pointer?.id === event.pointerId) cancel(); });
+    window.addEventListener('blur', cancel);
+    setMode('pan');
+    return { cancel, setMode };
+  };
   const visible = element => {
     if (!element) return false;
     const style = getComputedStyle(element);

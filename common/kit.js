@@ -28,6 +28,7 @@
     loop: '<path d="m17 3 4 4-4 4M3 11V9a2 2 0 0 1 2-2h16M7 21l-4-4 4-4m14 0v2a2 2 0 0 1-2 2H3"/>',
     minus: '<path d="M5 12h14"/>',
     plus: '<path d="M5 12h14M12 5v14"/>',
+    move: '<path d="M12 3v18M3 12h18m-12-6 3-3 3 3m-6 12 3 3 3-3M6 9l-3 3 3 3m12-6 3 3-3 3"/>',
     more: '<circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/>',
     close: '<path d="m6 6 12 12M6 18 18 6"/>',
   };
@@ -1698,7 +1699,7 @@
     }
     toolStrip.dataset.kitClean = '1';
 
-    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'stageClickMode']);
+    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'stageClickMode', 'btnStagePan']);
     const secondary = [...toolStrip.querySelectorAll('button')]
       .filter(button => button.parentElement === toolStrip)
       .filter(button => !primary.has(button.id));
