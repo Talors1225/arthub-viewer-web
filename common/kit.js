@@ -685,16 +685,14 @@
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const slot of skeleton.slots) {
       const a = slot.attachment;
-      if (!a || !slot.bone.active || slot.color.a <= 0.001) continue;
+      if (!a || !slot.bone.active || slot.color.a <= 0.001 || a.color?.a <= 0.001 || skeleton.color?.a <= 0.001) continue;
       let n = 0;
       if (a instanceof sp.RegionAttachment) {
         n = 8;
-        a.computeWorldVertices(slot, SCRATCH, 0, 2);
+        // Sequence support changed this argument from Bone (4.0) to Slot (4.1+).
+        a.computeWorldVertices('sequence' in a ? slot : slot.bone, SCRATCH, 0, 2);
       } else if (a instanceof sp.MeshAttachment) {
         n = a.worldVerticesLength;
-        if (n > 0 && n < SCRATCH.length) a.computeWorldVertices(slot, 0, n, SCRATCH, 0, 2);
-      } else if (a instanceof sp.PathAttachment) {
-        n = a.worldVerticesLength || (a.points ? a.points.length : 0);
         if (n > 0 && n < SCRATCH.length) a.computeWorldVertices(slot, 0, n, SCRATCH, 0, 2);
       } else continue;
       for (let i = 0; i < n; i += 2) {
@@ -1292,10 +1290,11 @@
     const factor = size.scale / reference;
     const centerX = size.centerX * reference, centerY = size.centerY * reference;
     return { size,
-      apply() { for (const item of saved) {
+      apply(tile) { for (const item of saved) {
         const sk = item.skeleton;
         sk.scaleX = item.scaleX * factor; sk.scaleY = item.scaleY * factor;
-        sk.x = (item.x - centerX) * factor; sk.y = (item.y - centerY) * factor;
+        sk.x = (item.x - centerX) * factor + (tile ? (size.width - tile.width) / 2 - tile.x : 0);
+        sk.y = (item.y - centerY) * factor + (tile ? tile.y - (size.height - tile.height) / 2 : 0);
         transform(sk);
       } },
       restore() { for (const item of saved) {
@@ -1506,6 +1505,20 @@
   };
 
   // ---------- PNG 导出 ----------
+  // A browser may silently allocate a smaller GPU drawing buffer than the
+  // requested canvas, even below MAX_TEXTURE_SIZE. Render bounded tiles and
+  // assemble them losslessly on a 2D canvas instead of cropping or downscaling.
+  K.renderTiledPNG = (size, draw) => {
+    const output = document.createElement('canvas'); output.width = size.width; output.height = size.height;
+    const ctx = output.getContext('2d'); if (!ctx) throw new Error('导出画布不可用');
+    for (let y = 0; y < size.height; y += 2048) for (let x = 0; x < size.width; x += 2048) {
+      const tile = { x, y, width: Math.min(2048, size.width - x), height: Math.min(2048, size.height - y) };
+      const source = draw(tile), gl = source.getContext('webgl2') || source.getContext('webgl');
+      if (gl && (gl.drawingBufferWidth !== tile.width || gl.drawingBufferHeight !== tile.height)) throw new Error('设备无法分配导出绘图区域，请选择较低质量');
+      ctx.drawImage(source, 0, 0, tile.width, tile.height, tile.x, tile.y, tile.width, tile.height);
+    }
+    return output;
+  };
   // o: { canvas, scale=1, transparent=false, bg=[r,g,b],
   //      filename, resize(k), draw(transparent), restore() }
   // resize(k): 画布已变为 k 倍尺寸后,调整渲染器/变换;draw: 同步重绘一帧;restore(): 恢复
@@ -1517,19 +1530,18 @@
     const kk = maxDim > 8192 ? 8192 / Math.max(w0, h0) : k;
     let blob, width, height;
     try {
-      canvas.width = o.size ? o.size.width : Math.round(w0 * kk);
-      canvas.height = o.size ? o.size.height : Math.round(h0 * kk);
-      if (Math.max(canvas.width, canvas.height) > 8192) throw new Error('导出尺寸超过本机范围');
-      if (o.resize) o.resize(kk);
-      o.draw(!!o.transparent);
+      width = o.size ? o.size.width : Math.round(w0 * kk);
+      height = o.size ? o.size.height : Math.round(h0 * kk);
+      if (Math.max(width, height) > 8192) throw new Error('导出尺寸超过本机范围');
+      const draw = tile => { canvas.width = tile.width; canvas.height = tile.height; if (o.resize) o.resize(kk, tile); o.draw(!!o.transparent); return canvas; };
+      const output = o.tiled ? K.renderTiledPNG({ width, height }, draw) : draw({ width, height });
       // 同步捕获(WebGL 绘制缓冲在合成后可能被清空,toDataURL 立即抓取)
-      const url = canvas.toDataURL('image/png');
+      const url = output.toDataURL('image/png');
       if (!url || url.length < 64) throw new Error('画布捕获失败');
       const bin = atob(url.split(',')[1]);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       blob = new Blob([bytes], { type: 'image/png' });
-      width = canvas.width; height = canvas.height;
     } finally {
       canvas.width = w0;
       canvas.height = h0;

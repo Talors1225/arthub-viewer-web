@@ -433,6 +433,16 @@ const viewerUI = window.createInteractionViewerUI({
     capture: animation => {
       const captureScene = Object.create(scene);
       return window.createInteractionSpineCapture({ layers: scene.layers, ns: SP, canvas, renderer, gl, editor, animation,
+        visible: layer => scene.visible(layer),
+        extraBounds: () => {
+          const result = [], drag = scene.objectDrag;
+          if (drag?.overlay) result.push(K.measureBounds(drag.overlay, SP));
+          for (const { def } of drag?.sprites || []) {
+            const angle = (def.rotation || 0) * Math.PI / 180, w = (Math.abs(def.width * Math.cos(angle)) + Math.abs(def.height * Math.sin(angle))) / 2, h = (Math.abs(def.width * Math.sin(angle)) + Math.abs(def.height * Math.cos(angle))) / 2;
+            result.push({ minX: def.centerX + drag.dx - w, maxX: def.centerX + drag.dx + w, minY: def.centerY + drag.dy - h, maxY: def.centerY + drag.dy + h });
+          }
+          return result;
+        },
         drawScene: (layers, size) => {
           captureScene.layers = layers; captureScene.main = layers[scene.layers.indexOf(scene.main)];
           const viewport = (x, y) => ({ x: (x - renderer.camera.position.x) / (renderer.camera.viewportWidth * renderer.camera.zoom) * size.width + size.width / 2, y: (y - renderer.camera.position.y) / (renderer.camera.viewportHeight * renderer.camera.zoom) * size.height + size.height / 2 });

@@ -394,7 +394,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=40e144121a13"></script>
-<script src="../../common/kit.js?v=40e144121a13"></script>
+<script src="../../common/kit.js?v=16c921275729"></script>
 <script src="../../common/asset-loader.js?v=40e144121a13"></script>
 <script src="../../common/stage-ui.js?v=40e144121a13"></script>
 <script src="../../common/library-ui.js?v=40e144121a13"></script>
@@ -1815,7 +1815,7 @@
     K.mountExportOptions(pop, {
       kind: 'png', quality: store.get('pngExportQuality', 'high'),
       onChange: quality => store.set('pngExportQuality', quality),
-      getDetail: quality => { const pose = poseFor(quality); return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素'; },
+      getDetail: quality => { const pose = poseFor(quality); return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素 · 完整可见模型 · PNG 无损编码'; },
       onExport: async (quality, transparent) => {
         closePopups();
         try {
@@ -1823,7 +1823,8 @@
           const r = await K.exportPNG({
             canvas, size: pose.size, transparent,
             filename: (curEntry ? String(curEntry.label).replace(/[\\/:*?"<>|\[\]]/g, '') : 'spine') + (transparent ? '-透明' : '') + '.png',
-            resize() { K.syncRendererSize(canvas, gl, renderer); pose.apply(); },
+            tiled: true,
+            resize(k, tile) { K.syncRendererSize(canvas, gl, renderer); pose.apply(tile); },
             draw(tr) {
               const raw = gl.gl || gl;
               if (tr) raw.clearColor(0, 0, 0, 0);

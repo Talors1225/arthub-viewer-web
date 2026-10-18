@@ -175,7 +175,7 @@
 
   // Reuse the current GL textures, but animate independent skeleton/state
   // objects. Export cannot trigger the portrait controller's events or phases.
-  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene }) => {
+  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, visible = () => true, extraBounds = () => [] }) => {
     const width = canvas.width, height = canvas.height, camera = renderer.camera;
     const saved = { width: camera.viewportWidth, height: camera.viewportHeight, zoom: camera.zoom, x: camera.position.x, y: camera.position.y, z: camera.position.z };
     const copies = layers.map((layer, index) => {
@@ -195,11 +195,26 @@
       const base = skeleton.bones.map(poseOf);
       return { ...layer, skeleton, state, index, base, pma: layer.atlas?.pages?.[0]?.pma ?? true };
     });
+    // Measure the frozen visible pose in model units, independently of the camera.
+    const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    const include = b => { if (b) for (const key of Object.keys(bounds)) bounds[key] = key.startsWith('min') ? Math.min(bounds[key], b[key]) : Math.max(bounds[key], b[key]); };
+    copies.forEach((item, i) => {
+      for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${i}:${slot.data.name}`)) slot.color.a = 0;
+      worldUpdate(item.skeleton, ns);
+      if (visible(layers[i], i)) include(K.measureBounds(item.skeleton, ns));
+    });
+    for (const b of extraBounds()) include(b);
     return {
+      pngSize: quality => ({ ...K.exportDimensions(bounds, quality), fullFrame: true }),
       draw(time, size, background) {
+        if (size.fullFrame && !size.tile) return K.renderTiledPNG(size, tile => this.draw(time, {
+          ...size, width: tile.width, height: tile.height, tile: true,
+          centerX: size.centerX + (tile.x + tile.width / 2 - size.width / 2) / size.scale,
+          centerY: size.centerY + (size.height / 2 - tile.y - tile.height / 2) / size.scale,
+        }, background));
         canvas.width = size.width; canvas.height = size.height; gl.viewport(0, 0, size.width, size.height);
-        camera.setViewport(size.width, size.height); camera.zoom = saved.width * saved.zoom / size.width;
-        camera.position.set(saved.x, saved.y, saved.z); camera.update();
+        camera.setViewport(size.width, size.height); camera.zoom = size.fullFrame ? 1 / size.scale : saved.width * saved.zoom / size.width;
+        camera.position.set(size.fullFrame ? size.centerX : saved.x, size.fullFrame ? size.centerY : saved.y, saved.z); camera.update();
         const color = K.parseColor(background || '#000000', [0, 0, 0]);
         gl.clearColor(...color, background ? 1 : 0); gl.clear(gl.COLOR_BUFFER_BIT);
         for (const item of copies) {
@@ -368,6 +383,7 @@
       setMode(''); if (poseTools) { poseLocked = false; $('poseLock').setAttribute('aria-pressed', 'false'); $('poseLock').classList.remove('on'); } identity = key; editor = cfg.editor(); selectedPart = null; refresh();
     }
     function dimensions(quality, kind) {
+      if (kind === 'png') return cfg.capture(driver.playback()).pngSize(quality);
       const canvas = driver.canvas(), preset = kind === 'png' ? K.exportPreset(quality) : K.animationExportPreset(quality);
       const edge = kind === 'png' ? preset.pngEdge : kind === 'video' ? preset.videoEdge : preset.gifEdge;
       const scale = edge ? edge / Math.max(canvas.width, canvas.height) : 1;
@@ -377,16 +393,21 @@
     }
     async function exportFile(quality, transparent, format = 'png', copy = false) {
       requireEditor(); if (exporting) return; closePopup();
-      const state = driver.playback(), size = dimensions(quality, format), name = (cfg.name() + (format === 'png' ? '' : '_' + state.name)).replace(/[\\/:*?"<>|]+/g, '_');
+      const state = driver.playback(), name = (cfg.name() + (format === 'png' ? '' : '_' + state.name)).replace(/[\\/:*?"<>|]+/g, '_');
       const job = format === 'png' ? null : K.exportProgress(); let session;
       exporting = true; document.body.dataset.viewerExporting = 'true'; cfg.setExporting(true); cfg.stopAudio?.();
       try {
-        session = await cfg.capture(state); const output = document.createElement('canvas'); output.width = size.width; output.height = size.height;
+        session = await cfg.capture(state); const size = format === 'png' ? session.pngSize(quality) : dimensions(quality, format);
+        const gl = driver.canvas().getContext('webgl2') || driver.canvas().getContext('webgl');
+        const limit = gl ? Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_TEXTURE_SIZE)) : 8192;
+        if (format !== 'png' && Math.max(size.width, size.height) > limit) throw new Error(`导出尺寸超过当前设备 ${limit} 像素限制，请选择较低质量`);
+        const output = document.createElement('canvas'); output.width = size.width; output.height = size.height;
         const ctx = output.getContext('2d', { willReadFrequently: format === 'gif' });
         const draw = time => { const source = session.draw(time, size, format === 'png' && !transparent ? (background === 'checker' ? '#000000' : background) : format === 'video' ? '#000000' : null); ctx.clearRect(0, 0, size.width, size.height); if (format === 'video' || format === 'png' && !transparent) { ctx.fillStyle = background === 'checker' ? '#000000' : background; ctx.fillRect(0, 0, size.width, size.height); } ctx.drawImage(source, 0, 0, size.width, size.height); };
         let blob, extension = format;
         if (format === 'png') {
-          draw(null); blob = await new Promise((resolve, reject) => output.toBlob(value => value ? resolve(value) : reject(new Error('图片捕获失败')), 'image/png'));
+          draw(null); session.dispose(); session = null; cfg.setExporting(false);
+          blob = await new Promise((resolve, reject) => output.toBlob(value => value ? resolve(value) : reject(new Error('图片捕获失败')), 'image/png'));
           if (copy) { if (!navigator.clipboard?.write || !window.ClipboardItem) throw new Error('当前浏览器不支持复制图片'); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }
         } else if (format === 'video') {
           const result = await K.encodeCanvasVideo({ canvas: output, duration: state.duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(value, `导出视频 ${time.toFixed(1)} / ${state.duration.toFixed(1)} 秒`) }); ({ blob, extension } = result);
@@ -429,7 +450,7 @@
           requireEditor(); const state = driver.playback();
           if (animation && !state.duration) throw new Error('请先选择一个有时长的动画');
           const size = dimensions(quality, animation ? format : 'png');
-          return `${size.width}×${size.height} 像素 · 当前画面范围` + (animation ? ` · ${state.duration.toFixed(2)} 秒 · 无声` : '');
+          return `${size.width}×${size.height} 像素 · ` + (animation ? `当前画面范围 · ${state.duration.toFixed(2)} 秒 · 无声` : '完整可见模型 · PNG 无损编码');
         },
         onExport: (quality, transparent, format) => exportFile(quality, transparent, animation ? format : 'png'),
         ...(animation ? {} : { onCopy: (quality, transparent) => exportFile(quality, transparent, 'png', true) }),

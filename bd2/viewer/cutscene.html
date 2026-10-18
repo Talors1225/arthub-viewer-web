@@ -406,7 +406,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=40e144121a13"></script>
-<script src="../../common/kit.js?v=40e144121a13"></script>
+<script src="../../common/kit.js?v=16c921275729"></script>
 <script src="../../common/asset-loader.js?v=40e144121a13"></script>
 <script src="../../common/portrait-audio.js?v=40e144121a13"></script>
 <script src="../../common/stage-ui.js?v=40e144121a13"></script>
@@ -2413,11 +2413,11 @@
     try { pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)); }
     catch (error) { K.toast('导出失败: ' + error.message, 'err'); return; }
     K.exportPNG({
-      canvas: cv, size: pose.size, transparent, copy: mode === 'copy',
+      canvas: cv, size: pose.size, tiled: true, transparent, copy: mode === 'copy',
       filename: routeSource + '-' + (cur.name || cur.id) + '.png',
-      resize() {
+      resize(k, tile) {
         K.syncRendererSize(cv, mgl, renderer);
-        pose.apply();
+        pose.apply(tile);
       },
       draw(tr) {
         for (const layer of cutLayers()) {
@@ -2486,7 +2486,7 @@
       getDetail: quality => {
         if (!cut) throw new Error('请先加载一个资源');
         const pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion));
-        return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素';
+        return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素 · 完整可见模型 · PNG 无损编码';
       },
       onExport: (quality, transparent) => exportFrame(transparent, 'download', () => closePopups(), quality),
       onCopy: (quality, transparent) => exportFrame(transparent, 'copy', () => closePopups(), quality),

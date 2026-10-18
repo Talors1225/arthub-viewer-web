@@ -217,10 +217,26 @@ async function live2dPortrait(model,generation){
   polygons:()=>model.interaction.hitAreas.map(h=>{const vertices=internal.getDrawableVertices(h.id);if(!vertices)return null;const pts=[];for(let j=0;j<vertices.length;j+=2){const p=new PIXI.Point(vertices[j],vertices[j+1]);internal.localTransform.apply(p,p);live.worldTransform.apply(p,p);pts.push([p.x,p.y]);}return {id:h.id,vertices:pts};}).filter(Boolean)
  };
  api.capture=()=>{
+  const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+  for(let i=0;i<core.drawables.ids.length;i++){
+   if(!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
+   const vertices=internal.getDrawableVertices(i);
+   const b={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+   for(let j=0;j<vertices.length;j+=2){const p=internal.localTransform.apply(new PIXI.Point(vertices[j],vertices[j+1]));b.minX=Math.min(b.minX,p.x);b.maxX=Math.max(b.maxX,p.x);b.minY=Math.min(b.minY,p.y);b.maxY=Math.max(b.maxY,p.y);}
+   // Screen-filling backdrop meshes can span over 100,000 pixels. Their
+   // meaningful frame is the authored model canvas, not an infinite backdrop.
+   if(b.maxX-b.minX>natural.width*4||b.maxY-b.minY>natural.height*4){b.minX=Math.max(0,b.minX);b.maxX=Math.min(natural.width,b.maxX);b.minY=Math.max(0,b.minY);b.maxY=Math.min(natural.height,b.maxY);}
+   if(b.maxX>b.minX&&b.maxY>b.minY)for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);
+  }
+  const transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y};
   const parameters=core.parameters.values.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
   const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffectTime=effectTime;let lastTime=0;
-  return {draw:(time,size)=>{editor.before();app.renderer.resolution=size.width/stage.clientWidth;app.renderer.resize(stage.clientWidth,stage.clientHeight);if(time!==null){live.elapsedTime=elapsed+time*1000;effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;}else app.render();return canvas;},
-   dispose:()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=nativeSaved;internal.coreModel.update();app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
+  return {pngSize:quality=>({...K.exportDimensions(bounds,quality),fullFrame:true}),
+   draw:(time,size)=>{editor.before();
+    if(size.fullFrame)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;});
+    else{app.renderer.resolution=size.width/stage.clientWidth;app.renderer.resize(stage.clientWidth,stage.clientHeight);}
+    if(time!==null){live.elapsedTime=elapsed+time*1000;effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;}else app.render();return canvas;},
+   dispose:()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=nativeSaved;internal.coreModel.update();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
  render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const frame=stageFrame(),scale=Math.min(frame.width/natural.width,frame.height/natural.height)*.93*view.zoom;live.scale.set(scale);live.position.set(frame.x+view.panX,frame.y+view.panY);if(view.playing){effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();};
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
