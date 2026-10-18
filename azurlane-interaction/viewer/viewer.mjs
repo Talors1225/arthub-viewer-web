@@ -35,6 +35,9 @@ Live2DCubismCore.Model.fromMoc=function(moc){const model=nativeFromMoc.call(this
 const evidenceNode=document.createElement('script');evidenceNode.type='application/json';evidenceNode.id='pilot-evidence';document.body.append(evidenceNode);
 const look={x:0,y:0,targetX:0,targetY:0};let pointer,libraryFilter='all',gridPage=1,gridPageSize=K.libraryPageSize(),libraryThumbs={},sortMode='name',sortDirection='asc';
 const libraryPrefs=K.Store('azurlane-interaction');sortMode=libraryPrefs.get('sortMode','name');sortDirection=libraryPrefs.get('sortDirection','asc');
+K.initTheme(libraryPrefs);K.bindThemePalette($('btnTheme'),libraryPrefs);
+$('thumbGrid').dataset.density=libraryPrefs.get('density','standard');
+$('thumbGrid').dataset.kitDensityReady='1';
 let retiredModels={};
 const canonicalModelId=id=>retiredModels[id]||id;
 const THUMB_PREFIX='../../thumbs/';
