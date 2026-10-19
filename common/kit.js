@@ -1257,7 +1257,7 @@
     let width = Math.max(1, Math.ceil(nativeW * scale - 1e-7));
     let height = Math.max(1, Math.ceil(nativeH * scale - 1e-7));
     if (kind === 'video') { width += width % 2; height += height % 2; }
-    if (Math.max(width, height) > 8192) throw new Error('原始尺寸超过 8192 像素，请选择高等质量');
+    if (![width, height].every(v => Number.isSafeInteger(v) && v > 0)) throw new Error('无法计算有效的原始尺寸');
     return { width, height, scale, centerX: (bounds.minX + bounds.maxX) / 2, centerY: (bounds.minY + bounds.maxY) / 2 };
   };
   K.exportTimeline = (duration, quality, kind = 'gif') => {
@@ -1508,9 +1508,10 @@
   // A browser may silently allocate a smaller GPU drawing buffer than the
   // requested canvas, even below MAX_TEXTURE_SIZE. Render bounded tiles and
   // assemble them losslessly on a 2D canvas instead of cropping or downscaling.
-  K.renderTiledPNG = (size, draw) => {
+  K.renderTiledPNG = (size, draw, background) => {
     const output = document.createElement('canvas'); output.width = size.width; output.height = size.height;
     const ctx = output.getContext('2d'); if (!ctx) throw new Error('导出画布不可用');
+    if (background) { ctx.fillStyle = background; ctx.fillRect(0, 0, size.width, size.height); }
     for (let y = 0; y < size.height; y += 2048) for (let x = 0; x < size.width; x += 2048) {
       const tile = { x, y, width: Math.min(2048, size.width - x), height: Math.min(2048, size.height - y) };
       const source = draw(tile), gl = source.getContext('webgl2') || source.getContext('webgl');
@@ -1526,13 +1527,12 @@
     const canvas = o.canvas;
     const k = Math.max(1, o.scale || 1);
     const w0 = canvas.width, h0 = canvas.height;
-    const maxDim = Math.max(w0, h0) * k;
-    const kk = maxDim > 8192 ? 8192 / Math.max(w0, h0) : k;
+    const kk = k;
     let blob, width, height;
     try {
       width = o.size ? o.size.width : Math.round(w0 * kk);
       height = o.size ? o.size.height : Math.round(h0 * kk);
-      if (Math.max(width, height) > 8192) throw new Error('导出尺寸超过本机范围');
+      if (![width, height].every(v => Number.isSafeInteger(v) && v > 0)) throw new Error('无法计算有效的导出尺寸');
       const draw = tile => { canvas.width = tile.width; canvas.height = tile.height; if (o.resize) o.resize(kk, tile); o.draw(!!o.transparent); return canvas; };
       const output = o.tiled ? K.renderTiledPNG({ width, height }, draw) : draw({ width, height });
       // 同步捕获(WebGL 绘制缓冲在合成后可能被清空,toDataURL 立即抓取)

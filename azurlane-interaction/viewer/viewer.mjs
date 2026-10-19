@@ -218,8 +218,9 @@ async function live2dPortrait(model,generation){
  };
  api.capture=()=>{
   const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+  const hitMeshes=new Set(model.interaction.hitAreas.map(area=>area.id));
   for(let i=0;i<core.drawables.ids.length;i++){
-   if(!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
+   if(hitMeshes.has(core.drawables.ids[i])||!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
    const vertices=internal.getDrawableVertices(i);
    const b={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
    for(let j=0;j<vertices.length;j+=2){const p=internal.localTransform.apply(new PIXI.Point(vertices[j],vertices[j+1]));b.minX=Math.min(b.minX,p.x);b.maxX=Math.max(b.maxX,p.x);b.minY=Math.min(b.minY,p.y);b.maxY=Math.max(b.maxY,p.y);}
@@ -232,8 +233,8 @@ async function live2dPortrait(model,generation){
   const parameters=core.parameters.values.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
   const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffectTime=effectTime;let lastTime=0;
   return {pngSize:quality=>({...K.exportDimensions(bounds,quality),fullFrame:true}),
-   draw:(time,size)=>{editor.before();
-    if(size.fullFrame)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;});
+   draw:(time,size,background)=>{editor.before();
+    if(size.fullFrame)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;},background);
     else{app.renderer.resolution=size.width/stage.clientWidth;app.renderer.resize(stage.clientWidth,stage.clientHeight);}
     if(time!==null){live.elapsedTime=elapsed+time*1000;effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;}else app.render();return canvas;},
    dispose:()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=nativeSaved;internal.coreModel.update();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};

@@ -401,13 +401,14 @@
         const gl = driver.canvas().getContext('webgl2') || driver.canvas().getContext('webgl');
         const limit = gl ? Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_TEXTURE_SIZE)) : 8192;
         if (format !== 'png' && Math.max(size.width, size.height) > limit) throw new Error(`导出尺寸超过当前设备 ${limit} 像素限制，请选择较低质量`);
-        const output = document.createElement('canvas'); output.width = size.width; output.height = size.height;
-        const ctx = output.getContext('2d', { willReadFrequently: format === 'gif' });
+        const output = format === 'png' ? null : document.createElement('canvas'); if (output) { output.width = size.width; output.height = size.height; }
+        const ctx = output?.getContext('2d', { willReadFrequently: format === 'gif' });
         const draw = time => { const source = session.draw(time, size, format === 'png' && !transparent ? (background === 'checker' ? '#000000' : background) : format === 'video' ? '#000000' : null); ctx.clearRect(0, 0, size.width, size.height); if (format === 'video' || format === 'png' && !transparent) { ctx.fillStyle = background === 'checker' ? '#000000' : background; ctx.fillRect(0, 0, size.width, size.height); } ctx.drawImage(source, 0, 0, size.width, size.height); };
         let blob, extension = format;
         if (format === 'png') {
-          draw(null); session.dispose(); session = null; cfg.setExporting(false);
-          blob = await new Promise((resolve, reject) => output.toBlob(value => value ? resolve(value) : reject(new Error('图片捕获失败')), 'image/png'));
+          const frame = session.draw(null, size, transparent ? null : (background === 'checker' ? '#000000' : background));
+          session.dispose(); session = null; cfg.setExporting(false);
+          blob = await new Promise((resolve, reject) => frame.toBlob(value => value ? resolve(value) : reject(new Error('浏览器无法编码此尺寸的 PNG，请尝试关闭其他页面后重试')), 'image/png'));
           if (copy) { if (!navigator.clipboard?.write || !window.ClipboardItem) throw new Error('当前浏览器不支持复制图片'); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }
         } else if (format === 'video') {
           const result = await K.encodeCanvasVideo({ canvas: output, duration: state.duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(value, `导出视频 ${time.toFixed(1)} / ${state.duration.toFixed(1)} 秒`) }); ({ blob, extension } = result);
@@ -429,11 +430,13 @@
             const col = document.createElement('div'); col.className = 'col';
             const title = document.createElement('strong'); title.textContent = '导出完成';
             const detail = document.createElement('p'); detail.textContent = `${extension.toUpperCase()} · ${size.width}×${size.height} · ${(blob.size / 1024 / 1024).toFixed(2)} MB`;
-            const preview = document.createElement(format === 'video' ? 'video' : 'img'); preview.src = exportUrl; preview.style.cssText = 'display:block;max-width:260px;max-height:180px;object-fit:contain;background:repeating-conic-gradient(#272b33 0% 25%,#171b22 0% 50%) 0 0 / 16px 16px';
+            const showPreview = format !== 'png' || size.width * size.height <= 64 * 1024 * 1024;
+            const preview = document.createElement(format === 'video' ? 'video' : 'img'); if (showPreview) preview.src = exportUrl; preview.style.cssText = 'display:block;max-width:260px;max-height:180px;object-fit:contain;background:repeating-conic-gradient(#272b33 0% 25%,#171b22 0% 50%) 0 0 / 16px 16px';
             if (format === 'video') preview.controls = true; else preview.alt = '导出预览';
             const download = document.createElement('a'); download.href = exportUrl; download.download = name + '.' + extension; download.textContent = '保存文件'; download.className = 'edit-btn';
             const close = document.createElement('button'); close.type = 'button'; close.textContent = '关闭'; close.onclick = closePopup;
-            col.append(title, detail, preview, download, close); pop.append(col);
+            col.append(title, detail); if (showPreview) col.append(preview);
+            col.append(download, close); pop.append(col);
           });
         }
         toast((copy ? '已复制图片' : '已导出 ' + extension.toUpperCase()) + `：${size.width}×${size.height}`, 'ok');
