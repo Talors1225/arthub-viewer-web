@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=40e144121a13">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=40e144121a13">
-<link rel="stylesheet" href="../../common/library-ui.css?v=20261018-density1">
-<link rel="stylesheet" href="../../common/visual.css?v=40e144121a13">
+<link rel="stylesheet" href="../../common/kit.css?v=b424ba3bc57b">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=b424ba3bc57b">
+<link rel="stylesheet" href="../../common/library-ui.css?v=b424ba3bc57b">
+<link rel="stylesheet" href="../../common/visual.css?v=b424ba3bc57b">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -276,8 +276,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=630e81edf6af"></script>
-  <script src="../../arthub-cos.js?v=40e144121a13"></script>
+  <script src="../../arthub-cos-config.js?v=1683fb354aef"></script>
+  <script src="../../arthub-cos.js?v=b424ba3bc57b"></script>
 </head>
 <body class="crosscore-viewer">
   <div class="stage" id="stage">
@@ -337,7 +337,7 @@
       <button id="btnBoneEdit" title="骨骼编辑模式 (E)"></button>
       <div class="strip-sep"></div>
       <button id="btnDebug" title="骨骼 / 网格 / 包围盒 调试视图"></button>
-      <button id="btnPng" title="导出当前画面为 PNG"></button>
+      <button id="btnPng" title="导出 PNG 立绘"></button>
       <button id="btnGif" title="导出动画">🎞</button>
       <button id="btnBg" title="背景颜色 / 预设">◐</button>
       <div class="strip-sep"></div>
@@ -405,12 +405,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=40e144121a13"></script>
-<script src="../../common/kit.js?v=9520e71e994d"></script>
-<script src="../../common/asset-loader.js?v=40e144121a13"></script>
-<script src="../../common/portrait-audio.js?v=40e144121a13"></script>
-<script src="../../common/stage-ui.js?v=40e144121a13"></script>
-<script src="../../common/library-ui.js?v=40e144121a13"></script>
+<script src="../../common/asset-display-overrides.js?v=b424ba3bc57b"></script>
+<script src="../../common/kit.js?v=b424ba3bc57b"></script>
+<script src="../../common/asset-loader.js?v=b424ba3bc57b"></script>
+<script src="../../common/portrait-audio.js?v=b424ba3bc57b"></script>
+<script src="../../common/stage-ui.js?v=b424ba3bc57b"></script>
+<script src="../../common/library-ui.js?v=b424ba3bc57b"></script>
 <script>
 
 (() => {
@@ -470,7 +470,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const indexUrl = '../' + indexFile + (routeSource === 'crosscore' ? '?v=cc12a6a0e12a' : '');
+  const indexUrl = '../' + indexFile + '?v=b424ba3bc57b';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
@@ -534,32 +534,7 @@
   const allPopups = [];
   const closePopups = () => allPopups.forEach(p => p.close());
   function makeStagePopup(btn, onOpen) {
-    const pop = document.createElement('div');
-    pop.className = 'stage-popup';
-    pop.style.position = 'fixed';
-    pop.style.display = 'none';
-    document.body.appendChild(pop);
-    const api = { close() { pop.style.display = 'none'; } };
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const show = pop.style.display === 'none';
-      allPopups.forEach(p => p.close());
-      if (show) {
-        pop.innerHTML = '';
-        onOpen(pop);
-        pop.style.display = 'flex';
-        const r = btn.getBoundingClientRect();
-        const pw = pop.offsetWidth, ph = pop.offsetHeight;
-        let left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8));
-        let top = r.bottom + 6;
-        if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
-        pop.style.left = left + 'px';
-        pop.style.top = top + 'px';
-      }
-    });
-    pop.addEventListener('click', e => e.stopPropagation());
-    pop.addEventListener('pointerdown', e => e.stopPropagation());
-    document.addEventListener('click', () => api.close());
+    const api = K.makeStagePopup(btn, onOpen);
     allPopups.push(api);
     return api;
   }

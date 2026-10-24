@@ -17,6 +17,7 @@
       button.setAttribute('aria-pressed', String(mode === 'pan'));
       button.title = mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面';
       button.setAttribute('aria-label', button.title);
+      button.setAttribute('data-action-label', mode === 'pan' ? '拖动' : '互动');
       K.setUiIcon(button, 'move');
     };
     button.addEventListener('click', () => setMode(mode === 'pan' ? 'interact' : 'pan'));
@@ -113,17 +114,28 @@
         queued = false;
         if (toggle) {
           const collapsed = playbar?.classList.contains('collapsed');
-          K.setUiIcon(toggle, collapsed ? 'controls' : 'chevronDown');
+          K.setUiIcon(toggle, collapsed ? 'play' : 'chevronDown');
+          toggle.dataset.actionLabel = collapsed ? '播放控制' : '';
           toggle.title = collapsed ? '展开播放控制' : '收起播放控制';
           toggle.setAttribute('aria-label', toggle.title);
         }
         const star = document.getElementById('railStar');
         if (star && !star.querySelector('svg.arthub-icon')) star.innerHTML = K.uiIcon('star', 18, star.textContent.trim() === '★');
         if (star?.title) star.setAttribute('aria-label', star.title);
-        for (const [id, icon] of [['railGrid', 'grid'], ['btnPrev', 'chevL'], ['btnNext', 'chevR'], ['zOut', 'minus'], ['zIn', 'plus'], ['btnAnimTab', 'anim'], ['btnAnimPanel', 'anim']]) {
+        if (star) star.dataset.actionLabel = star.classList.contains('on') || star.classList.contains('active') ? '已收藏' : '收藏';
+        for (const [id, icon, label] of [['railGrid', 'grid', '资源库'], ['btnPrev', 'chevL', '上一个'], ['btnNext', 'chevR', '下一个'], ['zOut', 'minus'], ['zIn', 'plus'], ['btnAnimTab', 'edit', '编辑'], ['btnAnimPanel', 'edit', '编辑']]) {
           const button = document.getElementById(id);
           K.setUiIcon(button, icon);
+          if (button && label) button.dataset.actionLabel = label;
           if (button?.title) button.setAttribute('aria-label', button.title);
+        }
+        const panelTrigger = document.getElementById('btnAnimTab') || document.getElementById('btnAnimPanel');
+        if (panelTrigger) {
+          const hasPose = !!panel?.querySelector('[data-tab="pose"], [data-panel-tab="pose"]');
+          panelTrigger.title = '编辑面板：动画、部件' + (hasPose ? '与姿势' : '');
+          panelTrigger.setAttribute('aria-label', panelTrigger.title);
+          panelTrigger.setAttribute('aria-expanded', String(!!panel?.classList.contains('open')));
+          panelTrigger.setAttribute('aria-controls', 'floatPanel');
         }
         K.setUiIcon(document.querySelector('.kit-more-tool'), 'more');
         if (canvas && refit) refit();
@@ -133,6 +145,7 @@
     for (const node of [panel, playbar, document.body, document.getElementById('stage')]) {
       if (node) observer.observe(node, { attributes: true, attributeFilter: ['class'] });
     }
+    if (document.getElementById('railStar')) observer.observe(document.getElementById('railStar'), {attributes:true,attributeFilter:['class','title']});
     window.addEventListener('resize', refresh);
     window.visualViewport?.addEventListener('resize', refresh);
     if (panel && typeof ResizeObserver !== 'undefined') new ResizeObserver(refresh).observe(panel);

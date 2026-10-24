@@ -239,7 +239,7 @@
   const tools = [
     ['btnRetry', '重新加载当前资源'], ['btnRestoreParts', '恢复默认部件显示'], ['btnGlobalSearch', '全局搜索'],
     ['btnPartEdit', '部件编辑'], ...(poseTools ? [['btnBoneEdit', '骨骼编辑模式']] : []), ['btnDebug', '骨骼 / 网格 / 包围盒 调试视图'],
-    ['btnPng', '导出当前画面为 PNG'], ['btnGif', '导出动画'], ['btnBg', '背景颜色 / 预设'],
+    ['btnPng', '导出 PNG 立绘'], ['btnGif', '导出动画'], ['btnBg', '背景颜色 / 预设'],
     ['btnVoiceSettings', '角色声音设置'], ['btnPresetImmersive', '沉浸模式'],
   ];
   const strip = $('toolStrip');
@@ -289,17 +289,15 @@
     const currentKey = () => cfg.identity();
     const poseKey = () => storeKey + ':poses:' + identity;
     const storedPoses = () => { try { return JSON.parse(localStorage.getItem(poseKey()) || '{}'); } catch (_) { return {}; } };
-    function closePopup() { popup?._layoutObserver?.disconnect(); popup?.remove(); popup = null; }
+    function closePopup() {
+      if (popup?._toolDismiss) { popup._toolDismiss(); return; }
+      popup?.remove(); popup = null;
+    }
     function showPopup(button, title, mount) {
       closePopup(); K.hideMenu();
       popup = document.createElement('div'); popup.className = 'stage-popup viewer-tools-popup'; popup.setAttribute('role', 'dialog'); popup.setAttribute('aria-label', title);
       document.body.append(popup); mount(popup);
-      let r = button.getBoundingClientRect(); if (r.width < 2) r = document.querySelector('.kit-more-tool').getBoundingClientRect();
-      const node = popup, position = () => { if (!node.isConnected) return;
-        node.style.left = Math.max(8, Math.min(r.right - node.offsetWidth, innerWidth - node.offsetWidth - 8)) + 'px';
-        node.style.top = Math.max(8, Math.min(r.bottom + 8, innerHeight - node.offsetHeight - 8)) + 'px';
-      };
-      position(); node._layoutObserver = new ResizeObserver(position); node._layoutObserver.observe(node);
+      K.attachPopupChrome(popup, {button, title, close:closePopup});
       popup.addEventListener('click', event => event.stopPropagation());
     }
     document.addEventListener('pointerdown', event => { if (popup && !popup.contains(event.target) && !event.target.closest('.ctx-menu, .tool-strip')) closePopup(); });

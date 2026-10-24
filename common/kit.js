@@ -11,7 +11,7 @@
     home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
     back: '<path d="m9 5-7 7 7 7M2 12h20"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
-    palette: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/>',
+    palette: '<path d="M12 3a9 9 0 1 0 0 18h1.2a2.3 2.3 0 0 0 1.8-3.7 1.6 1.6 0 0 1 1.3-2.6h1.1A3.6 3.6 0 0 0 21 11a9 9 0 0 0-9-8Z"/><circle cx="7.5" cy="10" r=".9" fill="currentColor"/><circle cx="11" cy="6.8" r=".9" fill="currentColor"/><circle cx="16" cy="8" r=".9" fill="currentColor"/><circle cx="7.5" cy="15" r=".9" fill="currentColor"/>',
     heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>',
     star: '<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z"/>',
     sort: '<path d="M8 3v18m-4-4 4 4 4-4M16 21V3m-4 4 4-4 4 4"/>',
@@ -24,6 +24,8 @@
     grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     play: '<path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/>',
     anim: '<path d="m8 5 11 7-11 7Z"/>',
+    panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 4v16m4-11h4m-4 6h4"/>',
+    edit: '<path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L4.5 15Z"/>',
     pause: '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
     loop: '<path d="m17 3 4 4-4 4M3 11V9a2 2 0 0 1 2-2h16M7 21l-4-4 4-4m14 0v2a2 2 0 0 1-2 2H3"/>',
     minus: '<path d="M5 12h14"/>',
@@ -1607,11 +1609,25 @@
   // ---------- 右键菜单 ----------
   // items: [{label, fn, danger?, sep?}] —— 在 (x,y) 显示,点选或点外关闭
   let menuDismiss = null;
-  K.showMenu = (items, x, y) => {
+  K.showMenu = (items, x, y, options = {}) => {
+    K.closeToolPopup?.();
+    K.closeThemePalette?.();
     K.hideMenu();
     const menu = document.createElement('div');
     menu.className = 'ctx-menu';
     menu.setAttribute('role', 'menu');
+    menu.addEventListener('keydown', event => { if (event.key !== 'Escape') event.stopPropagation(); });
+    if (options.title) {
+      menu.setAttribute('aria-label', options.title);
+      const head = document.createElement('div');
+      head.className = 'arthub-popup-head';
+      const title = document.createElement('strong'); title.textContent = options.title;
+      const dismiss = document.createElement('button'); dismiss.type = 'button';
+      dismiss.className = 'arthub-popup-close'; dismiss.innerHTML = K.uiIcon('close') + '<span>关闭</span>';
+      dismiss.setAttribute('aria-label', '关闭' + options.title);
+      dismiss.onclick = event => { event.stopPropagation(); K.hideMenu(); options.owner?.focus(); };
+      head.append(title, dismiss); menu.append(head);
+    }
     for (const it of items) {
       if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; menu.appendChild(s); continue; }
       if (it.heading) { const h = document.createElement('div'); h.className = 'menu-heading'; h.textContent = it.heading; menu.appendChild(h); continue; }
@@ -1634,25 +1650,103 @@
       menu.appendChild(b);
     }
     document.body.appendChild(menu);
-    const r = menu.getBoundingClientRect();
-    menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
-    menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+    options.owner?.setAttribute('aria-expanded', 'true');
+    // The entrance animation scales getBoundingClientRect(); layout dimensions
+    // keep the final menu and its last item inside small screens.
+    menu.style.left = Math.max(8, Math.min(x, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+    menu.style.top = Math.max(8, Math.min(y, window.innerHeight - menu.offsetHeight - 8)) + 'px';
     const close = (event) => {
       // 菜单内部点击先交给菜单项自身处理，不能被“点击外部关闭”抢先移除。
-      if (event && menu.contains(event.target)) return;
+      if (event?.type === 'click' && (menu.contains(event.target) || options.owner?.contains(event.target))) return;
       menu.remove();
       document.removeEventListener('click', close, true);
       window.removeEventListener('blur', close);
       document.removeEventListener('keydown', escape);
+      window.removeEventListener('resize', close);
+      options.owner?.setAttribute('aria-expanded', 'false');
       if (menuDismiss === close) menuDismiss = null;
     };
-    const escape = event => { if (event.key === 'Escape') { event.stopPropagation(); close(); } };
+    const escape = event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); options.owner?.focus(); } };
     menuDismiss = close;
     setTimeout(() => { if (menu.isConnected) document.addEventListener('click', close, true); }, 0);
     window.addEventListener('blur', close);
+    window.addEventListener('resize', close);
     document.addEventListener('keydown', escape);
+    if (options.title) menu.querySelector('.arthub-popup-close')?.focus();
+    return menu;
   };
   K.hideMenu = () => { if (menuDismiss) menuDismiss(); else document.querySelector('.ctx-menu')?.remove(); };
+
+  // One dismissible surface at a time. Native viewer handlers still own content.
+  let toolPopupDismiss = null;
+  K.closeToolPopup = () => toolPopupDismiss?.();
+  K.attachPopupChrome = (pop, { button, title, close }) => {
+    K.closeToolPopup(); K.hideMenu(); K.closeThemePalette?.();
+    const owner = button?._kitMenuAnchor || (button?.classList.contains('kit-secondary-tool') || button?.getBoundingClientRect().width < 2
+      ? document.querySelector('.kit-more-tool') || button : button);
+    pop.classList.add('arthub-tool-popup');
+    pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', title);
+    if (!pop.dataset.popupKeys) {
+      pop.dataset.popupKeys = '1';
+      pop.addEventListener('keydown', event => event.stopPropagation());
+    }
+    const head = document.createElement('div'); head.className = 'arthub-popup-head';
+    const caption = document.createElement('strong'); caption.textContent = title;
+    const repeatedTitle = pop.querySelector('.col-title');
+    if (repeatedTitle?.textContent.trim() === title.trim()) repeatedTitle.remove();
+    const dismiss = document.createElement('button'); dismiss.type = 'button';
+    dismiss.className = 'arthub-popup-close'; dismiss.setAttribute('aria-label', '关闭' + title);
+    dismiss.innerHTML = K.uiIcon('close') + '<span>关闭</span>'; head.append(caption, dismiss); pop.prepend(head);
+    const position = () => {
+      if (!pop.isConnected) { finish(); return; }
+      const r = owner?.getBoundingClientRect() || {left:8, right:8, top:8, bottom:8};
+      const left = Math.max(8, Math.min(r.right - pop.offsetWidth, innerWidth - pop.offsetWidth - 8));
+      const below = r.bottom + 8;
+      const top = below + pop.offsetHeight <= innerHeight - 8 ? below : Math.max(8, r.top - pop.offsetHeight - 8);
+      pop.style.left = left + 'px'; pop.style.top = top + 'px';
+    };
+    const finish = (restoreFocus = false) => {
+      if (pop._toolDismiss !== finish) return;
+      pop._toolDismiss = null;
+      if (toolPopupDismiss === finish) toolPopupDismiss = null;
+      observer?.disconnect();
+      document.removeEventListener('pointerdown', outside, true);
+      document.removeEventListener('keydown', escape, true);
+      window.removeEventListener('resize', position);
+      window.visualViewport?.removeEventListener('resize', position);
+      close();
+      if (restoreFocus && owner?.isConnected) owner.focus();
+    };
+    const outside = event => { if (!pop.contains(event.target)) finish(); };
+    const escape = event => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault(); event.stopImmediatePropagation(); finish(true);
+    };
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(position);
+    dismiss.onclick = event => { event.stopPropagation(); finish(true); };
+    pop._toolDismiss = toolPopupDismiss = finish;
+    document.addEventListener('pointerdown', outside, true);
+    document.addEventListener('keydown', escape, true);
+    window.addEventListener('resize', position);
+    window.visualViewport?.addEventListener('resize', position);
+    observer?.observe(pop); position(); dismiss.focus({preventScroll:true});
+    return finish;
+  };
+  K.makeStagePopup = (button, onOpen) => {
+    const pop = document.createElement('div'); pop.className = 'stage-popup';
+    pop.style.position = 'fixed'; pop.style.display = 'none'; document.body.appendChild(pop);
+    const api = { close() { if (pop._toolDismiss) pop._toolDismiss(); else pop.style.display = 'none'; } };
+    button.addEventListener('click', event => {
+      event.stopPropagation(); const show = pop.style.display === 'none';
+      api.close(); K.closeToolPopup(); K.hideMenu();
+      if (!show) return;
+      pop.innerHTML = ''; onOpen(pop); pop.style.display = 'flex';
+      K.attachPopupChrome(pop, {button, title:(button.title || '功能设置').replace(/\s*[（(][^）)]*[）)]\s*$/, ''), close:()=>{pop.style.display='none';}});
+    });
+    pop.addEventListener('click', event => event.stopPropagation());
+    pop.addEventListener('pointerdown', event => event.stopPropagation());
+    return api;
+  };
 
   // ---------- 清爽界面层 ----------
   // 不改变具体查看器的业务逻辑，只把低频工具收进统一的“更多”菜单。
@@ -1731,6 +1825,9 @@
     more.innerHTML = K.uiIcon('more');
     more.title = '更多操作';
     more.setAttribute('aria-label', '更多操作');
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    more.dataset.actionLabel = '更多';
     const invokeSecondary = (button) => {
       const originalStyle = button.getAttribute('style');
       const rect = more.getBoundingClientRect();
@@ -1746,8 +1843,10 @@
       button.style.height = '1px';
       button.style.opacity = '0';
       button.style.pointerEvents = 'none';
+      button._kitMenuAnchor = more;
       try { button.click(); }
       finally {
+        delete button._kitMenuAnchor;
         if (originalStyle == null) button.removeAttribute('style');
         else button.setAttribute('style', originalStyle);
         button.classList.add('kit-secondary-tool');
@@ -1756,11 +1855,12 @@
     };
     more.addEventListener('click', (event) => {
       event.stopPropagation();
+      if (more.getAttribute('aria-expanded') === 'true') { K.hideMenu(); return; }
       const rect = more.getBoundingClientRect();
       K.showMenu(secondary.map(button => ({
         label: labelOf(button),
         fn: () => invokeSecondary(button),
-      })), rect.left, rect.bottom + 6);
+      })), rect.left, rect.bottom + 6, {title:'更多功能', owner:more});
     });
     toolStrip.appendChild(more);
     // Reveal navigation and tools together only after the compact menu is ready.
@@ -1840,20 +1940,25 @@
     return hex;
   };
 
-  K.closeThemePalette = () => {
+  K.closeThemePalette = (restoreFocus = false) => {
     const panel = document.querySelector('.theme-palette');
     if (!panel) return;
     const owner = panel.dataset.owner && document.getElementById(panel.dataset.owner);
     if (owner) owner.setAttribute('aria-expanded', 'false');
     if (panel._outsideHandler) document.removeEventListener('pointerdown', panel._outsideHandler, true);
     if (panel._escapeHandler) document.removeEventListener('keydown', panel._escapeHandler, true);
+    if (panel._resizeHandler) window.removeEventListener('resize', panel._resizeHandler);
     panel.remove();
+    if (restoreFocus && owner?.isConnected) owner.focus();
   };
 
   K.bindThemePalette = (button, store) => {
     if (!button || button.dataset.themePaletteBound === '1') return;
     button.dataset.themePaletteBound = '1';
     button.title = '打开主题调色板';
+    button.setAttribute('aria-label', '主题调色板');
+    button.dataset.actionLabel = '主题';
+    K.setUiIcon(button, 'palette');
     button.setAttribute('aria-haspopup', 'dialog');
     button.setAttribute('aria-expanded', 'false');
     button.addEventListener('click', (event) => {
@@ -1865,14 +1970,16 @@
         return;
       }
       K.closeThemePalette();
+      K.closeToolPopup?.(); K.hideMenu();
       const root = document.documentElement;
       const panel = document.createElement('div');
       panel.className = 'theme-palette';
       panel.dataset.owner = button.id;
       panel.setAttribute('role', 'dialog');
       panel.setAttribute('aria-label', '主题调色板');
+      panel.addEventListener('keydown', event => event.stopPropagation());
       panel.innerHTML = `
-        <div class="theme-palette-head"><strong>主题调色板</strong><button type="button" class="theme-palette-close" aria-label="关闭调色板">×</button></div>
+        <div class="theme-palette-head"><strong>主题调色板</strong><button type="button" class="theme-palette-close" aria-label="关闭调色板">${K.uiIcon('close')}<span>关闭</span></button></div>
         <label class="theme-palette-picker"><span>自定义背景颜色</span><input type="color" aria-label="选择自定义背景颜色"></label>
         <button type="button" class="theme-palette-reset">恢复当前游戏默认背景</button>`;
       document.body.appendChild(panel);
@@ -1908,7 +2015,7 @@
       picker.addEventListener('input', applyPicker);
       picker.addEventListener('change', applyPicker);
       panel.querySelector('.theme-palette-reset').addEventListener('click', () => { K.setBackground(null, store); updateState(); });
-      panel.querySelector('.theme-palette-close').addEventListener('click', () => K.closeThemePalette());
+      panel.querySelector('.theme-palette-close').addEventListener('click', () => K.closeThemePalette(true));
       updateState();
 
       const rect = button.getBoundingClientRect();
@@ -1918,12 +2025,14 @@
       const top = below + panel.offsetHeight <= window.innerHeight - margin ? below : Math.max(margin, rect.top - panel.offsetHeight - 8);
       panel.style.left = `${left}px`;
       panel.style.top = `${top}px`;
-      const outsideHandler = (event) => { if (!panel.contains(event.target) && event.target !== button) K.closeThemePalette(); };
-      const escapeHandler = (event) => { if (event.key === 'Escape') K.closeThemePalette(); };
+      const outsideHandler = (event) => { if (!panel.contains(event.target) && !button.contains(event.target)) K.closeThemePalette(); };
+      const escapeHandler = (event) => { if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); K.closeThemePalette(true); } };
       panel._outsideHandler = outsideHandler;
       panel._escapeHandler = escapeHandler;
+      panel._resizeHandler = () => K.closeThemePalette();
       document.addEventListener('pointerdown', outsideHandler, true);
       document.addEventListener('keydown', escapeHandler, true);
+      window.addEventListener('resize', panel._resizeHandler);
     });
   };
 

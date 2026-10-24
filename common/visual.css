@@ -28,9 +28,9 @@ html[data-gav-ui="clean"] body .playbar.collapsed {
   right: auto !important;
   bottom: var(--arthub-edge) !important;
   transform: none !important;
-  width: 48px !important;
+  width: max-content !important;
   height: 48px !important;
-  min-width: 0 !important;
+  min-width: 98px !important;
   padding: 5px !important;
 }
 html[data-gav-ui="clean"] body .playbar.collapsed .playbar-toggle {
@@ -114,7 +114,7 @@ body.arthub-home :is(a, button):focus-visible { outline: 2px solid var(--arthub-
 @media (max-width: 720px) {
   :root { --arthub-edge: 8px; }
   html[data-gav-ui="clean"] body .playbar.collapsed {
-    width: 52px !important;
+    width: max-content !important;
     height: 52px !important;
     bottom: calc(72px + env(safe-area-inset-bottom)) !important;
     left: calc(8px + env(safe-area-inset-left)) !important;

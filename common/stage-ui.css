@@ -22,6 +22,30 @@
   .playbar.playbar-speed-only #btnPanel { display: none !important; }
 }
 
+/* Shared control cells keep native viewer styles from shifting icon centers. */
+html[data-gav-ui="clean"] body :is(.rail,.tool-strip) { align-items: center !important; }
+html[data-gav-ui="clean"] body :is(.rail,.tool-strip) button { box-sizing: border-box; }
+html[data-gav-ui="clean"] body :is(.rail,.tool-strip) button > .arthub-icon { display: block; flex: none; width: 18px; height: 18px; }
+@media (min-width: 721px) {
+  html[data-gav-ui="clean"] body :is(.rail,.tool-strip) {
+    height: 48px !important; min-height: 48px !important; box-sizing: border-box;
+    padding: 5px !important; gap: 4px !important;
+  }
+  html[data-gav-ui="clean"] body :is(.rail,.tool-strip) button { height: 36px !important; min-height: 36px !important; }
+  html[data-gav-ui="clean"] body .status { top: 72px !important; }
+  html[data-gav-ui="clean"] body .tool-strip :is(.zoom-bar,.tool-zoom) {
+    height: 36px !important; padding: 0 !important; align-items: center !important;
+  }
+}
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"] body :is(.rail,.tool-strip) { gap: 4px !important; }
+  html[data-gav-ui="clean"] body .tool-strip :is(.zoom-bar,.tool-zoom) { align-items: center !important; gap: 0 !important; }
+  html[data-gav-ui="clean"] body .tool-strip .tool-zoom :is(button,.zoom-pct) {
+    flex: 0 0 48px !important; height: 48px !important; min-height: 48px !important;
+    display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  }
+}
+
 /* CrossCore offers visible zoom controls on desktop as well as mobile. */
 html[data-gav-ui="clean"] body:is(.crosscore-viewer,.crosscore-interaction-viewer,.azurlane-viewer) .tool-strip .tool-zoom {
  display:flex !important; position:static !important; align-items:center; gap:2px; margin:0; padding:0; border:0; background:transparent; box-shadow:none;
@@ -35,3 +59,26 @@ body.game-interaction-viewer #btnStagePan { display:inline-flex; align-items:cen
 body.game-interaction-viewer #btnStagePan[aria-pressed="true"] { color:var(--accent); background:var(--accent-dim-bg); }
 body.game-interaction-viewer > .stage[data-pan-mode="pan"] > canvas { cursor:grab; }
 body.game-interaction-viewer > .stage[data-pan-dragging="true"] > canvas { cursor:grabbing; }
+
+/* Words identify unfamiliar actions; +/- remain standard zoom controls. */
+html[data-gav-ui="clean"] body :is(.rail,.tool-strip) button[data-action-label]:not([data-action-label=""]):not(.kit-secondary-tool) {
+  width: auto !important; min-width: 36px; padding-inline: 9px !important; gap: 5px;
+}
+html[data-gav-ui="clean"] body .playbar.collapsed { width: max-content !important; min-width: 98px !important; height: auto !important; box-sizing: border-box; }
+html[data-gav-ui="clean"] body .playbar.collapsed .playbar-toggle[data-action-label] { flex: 0 0 auto !important; width: auto !important; min-width: 86px; padding-inline: 8px; gap: 5px; }
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"] body :is(.rail,.tool-strip) button[data-action-label]:not([data-action-label=""]):not(.kit-secondary-tool) {
+    flex: 0 0 48px !important; width: 44px !important; height: 48px !important;
+    flex-direction: column !important; justify-content: center !important; padding: 3px 0 !important; gap: 3px;
+  }
+  html[data-gav-ui="clean"] body :is(.rail,.tool-strip) button[data-action-label]::after { font-size: 10px; }
+  html[data-gav-ui="clean"] body .rail button[data-action-label] { flex-basis: 44px !important; }
+  html[data-gav-ui="clean"] body .playbar.collapsed .playbar-toggle { flex: 0 0 auto !important; min-width: 86px; }
+  :is(.ctx-menu,.stage-popup) .arthub-popup-head .arthub-popup-close { min-height: 40px; }
+  html[data-gav-ui="clean"] body #gridView.library-ui .library-top-row > #btnTheme[data-action-label] {
+    width: 40px !important; padding: 2px 0 !important; gap: 2px;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  #gridView.library-ui #btnTheme[data-action-label] .arthub-icon { width: 14px; height: 14px; }
+  #gridView.library-ui #btnTheme[data-action-label]::after { font-size: 10px; }
+}
