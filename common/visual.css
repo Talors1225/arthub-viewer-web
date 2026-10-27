@@ -111,7 +111,11 @@ body.arthub-home .updates li { border-color: #282b32; }
 body.arthub-home .updates time { color: #9094a0; }
 body.arthub-home :is(.updates h2, .updates strong) { color: #e8e9ed; }
 body.arthub-home :is(a, button):focus-visible { outline: 2px solid var(--arthub-gold); outline-offset: 3px; }
+.arthub-sponsor { display: inline-flex; align-items: center; justify-content: center; flex: none; gap: 4px; box-sizing: border-box; height: 36px; min-height: 36px; padding: 5px 8px; border: 1px solid rgba(226,194,136,.4); border-radius: 9px; color: var(--arthub-gold); background: rgba(226,194,136,.08); font-size: 12px; font-weight: 600; line-height: 1.4; text-decoration: none; white-space: nowrap; }
+.arthub-sponsor .arthub-icon { width: 14px; height: 14px; }
+.arthub-sponsor:hover { background: rgba(226,194,136,.15); }
 @media (max-width: 720px) {
+  .arthub-sponsor { height: 36px; min-height: 36px; padding: 4px 6px; font-size: 11px; }
   :root { --arthub-edge: 8px; }
   html[data-gav-ui="clean"] body .playbar.collapsed {
     width: max-content !important;
@@ -124,7 +128,7 @@ body.arthub-home :is(a, button):focus-visible { outline: 2px solid var(--arthub-
   html[data-gav-ui="clean"] body #gridView.library-ui .thumb-card .tn { font-size: 13px !important; }
   #gridView.library-ui .library-top-row > #btnTheme { min-height: 36px !important; }
   #gridView.library-ui .library-category-tabs .filter-chip { padding: 6px 10px !important; }
-  body.arthub-home .wrap { padding: 32px 56px 32px 20px; }
+  body.arthub-home .wrap { padding: 32px 20px; }
   body.arthub-home h1 { font-size: 26px; }
   body.arthub-home .home-layout { margin-top: 24px; }
   body.arthub-home .card { padding: 16px; min-height: 96px; }

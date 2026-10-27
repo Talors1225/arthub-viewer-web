@@ -17,6 +17,16 @@ export function voiceClip(model,cue,favor=0,exact=false){
  const candidates=active.filter(c=>c.cue===cue&&(c.threshold??0)<=favor).sort((a,b)=>(b.threshold??0)-(a.threshold??0));
  return candidates[0]||active.find(c=>c.name===cue)||array(model.voice?.clips).find(c=>c.name===cue);
 }
+export function favorOptions(model,hasRing=false){
+ const levels=new Set();const add=value=>{const n=Number(value);if(Number.isFinite(n)&&n>0)levels.add(n);};
+ for(const clip of array(model.voice?.activeClips))add(clip.threshold);
+ for(const config of [...array(model.interaction?.configs),...array(model.interaction?.spine?.drag_data?.config_client)])add(config.favor);
+ for(const rows of Object.values(model.expression?.extra||{}))for(const row of array(rows))if(Array.isArray(row))add(row[0]);
+ const names=[...array(model.animations),...Object.keys(model.animator?.states||{})];
+ if((hasRing||names.some(n=>/^(touch_head|touch_body|touch_special|main_\d+|home|login|mail|mission|mission_complete|complete)_ex$/.test(n)))&&![...levels].some(n=>n>=1000))levels.add(1200);
+ return levels.size?[{value:0,label:'普通'},...[...levels].sort((a,b)=>a-b).map(value=>({value,label:value>=1000?'誓约 · '+(value-1000):'好感 · '+value}))]:[];
+}
+export function highestFavor(model){return Math.max(1200,...favorOptions(model).map(item=>item.value));}
 export function clampValue(value,config) {
  if (config.drag_direct===1 && value<0 || config.drag_direct===2 && value>0) value=0;
  if (config.range_abs===1) value=Math.abs(value);

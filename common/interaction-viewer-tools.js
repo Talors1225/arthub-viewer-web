@@ -91,8 +91,8 @@
       let vertices, triangles;
       if (attachment instanceof ns.RegionAttachment) {
         vertices = new Float32Array(8);
-        // The Azur Lane bundle uses Spine 4.0's bone argument; 4.2 uses a slot.
-        attachment.computeWorldVertices(ns.Physics ? part.slot : part.slot.bone, vertices, 0, 2);
+        // Region attachments use a Bone in 3.8/4.0 and a Slot in 4.1+.
+        attachment.computeWorldVertices('sequence' in attachment ? part.slot : part.slot.bone, vertices, 0, 2);
         triangles = [0, 1, 2, 2, 3, 0];
       } else if (attachment instanceof ns.MeshAttachment) {
         vertices = new Float32Array(attachment.worldVerticesLength);
@@ -564,6 +564,7 @@
     K.initSearchPalette(); applyBackground();
     return {
       sync, before: () => { sync(); editor?.before(); },
+      exitEditing() { closePopup(); setMode(''); K.closeToolPopup?.(); },
       prepareLoad() { setMode(''); editor = null; identity = null; selectedPart = null; },
       after: () => { editor?.after(); drawOverlay(); },
       update() { if (performance.now() - lastRefresh > 800) { lastRefresh = performance.now(); sync(); } },

@@ -314,6 +314,7 @@ async function loadModel(identity) {
   loadingPreview.begin(request, { path: previewThumb ? K.siteRoot() + 'thumbs/' + previewThumb : null, label: selected.name, trimImage: true });
   pointer = null; controller = null; callbacks = []; playback.playing = true; pendingFit = null; stopAudio(); transition?.dispose(); transition = null; specialMode = false; lastActionState = '';
   model = selected; fillVoiceOptions(); lastFailure = null; $('#loading').hidden = false; $('#loading').textContent = `正在加载 ${model.name}…`;
+  $('#btnStagePan').disabled = true; $('#interaction-more').open = false;
   $('#model').value = String(model.id); $('#active-name').textContent = model.name; $('#stage-info').textContent = `${model.name} · 正在加载`; fillModels(); $('#subtitle').textContent = ''; $('#feedback').textContent = '正在加载…';
   let loaded;
   try { loaded = await loadPrefab(model.prefab, request); }
@@ -321,7 +322,7 @@ async function loadModel(identity) {
   if (!loaded || request !== requestId) return;
   previewScene = loaded;
   controller = new InteractionController({ ...model, idle: loaded.idle }, handleInteraction, track => scene?.trackStatus(track));
-  $('#loading').hidden = true; K.setLibraryStageReady(true);
+  $('#loading').hidden = true; $('#btnStagePan').disabled = false; K.setLibraryStageReady(true);
   $('#stage-info').textContent = `${model.name} · ${model.actions.length} 条互动配置`;
   const thumb = thumbnailFor(model); K.setPreview($('#railThumb'), thumb ? '../../thumbs/' + thumb : null);
   document.title = model.name + ' · ArtHub';
@@ -475,7 +476,8 @@ function render() {
   } catch (error) { if (lastFailure !== error.message) fail(error); }
   requestAnimationFrame(render);
 }
-const stagePan = K.createStagePan({ stage, button: $('#btnStagePan'), accepts: target => target === canvas || target === overlay,
+const stagePan = K.createStagePan({ stage, button: $('#btnStagePan'), interactiveButton: true, accepts: target => target === canvas || target === overlay,
+  onModeChange: mode => { if (pointer?.started) controller?.endDrag(); pointer = null; if (mode === 'interact') { viewerUI.tools.exitEditing(); $('#interaction-more').open = false; endAnimationPreview(); playback.playing = true; viewerUI.showTab('interaction'); setPanelOpen('library', false); setPanelOpen('interaction', true); } else if ($('#floatPanel').dataset.tab === 'interaction') setPanelOpen('interaction', false); },
   ready: () => !!scene && !!controller && !previewPending && !exporting,
   move: (dx, dy) => { pendingFit = null; viewPan.x += dx; viewPan.y += dy; fit(); },
   tap: event => { const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (action && (!action.gesture || controller.restoreObjects.has(action.index))) { endAnimationPreview(); playback.playing = true; controller.trigger(action.index, now()); } }
@@ -506,6 +508,8 @@ $('#gridSearch').addEventListener('input', () => {
 $('#model').addEventListener('change', () => { clearTimeout(searchTimer); loadModel($('#model').value).catch(fail); });
 $('#btnPrev').addEventListener('click', () => step(-1)); $('#btnNext').addEventListener('click', () => step(1));
 $('#reset').addEventListener('click', () => model && loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { stagePan.cancel(); viewPan.x = viewPan.y = 0; viewZoom = 1; fit(); if (scene) pendingFit = { scene, at: now(), expires: now() + 2 }; });
+$('#resetInteraction').addEventListener('click', () => model && loadModel(model.id).catch(fail));
+$('#toggleRegions').addEventListener('click', () => { const show = !$('#regions').checked; $('#regions').checked = show; $('#toggleRegions').textContent = show ? '隐藏热点' : '显示热点'; $('#toggleRegions').setAttribute('aria-pressed', String(show)); });
 $('#railThumb').addEventListener('click', () => $('#fit').click());
 $('#railStar').addEventListener('click', () => { if (model) { K.favs.toggle(favoriteEntry(model)); fillModels(); } });
 
@@ -523,7 +527,7 @@ function setPanelOpen(name, open) {
   button.setAttribute('aria-expanded', String(open));
 }
 $('#railGrid').addEventListener('click', () => setPanelOpen('library', !$('#gridView').classList.contains('open')));
-$('#btnAnimTab').addEventListener('click', () => { const open = !$('#floatPanel').classList.contains('open'); if (open) viewerUI.showTab('anim'); setPanelOpen('interaction', open); });
+$('#btnAnimTab').addEventListener('click', () => { const open = !$('#floatPanel').classList.contains('open') || $('#floatPanel').dataset.tab === 'interaction'; if (open) { stagePan.setMode('pan'); viewerUI.showTab('anim'); } setPanelOpen('interaction', open); });
 $('#gridClose').addEventListener('click', () => setPanelOpen('library', false));
 $('#panel-close').addEventListener('click', () => setPanelOpen('interaction', false));
 document.querySelectorAll('[data-panel-tab]').forEach(tab => tab.addEventListener('click', () => {
@@ -534,6 +538,7 @@ document.querySelectorAll('[data-panel-tab]').forEach(tab => tab.addEventListene
     button.setAttribute('aria-selected', String(active));
   });
   document.querySelectorAll('[data-panel-page]').forEach(page => page.classList.toggle('on', page.dataset.panelPage === pageName));
+  if (pageName === 'interaction' && scene && controller) stagePan.setMode('interact');
 }));
 document.querySelectorAll('[data-group]').forEach(button => button.addEventListener('click', () => {
   modelGroupFilter = button.dataset.group; gridPage = 1;

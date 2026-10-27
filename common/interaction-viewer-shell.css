@@ -265,6 +265,7 @@ body.game-interaction-viewer #floatPanel.open {
   display: flex;
   animation: interactionPanelIn .18s ease;
 }
+html[data-gav-ui="clean"] body.game-interaction-viewer #floatPanel[data-tab="interaction"] { height: auto !important; }
 
 @keyframes interactionPanelIn {
   from { opacity: 0; transform: translateY(-50%) translateX(14px); }
@@ -312,6 +313,13 @@ body.game-interaction-viewer .interaction-content :is(button, select, input[type
 }
 body.game-interaction-viewer .interaction-content button { cursor: pointer; }
 body.game-interaction-viewer .interaction-content button:disabled { opacity: .4; cursor: default; }
+body.game-interaction-viewer .interaction-help { margin: 0 0 12px; color: var(--text-dim); font-size: 12px; line-height: 1.7; }
+body.game-interaction-viewer #interaction-panel [hidden] { display: none !important; }
+body.game-interaction-viewer #interaction-panel .interaction-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+body.game-interaction-viewer #interaction-panel .interaction-actions button { flex: 1 1 100px; width: auto; min-width: 0; min-height: 36px; margin: 0; }
+body.game-interaction-viewer #interaction-panel .field-label { display: grid; gap: 6px; margin: 12px 0; }
+body.game-interaction-viewer #interaction-panel .interaction-hotspots { display: flex; align-items: center; gap: 7px; margin: 8px 0 12px; font-size: 12px; }
+body.game-interaction-viewer #interaction-panel .interaction-hotspots input { width: auto; margin: 0; accent-color: var(--accent); }
 body.game-interaction-viewer .interaction-content label.field-label { flex-direction: column; align-items: stretch; margin: 14px 0; }
 body.game-interaction-viewer .interaction-content .interaction-actions { display: flex; gap: 7px; margin-top: 10px; }
 body.game-interaction-viewer .interaction-content .interaction-actions > button { flex: 1; }

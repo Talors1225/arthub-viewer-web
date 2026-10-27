@@ -3,7 +3,7 @@
   'use strict';
   const K = window.SpineKit;
   // Stage movement is separate from game gestures. A short tap still reaches the model.
-  K.createStagePan = ({ stage, button, modeSelect, accepts, ready, move, tap }) => {
+  K.createStagePan = ({ stage, button, modeSelect, accepts, ready, move, tap, interactiveButton = false, onModeChange }) => {
     let mode = 'pan', pointer = null;
     const consume = event => { event.preventDefault(); event.stopImmediatePropagation(); };
     const cancel = () => {
@@ -14,11 +14,12 @@
       cancel(); mode = value === 'interact' ? 'interact' : 'pan';
       stage.dataset.panMode = mode;
       if (modeSelect) modeSelect.value = mode;
-      button.setAttribute('aria-pressed', String(mode === 'pan'));
-      button.title = mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面';
+      button.setAttribute('aria-pressed', String(interactiveButton ? mode === 'interact' : mode === 'pan'));
+      button.title = interactiveButton ? (mode === 'pan' ? '开启立绘互动' : '关闭立绘互动，恢复拖动画面') : (mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面');
       button.setAttribute('aria-label', button.title);
-      button.setAttribute('data-action-label', mode === 'pan' ? '拖动' : '互动');
-      K.setUiIcon(button, 'move');
+      button.setAttribute('data-action-label', interactiveButton ? (mode === 'pan' ? '互动' : '互动中') : (mode === 'pan' ? '拖动' : '互动'));
+      K.setUiIcon(button, interactiveButton ? 'interact' : 'move');
+      onModeChange?.(mode);
     };
     button.addEventListener('click', () => setMode(mode === 'pan' ? 'interact' : 'pan'));
     modeSelect?.addEventListener('change', () => setMode(modeSelect.value));

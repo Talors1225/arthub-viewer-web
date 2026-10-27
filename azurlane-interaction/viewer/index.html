@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>碧蓝航线 · ArtHub 互动立绘</title>
-<link rel="stylesheet" href="../../common/kit.css?v=b424ba3bc57b">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=b424ba3bc57b">
-<link rel="stylesheet" href="../../common/library-ui.css?v=b424ba3bc57b">
-<link rel="stylesheet" href="../../common/visual.css?v=b424ba3bc57b">
+<link rel="stylesheet" href="../../common/kit.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/library-ui.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/visual.css?v=07d9b5141a72">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261018-parts-mobile2">
 <link rel="stylesheet" href="azurlane.css">
-  <script src="../../arthub-cos-config.js?v=1683fb354aef"></script>
-  <script src="../../arthub-cos.js?v=b424ba3bc57b"></script>
+  <script src="../../arthub-cos-config.js?v=4114f44f4e6e"></script>
+  <script src="../../arthub-cos.js?v=07d9b5141a72"></script>
 </head>
 <body class="game-interaction-viewer azurlane-viewer" data-pose-tools="disabled">
   <main class="stage" id="stage" aria-label="碧蓝航线动态立绘舞台">
@@ -43,7 +43,7 @@
       <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
     </div>
     <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
-    <button id="btnStagePan" type="button" title="拖动画面" aria-label="拖动画面" aria-pressed="true"></button>
+    <button id="btnStagePan" type="button" title="开启立绘互动" aria-label="开启立绘互动" aria-pressed="false" disabled></button>
     <button id="fit" type="button" title="适应窗口">适应</button>
   </div>
 
@@ -106,26 +106,12 @@
     </div>
     <div class="rp-page" data-panel-page="interaction">
       <div id="interaction-panel" class="interaction-content">
-        <details class="section">
-          <summary>舞台控制</summary>
-          <label for="pointer-mode" class="field-label">拖动模式
-            <select id="pointer-mode" aria-label="拖动模式" title="拖动模式">
-              <option value="pan">拖动画面</option><option value="interact">模型互动</option>
-            </select>
-          </label>
-        </details>
-        <h2>触摸与互动</h2>
-        <div id="touch-actions"></div>
-        <label for="favor" class="field-label">好感阶段
-          <select id="favor"><option value="0">陌生 · 0</option><option value="50">友好 · 50</option><option value="90">喜欢 · 90</option><option value="100">爱 · 100</option><option value="1100">誓约 · 100</option><option value="1200" selected>誓约 · 200</option></select>
-        </label>
-        <p id="game-state" role="status"></p>
-        <button id="reset-state" type="button">重置当前立绘状态</button>
-        <button id="show-hits" type="button">显示触摸区域</button>
-        <div id="drag-controls"></div>
-        <p id="interaction-note"></p>
-        <details>
-          <summary>其他互动区域</summary>
+        <p id="interaction-note" class="interaction-help">加载立绘后，可直接点击、拖动或长按热点。</p>
+        <div hidden><select id="pointer-mode" aria-label="互动输入模式"><option value="pan">拖动画面</option><option value="interact">模型互动</option></select></div>
+        <div class="interaction-actions"><button id="reset-state" type="button" disabled>重置互动</button><button id="show-hits" type="button" aria-pressed="false" disabled>显示热点</button></div>
+        <details class="section" id="interaction-more">
+          <summary>更多设置</summary>
+          <label for="hit-area" class="field-label">互动区域</label>
           <select id="hit-area" aria-label="选择互动区域"></select>
           <button id="hit-trigger" type="button">触发区域动作</button>
           <p>触摸判断遵循当前动作中的原始区域，拖动、长按和连点会随姿态变化。</p>
@@ -145,11 +131,11 @@
     </div>
   </aside>
 
-  <script src="../../common/asset-display-overrides.js?v=b424ba3bc57b"></script>
-  <script src="../../common/kit.js?v=b424ba3bc57b"></script>
-  <script src="../../common/asset-loader.js?v=b424ba3bc57b"></script>
-  <script src="../../common/stage-ui.js?v=b424ba3bc57b"></script>
-  <script src="../../common/library-ui.js?v=b424ba3bc57b"></script>
+  <script src="../../common/asset-display-overrides.js?v=07d9b5141a72"></script>
+  <script src="../../common/kit.js?v=07d9b5141a72"></script>
+  <script src="../../common/asset-loader.js?v=07d9b5141a72"></script>
+  <script src="../../common/stage-ui.js?v=07d9b5141a72"></script>
+  <script src="../../common/library-ui.js?v=07d9b5141a72"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261019-png-unlimit1"></script>
   <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
   <script src="vendor/spine-player.js"></script>

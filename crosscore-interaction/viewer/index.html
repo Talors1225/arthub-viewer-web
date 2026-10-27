@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>交错战线 · 互动立绘 | ArtHub</title>
-<link rel="stylesheet" href="../../common/kit.css?v=b424ba3bc57b">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=b424ba3bc57b">
-<link rel="stylesheet" href="../../common/library-ui.css?v=b424ba3bc57b">
-<link rel="stylesheet" href="../../common/visual.css?v=b424ba3bc57b">
+<link rel="stylesheet" href="../../common/kit.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/library-ui.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/visual.css?v=07d9b5141a72">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261018-parts-mobile2">
 <link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261017-sound1">
-  <script src="../../arthub-cos-config.js?v=1683fb354aef"></script>
-  <script src="../../arthub-cos.js?v=b424ba3bc57b"></script>
+  <script src="../../arthub-cos-config.js?v=4114f44f4e6e"></script>
+  <script src="../../arthub-cos.js?v=07d9b5141a72"></script>
 </head>
 <body class="game-interaction-viewer crosscore-interaction-viewer" data-pose-tools="disabled">
   <main id="stage" class="stage" aria-label="交错战线互动立绘舞台">
@@ -42,8 +42,8 @@
       <button id="zPct" class="zoom-pct" type="button" title="适应窗口" aria-label="适应窗口" disabled>100%</button>
       <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
     </div>
-    <button id="btnStagePan" type="button" title="拖动画面" aria-label="拖动画面" aria-pressed="true"></button>
     <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
+    <button id="btnStagePan" type="button" title="开启立绘互动" aria-label="开启立绘互动" aria-pressed="false" disabled></button>
     <button id="fit" type="button" title="适应窗口" aria-label="适应窗口">适应</button>
     <button id="reset" type="button" title="恢复当前立绘初始状态" aria-label="恢复初始状态">重置</button>
   </div>
@@ -103,26 +103,19 @@
     </div>
     <div class="rp-page" data-panel-page="interaction">
       <div id="interaction-panel" class="interaction-content">
-        <section class="stage-options" aria-label="舞台设置">
-          <div class="stage-options-title">舞台</div>
-          <label class="tool-toggle" title="显示原配置热点"><input id="regions" type="checkbox">显示热点</label>
-        </section>
-        <div class="interaction-actions"><button id="entrance" type="button" title="播放入场动作">入场动作</button></div>
+        <p class="interaction-help" id="hint">直接点击、拖动或长按立绘热点，触发对应反应。</p>
+        <input id="regions" type="checkbox" hidden>
+        <div class="interaction-actions"><button id="resetInteraction" type="button">重置互动</button><button id="toggleRegions" type="button" aria-pressed="false">显示热点</button></div>
         <p id="feedback" role="status">等待加载</p>
-        <p id="intro" class="muted">点击、拖动或按住立绘热点，查看原配置反应。</p>
-        <div class="muted" id="modelMeta"></div>
-        <p class="hint" id="hint">点击热点播放对应反应；带手势的热点支持拖动。</p>
         <p id="subtitle" aria-live="polite"></p>
-        <pre id="detail"></pre>
-        <div id="special">
-          <h2>特别互动</h2>
-          <p class="muted">可以继续触发该场景的互动动作，或恢复初始状态。</p>
-          <div id="specialActions" class="special-actions"></div>
-        </div>
-        <details class="section">
-          <summary>动作预览</summary>
+        <details class="section" id="interaction-more">
+          <summary>更多设置</summary>
+          <button id="entrance" type="button" title="播放入场动作">入场动作</button>
+          <div id="special"><h2>特别互动</h2><div id="specialActions" class="special-actions"></div></div>
           <p class="muted">可直接预览当前立绘状态的动作。画面热点仍按原配置处理点击条件。</p>
           <div id="actions"></div>
+          <div class="muted" id="modelMeta"></div>
+          <pre id="detail"></pre>
         </details>
       </div>
     </div>
@@ -162,11 +155,11 @@
     window.addEventListener('unhandledrejection', event => window.__crosscoreBootError(event.reason));
   })();
   </script>
-  <script src="../../common/asset-display-overrides.js?v=b424ba3bc57b"></script>
-  <script src="../../common/kit.js?v=b424ba3bc57b"></script>
-  <script src="../../common/asset-loader.js?v=b424ba3bc57b"></script>
-  <script src="../../common/stage-ui.js?v=b424ba3bc57b"></script>
-  <script src="../../common/library-ui.js?v=b424ba3bc57b"></script>
+  <script src="../../common/asset-display-overrides.js?v=07d9b5141a72"></script>
+  <script src="../../common/kit.js?v=07d9b5141a72"></script>
+  <script src="../../common/asset-loader.js?v=07d9b5141a72"></script>
+  <script src="../../common/stage-ui.js?v=07d9b5141a72"></script>
+  <script src="../../common/library-ui.js?v=07d9b5141a72"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261019-png-unlimit1"></script>
   <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
   <script src="../vendor/spine-webgl-4.2.js?v=20261015-2"></script>

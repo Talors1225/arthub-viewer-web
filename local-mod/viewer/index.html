@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>导入本地资源 · ArtHub</title>
+<link rel="stylesheet" href="../../common/kit.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/library-ui.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/visual.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261018-parts-mobile2">
+<link rel="stylesheet" href="local.css?v=07d9b5141a72">
+</head>
+<body class="game-interaction-viewer crosscore-interaction-viewer local-mod-viewer">
+  <main class="stage" id="stage" aria-label="本地资源舞台">
+    <canvas id="canvas"></canvas>
+
+    <div class="status" id="status" role="status">请先导入本地立绘</div>
+    <div class="hint" id="touch-hint"></div>
+  </main>
+
+  <nav class="rail" id="rail" aria-label="ArtHub 查看器导航">
+    <button id="railGrid" type="button" title="资源库 (G)" aria-label="资源库 (G)"></button>
+    <span class="rail-sep"></span>
+    <button id="btnPrev" type="button" title="上一个 (←)" aria-label="上一个 (←)"></button>
+    <button id="btnNext" type="button" title="下一个 (→)" aria-label="下一个 (→)"></button>
+    <button id="railThumb" class="rail-thumb" type="button" title="适应窗口 (F)" aria-label="适应窗口 (F)"><span>预览暂缺</span></button>
+    <span class="rail-sep"></span>
+    <button id="homeAction" type="button" title="网站首页" aria-label="网站首页" data-action-label="首页"></button>
+  </nav>
+
+
+
+  <div id="toolStrip" class="tool-strip" aria-label="舞台工具">
+    <div class="zoom-bar tool-zoom" aria-label="视图缩放">
+      <button id="zOut" type="button" title="缩小" aria-label="缩小" disabled></button>
+      <button id="zPct" class="zoom-pct" type="button" title="适应窗口" aria-label="适应窗口" disabled>100%</button>
+      <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
+    </div>
+    <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
+    <button id="btnStagePan" type="button" title="拖动画面" aria-label="拖动画面" aria-pressed="true"></button>
+    <button id="fit" type="button" title="适应窗口">适应</button>
+  </div>
+
+  <footer class="playbar collapsed" id="playbar" aria-label="播放控制">
+    <button id="playbarToggle" class="playbar-toggle" type="button" aria-expanded="false" title="展开播放控制"></button>
+    <div class="playbar-controls">
+      <button id="pbPlay" class="ctl active" type="button" title="暂停" aria-label="暂停"></button>
+      <button id="pbStepB" class="ctl" type="button" title="后退 1 帧" aria-label="后退 1 帧">«</button>
+      <input id="pbRange" type="range" min="0" max="1000" value="0" aria-label="动画进度">
+      <button id="pbStepF" class="ctl" type="button" title="前进 1 帧" aria-label="前进 1 帧">»</button>
+      <span class="pb-time" id="pbTime">0.00 / 0.00s</span>
+      <button id="pbLoop" class="ctl active" type="button" title="循环" aria-label="循环" aria-pressed="true"></button>
+      <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" title="播放速度" aria-label="播放速度">
+      <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+    </div>
+  </footer>
+
+  <div class="viewer-legacy-controls" hidden aria-hidden="true">
+    <select id="animation" disabled></select><button id="play" type="button" disabled>暂停</button><input type="checkbox" id="loop" checked>
+    <select id="speed"><option value="1" selected>1</option></select>
+  </div>
+
+  <section id="gridView" class="open mod-library" aria-label="导入本地资源">
+    <div class="mod-wrap"><header class="mod-head"><a href="../../index.html">← 网站首页</a><button id="btnTheme" title="主题调色板" aria-label="主题调色板"></button><a id="localSponsor" class="arthub-sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer" aria-label="爱发电 · 支持 ArtHub 维护（新窗口打开）">爱发电</a><button id="gridClose" hidden>返回舞台</button></header>
+    <h1>导入本地资源</h1><p class="mod-sub">选择完整文件夹或 ZIP，在当前浏览器查看、编辑和导出立绘。文件不会上传到服务器。</p>
+    <div id="dropZone" class="mod-drop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M4 14v6h16v-6"/></svg><strong>拖入文件夹、ZIP，或模型与贴图文件</strong>
+      <div class="mod-actions"><button id="chooseFolder" class="mod-primary">选择文件夹</button><button id="chooseFiles">选择 ZIP / 文件</button></div>
+      <small>Spine 3.8 / 4.0 / 4.1 / 4.2：骨骼＋atlas＋贴图<br>Live2D Cubism 4：model3.json＋moc3＋贴图，动作文件可一并导入</small>
+      <input id="folderInput" type="file" webkitdirectory multiple hidden><input id="filesInput" type="file" multiple hidden>
+    </div>
+    <p id="importStatus" class="mod-status" role="status" aria-live="polite">支持已解包资源；游戏安装包、加密包和 .modfile 请先解包。</p>
+    <div id="importBusy" hidden><progress aria-label="正在导入"></progress><button id="cancelLoad">取消加载</button></div>
+    <details id="issuesBox" hidden><summary>查看文件提示</summary><ul id="issuesList"></ul></details>
+    <div id="modelSection" hidden><div class="model-heading"><h2>本次导入的立绘</h2><input id="modSearch" type="search" placeholder="搜索本地文件名" aria-label="搜索导入的立绘"></div><div id="modelList" class="mod-models"></div><button id="clearFiles" class="mod-clear">关闭本地资源</button></div>
+    </div>
+  </section>
+  <aside id="floatPanel" aria-label="立绘互动面板">
+    <div class="rp-panel-head">
+      <div class="rp-tabs" role="tablist" aria-label="互动面板分类">
+        <button class="on" type="button" data-panel-tab="anim" aria-selected="true">动画</button>
+      </div>
+      <button class="rp-panel-close" id="panel-close" type="button" title="关闭面板" aria-label="关闭面板">×</button>
+    </div>
+        <div class="rp-page on" data-panel-page="anim">
+      <label id="skinRow" class="mod-skin" hidden>皮肤<select id="skinSelect" aria-label="切换模型皮肤"></select></label><div class="row"><input id="animFilter" class="text-input" type="search" placeholder="过滤动画名" aria-label="过滤动画名"></div>
+      <div id="animList" class="anim-list"></div>
+    </div>
+  </aside>
+
+  <script src="../../common/asset-display-overrides.js?v=07d9b5141a72"></script>
+  <script src="../../common/kit.js?v=07d9b5141a72"></script>
+  <script src="../../common/asset-loader.js?v=07d9b5141a72"></script>
+  <script src="../../common/stage-ui.js?v=07d9b5141a72"></script>
+  <script src="../../common/interaction-viewer-tools.js?v=20261019-png-unlimit1"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
+  <script type="module" src="viewer.mjs?v=07d9b5141a72"></script>
+</body>
+</html>

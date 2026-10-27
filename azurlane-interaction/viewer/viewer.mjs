@@ -1,4 +1,4 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip} from './controller.mjs';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=07d9b5141a72';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
 let stageFrameCache=null;
@@ -102,9 +102,9 @@ $('azurlaneSort').value=sortMode;$('azurlaneSort').onchange=event=>{sortMode=eve
 matchMedia('(max-width: 720px)').addEventListener('change',()=>{const firstIndex=(gridPage-1)*gridPageSize;gridPageSize=K.libraryPageSize();gridPage=Math.floor(firstIndex/gridPageSize)+1;populate();});
 function setPanelOpen(name,open){document.body.classList.toggle(name+'-open',open);$(name==='library'?'gridView':'floatPanel').classList.toggle('open',open);$(name==='library'?'railGrid':'btnAnimTab').setAttribute('aria-expanded',String(open));}
 $('railGrid').onclick=()=>{const open=!document.body.classList.contains('library-open');setPanelOpen('library',open);if(open&&innerWidth<=760)setPanelOpen('interaction',false);};
-$('btnAnimTab').onclick=()=>{const open=!document.body.classList.contains('interaction-open');if(open)viewerUI.showTab('anim');setPanelOpen('interaction',open);if(open&&innerWidth<=760)setPanelOpen('library',false);};
+$('btnAnimTab').onclick=()=>{const open=!document.body.classList.contains('interaction-open')||$('floatPanel').dataset.tab==='interaction';if(open){stagePan.setMode('pan');viewerUI.showTab('anim');}setPanelOpen('interaction',open);if(open&&innerWidth<=760)setPanelOpen('library',false);};
 $('gridClose').onclick=()=>setPanelOpen('library',false);$('panel-close').onclick=()=>setPanelOpen('interaction',false);
-document.querySelectorAll('[data-panel-tab]').forEach(tab=>tab.addEventListener('click',()=>{const name=tab.dataset.panelTab;document.querySelectorAll('[data-panel-tab]').forEach(button=>{const active=button===tab;button.classList.toggle('on',active);button.setAttribute('aria-selected',String(active));});document.querySelectorAll('[data-panel-page]').forEach(page=>page.classList.toggle('on',page.dataset.panelPage===name));}));
+document.querySelectorAll('[data-panel-tab]').forEach(tab=>tab.addEventListener('click',()=>{const name=tab.dataset.panelTab;document.querySelectorAll('[data-panel-tab]').forEach(button=>{const active=button===tab;button.classList.toggle('on',active);button.setAttribute('aria-selected',String(active));});document.querySelectorAll('[data-panel-page]').forEach(page=>page.classList.toggle('on',page.dataset.panelPage===name));if(name==='interaction'&&view.ready)stagePan.setMode('interact');}));
 $('railStar').onclick=()=>{if(selected){K.favs.toggle(entry(selected));populate();}};
 $('railThumb').onclick=()=>$('fit').click();
 $('btnPrev').onclick=()=>step(-1);$('btnNext').onclick=()=>step(1);
@@ -116,10 +116,10 @@ $('animation').onchange=()=>{unlockAudio().catch(()=>{});controller?.action($('a
 $('loop').onchange=()=>$('animation').onchange();
 $('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'声音：关':'声音：开';evidence.audio.muted=muted;if(muted)stopAudio();else unlockAudio().catch(()=>{});};
 $('voice-play').onclick=()=>{const c=selected?.voice?.activeClips?.find(c=>c.name===$('voice').value);if(c)sound(selected.voiceBank,c.name,{voice:true,exact:true});};
-$('voice-stop').onclick=()=>stopChannel('voice');$('reset-state').onclick=()=>{stopAudio();controller?.reset();};$('show-hits').onclick=()=>{showHits=!showHits;$('show-hits').textContent=showHits?'隐藏触摸区域':'显示触摸区域';};
-$('favor').onchange=()=>{if(controller)controller.state.favor=Number($('favor').value);};
+$('voice-stop').onclick=()=>stopChannel('voice');$('reset-state').onclick=()=>{stopAudio();controller?.reset();};$('show-hits').onclick=()=>{showHits=!showHits;$('show-hits').textContent=showHits?'隐藏热点':'显示热点';$('show-hits').setAttribute('aria-pressed',String(showHits));};
 function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
-const stagePan=K.createStagePan({stage,button:$('btnStagePan'),modeSelect:$('pointer-mode'),accepts:target=>target===canvas,ready:()=>view.ready&&!exporting,
+const stagePan=K.createStagePan({stage,button:$('btnStagePan'),modeSelect:$('pointer-mode'),interactiveButton:true,accepts:target=>target===canvas,ready:()=>view.ready&&!exporting,
+ onModeChange:mode=>{if(pointer&&controller instanceof Live2DController)controller.end(pointer.x,pointer.y,true);pointer=null;look.targetX=look.targetY=0;if(mode==='interact'){viewerUI.tools.exitEditing();$('interaction-more').open=false;if(!view.playing)$('play').click();unlockAudio().catch(()=>{});viewerUI.showTab('interaction');setPanelOpen('library',false);setPanelOpen('interaction',true);}else if($('floatPanel').dataset.tab==='interaction')setPanelOpen('interaction',false);},
  move:(dx,dy)=>{view.panX+=dx;view.panY+=dy;},
  tap:event=>{unlockAudio().catch(()=>{});const p=localPoint(event),hits=adapter.hits(p.x,p.y);evidence.interaction.hits=hits;if(selected.type==='live2d'){controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));controller.end(p.x,p.y);}else{const hit=hits[0];if(!hit||!controller.touch(hit,{drag:false}))spineBasic(hit);}}
 });
@@ -164,13 +164,11 @@ const viewerUI=window.createInteractionViewerUI({
 });
 function controls(){
  $('animation').replaceChildren(...selected.animations.map(name=>{const o=document.createElement('option');o.value=o.textContent=name;return o;}));$('animation').disabled=false;$('play').disabled=false;viewerUI.refreshAnimations();
- $('touch-actions').replaceChildren();for(const [area,label] of [['TouchHead','摸头'],['TouchBody','普通触摸'],['TouchSpecial','特殊触摸']]){const button=document.createElement('button');button.textContent=label;button.dataset.area=area;const name=basicActions[area],voice=selected.voice.activeClips.find(c=>c.cue===motionCue(name));button.disabled=!selected.animations.includes(name)&&!voice;button.onclick=()=>{unlockAudio().catch(()=>{});if(!controller.action(name,{interactive:true})&&voice&&!controller.state.busy)sound(selected.voiceBank,voice.cue,{voice:true});};$('touch-actions').append(button);}
+ for(const id of ['reset-state','show-hits'])$(id).disabled=false;
  const areas=[...new Set(array(selected.interaction.hitAreas).map(h=>h.id))];$('hit-area').replaceChildren(...areas.map(name=>{const o=document.createElement('option');o.value=o.textContent=name;return o;}));$('hit-trigger').disabled=!areas.length;
  $('hit-trigger').onclick=()=>{const area=$('hit-area').value;unlockAudio().catch(()=>{});if(controller instanceof Live2DController){controller.start([area],0,0);controller.end(0,0);}else if(!controller.touch(area,{drag:false}))spineBasic(area);};
  $('voice').replaceChildren(...selected.voice.activeClips.map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=(labels[c.cue]||c.cue)+(c.variant==='skin'?' · 皮肤':'')+(c.threshold?' · '+(c.threshold>=1000?'誓约':'好感')+' '+(c.threshold>=1000?c.threshold-1000:c.threshold):'');return o;}));
- $('drag-controls').replaceChildren();
- const drags=array(selected.interaction.configs).filter(c=>c.draw_able_name&&(c.offset_x||c.offset_y||c.action_trigger?.type===3));
- $('interaction-note').textContent=selected.type==='live2d'?`触摸、拖拽和长按由当前姿态决定。${drags.length} 个拖拽／长按控制；滚轮可继续放大。`:(selected.interaction.spine?.drag_data?'在原始热点内点击或拖动，可切换动作与姿态。':'这项资源没有独立互动规则，可播放原始动画。');
+ $('interaction-note').textContent='直接点击、拖动或长按立绘热点进行互动。';
 }
 async function live2dPortrait(model,generation){
  const app=new PIXI.Application({view:canvas,resizeTo:stage,autoStart:false,antialias:true,backgroundAlpha:0,resolution:Math.max(2,devicePixelRatio||1),autoDensity:true,preserveDrawingBuffer:true});
@@ -274,6 +272,7 @@ async function spinePortrait(model,generation){
 async function getJson(url,required=true){const r=await fetch(url);if(!r.ok){if(!required&&r.status===404)return null;throw Error(r.status+' '+url);}return r.json();}
 async function loadModel(id,{history=true}={}){
  stagePan.cancel();
+ $('btnStagePan').disabled=true;for(const key of ['reset-state','show-hits'])$(key).disabled=true;$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
  const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp',label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
@@ -282,8 +281,8 @@ async function loadModel(id,{history=true}={}){
  if(!data)return false;const [model,audio,animator]=data;
  if(generation!==loadGeneration)return false;selected=model;if(audio)Object.assign(model,audio);if(animator)model.animator=animator;evidence.selected=model;$('active-name').textContent=stageName(model);populate();
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
- controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:Number($('favor').value)}):new SpineController(model,adapter,{storage:localStorage,favor:Number($('favor').value)});evidence.controller=controller;evidence.adapter=adapter;controls();controller.playIdle();
- view.ready=evidence.ready=true;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
+ controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:highestFavor(model)}):new SpineController(model,adapter,{storage:localStorage,favor:highestFavor(model)});evidence.controller=controller;evidence.adapter=adapter;controls();controller.playIdle();
+ view.ready=evidence.ready=true;$('btnStagePan').disabled=false;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
  if(history){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);K.history.push(entry(model));}return true;
 }
 function record(){
@@ -291,7 +290,6 @@ function record(){
  Object.assign(evidence.interaction,{count:controller.state.interactions,idleIndex:controller.state.idleIndex,lastMotion:controller.state.motion});
  evidence.memory={createdMocs,releasedMocs:releasedMocCount,liveMocs:createdMocs-releasedMocCount};
  const state={id:selected.id,type:selected.type,ready:evidence.ready,frames:view.frames,pose,zoom:view.zoom,animation:evidence.animation,canvas:[canvas.width,canvas.height],state:{...controller.state},voiceCount:selected.voice.activeClips.length,interaction:evidence.interaction,audio:evidence.audio,trace:controller.trace.slice(-12),errors:evidence.errors};evidenceNode.textContent=JSON.stringify(state);
- $('game-state').textContent='当前姿态：'+(selected.type==='live2d'?controller.state.idleIndex:controller.state.idle)+' · '+(controller.state.busy?'动作中':'可交互');
  if(showHits){const polygons=adapter.polygons?.()||[];$('hit-overlay').setAttribute('viewBox',`0 0 ${stage.clientWidth} ${stage.clientHeight}`);$('hit-overlay').replaceChildren(...polygons.map(h=>{const polygon=document.createElementNS('http://www.w3.org/2000/svg','polygon');polygon.setAttribute('points',h.vertices.map(p=>p.join(',')).join(' '));polygon.setAttribute('fill','#ffce6e22');polygon.setAttribute('stroke','#ffce6e');polygon.setAttribute('stroke-width','1');return polygon;}));}else $('hit-overlay').replaceChildren();
 }
 window.__loadAzurLane=loadModel;window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('id'),match=allModels.find(m=>m.id===canonicalModelId(id));if(match){setPanelOpen('library',false);loadModel(id,{history:false}).catch(fail);}else setPanelOpen('library',true);});window.addEventListener('pagehide',()=>{loadGeneration++;controller?.dispose();disposeRenderer?.();ctx?.close().catch(()=>{});});
