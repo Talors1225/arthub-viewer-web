@@ -1437,6 +1437,7 @@
         button.classList.toggle('on', selected); button.setAttribute('aria-pressed', String(selected)); });
       go.textContent = animation ? (format === 'video' ? '导出视频' : '导出 GIF') : '导出 PNG';
       try { detail.textContent = options.getDetail(animation ? K.animationExportPreset(quality) : K.exportPreset(quality), format)
+        + (animation && format === 'video' ? ' · 自动选择 MP4 / WebM 编码，保留所选分辨率。' : '')
         + (animation && quality === 'ultra' ? ' · 文件更大、导出更慢；清晰度受原贴图限制。' : ''); go.disabled = false; if (copy) copy.disabled = false; }
       catch (error) { detail.textContent = error.message; go.disabled = true; if (copy) copy.disabled = true; }
     };
@@ -1497,17 +1498,24 @@
         error => { signal.removeEventListener('abort', abort); reject(error); });
     });
   };
-  K.writeCanvasVideo = async ({ canvas, duration, quality, draw, signal, onProgress }, codec) => {
-    const { Output, Mp4OutputFormat, BufferTarget, CanvasSource, Quality } = codec;
+  K.canvasVideoEncodings = [
+    { codec: 'avc', container: 'mp4', extension: 'mp4', label: 'MP4' },
+    { codec: 'hevc', container: 'mp4', extension: 'mp4', label: 'MP4' },
+    { codec: 'vp9', container: 'webm', extension: 'webm', label: 'WebM' },
+    { codec: 'av1', container: 'webm', extension: 'webm', label: 'WebM' },
+  ];
+  K.writeCanvasVideo = async ({ canvas, duration, quality, draw, signal, onProgress }, codec, encoding = K.canvasVideoEncodings[0]) => {
+    const { Output, Mp4OutputFormat, WebMOutputFormat, BufferTarget, CanvasSource, Quality } = codec;
     const preset = K.animationExportPreset(quality), plan = K.exportTimeline(duration, quality, 'video');
-    const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
+    const format = encoding.container === 'webm' ? new WebMOutputFormat() : new Mp4OutputFormat({ fastStart: 'in-memory' });
+    const output = new Output({ format, target: new BufferTarget() });
     const check = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
     const abort = () => { output.cancel().catch(() => {}); };
     let finished = false;
     signal?.addEventListener('abort', abort, { once: true });
     try {
       check();
-      const source = new CanvasSource(canvas, { codec: 'avc', quality: new Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality' });
+      const source = new CanvasSource(canvas, { codec: encoding.codec, quality: new Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality' });
       output.addVideoTrack(source, { frameRate: plan.fps }); await output.start();
       const step = plan.duration / plan.frames;
       // Every planned frame is encoded; timestamps come from the animation,
@@ -1518,43 +1526,65 @@
         await onProgress?.((k + 1) / plan.frames, time + step);
       }
       check(); await output.finalize(); finished = true; check();
-      const blob = new Blob([output.target.buffer], { type: 'video/mp4' });
+      const blob = new Blob([output.target.buffer], { type: 'video/' + encoding.container });
       if (!blob.size) throw new Error('视频文件为空，请重试');
-      return { blob, extension: 'mp4', label: 'MP4' };
+      return { blob, extension: encoding.extension, label: encoding.label };
     } catch (error) { check(); throw error; }
     finally { signal?.removeEventListener('abort', abort); if (!finished) await output.cancel().catch(() => {}); }
   };
   K.encodeCanvasVideo = async options => {
     const preset = K.animationExportPreset(options.quality);
     if (window.VideoEncoder && window.VideoFrame) {
-      let codec;
+      let codec, selected;
       try {
         // Only video export loads this locally bundled encoder/muxer adapter.
-        const candidate = await K.awaitExportTask(import('./vendor/mediabunny-1.61.0.esm.js'), options.signal);
-        const supported = await K.awaitExportTask(candidate.canEncodeVideo('avc', { width: options.canvas.width, height: options.canvas.height,
-          frameRate: preset.videoFps, quality: new candidate.Quality({ bitrate: preset.videoBitrate }) }), options.signal);
-        if (supported) codec = candidate;
+        codec = await K.awaitExportTask(import('./vendor/mediabunny-1.61.0.esm.js'), options.signal);
       } catch (error) { if (error.name === 'AbortError') throw error; console.warn('逐帧视频编码不可用，使用浏览器录制', error); }
-      if (codec) return K.writeCanvasVideo(options, codec);
+      if (codec) for (const encoding of K.canvasVideoEncodings) {
+        try {
+          const supported = await K.awaitExportTask(codec.canEncodeVideo(encoding.codec, { width: options.canvas.width, height: options.canvas.height,
+            frameRate: preset.videoFps, quality: new codec.Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality' }), options.signal);
+          if (!supported) continue;
+          // Container support alone does not imply this resolution can encode.
+          // Finalize a real frame using the exact export settings before moving
+          // the animation; a failed probe cannot consume or skip its first frames.
+          await K.writeCanvasVideo({ ...options, duration: 1 / preset.videoFps, draw() {}, onProgress: undefined }, codec, encoding);
+          selected = encoding; break;
+        } catch (error) { if (error.name === 'AbortError') throw error; console.warn('视频编码试运行失败：' + encoding.codec, error); }
+      }
+      // Keep rendering errors outside codec selection so they are never hidden
+      // by a retry after the animation has already advanced.
+      if (selected) return K.writeCanvasVideo(options, codec, selected);
     }
-    return K.recordCanvasVideo(options);
+    let selected, lastError;
+    for (const format of K.videoExportFormats()) {
+      try {
+        await K.recordCanvasVideo({ ...options, duration: Math.max(.05, 2 / preset.videoFps), draw() {}, onProgress: undefined }, format);
+        selected = format; break;
+      } catch (error) { if (error.name === 'AbortError') throw error; lastError = error; }
+    }
+    if (!selected) throw lastError || new Error('当前浏览器没有可用的视频编码器');
+    return K.recordCanvasVideo(options, selected);
   };
-  K.videoExportFormat = (Recorder = window.MediaRecorder) => {
+  K.videoExportFormats = (Recorder = window.MediaRecorder) => {
     if (!Recorder?.isTypeSupported) throw new Error('当前浏览器不支持视频导出，请使用 GIF');
     // Let the browser choose a profile for the actual adaptive frame size;
     // a fixed AVC level can be too restrictive for wide or square portraits.
     // Probe recording support, not merely whether an existing file can play.
+    const formats = [];
     for (const mimeType of ['video/mp4', 'video/mp4;codecs=avc1.64002A',
       'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
       if (Recorder.isTypeSupported(mimeType)) {
         const mp4 = mimeType.startsWith('video/mp4');
-        return { mimeType, extension: mp4 ? 'mp4' : 'webm', label: mp4 ? 'MP4' : 'WebM' };
+        formats.push({ mimeType, extension: mp4 ? 'mp4' : 'webm', label: mp4 ? 'MP4' : 'WebM' });
       }
     }
+    if (formats.length) return formats;
     throw new Error('当前浏览器没有可用的视频编码格式，请使用 GIF');
   };
-  K.recordCanvasVideo = async ({ canvas, duration, quality, draw, signal, onProgress }) => {
-    const preset = K.animationExportPreset(quality), format = K.videoExportFormat();
+  K.videoExportFormat = (Recorder = window.MediaRecorder) => K.videoExportFormats(Recorder)[0];
+  K.recordCanvasVideo = async ({ canvas, duration, quality, draw, signal, onProgress }, format = K.videoExportFormat()) => {
+    const preset = K.animationExportPreset(quality);
     if (!canvas.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
     const totalMs = (Number.isFinite(duration) && duration > 0 ? duration : 1 / preset.videoFps) * 1000;
     const checkAbort = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
