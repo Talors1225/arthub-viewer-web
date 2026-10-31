@@ -1,4 +1,4 @@
-import {liveDefinition} from './bundle.mjs?v=07d9b5141a72';
+import {liveDefinition} from './bundle.mjs?v=138348b63d05';
 const K=window.SpineKit;
 let runtimeQueue=Promise.resolve();
 async function spineRuntime(version){
@@ -103,19 +103,25 @@ export async function loadLive2D(bundle,model,canvas,signal,onProgress){
       seek(seconds,delta=0){const item=[...(queue?._motions||[])].reverse().find(i=>!i.isFinished()&&i._motion);if(!item)return;const time=Math.max(0,Math.min(api.playback().duration-.0001,seconds)),clock=live.elapsedTime/1000;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time);item.setEndTime(loop?-1:clock-time+api.playback().duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;app.render();},
       render(dt,view){if(disposed)return;lastView=view;tools?.before();const {w,h}=resize(canvas);app.renderer.resolution=Math.min(2,devicePixelRatio||1);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const f=stageFrame(canvas),scale=Math.min(f.width/natural.width,f.height/natural.height)*.94*view.zoom;live.scale.set(scale);live.position.set(f.left+f.width/2+view.x,f.top+f.height/2+view.y);editor.applyParameters();if(view.playing)live.update(dt*1000*view.speed);app.render();},
       capture(){
-        const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},hit=new Set(data.HitAreas?.map(a=>a.Id)||[]);
+        const hit=new Set(data.HitAreas?.map(a=>a.Id)||[]);
+        const measure=()=>{const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
         for(let i=0;i<core.drawables.ids.length;i++){
           if(hit.has(core.drawables.ids[i])||!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
           const vertices=internal.getDrawableVertices(i),b={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};for(let j=0;j<vertices.length;j+=2){const p=internal.localTransform.apply(new PIXI.Point(vertices[j],vertices[j+1]));b.minX=Math.min(b.minX,p.x);b.maxX=Math.max(b.maxX,p.x);b.minY=Math.min(b.minY,p.y);b.maxY=Math.max(b.maxY,p.y);}
           if(b.maxX-b.minX>natural.width*4||b.maxY-b.minY>natural.height*4){b.minX=Math.max(0,b.minX);b.maxX=Math.min(natural.width,b.maxX);b.minY=Math.max(0,b.minY);b.maxY=Math.min(natural.height,b.maxY);}
           if(b.maxX>b.minX&&b.maxY>b.minY)for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);
         }
-        const transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y},parameters=core.parameters.values.slice(),parts=core.parts.opacities.slice(),saved=internal.coreModel._savedParameters.slice(),restorePhysics=preserveSimulation(internal.physics),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,resolution=app.renderer.resolution;
+        return bounds;};
+        const bounds=measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y},parameters=core.parameters.values.slice(),parts=core.parts.opacities.slice(),saved=internal.coreModel._savedParameters.slice(),restorePhysics=preserveSimulation(internal.physics),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,resolution=app.renderer.resolution;
         let lastTime=0;
-        return {pngSize:quality=>({...K.exportDimensions(bounds,quality),fullFrame:true}),draw(time,size,background){tools?.before();
-          if(size.fullFrame)return K.renderTiledPNG(size,tile=>{app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;},background);
-          app.renderer.resolution=size.width/Math.max(1,canvas.clientWidth);app.renderer.resize(canvas.clientWidth,canvas.clientHeight);if(time!==null){live.elapsedTime=elapsed+time*1000;api.seek(time,Math.max(0,time-lastTime));lastTime=time;}else app.render();return canvas;
-        },dispose(){restorePhysics();entries.forEach(({item,values})=>Object.assign(item,values));live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=saved;internal.coreModel.update();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(canvas.clientWidth,canvas.clientHeight);api.render(0,lastView);}};
+        const rewind=()=>{restorePhysics();entries.forEach(({item,values})=>Object.assign(item,values));live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=saved.slice();internal.coreModel.update();lastTime=0;};
+        const advance=time=>{live.elapsedTime=elapsed+time*1000;api.seek(time,Math.max(0,time-lastTime));lastTime=time;};
+        return {pixelYUp:false,pngSize:quality=>({...K.exportDimensions(bounds,quality),fullFrame:true}),draw(time,size,background){tools?.before();
+          if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;},background);
+          if(size.fullFrame){app.renderer.resolution=1;app.renderer.resize(size.width,size.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale,size.height/2-size.centerY*size.scale);}
+          else{app.renderer.resolution=size.width/Math.max(1,canvas.clientWidth);app.renderer.resize(canvas.clientWidth,canvas.clientHeight);}
+          if(time!==null)advance(time);else app.render();return canvas;
+        },measure(time){tools?.before();advance(time);return measure();},rewind,dispose(){rewind();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(canvas.clientWidth,canvas.clientHeight);api.render(0,lastView);}};
       },
     };
     const first=animations.find(a=>/^idle/i.test(a.name))||animations[0];if(first)await api.play(first.name,true);return api;

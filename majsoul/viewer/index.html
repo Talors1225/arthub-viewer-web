@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=07d9b5141a72">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=07d9b5141a72">
-<link rel="stylesheet" href="../../common/library-ui.css?v=07d9b5141a72">
-<link rel="stylesheet" href="../../common/visual.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/kit.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/library-ui.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/visual.css?v=138348b63d05">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -269,8 +269,8 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=4114f44f4e6e"></script>
-  <script src="../../arthub-cos.js?v=07d9b5141a72"></script>
+  <script src="../../arthub-cos-config.js?v=7ce039e204a3"></script>
+  <script src="../../arthub-cos.js?v=138348b63d05"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -393,11 +393,11 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=07d9b5141a72"></script>
-<script src="../../common/kit.js?v=07d9b5141a72"></script>
-<script src="../../common/asset-loader.js?v=07d9b5141a72"></script>
-<script src="../../common/stage-ui.js?v=07d9b5141a72"></script>
-<script src="../../common/library-ui.js?v=07d9b5141a72"></script>
+<script src="../../common/asset-display-overrides.js?v=138348b63d05"></script>
+<script src="../../common/kit.js?v=138348b63d05"></script>
+<script src="../../common/asset-loader.js?v=138348b63d05"></script>
+<script src="../../common/stage-ui.js?v=138348b63d05"></script>
+<script src="../../common/library-ui.js?v=138348b63d05"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -1687,6 +1687,7 @@
     let selection;
     try { selection = animationExportSelection(); } catch (e) { K.toast(e.message, 'err'); return; }
     const video = format === 'video', plan = K.exportTimeline(selection.duration, quality, format);
+    const exportBackground = bgInput.value;
     const exportName = curEntry?.label || 'spine', animationName = curAnimName || selection.selected[0].animation || 'animation';
     const job = K.exportProgress(), models = [];
     let raw;
@@ -1723,7 +1724,19 @@
         }
         if (k % 8 === 0 || k === plan.frames - 1) await job.update(.25 * (k + 1) / plan.frames, `计算完整画面 ${k + 1} / ${plan.frames}`);
       }
-      const size = K.exportDimensions(bounds, quality, video ? 'video' : 'gif'), W = size.width, H = size.height;
+      const reference = K.exportDimensions(bounds, 'medium');
+      cv.width = reference.width; cv.height = reference.height; K.syncRendererSize(cv, context, outputRenderer);
+      let size;
+      for (const time of [0, Math.min(.1, plan.duration / 4), Math.min(.5, plan.duration / 2)]) {
+        pose(time, reference.scale, reference.centerX, reference.centerY);
+        raw.clearColor(0, 0, 0, 0); raw.clear(raw.COLOR_BUFFER_BIT); outputRenderer.begin();
+        for (const L of models) outputRenderer.drawSkeleton(L.skeleton, false);
+        outputRenderer.end();
+        try { size = K.refineIllustrationSize(reference, cv, quality, video ? 'video' : 'gif'); break; }
+        catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
+      }
+      if (!size) throw new Error('没有可导出的可见立绘');
+      const W = size.width, H = size.height;
       if (Math.max(W, H) > raw.getParameter(raw.MAX_TEXTURE_SIZE)) throw new Error('导出尺寸超过设备支持，请选择中等质量');
       cv.width = W; cv.height = H; K.syncRendererSize(cv, context, outputRenderer);
       for (const L of models) {
@@ -1738,7 +1751,7 @@
         raw.clearColor(0, 0, 0, 0); raw.clear(raw.COLOR_BUFFER_BIT); outputRenderer.begin();
         for (const L of models) outputRenderer.drawSkeleton(L.skeleton, false);
         outputRenderer.end();
-        if (video) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); } else ctx.clearRect(0, 0, W, H);
+        K.paintExportBackground(ctx, W, H, exportBackground);
         ctx.drawImage(cv, 0, 0);
       };
       let blob, extension = 'gif', label = 'GIF';
@@ -1777,7 +1790,7 @@
       const plan = K.exportTimeline(animationExportSelection().duration, quality, format);
       if (format === 'video') {
         if (!HTMLCanvasElement.prototype.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
-        return K.videoExportFormat().label + ' · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 黑底无声。导出时请保持页面在前台。';
+        return K.videoExportFormat().label + ' · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 背景跟随舞台 · 无声。导出时请保持页面在前台。';
       }
       return plan.frames + ' 帧 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒';
     },
@@ -1788,15 +1801,15 @@
   makeStagePopup(btnPng, (pop) => {
     const poseFor = quality => K.pngExportPose(layers.filter(L => L.visible).map(L => L.skeleton), quality, spine);
     K.mountExportOptions(pop, {
-      kind: 'png', quality: store.get('pngExportQuality', 'high'),
+      kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: false,
       onChange: quality => store.set('pngExportQuality', quality),
-      getDetail: quality => { const pose = poseFor(quality); return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素 · 完整可见模型 · PNG 无损编码'; },
+      getDetail: quality => { poseFor(quality); return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码'; },
       onExport: async (quality, transparent) => {
         closePopups();
         try {
           const pose = poseFor(quality);
           const r = await K.exportPNG({
-            canvas, size: pose.size, transparent,
+            canvas, size: pose.size, pose, transparent, background: bgInput.value,
             filename: (curEntry ? String(curEntry.label).replace(/[\\/:*?"<>|\[\]]/g, '') : 'spine') + (transparent ? '-透明' : '') + '.png',
             tiled: true,
             resize(k, tile) { K.syncRendererSize(canvas, gl, renderer); pose.apply(tile); },

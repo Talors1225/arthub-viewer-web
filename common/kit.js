@@ -711,10 +711,10 @@
 
   // 某些 NIKKE 演出骨架的 setup pose 没有可见附件，但动画第一帧有完整画面。
   // 缩略图引擎会先量 setup pose；这里用首个可用动画再尝试一次，避免“能打开但无预览”。
-  K.measureBounds = (skeleton, ns) => {
+  K.measureBounds = (skeleton, ns, allowAnimationFallback = true) => {
     const first = measureBoundsRaw(skeleton, ns);
     const span = first && (first.maxX - first.minX) > 0 && (first.maxY - first.minY) > 0;
-    if (span) return first;
+    if (span || !allowAnimationFallback) return first;
     const sp = ns || window.spine;
     const animations = skeleton && skeleton.data && skeleton.data.animations;
     const animation = animations && (animations.find(a => /^(loop|idle|skill|default)/i.test(a.name)) || animations[0]);
@@ -1250,8 +1250,8 @@
   K.animationExportPresets = Object.freeze(K.exportPresets.slice(0, 2));
   // Old saved PNG-sequence selections now export a playable high-quality animation.
   K.animationExportPreset = value => K.animationExportPresets.find(p => p.id === (value?.id || value)) || K.animationExportPresets[1];
-  K.exportDimensions = (bounds, quality, kind = 'png') => {
-    const preset = kind === 'png' ? K.exportPreset(quality) : K.animationExportPreset(quality), padding = 16;
+  K.exportDimensions = (bounds, quality, kind = 'png', padding = 16) => {
+    const preset = kind === 'png' ? K.exportPreset(quality) : K.animationExportPreset(quality);
     const spanW = bounds.maxX - bounds.minX, spanH = bounds.maxY - bounds.minY;
     if (![spanW, spanH].every(v => Number.isFinite(v) && v > 0)) throw new Error('没有可导出的可见部件');
     const nativeW = spanW + padding * 2, nativeH = spanH + padding * 2;
@@ -1276,6 +1276,65 @@
       timeAt: k => k * dur / frames,
       delayAt: k => (Math.round((k + 1) * ticks / frames) - Math.round(k * ticks / frames)) * 10 };
   };
+  // A reference illustration defines the frame. Isolated particles must not
+  // enlarge a PNG or a video, and black export backgrounds must not affect it.
+  K.illustrationPixelBounds = (rgba, width, height) => {
+    const count = width * height, seen = new Uint8Array(count), queue = new Uint32Array(count), regions = [];
+    for (let first = 0; first < count; first++) {
+      if (seen[first] || rgba[first * 4 + 3] < 8) continue;
+      let head = 0, tail = 1, pixels = 0, minX = width, minY = height, maxX = 0, maxY = 0;
+      queue[0] = first; seen[first] = 1;
+      while (head < tail) {
+        const index = queue[head++], x = index % width, y = Math.floor(index / width); pixels++;
+        minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const next = ny * width + nx;
+          if (!seen[next] && rgba[next * 4 + 3] >= 8) { seen[next] = 1; queue[tail++] = next; }
+        }
+      }
+      regions.push({ minX, minY, maxX: maxX + 1, maxY: maxY + 1, pixels });
+    }
+    regions.sort((a, b) => b.pixels - a.pixels);
+    if (!regions.length) throw new Error('没有可导出的可见立绘');
+    const main = regions[0], result = { ...main }, span = Math.max(main.maxX - main.minX, main.maxY - main.minY);
+    for (const item of regions.slice(1)) {
+      const gap = Math.max(main.minX - item.maxX, item.minX - main.maxX, main.minY - item.maxY, item.minY - main.maxY, 0);
+      if (item.pixels < main.pixels * .25 && !(item.pixels >= main.pixels * .02 && gap <= span * .12)) continue;
+      result.minX = Math.min(result.minX, item.minX); result.minY = Math.min(result.minY, item.minY);
+      result.maxX = Math.max(result.maxX, item.maxX); result.maxY = Math.max(result.maxY, item.maxY);
+    }
+    const x = Math.max(0, result.minX - 1), y = Math.max(0, result.minY - 1);
+    return { x, y, width: Math.min(width, result.maxX + 1) - x, height: Math.min(height, result.maxY + 1) - y };
+  };
+  K.canvasIllustrationBounds = source => {
+    const factor = Math.min(1, 1024 / Math.max(source.width, source.height)), canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(source.width * factor)); canvas.height = Math.max(1, Math.round(source.height * factor));
+    const ctx = canvas.getContext('2d', { willReadFrequently: true }); if (!ctx) throw new Error('无法读取立绘画面');
+    ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+    const crop = K.illustrationPixelBounds(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+    return { x: crop.x * source.width / canvas.width, y: crop.y * source.height / canvas.height,
+      width: crop.width * source.width / canvas.width, height: crop.height * source.height / canvas.height };
+  };
+  K.refineIllustrationSize = (reference, source, quality, kind = 'png', yUp = true) => {
+    const crop = K.canvasIllustrationBounds(source), x = reference.centerX + (crop.x - reference.width / 2) / reference.scale;
+    const y1 = reference.centerY + (yUp ? reference.height / 2 - crop.y - crop.height : crop.y - reference.height / 2) / reference.scale;
+    const bounds = { minX: x, minY: y1, maxX: x + crop.width / reference.scale, maxY: y1 + crop.height / reference.scale };
+    return { ...K.exportDimensions(bounds, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
+  };
+  K.illustrationExportSize = (session, quality, kind = 'png') => {
+    const reference = session.pngSize('medium'), source = session.draw(null, reference, null);
+    return K.refineIllustrationSize(reference, source, quality, kind, session.pixelYUp !== false);
+  };
+  K.animationExportSize = async ({ session, quality, kind, signal, onProgress }) => {
+    const check = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
+    try {
+      check(); await onProgress?.(0); check();
+      const size = K.illustrationExportSize(session, quality, kind);
+      await onProgress?.(1); check(); return size;
+    } finally { session.rewind(); }
+  };
   K.pngExportPose = (skeletons, quality, ns) => {
     const transform = skeleton => K.updateWorldTransform(skeleton, (ns || window.spine)?.Physics?.pose);
     const saved = skeletons.map(skeleton => ({ skeleton, scaleX: skeleton.scaleX, scaleY: skeleton.scaleY, x: skeleton.x, y: skeleton.y }));
@@ -1290,10 +1349,8 @@
     }
     const native = Object.fromEntries(Object.entries(bounds).map(([key, value]) => [key, value / reference]));
     const size = K.exportDimensions(native, quality);
-    const factor = size.scale / reference;
-    const centerX = size.centerX * reference, centerY = size.centerY * reference;
-    return { size,
-      apply(tile) { for (const item of saved) {
+    return { size, quality, probeSize: () => K.exportDimensions(native, 'medium'), useSize: next => Object.assign(size, next),
+      apply(tile) { const factor = size.scale / reference, centerX = size.centerX * reference, centerY = size.centerY * reference; for (const item of saved) {
         const sk = item.skeleton;
         sk.scaleX = item.scaleX * factor; sk.scaleY = item.scaleY * factor;
         sk.x = (item.x - centerX) * factor + (tile ? (size.width - tile.width) / 2 - tile.x : 0);
@@ -1320,7 +1377,7 @@
         return '<button type="button" class="export-choice" role="radio" data-quality="' + p.id + '"><strong>'
           + p.label + '</strong><small>' + detail + '</small></button>';
       }).join('') + '</div><div class="export-detail" role="status"></div>'
-      + (animation ? '' : '<label><input type="checkbox" class="png-alpha" checked> 透明背景</label>')
+      + (animation ? '' : '<label><input type="checkbox" class="png-alpha"' + (options.transparent ? ' checked' : '') + '> 透明背景</label>')
       + '<div class="export-actions"><button type="button" class="export-go"></button>'
       + (options.onCopy ? '<button type="button" class="export-copy">复制图片</button>' : '') + '</div></div>';
     const buttons = [...pop.querySelectorAll('.export-choice')], go = pop.querySelector('.export-go');
@@ -1440,8 +1497,10 @@
   };
   K.videoExportFormat = (Recorder = window.MediaRecorder) => {
     if (!Recorder?.isTypeSupported) throw new Error('当前浏览器不支持视频导出，请使用 GIF');
+    // Let the browser choose a profile for the actual adaptive frame size;
+    // a fixed AVC level can be too restrictive for wide or square portraits.
     // Probe recording support, not merely whether an existing file can play.
-    for (const mimeType of ['video/mp4;codecs=avc1.64002A', 'video/mp4',
+    for (const mimeType of ['video/mp4', 'video/mp4;codecs=avc1.64002A',
       'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
       if (Recorder.isTypeSupported(mimeType)) {
         const mp4 = mimeType.startsWith('video/mp4');
@@ -1508,13 +1567,28 @@
   };
 
   // ---------- PNG 导出 ----------
+  let exportCheckerCanvas;
+  K.paintExportBackground = (ctx, width, height, background) => {
+    ctx.clearRect(0, 0, width, height);
+    if (!background) return;
+    if (background === 'checker') {
+      if (!exportCheckerCanvas) {
+        exportCheckerCanvas = document.createElement('canvas'); exportCheckerCanvas.width = exportCheckerCanvas.height = 20;
+        const tile = exportCheckerCanvas.getContext('2d');
+        tile.fillStyle = '#171b22'; tile.fillRect(0, 0, 20, 20);
+        tile.fillStyle = '#272b33'; tile.fillRect(0, 0, 10, 10); tile.fillRect(10, 10, 10, 10);
+      }
+      ctx.fillStyle = ctx.createPattern(exportCheckerCanvas, 'repeat');
+    } else ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
+  };
   // A browser may silently allocate a smaller GPU drawing buffer than the
   // requested canvas, even below MAX_TEXTURE_SIZE. Render bounded tiles and
   // assemble them losslessly on a 2D canvas instead of cropping or downscaling.
   K.renderTiledPNG = (size, draw, background) => {
     const output = document.createElement('canvas'); output.width = size.width; output.height = size.height;
     const ctx = output.getContext('2d'); if (!ctx) throw new Error('导出画布不可用');
-    if (background) { ctx.fillStyle = background; ctx.fillRect(0, 0, size.width, size.height); }
+    K.paintExportBackground(ctx, size.width, size.height, background);
     for (let y = 0; y < size.height; y += 2048) for (let x = 0; x < size.width; x += 2048) {
       const tile = { x, y, width: Math.min(2048, size.width - x), height: Math.min(2048, size.height - y) };
       const source = draw(tile), gl = source.getContext('webgl2') || source.getContext('webgl');
@@ -1523,7 +1597,7 @@
     }
     return output;
   };
-  // o: { canvas, scale=1, transparent=false, bg=[r,g,b],
+  // o: { canvas, scale=1, transparent=false, background, bg=[r,g,b],
   //      filename, resize(k), draw(transparent), restore() }
   // resize(k): 画布已变为 k 倍尺寸后,调整渲染器/变换;draw: 同步重绘一帧;restore(): 恢复
   K.exportPNG = async (o) => {
@@ -1533,11 +1607,17 @@
     const kk = k;
     let blob, width, height;
     try {
+      if (o.pose) {
+        const probe = o.pose.probeSize(); o.pose.useSize(probe);
+        canvas.width = probe.width; canvas.height = probe.height;
+        o.resize?.(1, { x: 0, y: 0, width: probe.width, height: probe.height }); o.draw(true);
+        o.pose.useSize(K.refineIllustrationSize(probe, canvas, o.pose.quality));
+      }
       width = o.size ? o.size.width : Math.round(w0 * kk);
       height = o.size ? o.size.height : Math.round(h0 * kk);
       if (![width, height].every(v => Number.isSafeInteger(v) && v > 0)) throw new Error('无法计算有效的导出尺寸');
-      const draw = tile => { canvas.width = tile.width; canvas.height = tile.height; if (o.resize) o.resize(kk, tile); o.draw(!!o.transparent); return canvas; };
-      const output = o.tiled ? K.renderTiledPNG({ width, height }, draw) : draw({ width, height });
+      const draw = tile => { canvas.width = tile.width; canvas.height = tile.height; if (o.resize) o.resize(kk, tile); o.draw(o.tiled && o.background !== undefined ? true : !!o.transparent); return canvas; };
+      const output = o.tiled ? K.renderTiledPNG({ width, height }, draw, o.transparent ? null : o.background) : draw({ width, height });
       // 同步捕获(WebGL 绘制缓冲在合成后可能被清空,toDataURL 立即抓取)
       const url = output.toDataURL('image/png');
       if (!url || url.length < 64) throw new Error('画布捕获失败');

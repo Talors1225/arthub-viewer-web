@@ -188,6 +188,7 @@
       skeleton.drawOrder = original.drawOrder.map(slot => skeleton.slots[slot.data.index]);
       const state = new ns.AnimationState(new ns.AnimationStateData(original.data));
       for (const entry of layer.state.tracks.filter(Boolean)) {
+        if (!original.data.findAnimation(entry.animation.name)) continue;
         const copy = state.setAnimation(entry.trackIndex, entry.animation.name, entry.loop); copy.mixDuration = 0; copy.trackTime = entry.trackTime;
       }
       const track = original.data.findAnimation(animation.name);
@@ -201,13 +202,31 @@
     copies.forEach((item, i) => {
       for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${i}:${slot.data.name}`)) slot.color.a = 0;
       worldUpdate(item.skeleton, ns);
-      if (visible(layers[i], i)) include(K.measureBounds(item.skeleton, ns));
+      if (visible(layers[i], i)) include(K.measureBounds(item.skeleton, ns, false));
     });
     for (const b of extraBounds()) include(b);
+    const pose = time => {
+      for (const item of copies) {
+        item.base.forEach((base, i) => Object.assign(item.skeleton.bones[i], base));
+        if (time !== null) { for (const entry of item.state.tracks.filter(Boolean)) { entry.trackTime = time; entry.animationLast = entry.nextAnimationLast = time; } item.state.apply(item.skeleton); }
+        for (const bone of item.skeleton.bones) { const edited = editor?.poses.get(`${item.index}:${bone.data.name}`); if (edited) Object.assign(bone, edited); }
+        for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${item.index}:${slot.data.name}`)) slot.color.a = 0;
+        worldUpdate(item.skeleton, ns);
+      }
+    };
     return {
       pngSize: quality => ({ ...K.exportDimensions(bounds, quality), fullFrame: true }),
+      measure(time) {
+        pose(time);
+        const frame = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+        for (const b of [...copies.map((item, i) => visible(layers[i], i) ? K.measureBounds(item.skeleton, ns, false) : null), ...extraBounds()]) {
+          if (b) for (const key of Object.keys(frame)) frame[key] = key.startsWith('min') ? Math.min(frame[key], b[key]) : Math.max(frame[key], b[key]);
+        }
+        return frame;
+      },
+      rewind() { pose(0); },
       draw(time, size, background) {
-        if (size.fullFrame && !size.tile) return K.renderTiledPNG(size, tile => this.draw(time, {
+        if (size.fullFrame && !size.tile && size.tiled !== false) return K.renderTiledPNG(size, tile => this.draw(time, {
           ...size, width: tile.width, height: tile.height, tile: true,
           centerX: size.centerX + (tile.x + tile.width / 2 - size.width / 2) / size.scale,
           centerY: size.centerY + (size.height / 2 - tile.y - tile.height / 2) / size.scale,
@@ -215,15 +234,10 @@
         canvas.width = size.width; canvas.height = size.height; gl.viewport(0, 0, size.width, size.height);
         camera.setViewport(size.width, size.height); camera.zoom = size.fullFrame ? 1 / size.scale : saved.width * saved.zoom / size.width;
         camera.position.set(size.fullFrame ? size.centerX : saved.x, size.fullFrame ? size.centerY : saved.y, saved.z); camera.update();
-        const color = K.parseColor(background || '#000000', [0, 0, 0]);
-        gl.clearColor(...color, background ? 1 : 0); gl.clear(gl.COLOR_BUFFER_BIT);
-        for (const item of copies) {
-          item.base.forEach((pose, i) => Object.assign(item.skeleton.bones[i], pose));
-          if (time !== null) { for (const entry of item.state.tracks.filter(Boolean)) { entry.trackTime = time; entry.animationLast = entry.nextAnimationLast = time; } item.state.apply(item.skeleton); }
-          for (const bone of item.skeleton.bones) { const pose = editor?.poses.get(`${item.index}:${bone.data.name}`); if (pose) Object.assign(bone, pose); }
-          for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${item.index}:${slot.data.name}`)) slot.color.a = 0;
-          worldUpdate(item.skeleton, ns);
-        }
+        const solidBackground = background && background !== 'checker';
+        const color = K.parseColor(solidBackground ? background : '#000000', [0, 0, 0]);
+        gl.clearColor(...color, solidBackground ? 1 : 0); gl.clear(gl.COLOR_BUFFER_BIT);
+        pose(time);
         if (drawScene) drawScene(copies, size);
         else { renderer.begin(); for (const item of copies) renderer.drawSkeleton(item.skeleton, item.pma); renderer.end(); }
         return canvas;
@@ -380,36 +394,31 @@
       const key = currentKey(); if (identity === key && editor === cfg.editor()) return;
       setMode(''); if (poseTools) { poseLocked = false; $('poseLock').setAttribute('aria-pressed', 'false'); $('poseLock').classList.remove('on'); } identity = key; editor = cfg.editor(); selectedPart = null; refresh();
     }
-    function dimensions(quality, kind) {
-      if (kind === 'png') return cfg.capture(driver.playback()).pngSize(quality);
-      const canvas = driver.canvas(), preset = kind === 'png' ? K.exportPreset(quality) : K.animationExportPreset(quality);
-      const edge = kind === 'png' ? preset.pngEdge : kind === 'video' ? preset.videoEdge : preset.gifEdge;
-      const scale = edge ? edge / Math.max(canvas.width, canvas.height) : 1;
-      let width = Math.max(1, Math.round(canvas.width * scale)), height = Math.max(1, Math.round(canvas.height * scale));
-      if (kind === 'video') { width += width % 2; height += height % 2; }
-      return { width, height };
-    }
+    function dimensions(quality) { return cfg.capture(driver.playback()).pngSize(quality); }
     async function exportFile(quality, transparent, format = 'png', copy = false) {
       requireEditor(); if (exporting) return; closePopup();
       const state = driver.playback(), name = (cfg.name() + (format === 'png' ? '' : '_' + state.name)).replace(/[\\/:*?"<>|]+/g, '_');
+      const exportBackground = background;
       const job = format === 'png' ? null : K.exportProgress(); let session;
       exporting = true; document.body.dataset.viewerExporting = 'true'; cfg.setExporting(true); cfg.stopAudio?.();
       try {
-        session = await cfg.capture(state); const size = format === 'png' ? session.pngSize(quality) : dimensions(quality, format);
+        session = await cfg.capture(state);
+        const size = format === 'png' ? K.illustrationExportSize(session, quality) : await K.animationExportSize({ session, duration: state.duration, quality, kind: format,
+          signal: job.signal, onProgress: value => job.update(.2 * value, '正在识别立绘范围…') });
         const gl = driver.canvas().getContext('webgl2') || driver.canvas().getContext('webgl');
         const limit = gl ? Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_TEXTURE_SIZE)) : 8192;
         if (format !== 'png' && Math.max(size.width, size.height) > limit) throw new Error(`导出尺寸超过当前设备 ${limit} 像素限制，请选择较低质量`);
         const output = format === 'png' ? null : document.createElement('canvas'); if (output) { output.width = size.width; output.height = size.height; }
         const ctx = output?.getContext('2d', { willReadFrequently: format === 'gif' });
-        const draw = time => { const source = session.draw(time, size, format === 'png' && !transparent ? (background === 'checker' ? '#000000' : background) : format === 'video' ? '#000000' : null); ctx.clearRect(0, 0, size.width, size.height); if (format === 'video' || format === 'png' && !transparent) { ctx.fillStyle = background === 'checker' ? '#000000' : background; ctx.fillRect(0, 0, size.width, size.height); } ctx.drawImage(source, 0, 0, size.width, size.height); };
+        const draw = time => { const source = session.draw(time, size, null); K.paintExportBackground(ctx, size.width, size.height, exportBackground === 'checker' && format === 'gif' ? null : exportBackground); ctx.drawImage(source, 0, 0, size.width, size.height); };
         let blob, extension = format;
         if (format === 'png') {
-          const frame = session.draw(null, size, transparent ? null : (background === 'checker' ? '#000000' : background));
+          const frame = session.draw(null, size, transparent ? null : exportBackground);
           session.dispose(); session = null; cfg.setExporting(false);
           blob = await new Promise((resolve, reject) => frame.toBlob(value => value ? resolve(value) : reject(new Error('浏览器无法编码此尺寸的 PNG，请尝试关闭其他页面后重试')), 'image/png'));
           if (copy) { if (!navigator.clipboard?.write || !window.ClipboardItem) throw new Error('当前浏览器不支持复制图片'); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }
         } else if (format === 'video') {
-          const result = await K.encodeCanvasVideo({ canvas: output, duration: state.duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(value, `导出视频 ${time.toFixed(1)} / ${state.duration.toFixed(1)} 秒`) }); ({ blob, extension } = result);
+          const result = await K.encodeCanvasVideo({ canvas: output, duration: state.duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(.2 + .8 * value, `导出视频 ${time.toFixed(1)} / ${state.duration.toFixed(1)} 秒 · ${size.width}×${size.height}`) }); ({ blob, extension } = result);
         } else {
           const codec = await import('./vendor/gifenc.esm.js'), gif = codec.GIFEncoder(), plan = K.exportTimeline(state.duration, quality, 'gif');
           for (let i = 0; i < plan.frames; i++) {
@@ -417,7 +426,7 @@
             const palette = codec.quantize(rgba, 255, { format: 'rgb565' }), indices = codec.applyPalette(rgba, palette, 'rgb565');
             for (let p = 0; p < indices.length; p++) indices[p] = rgba[p * 4 + 3] < 128 ? 0 : indices[p] + 1;
             gif.writeFrame(indices, size.width, size.height, { palette: [[0, 0, 0], ...palette], delay: plan.delayAt(i), transparent: true, transparentIndex: 0 });
-            await job.update((i + 1) / plan.frames, `导出 ${i + 1} / ${plan.frames} 帧 · ${size.width}×${size.height}`);
+            await job.update(.2 + .8 * (i + 1) / plan.frames, `导出 ${i + 1} / ${plan.frames} 帧 · ${size.width}×${size.height}`);
           }
           gif.finish(); blob = new Blob([gif.bytes()], { type: 'image/gif' });
         }
@@ -446,12 +455,14 @@
     }
     function exportPopup(button, animation) {
       showPopup(button, animation ? '导出动画' : '导出 PNG', pop => K.mountExportOptions(pop, {
-        kind: animation ? 'animation' : 'png', quality: 'high',
+        kind: animation ? 'animation' : 'png', quality: 'high', transparent: background === 'checker',
         getDetail: (quality, format) => {
           requireEditor(); const state = driver.playback();
           if (animation && !state.duration) throw new Error('请先选择一个有时长的动画');
-          const size = dimensions(quality, animation ? format : 'png');
-          return `${size.width}×${size.height} 像素 · ` + (animation ? `当前画面范围 · ${state.duration.toFixed(2)} 秒 · 无声` : '完整可见模型 · PNG 无损编码');
+          if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · 长边 ${format === 'video' ? preset.videoEdge : preset.gifEdge} 像素 · ${state.duration.toFixed(2)} 秒 · 背景跟随舞台 · 无声`; }
+          dimensions(quality);
+          const preset = K.exportPreset(quality);
+          return `按立绘范围裁剪 · ${preset.pngEdge ? '长边 ' + preset.pngEdge + ' 像素' : '原始像素比例'} · 背景跟随舞台 · PNG 无损编码`;
         },
         onExport: (quality, transparent, format) => exportFile(quality, transparent, animation ? format : 'png'),
         ...(animation ? {} : { onCopy: (quality, transparent) => exportFile(quality, transparent, 'png', true) }),

@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=07d9b5141a72">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=07d9b5141a72">
-<link rel="stylesheet" href="../../common/library-ui.css?v=07d9b5141a72">
-<link rel="stylesheet" href="../../common/visual.css?v=07d9b5141a72">
+<link rel="stylesheet" href="../../common/kit.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/library-ui.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/visual.css?v=138348b63d05">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -276,8 +276,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=4114f44f4e6e"></script>
-  <script src="../../arthub-cos.js?v=07d9b5141a72"></script>
+  <script src="../../arthub-cos-config.js?v=7ce039e204a3"></script>
+  <script src="../../arthub-cos.js?v=138348b63d05"></script>
 </head>
 <body class="crosscore-viewer">
   <div class="stage" id="stage">
@@ -405,12 +405,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=07d9b5141a72"></script>
-<script src="../../common/kit.js?v=07d9b5141a72"></script>
-<script src="../../common/asset-loader.js?v=07d9b5141a72"></script>
-<script src="../../common/portrait-audio.js?v=07d9b5141a72"></script>
-<script src="../../common/stage-ui.js?v=07d9b5141a72"></script>
-<script src="../../common/library-ui.js?v=07d9b5141a72"></script>
+<script src="../../common/asset-display-overrides.js?v=138348b63d05"></script>
+<script src="../../common/kit.js?v=138348b63d05"></script>
+<script src="../../common/asset-loader.js?v=138348b63d05"></script>
+<script src="../../common/portrait-audio.js?v=138348b63d05"></script>
+<script src="../../common/stage-ui.js?v=138348b63d05"></script>
+<script src="../../common/library-ui.js?v=138348b63d05"></script>
 <script>
 
 (() => {
@@ -470,7 +470,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const indexUrl = '../' + indexFile + '?v=07d9b5141a72';
+  const indexUrl = '../' + indexFile + '?v=138348b63d05';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
@@ -2195,6 +2195,7 @@
     const anim = cut.data.animations.find(a => a.name === animName);
     if (!anim) { K.toast('动画不存在', 'err'); return; }
     const video = format === 'video';
+    const exportBackground = getBg();
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
@@ -2265,7 +2266,18 @@
         if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
       }
       if (!isFinite(bMinX)) throw new Error('空包围盒');
-      const size = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, quality, video ? 'video' : 'gif');
+      const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
+      cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
+      let size;
+      for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
+        applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
+        raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
+        for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+        r2.end();
+        try { size = K.refineIllustrationSize(reference, cv2, quality, video ? 'video' : 'gif'); break; }
+        catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
+      }
+      if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;
       if (Math.max(W, H) > raw2.getParameter(raw2.MAX_TEXTURE_SIZE)) throw new Error('原始尺寸超过设备支持，请选择高等质量');
       cv2.width = W; cv2.height = H; K.syncRendererSize(cv2, mgl2, r2);
@@ -2285,8 +2297,7 @@
         r2.begin();
         for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
         r2.end();
-        if (video) { ctx2d.fillStyle = '#000'; ctx2d.fillRect(0, 0, W, H); }
-        else ctx2d.clearRect(0, 0, W, H);
+        K.paintExportBackground(ctx2d, W, H, exportBackground === 'checker' && !video ? null : exportBackground);
         ctx2d.drawImage(cv2, 0, 0);
       };
       let blob, extension = 'gif', label = 'GIF';
@@ -2331,7 +2342,7 @@
       const plan = K.exportTimeline(anim.duration, preset, format);
       if (format === 'video') {
         if (!HTMLCanvasElement.prototype.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
-        return K.videoExportFormat().label + ' · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 黑底无声。导出时请保持页面在前台。';
+        return K.videoExportFormat().label + ' · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 背景跟随舞台 · 无声。导出时请保持页面在前台。';
       }
       return plan.frames + ' 帧 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒';
     },
@@ -2389,7 +2400,7 @@
     try { pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)); }
     catch (error) { K.toast('导出失败: ' + error.message, 'err'); return; }
     K.exportPNG({
-      canvas: cv, size: pose.size, tiled: true, transparent, copy: mode === 'copy',
+      canvas: cv, size: pose.size, pose, tiled: true, transparent, background: getBg(), copy: mode === 'copy',
       filename: routeSource + '-' + (cur.name || cur.id) + '.png',
       resize(k, tile) {
         K.syncRendererSize(cv, mgl, renderer);
@@ -2457,12 +2468,12 @@
   });
   makeStagePopup(btnPng, (pop) => {
     K.mountExportOptions(pop, {
-      kind: 'png', quality: exportQuality,
+      kind: 'png', quality: exportQuality, transparent: getBg() === 'checker',
       onChange: quality => { exportQuality = quality; store.set('pngExportQuality', quality); },
       getDetail: quality => {
         if (!cut) throw new Error('请先加载一个资源');
         const pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion));
-        return 'PNG · ' + pose.size.width + '×' + pose.size.height + ' 像素 · 完整可见模型 · PNG 无损编码';
+        return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码';
       },
       onExport: (quality, transparent) => exportFrame(transparent, 'download', () => closePopups(), quality),
       onCopy: (quality, transparent) => exportFrame(transparent, 'copy', () => closePopups(), quality),
