@@ -1243,7 +1243,7 @@
     } catch {}
   };
 
-  // ---------- 导出质量：图片三档，GIF 和视频两档 ----------
+  // ---------- 导出质量：图片三档、GIF 两档、视频三档 ----------
   K.exportPresets = Object.freeze([
     Object.freeze({ id: 'medium', label: '中等质量', pngEdge: 1024, gifEdge: 768, fps: 25, videoEdge: 1280, videoFps: 30, videoBitrate: 5000000 }),
     Object.freeze({ id: 'high', label: '高等质量', pngEdge: 2048, gifEdge: 1280, fps: 50, videoEdge: 1920, videoFps: 60, videoBitrate: 12000000 }),
@@ -1251,8 +1251,11 @@
   ]);
   K.exportPreset = value => K.exportPresets.find(p => p.id === (value?.id || value)) || K.exportPresets[1];
   K.animationExportPresets = Object.freeze(K.exportPresets.slice(0, 2));
+  K.videoExportPresets = Object.freeze([...K.animationExportPresets,
+    Object.freeze({ id: 'ultra', label: '超清质量', videoOnly: true, gifEdge: 1280, fps: 50, videoEdge: 3840, videoFps: 60, videoBitrate: 40000000 }),
+  ]);
   // Old saved PNG-sequence selections now export a playable high-quality animation.
-  K.animationExportPreset = value => K.animationExportPresets.find(p => p.id === (value?.id || value)) || K.animationExportPresets[1];
+  K.animationExportPreset = value => K.videoExportPresets.find(p => p.id === (value?.id || value)) || K.animationExportPresets[1];
   K.exportDimensions = (bounds, quality, kind = 'png', padding = 16) => {
     const preset = kind === 'png' ? K.exportPreset(quality) : K.animationExportPreset(quality);
     const spanW = bounds.maxX - bounds.minX, spanH = bounds.maxY - bounds.minY;
@@ -1282,9 +1285,11 @@
   // A reference illustration defines the frame. Isolated particles must not
   // enlarge a PNG or a video, and black export backgrounds must not affect it.
   K.illustrationPixelBounds = (rgba, width, height) => {
-    const count = width * height, seen = new Uint8Array(count), queue = new Uint32Array(count), regions = [];
+    const count = width * height, queue = new Uint32Array(count);
+    const components = excluded => {
+    const seen = new Uint8Array(count), regions = [];
     for (let first = 0; first < count; first++) {
-      if (seen[first] || rgba[first * 4 + 3] < 8) continue;
+      if (seen[first] || excluded?.[first] || rgba[first * 4 + 3] < 8) continue;
       let head = 0, tail = 1, pixels = 0, minX = width, minY = height, maxX = 0, maxY = 0;
       queue[0] = first; seen[first] = 1;
       while (head < tail) {
@@ -1294,13 +1299,44 @@
           const nx = x + dx, ny = y + dy;
           if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
           const next = ny * width + nx;
-          if (!seen[next] && rgba[next * 4 + 3] >= 8) { seen[next] = 1; queue[tail++] = next; }
+          if (!seen[next] && !excluded?.[next] && rgba[next * 4 + 3] >= 8) { seen[next] = 1; queue[tail++] = next; }
         }
       }
       regions.push({ minX, minY, maxX: maxX + 1, maxY: maxY + 1, pixels });
     }
     regions.sort((a, b) => b.pixels - a.pixels);
+    return regions;
+    };
+    let regions = components();
     if (!regions.length) throw new Error('没有可导出的可见立绘');
+    // Some game scenes contain an oversized, opaque black curtain. Alpha alone
+    // counts the curtain as artwork and spends most video pixels on that border.
+    // Trim only a flat dark surround on all four sides of a substantial inset
+    // illustration; gradients, edge-to-edge art and fully dark art stay intact.
+    const outer = regions[0], ow = outer.maxX - outer.minX, oh = outer.maxY - outer.minY;
+    const ix = Math.max(1, Math.floor(ow * .025)), iy = Math.max(1, Math.floor(oh * .025));
+    if (ow > 32 && oh > 32) {
+      const seeds = [[outer.minX + ix, outer.minY + iy], [outer.maxX - 1 - ix, outer.minY + iy],
+        [outer.minX + ix, outer.maxY - 1 - iy], [outer.maxX - 1 - ix, outer.maxY - 1 - iy]].map(([x, y]) => y * width + x);
+      const color = [0, 1, 2].map(c => rgba[seeds[0] * 4 + c]);
+      const same = (index, tolerance) => rgba[index * 4 + 3] >= 8 && color.every((v, c) => Math.abs(rgba[index * 4 + c] - v) <= tolerance);
+      if (Math.max(...color) <= 40 && seeds.every(index => rgba[index * 4 + 3] >= 240 && same(index, 4))) {
+        const mask = new Uint8Array(count); let head = 0, tail = 0;
+        for (const index of seeds) if (!mask[index]) { mask[index] = 1; queue[tail++] = index; }
+        while (head < tail) {
+          const index = queue[head++], x = index % width, y = Math.floor(index / width);
+          for (const next of [x ? index - 1 : -1, x + 1 < width ? index + 1 : -1, y ? index - width : -1, y + 1 < height ? index + width : -1]) {
+            if (next >= 0 && !mask[next] && same(next, 7)) { mask[next] = 1; queue[tail++] = next; }
+          }
+        }
+        if (tail >= outer.pixels * .55) {
+          const trimmed = components(mask), core = trimmed[0];
+          if (core && core.pixels >= outer.pixels * .025 && core.pixels <= outer.pixels * .6
+            && core.minX - outer.minX >= ow * .12 && outer.maxX - core.maxX >= ow * .12
+            && core.minY - outer.minY >= oh * .12 && outer.maxY - core.maxY >= oh * .12) regions = trimmed;
+        }
+      }
+    }
     const main = regions[0], result = { ...main }, span = Math.max(main.maxX - main.minX, main.maxY - main.minY);
     for (const item of regions.slice(1)) {
       const gap = Math.max(main.minX - item.maxX, item.minX - main.maxX, main.minY - item.maxY, item.minY - main.maxY, 0);
@@ -1368,7 +1404,7 @@
   };
   K.mountExportOptions = (pop, options) => {
     const animation = options.kind === 'animation';
-    const presets = animation ? K.animationExportPresets : K.exportPresets;
+    const presets = animation ? K.videoExportPresets : K.exportPresets;
     let quality = (animation ? K.animationExportPreset(options.quality) : K.exportPreset(options.quality)).id;
     let format = options.format === 'video' ? 'video' : 'gif';
     pop.innerHTML = '<div class="col export-options"><div class="col-title">' + (animation ? '导出动画' : '导出 PNG') + '</div>'
@@ -1387,7 +1423,10 @@
     const formats = [...pop.querySelectorAll('[data-format]')];
     const copy = pop.querySelector('.export-copy'), detail = pop.querySelector('.export-detail');
     const update = () => {
+      if (animation && format !== 'video' && K.animationExportPreset(quality).videoOnly) { quality = 'high'; options.onChange?.(quality); }
       buttons.forEach(button => { const selected = button.dataset.quality === quality;
+        button.hidden = !!(animation && format !== 'video' && K.animationExportPreset(button.dataset.quality).videoOnly);
+        button.style.display = button.hidden ? 'none' : '';
         button.classList.toggle('on', selected); button.setAttribute('aria-checked', String(selected)); button.tabIndex = selected ? 0 : -1;
         if (animation) { const p = K.animationExportPreset(button.dataset.quality);
           button.querySelector('small').textContent = format === 'video'
@@ -1397,7 +1436,8 @@
       formats.forEach(button => { const selected = button.dataset.format === format;
         button.classList.toggle('on', selected); button.setAttribute('aria-pressed', String(selected)); });
       go.textContent = animation ? (format === 'video' ? '导出视频' : '导出 GIF') : '导出 PNG';
-      try { detail.textContent = options.getDetail(K.exportPreset(quality), format); go.disabled = false; if (copy) copy.disabled = false; }
+      try { detail.textContent = options.getDetail(animation ? K.animationExportPreset(quality) : K.exportPreset(quality), format)
+        + (animation && quality === 'ultra' ? ' · 文件更大、导出更慢；清晰度受原贴图限制。' : ''); go.disabled = false; if (copy) copy.disabled = false; }
       catch (error) { detail.textContent = error.message; go.disabled = true; if (copy) copy.disabled = true; }
     };
     buttons.forEach((button, index) => {
@@ -1406,7 +1446,8 @@
         if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();
         const step = ['ArrowDown', 'ArrowRight'].includes(event.key) ? 1 : -1;
-        const next = buttons[(index + step + buttons.length) % buttons.length]; next.click(); next.focus();
+        const shown = buttons.filter(item => !item.hidden), current = shown.indexOf(button);
+        const next = shown[(current + step + shown.length) % shown.length]; next.click(); next.focus();
       };
     });
     formats.forEach(button => { button.onclick = () => { format = button.dataset.format; options.onFormatChange?.(format); update(); }; });
@@ -1485,7 +1526,7 @@
   };
   K.encodeCanvasVideo = async options => {
     const preset = K.animationExportPreset(options.quality);
-    if (window.VideoEncoder && window.VideoFrame && K.videoExportFormat().extension === 'mp4') {
+    if (window.VideoEncoder && window.VideoFrame) {
       let codec;
       try {
         // Only video export loads this locally bundled encoder/muxer adapter.

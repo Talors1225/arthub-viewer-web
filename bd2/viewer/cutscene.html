@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=ce68dfb5caba">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=ce68dfb5caba">
-<link rel="stylesheet" href="../../common/library-ui.css?v=ce68dfb5caba">
-<link rel="stylesheet" href="../../common/visual.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/kit.css?v=104d9ec32e91">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=104d9ec32e91">
+<link rel="stylesheet" href="../../common/library-ui.css?v=104d9ec32e91">
+<link rel="stylesheet" href="../../common/visual.css?v=104d9ec32e91">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -276,8 +276,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=ade2e56ce253"></script>
-  <script src="../../arthub-cos.js?v=ce68dfb5caba"></script>
+  <script src="../../arthub-cos-config.js?v=d4a5c2bb269f"></script>
+  <script src="../../arthub-cos.js?v=104d9ec32e91"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -405,12 +405,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=ce68dfb5caba"></script>
-<script src="../../common/kit.js?v=ce68dfb5caba"></script>
-<script src="../../common/asset-loader.js?v=ce68dfb5caba"></script>
-<script src="../../common/portrait-audio.js?v=ce68dfb5caba"></script>
-<script src="../../common/stage-ui.js?v=ce68dfb5caba"></script>
-<script src="../../common/library-ui.js?v=ce68dfb5caba"></script>
+<script src="../../common/asset-display-overrides.js?v=104d9ec32e91"></script>
+<script src="../../common/kit.js?v=104d9ec32e91"></script>
+<script src="../../common/asset-loader.js?v=104d9ec32e91"></script>
+<script src="../../common/portrait-audio.js?v=104d9ec32e91"></script>
+<script src="../../common/stage-ui.js?v=104d9ec32e91"></script>
+<script src="../../common/library-ui.js?v=104d9ec32e91"></script>
 <script>
 
 (() => {
@@ -2328,7 +2328,7 @@
       const plan = K.exportTimeline(anim.duration, preset, format);
       if (format === 'video') {
         if (!HTMLCanvasElement.prototype.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
-        return K.videoExportFormat().label + ' · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 背景跟随舞台 · 无声。导出时请保持页面在前台。';
+        return '视频 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 背景跟随舞台 · 无声。导出时请保持页面在前台。';
       }
       return plan.frames + ' 帧 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒';
     },
