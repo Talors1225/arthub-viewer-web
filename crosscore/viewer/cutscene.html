@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=ce68dfb5caba">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=ce68dfb5caba">
-<link rel="stylesheet" href="../../common/library-ui.css?v=ce68dfb5caba">
-<link rel="stylesheet" href="../../common/visual.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/kit.css?v=c73869f5de97">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=c73869f5de97">
+<link rel="stylesheet" href="../../common/library-ui.css?v=c73869f5de97">
+<link rel="stylesheet" href="../../common/visual.css?v=c73869f5de97">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -276,8 +276,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=ade2e56ce253"></script>
-  <script src="../../arthub-cos.js?v=ce68dfb5caba"></script>
+  <script src="../../arthub-cos-config.js?v=613ce0ec3cee"></script>
+  <script src="../../arthub-cos.js?v=c73869f5de97"></script>
 </head>
 <body class="crosscore-viewer">
   <div class="stage" id="stage">
@@ -405,12 +405,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=ce68dfb5caba"></script>
-<script src="../../common/kit.js?v=ce68dfb5caba"></script>
-<script src="../../common/asset-loader.js?v=ce68dfb5caba"></script>
-<script src="../../common/portrait-audio.js?v=ce68dfb5caba"></script>
-<script src="../../common/stage-ui.js?v=ce68dfb5caba"></script>
-<script src="../../common/library-ui.js?v=ce68dfb5caba"></script>
+<script src="../../common/asset-display-overrides.js?v=c73869f5de97"></script>
+<script src="../../common/kit.js?v=c73869f5de97"></script>
+<script src="../../common/asset-loader.js?v=c73869f5de97"></script>
+<script src="../../common/portrait-audio.js?v=c73869f5de97"></script>
+<script src="../../common/stage-ui.js?v=c73869f5de97"></script>
+<script src="../../common/library-ui.js?v=c73869f5de97"></script>
 <script>
 
 (() => {
@@ -470,7 +470,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const indexUrl = '../' + indexFile + '?v=ce68dfb5caba';
+  const indexUrl = '../' + indexFile + '?v=c73869f5de97';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);

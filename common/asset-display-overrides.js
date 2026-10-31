@@ -382,8 +382,26 @@
     return entries && Object.prototype.hasOwnProperty.call(entries, key) ? entries[key] : null;
   }
 
+  function shortCrosscoreCG(entry) {
+    if (!/^cg_/i.test(String(entry.id || '')) && entry.category !== '剧情CG') return entry;
+    const originalName = String(entry.originalName || entry.name || entry.displayName || entry.id);
+    const stem = String(entry.cutscenes?.[0]?.skel || originalName.replace(/^剧情CG\s*[?·:：]?\s*/u, ''))
+      .split(/[\\/]/).pop().replace(/\.(?:json|skel)$/i, '');
+    if (!/^CG(?:\d+)?_|^CG\d+$/i.test(stem)) return entry;
+    const name = stem.replace(/^CG(?:\d+)?_/i, '').replace(/_(?:character|charact|chara|spine)$/i, '').trim().toLowerCase();
+    if (!name) return entry;
+    let searchText = String(entry.searchText || '');
+    for (const term of [name, originalName, String(entry.id)]) {
+      if (term && !searchText.includes(term)) searchText += (searchText ? ' ' : '') + term;
+    }
+    const patch = {originalName, displayName: name, sortName: name, sortKey: name + '|' + entry.id, searchText};
+    if (Object.prototype.hasOwnProperty.call(entry, 'name')) patch.name = name;
+    return Object.entries(patch).every(([key, value]) => entry[key] === value) ? entry : {...entry, ...patch};
+  }
+
   function apply(source, entry) {
     if (!entry || typeof entry !== 'object') return entry;
+    if (source === 'crosscore') return shortCrosscoreCG(entry);
     const record = get(source, entry.id);
     if (!record) return entry;
     const originalName = String(entry.originalName || entry.name || entry.id);
