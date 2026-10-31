@@ -294,7 +294,11 @@
   window.createInteractionViewerTools = (driver, ui) => {
     const cfg = driver.tools, storeKey = 'arthub:interaction-tools:' + location.pathname;
     let editor, identity, mode = '', lastRefresh = 0, selectedPart = null, dragBone = null, partPress = null, partTap = null, resumeEdit = false, poseLocked = false, popup = null, exporting = false;
-    let background = localStorage.getItem(storeKey + ':background') || '#000000', exportUrl = null;
+    let background, exportUrl = null;
+    const backgroundControl = K.createStageBackground({ stage: $('stage'),
+      read: () => localStorage.getItem(storeKey + ':background'), write: value => localStorage.setItem(storeKey + ':background', value),
+      onChange: value => { background = value; cfg.setBackground?.(value === 'checker' ? null : value); },
+    });
     const debug = {}, paint = editOverlay.getContext('2d');
     const toast = (message, type = 'info') => K.toast(message, type);
     const report = error => { console.error(error); toast(error.message || String(error), 'err'); };
@@ -335,18 +339,13 @@
       if (poseTools) $('poseEditToggle').textContent = mode === 'pose' ? '结束编辑，恢复点击互动' : '开启姿势编辑';
       if (next) { const tab = next === 'parts' ? 'parts' : 'pose'; if ($('floatPanel').dataset.tab === tab) cfg.openPanel(true); else openTab(tab); }
     }
-    function applyBackground() {
-      const checker = background === 'checker';
-      $('stage').style.background = checker ? 'repeating-conic-gradient(#272b33 0% 25%,#171b22 0% 50%) 0 0 / 20px 20px' : background;
-      cfg.setBackground?.(checker ? null : background);
-    }
     function renderParts() {
       const list = $('slotList'), query = $('partFilter').value.toLocaleLowerCase(), fragment = document.createDocumentFragment();
       for (const part of editor?.parts() || []) {
         if (query && !part.name.toLocaleLowerCase().includes(query)) continue;
         const row = document.createElement('div'); row.className = 'viewer-part-row';
         const button = document.createElement('button'); button.type = 'button'; button.className = 'eye';
-        const visible = !editor.hidden.has(part.id); button.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>'; button.setAttribute('aria-label', (visible ? '隐藏 ' : '显示 ') + part.name); button.setAttribute('aria-pressed', String(visible));
+        const visible = !editor.hidden.has(part.id); button.innerHTML = K.uiIcon(visible ? 'eye' : 'eyeOff'); button.setAttribute('aria-label', (visible ? '隐藏 ' : '显示 ') + part.name); button.setAttribute('aria-pressed', String(visible));
         button.onclick = () => { if (editor.hidden.has(part.id)) editor.hidden.delete(part.id); else editor.hidden.add(part.id); renderParts(); };
         const name = document.createElement('span'); name.textContent = part.name; name.title = part.id; row.append(button, name); fragment.append(row);
         row.onpointerenter = () => { selectedPart = part; }; row.onpointerleave = () => { selectedPart = null; };
@@ -490,12 +489,7 @@
     document.querySelectorAll('[data-panel-tab]').forEach(button => button.addEventListener('click', () => { if (mode && button.dataset.panelTab !== (mode === 'parts' ? 'parts' : 'pose')) setMode(''); refresh(); }));
     $('panel-close').addEventListener('click', () => setMode(''));
     $('btnAnimTab').addEventListener('click', () => { closePopup(); if (mode) setMode(''); });
-    $('btnBg').onclick = () => showPopup($('btnBg'), '背景颜色 / 预设', pop => {
-      pop.innerHTML = '<div class="col"><div class="col-title">背景</div><div class="opt-row"></div><label>自定义颜色 <input type="color" aria-label="背景颜色"></label></div>';
-      const row = pop.querySelector('.opt-row');
-      for (const [label, value] of [['深空', '#0f1218'], ['纯黑', '#000000'], ['石墨', '#1f242e'], ['浅灰', '#b9bec7'], ['棋盘(透明)', 'checker']]) { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.onclick = () => { background = value; if (value !== 'checker') pop.querySelector('input[type=color]').value = value; localStorage.setItem(storeKey + ':background', value); applyBackground(); }; row.append(button); }
-      const color = pop.querySelector('input'); color.value = background === 'checker' ? '#000000' : background; color.oninput = () => { background = color.value; localStorage.setItem(storeKey + ':background', background); applyBackground(); };
-    });
+    $('btnBg').onclick = () => showPopup($('btnBg'), '背景颜色 / 预设', pop => backgroundControl.mount(pop));
     $('btnDebug').onclick = () => showPopup($('btnDebug'), '骨骼 / 网格 / 包围盒 调试视图', pop => {
       pop.innerHTML = '<div class="col"><div class="col-title">调试视图</div></div>';
       for (const [flag, label] of [['bones', '骨骼线'], ['regions', '区域框'], ['bounds', '包围盒'], ['meshHull', '网格轮廓'], ['meshTris', '网格三角面'], ['paths', '路径'], ['clipping', '裁剪形状']]) {
@@ -572,7 +566,7 @@
         paint.fillStyle = paint.strokeStyle; paint.beginPath(); paint.arc(p.x, p.y, selected ? 4 : 2, 0, Math.PI * 2); paint.fill();
       }
     }
-    K.initSearchPalette(); applyBackground();
+    K.initSearchPalette();
     return {
       sync, before: () => { sync(); editor?.before(); },
       exitEditing() { closePopup(); setMode(''); K.closeToolPopup?.(); },

@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=138348b63d05">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=138348b63d05">
-<link rel="stylesheet" href="../../common/library-ui.css?v=138348b63d05">
-<link rel="stylesheet" href="../../common/visual.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/kit.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/library-ui.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/visual.css?v=ce68dfb5caba">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -269,8 +269,8 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=7ce039e204a3"></script>
-  <script src="../../arthub-cos.js?v=138348b63d05"></script>
+  <script src="../../arthub-cos-config.js?v=ade2e56ce253"></script>
+  <script src="../../arthub-cos.js?v=ce68dfb5caba"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -323,6 +323,7 @@
       <button id="btnDebug" title="骨骼 / 网格 / 包围盒 调试视图">🦴</button>
       <button id="btnPng" title="导出 PNG 立绘">📷</button>
       <button id="btnGif" title="导出动画">🎞</button>
+      <button id="btnBg" title="背景颜色 / 预设"></button>
       <div class="strip-sep"></div>
       <button id="btnPresetImmersive" title="沉浸模式 (Tab / I)">⛶</button>
     </div>
@@ -382,7 +383,7 @@
       <div class="lbl">视图</div>
       <label class="row"><input type="checkbox" id="autoIdle" checked> 6 秒无操作自动回到待机</label>
       <label class="row">整体缩放 <input type="range" id="zoom" min="0.1" max="4" step="0.01" value="1" style="flex:1;width:auto"></label>
-      <label class="row">背景 <input type="color" id="bg" value="#000000"></label>
+      <input type="color" id="bg" value="#000000" hidden><button id="viewBackground" type="button">背景颜色 / 预设</button>
       <div class="chips" style="margin-top:6px">
         <button id="btnFit2">适合窗口</button>
         <button id="btnReset2">复位视图</button>
@@ -393,11 +394,11 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=138348b63d05"></script>
-<script src="../../common/kit.js?v=138348b63d05"></script>
-<script src="../../common/asset-loader.js?v=138348b63d05"></script>
-<script src="../../common/stage-ui.js?v=138348b63d05"></script>
-<script src="../../common/library-ui.js?v=138348b63d05"></script>
+<script src="../../common/asset-display-overrides.js?v=ce68dfb5caba"></script>
+<script src="../../common/kit.js?v=ce68dfb5caba"></script>
+<script src="../../common/asset-loader.js?v=ce68dfb5caba"></script>
+<script src="../../common/stage-ui.js?v=ce68dfb5caba"></script>
+<script src="../../common/library-ui.js?v=ce68dfb5caba"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -483,9 +484,12 @@
   };
 
   // ---------- 设置恢复 ----------
-  bgInput.value = store.get('bg', '#000000');
+  const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: value => store.set('bg', value),
+    onChange: value => { if (value !== 'checker') bgInput.value = value; },
+  });
+  const getBg = stageBackground.get;
   autoIdleChk.checked = store.get('autoIdle', true);
-  bgInput.addEventListener('input', () => store.set('bg', bgInput.value));
+  bgInput.addEventListener('input', () => stageBackground.set(bgInput.value));
   autoIdleChk.addEventListener('change', () => store.set('autoIdle', autoIdleChk.checked));
   btnDebug.classList.toggle('active', K.debugActive(debugFlags));
   setPbPlay();
@@ -534,6 +538,8 @@
     allPopups.push(api);
     return api;
   }
+  makeStagePopup($('#btnBg'), pop => stageBackground.mount(pop));
+  $('#viewBackground').onclick = () => $('#btnBg').click();
 
   // ---------- 全局状态 ----------
   const RUNTIME_SOURCES = [
@@ -697,8 +703,8 @@
     if (curEntry && gl && layers.length && !libraryThumbnail(curEntry)) {
       try {
         const raw = gl.gl || gl;
-        const c = K.parseColor(bgInput.value, [0.09, 0.1, 0.13]);
-        raw.clearColor(c[0], c[1], c[2], 1);
+        const c = K.parseColor(getBg(), [0.09, 0.1, 0.13]);
+        raw.clearColor(c[0], c[1], c[2], getBg() === 'checker' ? 0 : 1);
         raw.clear(raw.COLOR_BUFFER_BIT);
         renderer.begin();
         for (const L of layers) if (L.visible) renderer.drawSkeleton(L.skeleton, false);
@@ -779,8 +785,8 @@
       if (L.hiddenSlots.size) K.applyHiddenSlots(L.skeleton, L.hiddenSlots);
     }
     const raw = gl.gl || gl;
-    const c = K.parseColor(bgInput.value, [0.09, 0.1, 0.13]);
-    raw.clearColor(c[0], c[1], c[2], 1);
+    const c = K.parseColor(getBg(), [0.09, 0.1, 0.13]);
+    raw.clearColor(c[0], c[1], c[2], getBg() === 'checker' ? 0 : 1);
     raw.clear(raw.COLOR_BUFFER_BIT);
     renderer.begin();
     for (const L of layers) {
@@ -1687,7 +1693,7 @@
     let selection;
     try { selection = animationExportSelection(); } catch (e) { K.toast(e.message, 'err'); return; }
     const video = format === 'video', plan = K.exportTimeline(selection.duration, quality, format);
-    const exportBackground = bgInput.value;
+    const exportBackground = getBg();
     const exportName = curEntry?.label || 'spine', animationName = curAnimName || selection.selected[0].animation || 'animation';
     const job = K.exportProgress(), models = [];
     let raw;
@@ -1751,7 +1757,7 @@
         raw.clearColor(0, 0, 0, 0); raw.clear(raw.COLOR_BUFFER_BIT); outputRenderer.begin();
         for (const L of models) outputRenderer.drawSkeleton(L.skeleton, false);
         outputRenderer.end();
-        K.paintExportBackground(ctx, W, H, exportBackground);
+        K.paintExportBackground(ctx, W, H, exportBackground === 'checker' && !video ? null : exportBackground);
         ctx.drawImage(cv, 0, 0);
       };
       let blob, extension = 'gif', label = 'GIF';
@@ -1801,7 +1807,7 @@
   makeStagePopup(btnPng, (pop) => {
     const poseFor = quality => K.pngExportPose(layers.filter(L => L.visible).map(L => L.skeleton), quality, spine);
     K.mountExportOptions(pop, {
-      kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: false,
+      kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: getBg() === 'checker',
       onChange: quality => store.set('pngExportQuality', quality),
       getDetail: quality => { poseFor(quality); return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码'; },
       onExport: async (quality, transparent) => {
@@ -1809,14 +1815,14 @@
         try {
           const pose = poseFor(quality);
           const r = await K.exportPNG({
-            canvas, size: pose.size, pose, transparent, background: bgInput.value,
+            canvas, size: pose.size, pose, transparent, background: getBg(),
             filename: (curEntry ? String(curEntry.label).replace(/[\\/:*?"<>|\[\]]/g, '') : 'spine') + (transparent ? '-透明' : '') + '.png',
             tiled: true,
             resize(k, tile) { K.syncRendererSize(canvas, gl, renderer); pose.apply(tile); },
             draw(tr) {
               const raw = gl.gl || gl;
               if (tr) raw.clearColor(0, 0, 0, 0);
-              else { const c = K.parseColor(bgInput.value, [0.09, 0.1, 0.13]); raw.clearColor(c[0], c[1], c[2], 1); }
+              else { const c = K.parseColor(getBg(), [0.09, 0.1, 0.13]); raw.clearColor(c[0], c[1], c[2], 1); }
               raw.clear(raw.COLOR_BUFFER_BIT); renderer.begin();
               for (const L of layers) if (L.visible) renderer.drawSkeleton(L.skeleton, false);
               renderer.end();

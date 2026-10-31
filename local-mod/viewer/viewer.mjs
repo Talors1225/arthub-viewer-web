@@ -1,5 +1,5 @@
-import {importBundle,discoverModels} from './bundle.mjs?v=138348b63d05';
-import {loadSpine,loadLive2D} from './runtimes.mjs?v=138348b63d05';
+import {importBundle,discoverModels} from './bundle.mjs?v=ce68dfb5caba';
+import {loadSpine,loadLive2D} from './runtimes.mjs?v=ce68dfb5caba';
 const K=window.SpineKit,$=id=>document.getElementById(id),stage=$('stage');
 let canvas=$('canvas'),engine=null,activeBundle=null,bundle=null,models=[],selected=null,identity='',epoch=0,pending=null,exporting=false,renderFailed=false,gridPlaying=true;
 const view={zoom:1,x:0,y:0,playing:true,speed:1},store=K.Store('local-mod-ui');

@@ -26,6 +26,8 @@
     anim: '<path d="m8 5 11 7-11 7Z"/>',
     panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 4v16m4-11h4m-4 6h4"/>',
     edit: '<path d="m15 5 4 4M4 20l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L4.5 15Z"/>',
+    eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    eyeOff: '<path d="m3 3 18 18M10.5 6.1 12 6c6.5 0 10 6 10 6a17 17 0 0 1-3 3.5M6.2 7.4A17 17 0 0 0 2 12s3.5 6 10 6a12 12 0 0 0 4.5-.8M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
     pause: '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none"/>',
     loop: '<path d="m17 3 4 4-4 4M3 11V9a2 2 0 0 1 2-2h16M7 21l-4-4 4-4m14 0v2a2 2 0 0 1-2 2H3"/>',
     minus: '<path d="M5 12h14"/>',
@@ -816,9 +818,10 @@
         const row = document.createElement('div');
         row.className = 'slot-row' + (hiddenIn.length ? ' off' : '');
         const eye = document.createElement('button');
-        eye.className = 'eye';
-        eye.textContent = hiddenIn.length ? '🚫' : '👁';
-        eye.title = '显示/隐藏 ' + name;
+        eye.type = 'button'; eye.className = 'eye';
+        eye.innerHTML = K.uiIcon(hiddenIn.length ? 'eyeOff' : 'eye');
+        eye.title = (hiddenIn.length ? '显示 ' : '隐藏 ') + name;
+        eye.setAttribute('aria-label', eye.title); eye.setAttribute('aria-pressed', String(!hiddenIn.length));
         eye.onclick = () => {
           for (const t of targets) {
             if (!t.data.slots.some(sd => sd.name === name)) continue;
@@ -1847,7 +1850,10 @@
           const target = tab.dataset.tab;
           if (target === panel.dataset.tab) return;
           if (target === 'parts') partsTrigger.click();
-          else if (target === 'anim') animTrigger.click();
+          else if (target === 'anim') {
+            animTrigger._kitSwitchTab = true;
+            try { animTrigger.click(); } finally { delete animTrigger._kitSwitchTab; }
+          }
           else {
             // “姿势”主要由骨骼编辑入口打开；这里至少让标签页可见，
             // 不伪造骨骼编辑状态，也不覆盖原页面的保存/锁定逻辑。
@@ -1938,10 +1944,24 @@
       event.stopPropagation();
       if (more.getAttribute('aria-expanded') === 'true') { K.hideMenu(); return; }
       const rect = more.getBoundingClientRect();
-      K.showMenu(secondary.map(button => ({
-        label: labelOf(button),
+      const groups = [
+        ['导出', ['btnPng', 'btnGif']],
+        ['画面', ['btnBg', 'btnPresetImmersive', 'btnDebug']],
+        ['编辑', ['btnPartEdit', 'btnBoneEdit']],
+        ['声音', ['btnVoiceSettings', 'btnVoice']],
+        ['资源', ['btnGlobalSearch', 'btnRestoreParts', 'btnRetry']],
+      ];
+      const pending = new Map(secondary.filter(button => button.isConnected && !button.hidden).map(button => [button.id, button]));
+      const items = [], itemFor = button => ({ label: labelOf(button), disabled: button.disabled,
+        ...(button.hasAttribute('aria-pressed') ? { checked: button.getAttribute('aria-pressed') === 'true' } : {}),
         fn: () => invokeSecondary(button),
-      })), rect.left, rect.bottom + 6, {title:'更多功能', owner:more});
+      });
+      for (const [heading, ids] of groups) {
+        const buttons = ids.map(id => pending.get(id)).filter(Boolean); if (!buttons.length) continue;
+        items.push({heading}); for (const button of buttons) { items.push(itemFor(button)); pending.delete(button.id); }
+      }
+      if (pending.size) { items.push({heading:'其他'}); for (const button of pending.values()) items.push(itemFor(button)); }
+      K.showMenu(items, rect.left, rect.bottom + 6, {title:'更多功能', owner:more});
     });
     toolStrip.appendChild(more);
     // Reveal navigation and tools together only after the compact menu is ready.
@@ -2061,8 +2081,8 @@
       panel.addEventListener('keydown', event => event.stopPropagation());
       panel.innerHTML = `
         <div class="theme-palette-head"><strong>主题调色板</strong><button type="button" class="theme-palette-close" aria-label="关闭调色板">${K.uiIcon('close')}<span>关闭</span></button></div>
-        <label class="theme-palette-picker"><span>自定义背景颜色</span><input type="color" aria-label="选择自定义背景颜色"></label>
-        <button type="button" class="theme-palette-reset">恢复当前游戏默认背景</button>`;
+        <label class="theme-palette-picker"><span>界面背景颜色</span><input type="color" aria-label="选择界面背景颜色"></label>
+        <button type="button" class="theme-palette-reset">恢复默认界面颜色</button>`;
       document.body.appendChild(panel);
       button.setAttribute('aria-expanded', 'true');
 

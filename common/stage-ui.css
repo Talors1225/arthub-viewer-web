@@ -46,15 +46,15 @@ html[data-gav-ui="clean"] body :is(.rail,.tool-strip) button > .arthub-icon { di
   }
 }
 
-/* CrossCore offers visible zoom controls on desktop as well as mobile. */
-html[data-gav-ui="clean"] body:is(.crosscore-viewer,.crosscore-interaction-viewer,.azurlane-viewer) .tool-strip .tool-zoom {
+/* Every viewer exposes the same zoom controls on desktop and mobile. */
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom {
  display:flex !important; position:static !important; align-items:center; gap:2px; margin:0; padding:0; border:0; background:transparent; box-shadow:none;
 }
-body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom button { display:inline-flex; align-items:center; justify-content:center; min-width:32px; min-height:38px; padding:5px; border:0; border-radius:9px; color:var(--text-dim); background:transparent; cursor:pointer; font:inherit; }
-body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom .zoom-pct { min-width:46px; font-size:11px; font-variant-numeric:tabular-nums; }
-body:is(.crosscore-interaction-viewer,.azurlane-viewer) .tool-zoom button:hover { color:var(--accent); background:var(--accent-dim-bg); }
+html[data-gav-ui="clean"] body .tool-zoom :is(button,#zPct) { display:inline-flex; align-items:center; justify-content:center; min-width:32px; min-height:36px; padding:5px; border:0; border-radius:9px; color:var(--text-dim); background:transparent; cursor:pointer; font:inherit; }
+html[data-gav-ui="clean"] body .tool-zoom .zoom-pct { min-width:46px; font-size:11px; font-variant-numeric:tabular-nums; }
+html[data-gav-ui="clean"] body .tool-zoom :is(button,#zPct):hover { color:var(--accent); background:var(--accent-dim-bg); }
 
-html[data-gav-ui="clean"] body:is(.crosscore-viewer,.crosscore-interaction-viewer,.azurlane-viewer) .tool-strip .tool-zoom :is(#zOut,#zPct,#zIn) { display:inline-flex !important; align-items:center; justify-content:center; }
+html[data-gav-ui="clean"] body .tool-strip .tool-zoom :is(#zOut,#zPct,#zIn) { display:inline-flex !important; align-items:center; justify-content:center; }
 body.game-interaction-viewer #btnStagePan { display:inline-flex; align-items:center; justify-content:center; }
 body.game-interaction-viewer #btnStagePan[aria-pressed="true"] { color:var(--accent); background:var(--accent-dim-bg); }
 body.game-interaction-viewer > .stage[data-pan-mode="pan"] > canvas { cursor:grab; }
@@ -81,4 +81,44 @@ html[data-gav-ui="clean"] body .playbar.collapsed .playbar-toggle[data-action-la
   }
   #gridView.library-ui #btnTheme[data-action-label] .arthub-icon { width: 14px; height: 14px; }
   #gridView.library-ui #btnTheme[data-action-label]::after { font-size: 10px; }
+}
+
+/* Shared background editor and edit-panel geometry across every runtime. */
+.stage-popup.arthub-tool-popup { width: min(324px,calc(100vw - 16px)); }
+.stage-popup.arthub-tool-popup > .col { width: 100%; max-width: 100%; }
+.stage[data-stage-background="checker"]::before { display: none !important; }
+.stage-popup .stage-background-options { display: grid; align-items: stretch; gap: 10px; width: min(300px, calc(100vw - 44px)); max-width: 100%; }
+.stage-background-presets { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.stage-background-presets button:last-child { grid-column: 1 / -1; }
+.stage-popup .stage-background-options button { min-height: 38px; white-space: nowrap; }
+.stage-popup .stage-background-presets button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-dim-bg); }
+.stage-background-label { color: var(--text-dim) !important; font-size: 12px; }
+.stage-background-custom { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; align-items: center; gap: 7px; }
+.stage-background-custom input[type="color"] { width: 44px; height: 40px; padding: 3px; border: 1px solid var(--border2); border-radius: 9px; background: var(--panel2); cursor: pointer; box-sizing: border-box; }
+.stage-background-custom input[type="text"] { width: 100%; min-width: 0; height: 40px; padding: 7px 9px; box-sizing: border-box; font: 12px var(--mono,Consolas,monospace); }
+.stage-background-custom input[aria-invalid="true"] { border-color: #df7373; }
+.stage-background-message { margin: 0; min-height: 2.8em; color: var(--text-dim); font-size: 11px; line-height: 1.5; }
+.ctx-menu .menu-heading { padding: 8px 10px 4px; color: var(--text-faint); font-size: 10px; font-weight: 600; letter-spacing: .06em; }
+.ctx-menu .menu-heading ~ .menu-heading { margin-top: 5px; border-top: 1px solid var(--border); }
+.ctx-menu .arthub-popup-head,.stage-popup.arthub-tool-popup > .arthub-popup-head { position: sticky; top: 0; z-index: 1; background: var(--panel); }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] { z-index: 40; box-sizing: border-box; border-radius: 16px !important; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-panel-head { flex: none; align-items: center; gap: 6px; padding: 10px 10px 0 !important; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-panel-head .rp-tabs { min-width: 0; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-panel-head .rp-tabs::-webkit-scrollbar { display: none; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-tabs button { flex: 1 0 50px; min-width: 50px; min-height: 36px; padding: 7px 9px !important; font-size: 12px; line-height: 1.3; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-panel-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; width: 36px; height: 36px; padding: 0; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-extra-tabs:empty { display: none; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-page { min-height: 0; padding: 12px !important; overscroll-behavior: contain; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] :is(.slot-row,.viewer-part-row) .eye { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 32px; padding: 5px !important; }
+html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .eye > .arthub-icon { display: block; flex: none; width: 18px; height: 18px; }
+@media (min-width: 721px) {
+  html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] { left: auto !important; right: 12px !important; top: 80px !important; bottom: var(--stage-panel-bottom,72px) !important; width: 320px !important; height: auto !important; max-height: calc(100dvh - 92px) !important; transform: none !important; }
+}
+@media (max-width: 720px) {
+  html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] { left: 8px !important; right: 8px !important; top: auto !important; bottom: var(--stage-panel-bottom,calc(140px + env(safe-area-inset-bottom))) !important; width: auto !important; height: min(48dvh,400px) !important; max-height: calc(100dvh - 150px) !important; transform: none !important; }
+  html[data-gav-ui="clean"] body:has(#floatPanel.open) #toolStrip { display: none !important; }
+  html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-tabs button { min-height: 40px; }
+  html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] .rp-panel-close { flex-basis: 40px; width: 40px; height: 40px; }
+  html[data-gav-ui="clean"][data-stage-ui-ready="1"] body #floatPanel[aria-label] :is(.slot-row,.viewer-part-row) .eye { flex-basis: 40px; width: 40px; height: 40px; }
+  .stage-popup .stage-background-options button { min-height: 42px; }
 }

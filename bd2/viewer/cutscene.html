@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=138348b63d05">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=138348b63d05">
-<link rel="stylesheet" href="../../common/library-ui.css?v=138348b63d05">
-<link rel="stylesheet" href="../../common/visual.css?v=138348b63d05">
+<link rel="stylesheet" href="../../common/kit.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/library-ui.css?v=ce68dfb5caba">
+<link rel="stylesheet" href="../../common/visual.css?v=ce68dfb5caba">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -276,8 +276,8 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=7ce039e204a3"></script>
-  <script src="../../arthub-cos.js?v=138348b63d05"></script>
+  <script src="../../arthub-cos-config.js?v=ade2e56ce253"></script>
+  <script src="../../arthub-cos.js?v=ce68dfb5caba"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -405,12 +405,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=138348b63d05"></script>
-<script src="../../common/kit.js?v=138348b63d05"></script>
-<script src="../../common/asset-loader.js?v=138348b63d05"></script>
-<script src="../../common/portrait-audio.js?v=138348b63d05"></script>
-<script src="../../common/stage-ui.js?v=138348b63d05"></script>
-<script src="../../common/library-ui.js?v=138348b63d05"></script>
+<script src="../../common/asset-display-overrides.js?v=ce68dfb5caba"></script>
+<script src="../../common/kit.js?v=ce68dfb5caba"></script>
+<script src="../../common/asset-loader.js?v=ce68dfb5caba"></script>
+<script src="../../common/portrait-audio.js?v=ce68dfb5caba"></script>
+<script src="../../common/stage-ui.js?v=ce68dfb5caba"></script>
+<script src="../../common/library-ui.js?v=ce68dfb5caba"></script>
 <script>
 
 (() => {
@@ -582,23 +582,9 @@
   K.bindThemePalette($('#btnTheme'), store);
 
   // ---------- 背景 ----------
-  const getBg = () => store.get('bg', '#000000');
-  const applyBgToUI = () => stage.classList.toggle('checker', getBg() === 'checker');
-  applyBgToUI();
-  makeStagePopup(btnBg, (pop) => {
-    const presets = [['\u7eaf\u9ed1', '#000000'], ['\u6df1\u7a7a', '#0f1218'], ['\u77f3\u58a8', '#1f242e'], ['\u6d45\u7070', '#b9bec7'], ['\u68cb\u76d8(\u900f\u660e)', 'checker']];
-    pop.innerHTML = '<div class="col"><div class="col-title">背景</div><div class="opt-row" id="bgSwatches"></div></div>';
-    const row = pop.querySelector('#bgSwatches');
-    for (const [label, val] of presets) {
-      const b = document.createElement('button');
-      b.textContent = label;
-      if (getBg() === val) b.style.color = 'var(--accent)';
-      b.onclick = () => { store.set('bg', val); applyBgToUI(); };
-      row.appendChild(b);
-    }
-  });
+  const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: value => store.set('bg', value) });
+  const getBg = stageBackground.get;
 
-  // ---------- 类型/排序/别名 ----------
   const aliasMap = store.get('aliasMap', {});
   const aliasOf = id => aliasMap[id] || '';
   const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
@@ -1093,7 +1079,7 @@
   }
   btnPartEdit.addEventListener('click', () => setPartEditMode(!partEditMode));
   $('#exitPartEdit')?.addEventListener('click', () => setPartEditMode(false));
-  $('#floatPanel [data-panel-close]').addEventListener('click', () => setPartEditMode(false));
+  $('#floatPanel [data-panel-close]').addEventListener('click', () => { setPartEditMode(false); if (boneEditMode) btnBoneEdit.click(); });
   $('#floatPanel [data-tab="pose"]').addEventListener('click', () => {
     if (partEditMode) { setPartEditMode(false); setFloatPanel('pose'); }
   });
@@ -1205,6 +1191,7 @@
     if (!boneEditMode && partEditMode) setPartEditMode(false);
     boneEditMode = !boneEditMode;
     btnBoneEdit.classList.toggle('on', boneEditMode);
+    btnBoneEdit.setAttribute('aria-pressed', String(boneEditMode));
     if (boneEditMode) {
       if (cut && !editBaseline) editBaseline = capturePose();
       if (!floatPanel.classList.contains('open') || floatPanel.dataset.tab !== 'pose') setFloatPanel('pose');
@@ -2436,18 +2423,7 @@
   }
 
   // ---------- 背景弹窗 / 调试 / PNG 弹窗 ----------
-  makeStagePopup(btnBg, (pop) => {
-    const presets = [['深空', '#0f1218'], ['纯黑', '#000000'], ['石墨', '#1f242e'], ['浅灰', '#b9bec7'], ['棋盘(透明)', 'checker']];
-    pop.innerHTML = '<div class="col"><div class="col-title">背景</div><div class="opt-row" id="bgSwatches"></div></div>';
-    const row = pop.querySelector('#bgSwatches');
-    for (const [label, val] of presets) {
-      const b = document.createElement('button');
-      b.textContent = label;
-      if (getBg() === val) b.style.color = 'var(--accent)';
-      b.onclick = () => { store.set('bg', val); applyBgToUI(); };
-      row.appendChild(b);
-    }
-  });
+  makeStagePopup(btnBg, pop => stageBackground.mount(pop));
   makeStagePopup(btnDebug, (pop) => {
     const flags = [
       ['bones', '骨骼线'], ['regions', '区域框'], ['bounds', '包围盒'],
