@@ -1,0 +1,17 @@
+/* Reuse the standard ArtHub resource library and player. */
+.riichi-subtitle{position:absolute;left:50%;bottom:calc(var(--stage-panel-bottom,100px) + 14px);transform:translateX(-50%);z-index:2;box-sizing:border-box;width:max-content;max-width:min(620px,80%);padding:14px 18px;border:1px solid var(--border2);border-radius:12px;background:var(--panel);color:var(--text);font-size:14px;line-height:1.8;white-space:pre-line;pointer-events:none}.riichi-subtitle[hidden]{display:none}
+.riichi-voice-panel{display:flex;flex-direction:column;gap:12px;font-size:12px;line-height:1.7}.riichi-voice-panel p{margin:0;color:var(--text-dim)}.riichi-voice-panel select,.riichi-voice-panel input[type=search]{width:100%;min-width:0;box-sizing:border-box;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--panel2);color:var(--text);font:inherit}.riichi-voice-panel .voice-actions{display:flex;gap:10px}.riichi-voice-panel .voice-actions button{flex:1}.riichi-voice-panel input[type=range]{width:100%;accent-color:var(--accent)}
+.riichicity-viewer #characterSelect{max-width:180px;min-width:120px}
+.riichi-voice-panel .voice-actions button{padding:8px 12px;min-height:36px;border:1px solid var(--border2);border-radius:8px;background:var(--panel2);color:var(--text);font:inherit;cursor:pointer}.riichi-voice-panel .voice-actions button:hover{border-color:var(--accent)}.riichi-voice-panel .voice-actions button:disabled{opacity:.45;cursor:default}
+.riichicity-viewer #gridView .thumb-card .ph{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.riichicity-viewer #gridView .thumb-card .ph img{position:absolute;inset:0;display:block;box-sizing:border-box;width:100%;height:100%;min-width:0;min-height:0;object-fit:contain}
+.riichicity-viewer .thumb-card .ph [hidden]{display:none}
+.riichicity-viewer .catalog-fallback{font-size:40px;color:var(--text-faint)}
+.riichicity-viewer .catalog-warning{color:#e6b97a!important}
+.riichicity-viewer .catalog-feedback{max-width:1680px;margin:0 auto;padding:0 22px;font-size:12px;color:var(--text-dim)}
+.riichicity-viewer #importStatus:not(.error){margin:0;max-height:0;overflow:hidden}
+.riichicity-viewer #importStatus.error{color:#f1a49e;line-height:1.7}
+.riichicity-viewer #issuesBox{color:#e6b97a}
+.riichicity-viewer .catalog-empty{padding:50px 20px;text-align:center;color:var(--text-dim)}
+.riichicity-viewer #gridView [hidden]{display:none!important}
+@media(max-width:720px){.riichicity-viewer #characterSelect{max-width:150px}.riichicity-viewer .catalog-feedback{padding-inline:12px}}

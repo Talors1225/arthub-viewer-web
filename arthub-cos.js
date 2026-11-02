@@ -5,9 +5,11 @@
   const root = String(cfg.root || '').replace(/\/+$/, '');
   const gameRoot = String(cfg.gameAssetsRoot || '').replace(/\/+$/, '');
   const crosscoreRoot = String(cfg.crosscoreAssetsRoot || '').replace(/\/+$/, '');
+  const riichicityRoot = String(cfg.riichicityAssetsRoot || cfg.crosscoreAssetsRoot || "").replace(/\/+$/, "");
   if (!root) return;
 
   const ASSET_MARKERS = [
+    '/riichicity/assets/', '/riichicity/thumbs/', '/riichicity/characters.json',
     '/bd2/spine/', '/nikki/spine/', '/nikki/spine_carved/', '/nikki/audio/',
     '/majsoul/assets_raw/', '/majsoul/web_illustrations/',
 
@@ -53,7 +55,8 @@
     if (!remotePath) return url.href;
     const gameAsset = GAME_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);
     const crosscoreAsset = CROSSCORE_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);
-    const targetRoot = crosscoreAsset && crosscoreRoot ? crosscoreRoot : gameAsset && gameRoot ? gameRoot : root;
+    const riichicityAsset = ['/riichicity/assets/', '/riichicity/thumbs/', '/riichicity/characters.json'].some(marker => url.pathname.indexOf(marker) >= 0);
+    const targetRoot = riichicityAsset && riichicityRoot ? riichicityRoot : crosscoreAsset && crosscoreRoot ? crosscoreRoot : gameAsset && gameRoot ? gameRoot : root;
     return targetRoot + remotePath + url.search + url.hash;
   }
 
