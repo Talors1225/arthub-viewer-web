@@ -314,45 +314,80 @@
   // the gesture without turning it into a part-selection click.
   K.bindPinch = (stage, options) => {
     const touches = new Map();
-    let previous = 0, pinching = false, lastTap = null;
+    let previous = 0, anchor = null, pinching = false, lastTap = null, suppressClick = false, notifying = false;
+    const consume = event => { event.preventDefault(); event.stopImmediatePropagation(); };
+    const inStage = target => target === stage || stage.contains(target);
+    const ready = () => options.ready?.() !== false && !stage.classList.contains('loading-preview-active');
     const distance = () => {
       const [a, b] = [...touches.values()];
       return Math.hypot(a.x - b.x, a.y - b.y);
     };
-    stage.addEventListener('pointerdown', event => {
-      if (event.pointerType !== 'touch' || options.isChrome(event.target)) return;
-      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (touches.size >= 2) {
-        pinching = true; previous = distance(); lastTap = null;
-        options.cancelDrag();
-        event.preventDefault(); event.stopImmediatePropagation();
-      }
-    }, true);
-    stage.addEventListener('pointermove', event => {
+    const midpoint = () => { const [a, b] = [...touches.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    const cancelOriginalPointers = points => {
+      if (!window.PointerEvent) return;
+      notifying = true;
+      try {
+        for (const [id, point] of points) point.target.dispatchEvent(new window.PointerEvent('pointercancel', {
+          bubbles: true, pointerId: id, pointerType: 'touch', clientX: point.x, clientY: point.y,
+        }));
+      } finally { notifying = false; }
+    };
+    const cancel = () => {
+      const points = [...touches];
+      touches.clear(); previous = 0; anchor = null; pinching = false; lastTap = null;
+      delete stage.dataset.pinching;
+      options.cancelDrag?.(); cancelOriginalPointers(points);
+    };
+    const down = event => {
+      if (event.pointerType !== 'touch') { if (!touches.size) suppressClick = false; return; }
+      if (!inStage(event.target) || options.isChrome(event.target) || !ready()) return;
+      if (!touches.size) suppressClick = false;
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY, target: event.target });
+      if (touches.size === 2 && !pinching) {
+        pinching = true; previous = distance(); anchor = midpoint(); lastTap = null; suppressClick = true;
+        stage.dataset.pinching = 'true';
+        options.cancelDrag?.(); cancelOriginalPointers([...touches]);
+      } else if (touches.size === 2) { previous = distance(); anchor = midpoint(); }
+      if (pinching) consume(event);
+    };
+    const move = event => {
       if (!touches.has(event.pointerId)) return;
-      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (!pinching || touches.size < 2) return;
-      const points = [...touches.values()], next = distance();
-      if (previous > 0 && next > 0) options.zoom(next / previous, (points[0].x + points[1].x) / 2, (points[0].y + points[1].y) / 2);
+      Object.assign(touches.get(event.pointerId), { x: event.clientX, y: event.clientY });
+      if (!pinching) return;
+      // Keep the remaining finger from becoming a drag or a model interaction.
+      consume(event);
+      if (!ready()) { cancel(); return; }
+      if (touches.size < 2) return;
+      const next = distance();
+      // A stable midpoint prevents alternating native pointermove events from
+      // drifting the artwork while the fingers open or close symmetrically.
+      if (previous > 0 && next > 0) options.zoom(next / previous, anchor.x, anchor.y);
       previous = next;
-      event.preventDefault(); event.stopImmediatePropagation();
-    }, true);
+    };
     const up = event => {
-      if (!touches.has(event.pointerId)) return;
+      if (notifying || !touches.has(event.pointerId)) return;
       touches.delete(event.pointerId);
       if (pinching) {
-        options.cancelDrag();
-        event.stopImmediatePropagation();
-        if (!touches.size) pinching = false;
+        options.cancelDrag?.(); consume(event);
+        if (touches.size >= 2) { previous = distance(); anchor = midpoint(); }
+        if (!touches.size) { pinching = false; delete stage.dataset.pinching; }
         return;
       }
-      if (event.type !== 'pointerup' || !options.isTap()) { lastTap = null; return; }
+      if (event.type !== 'pointerup' || !options.isTap?.() || !options.fit) { lastTap = null; return; }
       const now = Date.now();
       if (lastTap && now - lastTap.time < 320 && Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) < 24) {
-        lastTap = null; options.cancelDrag(); options.fit(); event.stopImmediatePropagation();
+        lastTap = null; options.cancelDrag?.(); options.fit(); consume(event);
       } else lastTap = { time: now, x: event.clientX, y: event.clientY };
     };
-    stage.addEventListener('pointerup', up, true);
-    stage.addEventListener('pointercancel', up, true);
+    const click = event => { if (suppressClick && inStage(event.target) && !options.isChrome(event.target)) consume(event); };
+    // Window capture runs before single-pointer panning and part/bone editors,
+    // including viewers whose stage handlers stop immediate propagation.
+    const handlers = { pointerdown: down, pointermove: move, pointerup: up, pointercancel: up, click };
+    for (const [name, handler] of Object.entries(handlers)) window.addEventListener(name, handler, { capture: true, passive: false });
+    window.addEventListener('blur', cancel); window.addEventListener('pagehide', cancel);
+    return { cancel, dispose() {
+      cancel(); for (const [name, handler] of Object.entries(handlers)) window.removeEventListener(name, handler, true);
+      window.removeEventListener('blur', cancel); window.removeEventListener('pagehide', cancel);
+    } };
   };
 })();

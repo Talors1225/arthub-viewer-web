@@ -161,9 +161,15 @@ function fit() {
  renderer.camera.position.set(bounds.x + bounds.width / 2 - offsetX * units, bounds.y + bounds.height / 2 - offsetY * units, 0);
  renderer.camera.update(); updateZoomControls();
 }
-function setZoom(value) {
+function setZoom(value, clientX, clientY) {
  if (!scene || !Number.isFinite(value)) return;
- viewZoom = Math.max(.1, Math.min(8, value)); pendingFit = null; fit();
+ const next = Math.max(.1, Math.min(8, value));
+ if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+  const area = K.stageViewArea(canvas), factor = next / viewZoom;
+  viewPan.x = factor * viewPan.x + (1 - factor) * (clientX - area.left - area.width / 2);
+  viewPan.y = factor * viewPan.y + (1 - factor) * (clientY - area.top - area.height / 2);
+ }
+ viewZoom = next; pendingFit = null; fit();
 }
 $('#zOut').addEventListener('click', () => setZoom(viewZoom / 1.25));
 $('#zIn').addEventListener('click', () => setZoom(viewZoom * 1.25));
@@ -502,6 +508,12 @@ function releasePointer(event, cancelled = false) {
   if (pointer.started) controller?.endDrag(); else if (!cancelled && (!pointer.action.gesture || controller?.restoreObjects.has(pointer.action.index))) controller?.trigger(pointer.action.index, now()); pointer = null;
 }
 stage.addEventListener('pointerup', event => releasePointer(event)); stage.addEventListener('pointercancel', event => releasePointer(event, true));
+K.bindPinch(stage, {
+  isChrome: target => target !== canvas && target !== overlay,
+  ready: () => !!scene && !!controller && !previewPending && !exporting,
+  cancelDrag: () => { stagePan.cancel(); if (pointer) releasePointer({ pointerId: pointer.id }, true); },
+  zoom: (factor, x, y) => setZoom(viewZoom * factor, x, y),
+});
 $('#gridSearch').addEventListener('input', () => {
   gridPage = 1; fillModels();
 });

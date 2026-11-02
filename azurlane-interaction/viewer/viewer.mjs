@@ -1,4 +1,4 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=138348b63d05';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=13c1a4323109';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
 let stageFrameCache=null;
@@ -142,6 +142,11 @@ function release(e,cancel=false){if(!pointer)return;const p=localPoint(e),down=p
  else if(!cancel&&!down.triggered){const click=Math.abs(p.x-down.startX)<30&&Math.abs(p.y-down.startY)<30&&portraitTime-down.down<.5;const hit=down.hits[0];if(hit){if((Math.abs(p.x-down.startX)<200||Math.abs(p.y-down.startY)<200)&&!controller.touch(hit,{drag:false})&&click)spineBasic(hit);}else if(click)spineBasic();}
 }
 stage.addEventListener('pointerup',e=>release(e));stage.addEventListener('pointercancel',e=>release(e,true));
+K.bindPinch(stage,{
+ isChrome:target=>target!==canvas,ready:()=>view.ready&&!exporting,
+ cancelDrag:()=>{stagePan.cancel();if(pointer){release({clientX:pointer.x+canvas.getBoundingClientRect().left,clientY:pointer.y+canvas.getBoundingClientRect().top},true);stopAudio();}},
+ zoom:(factor,x,y)=>zoomTo(view.zoom*factor,x,y),
+});
 window.addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){space=true;e.preventDefault();}if(e.key==='Escape'){fold(false);setPanelOpen('library',false);setPanelOpen('interaction',false);}});window.addEventListener('keyup',e=>{if(e.code==='Space')space=false;});window.addEventListener('blur',()=>{space=false;if(pointer&&controller instanceof Live2DController)controller.end(pointer.x,pointer.y,true);pointer=null;look.targetX=look.targetY=0;});
 function spineBasic(hit){if(controller.state.busy)return;let event=selected.interaction.hitAreas.find(h=>h.id===hit)?.event;if(selected.id.endsWith('_hx')&&event==='TouchSpecial')event='TouchBody';if(event){const action=basicActions[event];if(!controller.action(action,{interactive:true}))sound(selected.voiceBank,motionCue(action),{voice:true});return;}const candidates=selected.animations.filter(n=>/^main_\d+$/.test(n));if(candidates.length)controller.action(candidates[Math.floor(Math.random()*candidates.length)],{interactive:true});else{const clips=selected.voice.activeClips.filter(c=>/^main_\d+$/.test(c.cue));const c=clips[Math.floor(Math.random()*clips.length)];if(c)sound(selected.voiceBank,c.cue,{voice:true});}}
 const viewerUI=window.createInteractionViewerUI({
