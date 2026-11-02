@@ -1,4 +1,4 @@
-import {liveDefinition} from './bundle.mjs?v=20261102-riichi-r2-1';
+import {liveDefinition} from './bundle.mjs?v=20261102-riichi-ui-2';
 const K=window.SpineKit;
 let runtimeQueue=Promise.resolve();
 async function spineRuntime(version){

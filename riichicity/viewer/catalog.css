@@ -9,6 +9,10 @@
 .riichicity-viewer .catalog-fallback{font-size:40px;color:var(--text-faint)}
 .riichicity-viewer .catalog-warning{color:#e6b97a!important}
 .riichicity-viewer .catalog-feedback{max-width:1680px;margin:0 auto;padding:0 22px;font-size:12px;color:var(--text-dim)}
+.riichicity-viewer .catalog-feedback:has(#importBusy[hidden]):not(:has(#importStatus.error)):not(:has(#issuesBox:not([hidden]))){display:none}
+.riichicity-viewer .catalog-loading{display:flex;align-items:center;justify-content:center;gap:10px;min-height:120px;color:var(--text-dim)}
+.riichicity-viewer #catalogRetry{margin:8px 0 18px}
+.riichicity-viewer [hidden]{display:none!important}
 .riichicity-viewer #importStatus:not(.error){margin:0;max-height:0;overflow:hidden}
 .riichicity-viewer #importStatus.error{color:#f1a49e;line-height:1.7}
 .riichicity-viewer #issuesBox{color:#e6b97a}
