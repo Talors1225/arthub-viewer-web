@@ -1781,6 +1781,13 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
   .stage-popup .col-title { line-height: 1.5; }
 }
 
+.png-size-settings { padding: 8px 0; border-top: 1px solid var(--border2); }
+.png-size-settings summary { cursor: pointer; color: var(--text-dim); line-height: 1.6; }
+.png-size-settings label { display: grid; gap: 6px; margin-top: 10px; }
+.png-size-settings label[hidden] { display: none; }
+.png-size-settings select, .png-size-settings input { width: 100%; box-sizing: border-box; min-height: 40px; padding: 8px 10px; color: var(--text); background: var(--panel2); border: 1px solid var(--border2); border-radius: 8px; font: inherit; }
+.png-size-settings small { display: block; margin-top: 8px; line-height: 1.6; }
+.export-detail { overflow-wrap: anywhere; }
 /* Full-resolution transparent posters fit the same stage as the final model. */
 .stage-loading-preview {
   position: absolute; inset: 0; z-index: 2;

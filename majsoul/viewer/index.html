@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=13c1a4323109">
+<link rel="stylesheet" href="../../common/kit.css?v=20261103-png1">
 <link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
@@ -395,7 +395,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-<script src="../../common/kit.js?v=13c1a4323109"></script>
+<script src="../../common/kit.js?v=20261103-png1"></script>
 <script src="../../common/asset-loader.js?v=13c1a4323109"></script>
 <script src="../../common/stage-ui.js?v=13c1a4323109"></script>
 <script src="../../common/library-ui.js?v=13c1a4323109"></script>
@@ -775,7 +775,7 @@
   function frame(now) {
     requestAnimationFrame(frame);
     if (!gl || !renderer) return;
-    if (document.hidden || (!embedded && !stageMode)) { lastFrame = now; return; }
+    if (K.pngExporting || document.hidden || (!embedded && !stageMode)) { lastFrame = now; return; }
     const delta = Math.min((now - lastFrame) / 1000, 0.25);
     lastFrame = now;
     try {
@@ -1809,6 +1809,7 @@
     K.mountExportOptions(pop, {
       kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: getBg() === 'checker',
       onChange: quality => store.set('pngExportQuality', quality),
+      getSize: quality => poseFor(quality).size,
       getDetail: quality => { poseFor(quality); return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码'; },
       onExport: async (quality, transparent) => {
         closePopups();
@@ -1829,7 +1830,7 @@
             },
             restore() { pose.restore(); K.resizeCanvas(canvas, renderer); applyAllTransforms(); },
           });
-          K.toast('已导出 PNG: ' + r.w + '×' + r.h + 'px', 'ok');
+          K.toast('已导出 PNG: ' + r.w + '×' + r.h + 'px' + (r.adapted ? '（适配尺寸）' : ''), 'ok');
         } catch (e) { K.toast('导出失败: ' + e.message, 'err'); console.error(e); }
       },
     });

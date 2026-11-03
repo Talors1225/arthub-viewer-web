@@ -1256,12 +1256,29 @@
   ]);
   // Old saved PNG-sequence selections now export a playable high-quality animation.
   K.animationExportPreset = value => K.videoExportPresets.find(p => p.id === (value?.id || value)) || K.animationExportPresets[1];
+  K.pngRequest = (quality, mode = 'preset', edge = 4096) => {
+    const preset = K.exportPreset(quality);
+    if (!['preset', 'auto', 'custom'].includes(mode)) mode = 'preset';
+    if (mode === 'custom' && (!Number.isSafeInteger(Number(edge)) || Number(edge) < 1 || Number(edge) > 0x7fffffff)) throw new Error('请输入有效的长边像素数');
+    return { ...preset, pngMode: mode, pngEdge: mode === 'custom' ? Number(edge) : preset.pngEdge };
+  };
+  K.pngSizePlan = (size, request) => {
+    let factor = 1;
+    if (request?.pngMode === 'auto') {
+      const nav = typeof navigator === 'undefined' ? {} : navigator;
+      const small = /Android|iPhone|iPad|iPod/i.test(nav.userAgent || '') || (nav.deviceMemory > 0 && nav.deviceMemory <= 4);
+      factor = Math.min(1, (small ? 8192 : 16384) / Math.max(size.width, size.height), Math.sqrt((small ? 8 : 32) * 1024 * 1024 / (size.width * size.height)));
+    }
+    return { ...size, width: Math.max(1, Math.floor(size.width * factor)), height: Math.max(1, Math.floor(size.height * factor)),
+      scale: size.scale * factor, requestedWidth: size.width, requestedHeight: size.height, adapted: factor < 1 };
+  };
   K.exportDimensions = (bounds, quality, kind = 'png', padding = 16) => {
     const preset = kind === 'png' ? K.exportPreset(quality) : K.animationExportPreset(quality);
     const spanW = bounds.maxX - bounds.minX, spanH = bounds.maxY - bounds.minY;
     if (![spanW, spanH].every(v => Number.isFinite(v) && v > 0)) throw new Error('没有可导出的可见部件');
     const nativeW = spanW + padding * 2, nativeH = spanH + padding * 2;
-    const edge = kind === 'video' ? preset.videoEdge : kind === 'gif' ? preset.gifEdge : preset.pngEdge;
+    const edge = kind === 'video' ? preset.videoEdge : kind === 'gif' ? preset.gifEdge
+      : Number.isSafeInteger(quality?.pngEdge) && quality.pngEdge >= 0 ? quality.pngEdge : preset.pngEdge;
     const scale = edge ? edge / Math.max(nativeW, nativeH) : 1;
     let width = Math.max(1, Math.ceil(nativeW * scale - 1e-7));
     let height = Math.max(1, Math.ceil(nativeH * scale - 1e-7));
@@ -1406,6 +1423,8 @@
     const animation = options.kind === 'animation';
     const presets = animation ? K.videoExportPresets : K.exportPresets;
     let quality = (animation ? K.animationExportPreset(options.quality) : K.exportPreset(options.quality)).id;
+    const pngPrefs = animation ? null : K.Store?.('png-export');
+    let pngMode = pngPrefs?.get('sizeMode', 'preset') || 'preset', pngEdge = pngPrefs?.get('edge', 4096) || 4096;
     let format = options.format === 'video' ? 'video' : 'gif';
     pop.innerHTML = '<div class="col export-options"><div class="col-title">' + (animation ? '导出动画' : '导出 PNG') + '</div>'
       + (animation ? '<div class="export-formats" role="group" aria-label="动画文件格式"><button type="button" data-format="gif">GIF 动图</button><button type="button" data-format="video">视频</button></div>' : '')
@@ -1416,13 +1435,18 @@
         return '<button type="button" class="export-choice" role="radio" data-quality="' + p.id + '"><strong>'
           + p.label + '</strong><small>' + detail + '</small></button>';
       }).join('') + '</div><div class="export-detail" role="status"></div>'
-      + (animation ? '' : '<label><input type="checkbox" class="png-alpha"' + (options.transparent ? ' checked' : '') + '> 透明背景</label>')
+      + (animation ? '' : '<details class="png-size-settings"><summary>尺寸设置（保持比例）</summary><label>尺寸方式<select class="png-size-mode" aria-label="PNG 尺寸方式"><option value="preset">按所选质量</option><option value="auto">自动适配设备</option><option value="custom">自定义长边</option></select></label><label class="png-edge-row" hidden>长边像素<input class="png-edge" type="number" min="1" max="2147483647" step="1" inputmode="numeric" aria-label="PNG 长边像素"></label><small class="muted">自动适配允许缩小；原始尺寸保留像素，超大图分块编码。</small></details><label><input type="checkbox" class="png-alpha"' + (options.transparent ? ' checked' : '') + '> 透明背景</label>')
       + '<div class="export-actions"><button type="button" class="export-go"></button>'
       + (options.onCopy ? '<button type="button" class="export-copy">复制图片</button>' : '') + '</div></div>';
     const buttons = [...pop.querySelectorAll('.export-choice')], go = pop.querySelector('.export-go');
     const formats = [...pop.querySelectorAll('[data-format]')];
     const copy = pop.querySelector('.export-copy'), detail = pop.querySelector('.export-detail');
+    let preparingTimer;
+    const modeSelect = pop.querySelector('.png-size-mode'), edgeInput = pop.querySelector('.png-edge');
+    if (modeSelect) { modeSelect.value = ['preset', 'auto', 'custom'].includes(pngMode) ? pngMode : 'preset'; pngMode = modeSelect.value; edgeInput.value = pngEdge; }
+    const pngRequest = () => K.pngRequest(quality, pngMode, pngEdge);
     const update = () => {
+      clearTimeout(preparingTimer);
       if (animation && format !== 'video' && K.animationExportPreset(quality).videoOnly) { quality = 'high'; options.onChange?.(quality); }
       buttons.forEach(button => { const selected = button.dataset.quality === quality;
         button.hidden = !!(animation && format !== 'video' && K.animationExportPreset(button.dataset.quality).videoOnly);
@@ -1436,13 +1460,27 @@
       formats.forEach(button => { const selected = button.dataset.format === format;
         button.classList.toggle('on', selected); button.setAttribute('aria-pressed', String(selected)); });
       go.textContent = animation ? (format === 'video' ? '导出视频' : '导出 GIF') : '导出 PNG';
-      try { detail.textContent = options.getDetail(animation ? K.animationExportPreset(quality) : K.exportPreset(quality), format)
+      if (modeSelect) pop.querySelector('.png-edge-row').hidden = pngMode !== 'custom';
+      try { const request = animation ? K.animationExportPreset(quality) : pngRequest();
+        detail.textContent = options.getDetail(request, format)
         + (animation && format === 'video' ? ' · 自动选择 MP4 / WebM 编码，保留所选分辨率。' : '')
-        + (animation && quality === 'ultra' ? ' · 文件更大、导出更慢；清晰度受原贴图限制。' : ''); go.disabled = false; if (copy) copy.disabled = false; }
-      catch (error) { detail.textContent = error.message; go.disabled = true; if (copy) copy.disabled = true; }
+        + (animation && quality === 'ultra' ? ' · 文件更大、导出更慢；清晰度受原贴图限制。' : '');
+        if (!animation && options.getSize) {
+          const raw = options.getSize(request), size = K.pngSizePlan(raw, request);
+          detail.textContent = `预计 ${size.width}×${size.height} 像素${size.adapted ? ' · 自动适配，已降低尺寸' : pngMode === 'custom' ? ' · 自定义尺寸' : quality === 'lossless' ? ' · 原始尺寸' : ''} · 按立绘范围裁剪 · PNG 无损编码`;
+          if (copy && size.width * size.height > 64 * 1024 * 1024) { copy.disabled = true; detail.textContent += ' · 超大图片请下载文件'; } else if (copy) copy.disabled = false;
+        } else if (copy) copy.disabled = false;
+        if (!animation) {
+          const selected = buttons.find(button => button.dataset.quality === quality);
+          selected.querySelector('small').textContent = pngMode === 'custom' ? 'PNG · 自定义长边 ' + pngEdge + ' 像素' : pngMode === 'auto' ? 'PNG · 自动适配设备' : 'PNG · ' + (request.pngEdge ? '长边 ' + request.pngEdge + ' 像素' : '原始尺寸');
+        }
+        go.disabled = false; }
+      catch (error) { detail.textContent = error.message; go.disabled = true; if (copy) copy.disabled = true;
+        if (options.isPreparing?.()) preparingTimer = setTimeout(() => { if (pop.isConnected) update(); }, 150);
+      }
     };
     buttons.forEach((button, index) => {
-      button.onclick = () => { quality = button.dataset.quality; options.onChange?.(quality); update(); };
+      button.onclick = () => { quality = button.dataset.quality; if (modeSelect) { pngMode = modeSelect.value = 'preset'; pngPrefs?.set('sizeMode', pngMode); for (const item of buttons) { const p = K.exportPreset(item.dataset.quality); item.querySelector('small').textContent = 'PNG · ' + (p.pngEdge ? '长边 ' + p.pngEdge + ' 像素' : '原始尺寸'); } } options.onChange?.(quality); update(); };
       button.onkeydown = event => {
         if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();
@@ -1452,16 +1490,18 @@
       };
     });
     formats.forEach(button => { button.onclick = () => { format = button.dataset.format; options.onFormatChange?.(format); update(); }; });
+    if (modeSelect) { modeSelect.onchange = () => { pngMode = modeSelect.value; pngPrefs?.set('sizeMode', pngMode); update(); }; edgeInput.oninput = () => { pngEdge = edgeInput.value; if (Number(pngEdge) > 0) pngPrefs?.set('edge', pngEdge); update(); }; }
     const transparent = () => !!pop.querySelector('.png-alpha')?.checked;
-    go.onclick = () => options.onExport(quality, transparent(), format);
-    if (copy) copy.onclick = () => options.onCopy(quality, transparent());
+    go.onclick = () => options.onExport(animation ? quality : pngRequest(), transparent(), format);
+    if (copy) copy.onclick = () => options.onCopy(animation ? quality : pngRequest(), transparent());
     update();
   };
-  K.exportProgress = () => {
+  K.exportProgress = (kind = 'animation') => {
     const controller = new AbortController(), node = document.createElement('div');
     node.className = 'export-progress'; node.setAttribute('role', 'dialog'); node.setAttribute('aria-label', '动画导出进度'); node.setAttribute('aria-modal', 'true');
     node.innerHTML = '<div class="export-progress-card"><strong>正在导出动画</strong><div class="export-progress-text" role="status">准备资源…</div>'
       + '<progress max="1" value="0"></progress><button type="button">取消导出</button></div>';
+    if (kind === 'png') { node.setAttribute('aria-label', 'PNG 导出进度'); node.querySelector('strong').textContent = '正在导出 PNG'; }
     document.body.appendChild(node);
     const cancel = node.querySelector('button'), previousFocus = document.activeElement;
     cancel.onclick = () => controller.abort(); cancel.focus();
@@ -1671,16 +1711,75 @@
     }
     return output;
   };
+  K.loadPNGEncoder = () => import('./png-encoder.mjs?v=20261103-png1');
+  K.pngTileSize = (size, tile, yUp = true) => ({ ...size,
+    width: tile.width, height: tile.height, tile: true, tiled: false, fullFrame: true,
+    centerX: size.centerX + (tile.x + tile.width / 2 - size.width / 2) / size.scale,
+    centerY: size.centerY + (yUp ? -1 : 1) * (tile.y + tile.height / 2 - size.height / 2) / size.scale,
+  });
+  K.encodePNGFrame = async ({ size, request, drawTile, onSize, background, signal, onProgress, copy = false }) => {
+    const codec = await K.awaitExportTask(K.loadPNGEncoder(), signal);
+    const check = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
+    const scratch = document.createElement('canvas');
+    let current = K.pngSizePlan(size, request), shrink = 0, edgeIndex = 0;
+    if (copy && current.width * current.height > 64 * 1024 * 1024) throw new Error('超大 PNG 请下载保存，剪贴板可能无法承受此尺寸');
+    const edges = [2048, 1024, 512];
+    try {
+      while (true) {
+        check(); onSize?.(current);
+        try {
+          const result = await codec.encodePNG({ width: current.width, height: current.height, tileEdge: edges[edgeIndex], signal,
+            onProgress: onProgress ? value => onProgress(value, current) : undefined,
+            readTile: tile => {
+              check();
+              const source = drawTile(tile, current);
+              const gl = source.getContext('webgl2') || source.getContext('webgl');
+              if (source.width !== tile.width || source.height !== tile.height || gl && (gl.isContextLost() || gl.drawingBufferWidth !== tile.width || gl.drawingBufferHeight !== tile.height)) {
+                throw Object.assign(new Error('设备无法分配 PNG 绘图区域'), { code: 'PNG_ALLOCATION_FAILED' });
+              }
+              scratch.width = tile.width; scratch.height = tile.height;
+              const ctx = scratch.getContext('2d', { willReadFrequently: true });
+              if (!ctx || ctx.isContextLost?.()) throw Object.assign(new Error('PNG 像素缓存不可用'), { code: 'PNG_ALLOCATION_FAILED' });
+              ctx.save(); ctx.translate(-tile.x, -tile.y);
+              K.paintExportBackground(ctx, current.width, current.height, background); ctx.restore();
+              ctx.drawImage(source, 0, 0, tile.width, tile.height);
+              try { return ctx.getImageData(0, 0, tile.width, tile.height).data; }
+              catch (error) { if (error.name === 'SecurityError') throw new Error('资源的跨域设置不允许读取图片像素'); throw Object.assign(error, { code: 'PNG_ALLOCATION_FAILED' }); }
+            },
+          });
+          return { ...result, size: current };
+        } catch (error) {
+          check();
+          if (error.code !== 'PNG_ALLOCATION_FAILED' && error.name !== 'RangeError' && error.name !== 'QuotaExceededError') throw error;
+          if (edgeIndex < edges.length - 1) { edgeIndex++; continue; }
+          if (request?.pngMode !== 'auto' || shrink++ >= 3 || Math.max(current.width, current.height) <= 64) throw new Error('当前设备内存不足，请选择自动适配或减小自定义尺寸');
+          const factor = .75;
+          current = { ...current, width: Math.max(1, Math.floor(current.width * factor)), height: Math.max(1, Math.floor(current.height * factor)), scale: current.scale * factor, adapted: true };
+          edgeIndex = 0; await onProgress?.(0, current);
+        }
+      }
+    } finally { scratch.width = scratch.height = 1; }
+  };
+  K.copyPNGBlob = async (blob, size) => {
+    if (size.width * size.height > 64 * 1024 * 1024) throw new Error('超大 PNG 请下载保存，剪贴板可能无法承受此尺寸');
+    if (!navigator.clipboard?.write || !window.ClipboardItem) throw new Error('当前浏览器不支持复制图片，请下载保存');
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }
+    catch (error) { if (error.name !== 'NotAllowedError') throw error; throw new Error('浏览器未允许复制图片，请下载保存'); }
+  };
   // o: { canvas, scale=1, transparent=false, background, bg=[r,g,b],
   //      filename, resize(k), draw(transparent), restore() }
   // resize(k): 画布已变为 k 倍尺寸后,调整渲染器/变换;draw: 同步重绘一帧;restore(): 恢复
   K.exportPNG = async (o) => {
+    if (K.pngExporting) throw new Error('已有 PNG 正在导出，请稍候');
     const canvas = o.canvas;
     const k = Math.max(1, o.scale || 1);
     const w0 = canvas.width, h0 = canvas.height;
     const kk = k;
-    let blob, width, height;
+    let blob, width, height, finalSize;
+    const job = K.exportProgress('png');
+    K.pngExporting = true;
     try {
+      await job.update(0, '正在识别立绘范围…');
       if (o.pose) {
         const probe = o.pose.probeSize(); o.pose.useSize(probe);
         canvas.width = probe.width; canvas.height = probe.height;
@@ -1690,37 +1789,25 @@
       width = o.size ? o.size.width : Math.round(w0 * kk);
       height = o.size ? o.size.height : Math.round(h0 * kk);
       if (![width, height].every(v => Number.isSafeInteger(v) && v > 0)) throw new Error('无法计算有效的导出尺寸');
-      const draw = tile => { canvas.width = tile.width; canvas.height = tile.height; if (o.resize) o.resize(kk, tile); o.draw(o.tiled && o.background !== undefined ? true : !!o.transparent); return canvas; };
-      const output = o.tiled ? K.renderTiledPNG({ width, height }, draw, o.transparent ? null : o.background) : draw({ width, height });
-      // 同步捕获(WebGL 绘制缓冲在合成后可能被清空,toDataURL 立即抓取)
-      const url = output.toDataURL('image/png');
-      if (!url || url.length < 64) throw new Error('画布捕获失败');
-      const bin = atob(url.split(',')[1]);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      blob = new Blob([bytes], { type: 'image/png' });
+      const result = await K.encodePNGFrame({ size: { ...(o.size || {}), width, height, scale: o.size?.scale || 1 }, request: o.pose?.quality || o.quality,
+        background: o.transparent ? null : o.background, signal: job.signal, copy: !!o.copy,
+        onSize: size => { if (o.pose) o.pose.useSize(size); },
+        onProgress: (value, size) => job.update(value, `分块编码 PNG · ${size.width}×${size.height}${size.adapted ? ' · 适配尺寸' : ''} · ${Math.round(value * 100)}%`),
+        drawTile: tile => { canvas.width = tile.width; canvas.height = tile.height; o.resize?.(kk, tile); o.draw(true); return canvas; },
+      });
+      blob = result.blob; finalSize = result.size; width = finalSize.width; height = finalSize.height;
     } finally {
       canvas.width = w0;
       canvas.height = h0;
-      if (o.restore) o.restore();
+      try { if (o.restore) o.restore(); } finally { K.pngExporting = false; job.close(); }
     }
     // copy 模式: 写入剪贴板而非下载
     if (o.copy) {
-      if (!navigator.clipboard || !window.ClipboardItem) {
-        throw new Error('浏览器不支持剪贴板图片(需 https 或 localhost)');
-      }
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      } catch (e) {
-        // 后台标签页可能失焦导致失败,聚焦后重试一次
-        window.focus();
-        await new Promise(r => setTimeout(r, 120));
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      }
-      return { w: width, h: height, size: blob.size, copied: true };
+      await K.copyPNGBlob(blob, finalSize);
+      return { w: width, h: height, size: blob.size, copied: true, adapted: finalSize.adapted };
     }
     K.downloadBlob(blob, o.filename || ('spine-' + Date.now() + '.png'));
-    return { w: width, h: height, size: blob.size };
+    return { w: width, h: height, size: blob.size, adapted: finalSize.adapted };
   };
 
   // ---------- 杂项 ----------

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=13c1a4323109">
+<link rel="stylesheet" href="../../common/kit.css?v=20261103-png1">
 <link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
@@ -406,7 +406,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-<script src="../../common/kit.js?v=13c1a4323109"></script>
+<script src="../../common/kit.js?v=20261103-png1"></script>
 <script src="../../common/asset-loader.js?v=13c1a4323109"></script>
 <script src="../../common/portrait-audio.js?v=13c1a4323109"></script>
 <script src="../../common/stage-ui.js?v=13c1a4323109"></script>
@@ -1454,6 +1454,7 @@
     requestAnimationFrame(loop);
     let dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
     lastT = t;
+    if (K.pngExporting) return;
     if (document.hidden || (!embedded && !stageMode)) { portraitAudio?.syncPause(); return; }
     if (portraitAudio) dt = portraitAudio.animationDelta(dt);
     try {
@@ -2414,7 +2415,7 @@
       },
     }).then(r => {
       if (mode === 'copy') K.toast('已复制到剪贴板: ' + r.w + '×' + r.h + 'px', 'ok');
-      else K.toast('已导出 PNG: ' + r.w + '×' + r.h + 'px', 'ok');
+      else K.toast('已导出 PNG: ' + r.w + '×' + r.h + 'px' + (r.adapted ? '（适配尺寸）' : ''), 'ok');
       if (done) done();
     }).catch(e => {
       K.toast((mode === 'copy' ? '复制失败: ' : '导出失败: ') + e.message, 'err');
@@ -2445,6 +2446,7 @@
     K.mountExportOptions(pop, {
       kind: 'png', quality: exportQuality, transparent: getBg() === 'checker',
       onChange: quality => { exportQuality = quality; store.set('pngExportQuality', quality); },
+      getSize: quality => K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)).size,
       getDetail: quality => {
         if (!cut) throw new Error('请先加载一个资源');
         const pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion));

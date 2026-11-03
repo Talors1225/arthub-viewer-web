@@ -303,7 +303,7 @@
     const toast = (message, type = 'info') => K.toast(message, type);
     const report = error => { console.error(error); toast(error.message || String(error), 'err'); };
     const run = fn => { try { Promise.resolve(fn()).catch(report); } catch (error) { report(error); } };
-    const requireEditor = () => { if (!editor || !driver.playback().ready) throw new Error('请先加载一个资源'); return editor; };
+    const requireEditor = () => { sync(); if (!editor || !driver.playback().ready) throw new Error('请先加载一个资源'); return editor; };
     const currentKey = () => cfg.identity();
     const poseKey = () => storeKey + ':poses:' + identity;
     const storedPoses = () => { try { return JSON.parse(localStorage.getItem(poseKey()) || '{}'); } catch (_) { return {}; } };
@@ -393,16 +393,16 @@
       const key = currentKey(); if (identity === key && editor === cfg.editor()) return;
       setMode(''); if (poseTools) { poseLocked = false; $('poseLock').setAttribute('aria-pressed', 'false'); $('poseLock').classList.remove('on'); } identity = key; editor = cfg.editor(); selectedPart = null; refresh();
     }
-    function dimensions(quality) { return cfg.capture(driver.playback()).pngSize(quality); }
+    function dimensions(quality) { const session = cfg.capture(driver.playback()); try { return session.pngSize(quality); } finally { session.dispose(); } }
     async function exportFile(quality, transparent, format = 'png', copy = false) {
       requireEditor(); if (exporting) return; closePopup();
       const state = driver.playback(), name = (cfg.name() + (format === 'png' ? '' : '_' + state.name)).replace(/[\\/:*?"<>|]+/g, '_');
       const exportBackground = background;
-      const job = format === 'png' ? null : K.exportProgress(); let session;
+      const job = K.exportProgress(format === 'png' ? 'png' : 'animation'); let session;
       exporting = true; document.body.dataset.viewerExporting = 'true'; cfg.setExporting(true); cfg.stopAudio?.();
       try {
         session = await cfg.capture(state);
-        const size = format === 'png' ? K.illustrationExportSize(session, quality) : await K.animationExportSize({ session, duration: state.duration, quality, kind: format,
+        let size = format === 'png' ? K.illustrationExportSize(session, quality) : await K.animationExportSize({ session, duration: state.duration, quality, kind: format,
           signal: job.signal, onProgress: value => job.update(.2 * value, '正在识别立绘范围…') });
         const gl = driver.canvas().getContext('webgl2') || driver.canvas().getContext('webgl');
         const limit = gl ? Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_TEXTURE_SIZE)) : 8192;
@@ -412,10 +412,13 @@
         const draw = time => { const source = session.draw(time, size, null); K.paintExportBackground(ctx, size.width, size.height, exportBackground === 'checker' && format === 'gif' ? null : exportBackground); ctx.drawImage(source, 0, 0, size.width, size.height); };
         let blob, extension = format;
         if (format === 'png') {
-          const frame = session.draw(null, size, transparent ? null : exportBackground);
+          const result = await K.encodePNGFrame({ size, request: quality, background: transparent ? null : exportBackground, signal: job.signal, copy,
+            onProgress: (value, frame) => job.update(value, `分块编码 PNG · ${frame.width}×${frame.height}${frame.adapted ? ' · 适配尺寸' : ''} · ${Math.round(value * 100)}%`),
+            drawTile: (tile, frame) => session.draw(null, K.pngTileSize(frame, tile, session.pixelYUp !== false), null),
+          });
+          blob = result.blob; size = result.size;
           session.dispose(); session = null; cfg.setExporting(false);
-          blob = await new Promise((resolve, reject) => frame.toBlob(value => value ? resolve(value) : reject(new Error('浏览器无法编码此尺寸的 PNG，请尝试关闭其他页面后重试')), 'image/png'));
-          if (copy) { if (!navigator.clipboard?.write || !window.ClipboardItem) throw new Error('当前浏览器不支持复制图片'); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); }
+          if (copy) await K.copyPNGBlob(blob, size);
         } else if (format === 'video') {
           const result = await K.encodeCanvasVideo({ canvas: output, duration: state.duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(.2 + .8 * value, `导出视频 ${time.toFixed(1)} / ${state.duration.toFixed(1)} 秒 · ${size.width}×${size.height}`) }); ({ blob, extension } = result);
         } else {
@@ -435,7 +438,7 @@
           showPopup($(format === 'png' ? 'btnPng' : 'btnGif'), '导出完成', pop => {
             const col = document.createElement('div'); col.className = 'col';
             const title = document.createElement('strong'); title.textContent = '导出完成';
-            const detail = document.createElement('p'); detail.textContent = `${extension.toUpperCase()} · ${size.width}×${size.height} · ${(blob.size / 1024 / 1024).toFixed(2)} MB`;
+            const detail = document.createElement('p'); detail.textContent = `${extension.toUpperCase()} · ${size.width}×${size.height}${size.adapted ? ' · 适配尺寸' : ''} · ${(blob.size / 1024 / 1024).toFixed(2)} MB`;
             const showPreview = format !== 'png' || size.width * size.height <= 64 * 1024 * 1024;
             const preview = document.createElement(format === 'video' ? 'video' : 'img'); if (showPreview) preview.src = exportUrl; preview.style.cssText = 'display:block;max-width:260px;max-height:180px;object-fit:contain;background:repeating-conic-gradient(#272b33 0% 25%,#171b22 0% 50%) 0 0 / 16px 16px';
             if (format === 'video') preview.controls = true; else preview.alt = '导出预览';
@@ -445,7 +448,7 @@
             col.append(download, close); pop.append(col);
           });
         }
-        toast((copy ? '已复制图片' : '已导出 ' + extension.toUpperCase()) + `：${size.width}×${size.height}`, 'ok');
+        toast((copy ? '已复制图片' : '已导出 ' + extension.toUpperCase()) + `：${size.width}×${size.height}${size.adapted ? '（适配尺寸）' : ''}`, 'ok');
       } catch (error) {
         if (error.name === 'AbortError') toast('已取消导出');
         else { report(error); showPopup($(format === 'png' ? 'btnPng' : 'btnGif'), '导出失败', pop => { const text = document.createElement('p'); text.className = 'muted'; text.textContent = '导出失败：' + error.message; pop.append(text); }); }
@@ -453,13 +456,21 @@
       finally { try { session?.dispose(); } finally { exporting = false; delete document.body.dataset.viewerExporting; cfg.setExporting(false); job?.close(); ui.update(true); } }
     }
     function exportPopup(button, animation) {
+      let nativeSize;
+      const previewSize = quality => {
+        nativeSize ||= dimensions('lossless');
+        const edge = quality.pngEdge, factor = edge ? edge / Math.max(nativeSize.width, nativeSize.height) : 1;
+        return { ...nativeSize, width: Math.max(1, Math.ceil(nativeSize.width * factor)), height: Math.max(1, Math.ceil(nativeSize.height * factor)), scale: nativeSize.scale * factor };
+      };
       showPopup(button, animation ? '导出动画' : '导出 PNG', pop => K.mountExportOptions(pop, {
         kind: animation ? 'animation' : 'png', quality: 'high', transparent: background === 'checker',
+        ...(!animation ? { getSize: previewSize } : {}),
+        isPreparing: () => !!cfg.editor() && !driver.playback().ready,
         getDetail: (quality, format) => {
           requireEditor(); const state = driver.playback();
           if (animation && !state.duration) throw new Error('请先选择一个有时长的动画');
           if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · 长边 ${format === 'video' ? preset.videoEdge : preset.gifEdge} 像素 · ${state.duration.toFixed(2)} 秒 · 背景跟随舞台 · 无声`; }
-          dimensions(quality);
+          requireEditor();
           const preset = K.exportPreset(quality);
           return `按立绘范围裁剪 · ${preset.pngEdge ? '长边 ' + preset.pngEdge + ' 像素' : '原始像素比例'} · 背景跟随舞台 · PNG 无损编码`;
         },
