@@ -789,102 +789,200 @@
     for (const name of hiddenSet) K.hideSlot(skeleton, name);
   };
 
-  // ---------- 通用部件面板 ----------
-  // o: { listEl, filterEl, allEl, noneEl, invEl,
-  //      getTargets: () => [{data, skeleton, hiddenSlots:Set}] | null,
-  //      onHover: (slotName|null) => void,   可选,悬停高亮
-  //      onChange: () => void }              可选,状态变化后回调
-  // 返回 { refresh() };一次性绑定按钮,之后随时 refresh() 重建列表
-  K.buildPartsPanel = (o) => {
-    const refresh = () => {
-      const listEl = o.listEl;
-      listEl.innerHTML = '';
-      const targets = o.getTargets();
-      if (!targets || !targets.length) {
-        listEl.innerHTML = '<div class="empty-tip">未加载骨架</div>';
-        return;
-      }
-      const q = (o.filterEl ? o.filterEl.value : '').trim().toLowerCase();
-      const names = [];
-      for (const t of targets) {
-        for (const sd of t.data.slots) {
-          if (!names.includes(sd.name)) names.push(sd.name);
-        }
-      }
-      let shown = 0;
-      for (const name of names) {
-        if (q && !name.toLowerCase().includes(q)) continue;
-        const hiddenIn = targets.filter(t => t.hiddenSlots.has(name));
-        const row = document.createElement('div');
-        row.className = 'slot-row' + (hiddenIn.length ? ' off' : '');
-        const eye = document.createElement('button');
-        eye.type = 'button'; eye.className = 'eye';
-        eye.innerHTML = K.uiIcon(hiddenIn.length ? 'eyeOff' : 'eye');
-        eye.title = (hiddenIn.length ? '显示 ' : '隐藏 ') + name;
-        eye.setAttribute('aria-label', eye.title); eye.setAttribute('aria-pressed', String(!hiddenIn.length));
-        eye.onclick = () => {
-          for (const t of targets) {
-            if (!t.data.slots.some(sd => sd.name === name)) continue;
-            if (t.hiddenSlots.has(name)) {
-              t.hiddenSlots.delete(name);
-              K.showSlot(t.skeleton, name);
-            } else {
-              t.hiddenSlots.add(name);
-              K.hideSlot(t.skeleton, name);
-            }
-          }
-          if (o.onChange) o.onChange();
-          refresh();
-        };
-        const sn = document.createElement('span');
-        sn.className = 'sn';
-        sn.textContent = name + (targets.length > 1 && hiddenIn.length && hiddenIn.length < targets.length ? ` (${targets.length - hiddenIn.length}/${targets.length})` : '');
-        sn.title = name;
-        row.appendChild(eye);
-        row.appendChild(sn);
-        if (o.onHover) {
-          row.addEventListener('pointerenter', () => o.onHover(name));
-          row.addEventListener('pointerleave', () => o.onHover(null));
-        }
-        listEl.appendChild(row);
-        shown++;
-      }
-      if (!shown) listEl.innerHTML = '<div class="empty-tip">无匹配部件</div>';
+  // ---------- 部件显隐状态：只记录手动隐藏，独立于动画当前的透明度 ----------
+  K.createPartsState = (o) => {
+    let context = [], history = [], known = '';
+    const targets = () => (o.getTargets() || []).filter(t => t?.hidden && t.parts);
+    const snapshot = list => [...new Set(list.map(t => t.hidden))].map(set => ({ set, names: [...set] }));
+    const signature = value => JSON.stringify(value.map(item => item.names.slice().sort()));
+    const sync = () => {
+      const list = targets(), next = list.flatMap(t => [t.key || t.hidden, t.hidden]), current = signature(snapshot(list));
+      if (next.length !== context.length || next.some((key, i) => key !== context[i])) {
+        context = next; history = []; o.onContextChange?.();
+      } else if (known !== current) history = []; // External state changes invalidate older undo entries.
+      known = current;
+      return list;
     };
-    if (o.filterEl) o.filterEl.addEventListener('input', refresh);
-    if (o.allEl) o.allEl.addEventListener('click', () => {
-      const targets = o.getTargets();
-      if (!targets) return;
-      for (const t of targets) {
-        t.hiddenSlots.clear();
-        t.skeleton.setSlotsToSetupPose();
-      }
-      if (o.onChange) o.onChange();
-      refresh();
-    });
-    if (o.noneEl) o.noneEl.addEventListener('click', () => {
-      const targets = o.getTargets();
-      if (!targets) return;
-      for (const t of targets) for (const sd of t.data.slots) t.hiddenSlots.add(sd.name);
-      for (const t of targets) K.applyHiddenSlots(t.skeleton, t.hiddenSlots);
-      if (o.onChange) o.onChange();
-      refresh();
-    });
-    if (o.invEl) o.invEl.addEventListener('click', () => {
-      const targets = o.getTargets();
-      if (!targets) return;
-      for (const t of targets) {
-        for (const sd of t.data.slots) {
-          if (t.hiddenSlots.has(sd.name)) { t.hiddenSlots.delete(sd.name); K.showSlot(t.skeleton, sd.name); }
-          else { t.hiddenSlots.add(sd.name); K.hideSlot(t.skeleton, sd.name); }
+    const rowsFor = list => {
+      const rows = new Map();
+      for (const target of list) {
+        if (target.active === false) continue;
+        for (const part of target.parts) {
+          const id = String(part.id), row = rows.get(id) || { id, name: part.name || id, hidden: 0, total: 0 };
+          row.total++; if (target.hidden.has(id)) row.hidden++; rows.set(id, row);
         }
       }
-      if (o.onChange) o.onChange();
-      refresh();
-    });
-    refresh();
-    return { refresh };
+      return [...rows.values()];
+    };
+    const changed = (before, list) => {
+      const after = snapshot(list);
+      if (signature(before) === signature(after)) return false;
+      history.push(before); if (history.length > 20) history.shift();
+      known = signature(after); o.onChange?.(); return true;
+    };
+    const apply = (list, mutate) => {
+      const before = snapshot(list), previous = new Map(before.map(item => [item.set, new Set(item.names)]));
+      mutate(list);
+      for (const target of list) for (const part of target.parts) {
+        const id = String(part.id), hidden = target.hidden.has(id);
+        if (previous.get(target.hidden).has(id) !== hidden) target.setVisible?.(id, !hidden);
+      }
+      return changed(before, list);
+    };
+    return {
+      rows() { return rowsFor(sync()); },
+      canUndo() { sync(); return history.length > 0; },
+      hiddenCount() { return snapshot(sync()).reduce((n, item) => n + item.names.length, 0); },
+      setVisible(ids, visible) {
+        const list = sync(), wanted = new Set(ids);
+        return apply(list, () => { for (const target of list) if (target.active !== false) for (const part of target.parts) {
+          const id = String(part.id); if (wanted.has(id)) { if (visible) target.hidden.delete(id); else target.hidden.add(id); }
+        } });
+      },
+      invert(ids) {
+        const list = sync(), wanted = new Set(ids), changes = new Map();
+        // Composite layers can share a hidden Set: reverse each slot once.
+        for (const target of list) if (target.active !== false) for (const part of target.parts) if (wanted.has(String(part.id))) {
+          if (!changes.has(target.hidden)) changes.set(target.hidden, new Set());
+          changes.get(target.hidden).add(String(part.id));
+        }
+        return apply(list, () => { for (const [set, names] of changes) for (const id of names) {
+          if (set.has(id)) set.delete(id); else set.add(id);
+        } });
+      },
+      restoreAll() { const list = sync(); return apply(list, () => { for (const target of list) target.hidden.clear(); }); },
+      undo() {
+        const list = sync(), saved = history.pop(); if (!saved) return false;
+        const previous = new Map(snapshot(list).map(item => [item.set, new Set(item.names)]));
+        for (const item of saved) { item.set.clear(); for (const id of item.names) item.set.add(id); }
+        for (const target of list) for (const part of target.parts) {
+          const id = String(part.id), hidden = target.hidden.has(id);
+          if (previous.get(target.hidden).has(id) !== hidden) target.setVisible?.(id, !hidden);
+        }
+        known = signature(snapshot(list)); o.onChange?.(); return true;
+      },
+    };
   };
+
+  // One panel implementation for classic Spine, interactive Spine and Live2D.
+  K.mountPartsPanel = (o) => {
+    const list = o.listEl, page = list.closest('.rp-page'), controls = document.createElement('div');
+    controls.className = 'parts-controls'; page?.classList.add('parts-panel'); list.classList.add('parts-list');
+    const searchRow = o.filterEl.closest('.row'); searchRow.classList.add('parts-search-row');
+    o.filterEl.placeholder = '搜索部件名称'; o.filterEl.setAttribute('aria-label', '搜索部件名称');
+    const searchIcon = document.createElement('span'); searchIcon.className = 'parts-search-icon'; searchIcon.innerHTML = K.uiIcon('search', 15); searchIcon.setAttribute('aria-hidden', 'true'); searchRow.prepend(searchIcon);
+    const pickControl = page?.querySelector('#partEditControls') || page?.querySelector('#exitPartEdit');
+    if (pickControl) {
+      pickControl.classList.add('parts-pick-control'); searchRow.append(pickControl);
+      if (pickControl.id === 'partEditControls') {
+        const exit = pickControl.querySelector('#exitPartEdit');
+        if (exit) { exit.title = exit.textContent; exit.textContent = '结束点选'; }
+      }
+    }
+    const filters = document.createElement('div'); filters.className = 'parts-filters'; filters.setAttribute('role', 'group'); filters.setAttribute('aria-label', '部件显示筛选');
+    const makeButton = (text, title) => { const button = document.createElement('button'); button.type = 'button'; button.textContent = text; button.title = title || text; return button; };
+    const allFilter = makeButton('全部', '查看全部部件'), hiddenFilter = makeButton('已隐藏', '只查看手动隐藏的部件');
+    const undoButton = makeButton('撤销', '撤销上一次部件显隐操作'); undoButton.className = 'parts-undo'; undoButton.setAttribute('aria-label', '撤销部件操作');
+    filters.append(allFilter, hiddenFilter);
+    const moreButton = makeButton('更多', '部件批量操作'); moreButton.className = 'parts-more'; moreButton.setAttribute('aria-label', '更多部件操作'); moreButton.setAttribute('aria-haspopup', 'menu'); moreButton.setAttribute('aria-expanded', 'false'); moreButton.innerHTML = '<span>更多</span>' + K.uiIcon('chevronDown', 13);
+    const toolbar = document.createElement('div'); toolbar.className = 'parts-toolbar'; toolbar.append(filters, undoButton, moreButton);
+    const actions = o.allEl.parentNode; actions.classList.add('parts-actions');
+    const restoreButton = makeButton('恢复全部', '恢复当前资源的所有手动隐藏部件，不受搜索和筛选限制');
+    restoreButton.setAttribute('aria-label', '恢复所有部件'); actions.append(restoreButton);
+    page.insertBefore(controls, list); controls.append(searchRow, toolbar, actions);
+    let onlyHidden = false, focused = null, focusTimer;
+    const state = K.createPartsState({ getTargets: o.getTargets, onChange: o.onChange,
+      onContextChange() { onlyHidden = false; o.filterEl.value = ''; focused = null; clearTimeout(focusTimer); o.onHover?.(null); },
+    });
+    const matching = rows => {
+      const query = o.filterEl.value.trim().toLocaleLowerCase();
+      return rows.filter(row => (!onlyHidden || row.hidden) && (!query || row.name.toLocaleLowerCase().includes(query) || row.id.toLocaleLowerCase().includes(query)));
+    };
+    const revealRow = () => {
+      const row = [...list.children].find(el => el.dataset.partId === focused);
+      if (!row || !list.clientHeight) return;
+      const rect = row.getBoundingClientRect(), box = list.getBoundingClientRect();
+      if (rect.top < box.top) list.scrollTop -= box.top - rect.top;
+      else if (rect.bottom > box.bottom) list.scrollTop += rect.bottom - box.bottom;
+    };
+    function refresh() {
+      o.onHover?.(null);
+      const scroll = list.scrollTop, rows = state.rows(), shown = matching(rows), filtered = onlyHidden || !!o.filterEl.value.trim();
+      allFilter.textContent = '全部 ' + rows.length; hiddenFilter.textContent = '已隐藏 ' + rows.filter(row => row.hidden).length;
+      allFilter.setAttribute('aria-pressed', String(!onlyHidden)); hiddenFilter.setAttribute('aria-pressed', String(onlyHidden));
+      undoButton.disabled = !state.canUndo(); restoreButton.disabled = !state.hiddenCount();
+      const ids = shown.map(row => row.id);
+      for (const [button, label] of [[o.allEl, filtered ? '显示结果' : '全部显示'], [o.noneEl, filtered ? '隐藏结果' : '全部隐藏'], [o.invEl, filtered ? '反转结果' : '反转显示']]) {
+        button.type = 'button'; button.textContent = label; button.disabled = !ids.length;
+        button.title = (filtered ? '仅作用于当前筛选的 ' : '作用于列表中的全部 ') + ids.length + ' 个部件';
+      }
+      const fragment = document.createDocumentFragment();
+      for (const part of shown) {
+        const row = document.createElement('div'); row.className = (o.rowClass || 'slot-row') + (part.hidden ? ' off' : '') + (part.id === focused ? ' parts-focused' : ''); row.dataset.partId = part.id;
+        const eye = document.createElement('button'); eye.type = 'button'; eye.className = 'eye';
+        eye.innerHTML = K.uiIcon(part.hidden ? 'eyeOff' : 'eye'); eye.title = (part.hidden ? '显示 ' : '隐藏 ') + part.name;
+        eye.setAttribute('aria-label', eye.title); eye.setAttribute('aria-pressed', String(!part.hidden));
+        eye.onclick = () => { state.setVisible([part.id], !!part.hidden); refresh(); };
+        const name = document.createElement('span'); name.className = 'sn parts-part-name'; name.title = part.name;
+        name.textContent = part.name + (part.hidden && part.hidden < part.total ? '（部分隐藏）' : '');
+        row.append(eye, name);
+        row.addEventListener('pointerenter', () => o.onHover?.(part.id));
+        row.addEventListener('pointerleave', () => o.onHover?.(null));
+        fragment.append(row);
+      }
+      if (!shown.length) {
+        const empty = document.createElement('div'); empty.className = 'empty-tip';
+        empty.textContent = !rows.length ? '未加载部件' : onlyHidden && !rows.some(row => row.hidden) ? '没有手动隐藏的部件' : '无匹配部件';
+        fragment.append(empty);
+      }
+      list.replaceChildren(fragment); list.scrollTop = scroll; o.onRefresh?.();
+    }
+    const bulk = action => { const ids = matching(state.rows()).map(row => row.id); action(ids); refresh(); };
+    o.filterEl.addEventListener('input', () => { focused = null; list.scrollTop = 0; refresh(); });
+    allFilter.onclick = () => { onlyHidden = false; list.scrollTop = 0; refresh(); };
+    hiddenFilter.onclick = () => { onlyHidden = true; list.scrollTop = 0; refresh(); };
+    o.allEl.onclick = () => bulk(ids => state.setVisible(ids, true));
+    o.noneEl.onclick = () => bulk(ids => state.setVisible(ids, false));
+    o.invEl.onclick = () => bulk(ids => state.invert(ids));
+    const restoreAll = () => { state.restoreAll(); refresh(); };
+    restoreButton.onclick = restoreAll;
+    undoButton.onclick = () => { state.undo(); refresh(); };
+    moreButton.onclick = event => {
+      event.stopPropagation();
+      if (moreButton.getAttribute('aria-expanded') === 'true') { K.hideMenu(); return; }
+      const shown = matching(state.rows()), rect = moreButton.getBoundingClientRect();
+      K.showMenu([
+        { heading: '当前列表 · ' + shown.length + ' 个部件' },
+        ...[o.allEl, o.noneEl, o.invEl].map(button => ({ label: button.textContent, disabled: button.disabled, fn: () => button.click() })),
+        { sep: true },
+        { label: '恢复全部隐藏部件', disabled: restoreButton.disabled, fn: restoreAll },
+      ], rect.right - 220, rect.bottom + 6, { owner: moreButton, title: '部件操作' });
+    };
+    refresh();
+    return {
+      refresh, restoreAll,
+      hide(id) { state.setVisible([String(id)], false); refresh(); },
+      focus(id) {
+        id = String(id); const rows = state.rows();
+        if (!matching(rows).some(row => row.id === id)) { onlyHidden = false; o.filterEl.value = ''; }
+        focused = id; refresh(); requestAnimationFrame(revealRow);
+        clearTimeout(focusTimer); focusTimer = setTimeout(() => {
+          focused = null; for (const row of list.children) row.classList.remove('parts-focused');
+        }, 1800);
+      },
+    };
+  };
+
+  // Classic Spine adapters retain their existing layer and persistence rules.
+  K.buildPartsPanel = (o) => K.mountPartsPanel({ ...o,
+    getTargets: () => {
+      const active = o.getTargets() || [], all = o.getAllTargets?.() || active;
+      return all.map(target => ({ key: target.skeleton, hidden: target.hiddenSlots, active: active.includes(target),
+        parts: target.data.slots.map(slot => ({ id: String(slot.name), name: String(slot.name) })),
+        setVisible(id, visible) { if (visible) K.showSlot(target.skeleton, id); else K.hideSlot(target.skeleton, id); },
+      }));
+    },
+  });
 
   // ---------- 跨源收藏 / 最近浏览（同源 localStorage 共享, 首页聚合展示） ----------
   // entry: { k: 唯一键, src: 源 id, t: 标题, s: 副标题, u: 深链 URL, ts }

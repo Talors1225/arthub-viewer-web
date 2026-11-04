@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=20261103-png1">
+<link rel="stylesheet" href="../../common/kit.css?v=20261104-parts2">
 <link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
@@ -406,7 +406,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-<script src="../../common/kit.js?v=20261103-png1"></script>
+<script src="../../common/kit.js?v=20261104-parts2"></script>
 <script src="../../common/asset-loader.js?v=13c1a4323109"></script>
 <script src="../../common/portrait-audio.js?v=13c1a4323109"></script>
 <script src="../../common/stage-ui.js?v=13c1a4323109"></script>
@@ -470,7 +470,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const indexUrl = '../' + indexFile + '?v=b82d36dd4049';
+  const indexUrl = '../' + indexFile + '?v=883f797d8680';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
@@ -1124,6 +1124,7 @@
   // ---------- 点选隐藏部件 ----------
   function hidePartPopup() { partPopup.style.display = 'none'; popupSlot = null; }
   function showPartPopup(name, clientX, clientY) {
+    partsCtl?.focus(name);
     const rect = stage.getBoundingClientRect();
     popupSlot = name;
     popupSlotName.textContent = name;
@@ -1138,11 +1139,7 @@
   }
   function hidePartFromPopup() {
     if (!cut || !popupSlot) return;
-    cut.hiddenSlots.add(popupSlot);
-    applyCutHidden(cut);
-    persistHidden();
-    if (partsCtl) partsCtl.refresh();
-    updatePartsBadge();
+    partsCtl.hide(popupSlot);
     K.toast('已隐藏部件: ' + popupSlot, 'ok');
     hidePartPopup();
   }
@@ -2369,10 +2366,7 @@
   $('#btnGlobalSearch').onclick = () => K.openSearchPalette?.();
   $('#btnRestoreParts').onclick = () => {
     if (!cur || !cut) return;
-    const hidden = store.get('hiddenMap', {});
-    delete hidden[cur.id + '/' + cut.variant];
-    store.set('hiddenMap', hidden);
-    loadCutscene(Number(variantSel.value), animSel.value);
+    partsCtl.restoreAll();
   };
   K.observeCanvas(cv, () => {
     K.resizeCanvas(cv, renderer);

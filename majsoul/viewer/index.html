@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=20261103-png1">
+<link rel="stylesheet" href="../../common/kit.css?v=20261104-parts2">
 <link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
 <link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
@@ -395,7 +395,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-<script src="../../common/kit.js?v=20261103-png1"></script>
+<script src="../../common/kit.js?v=20261104-parts2"></script>
 <script src="../../common/asset-loader.js?v=13c1a4323109"></script>
 <script src="../../common/stage-ui.js?v=13c1a4323109"></script>
 <script src="../../common/library-ui.js?v=13c1a4323109"></script>
@@ -1265,6 +1265,7 @@
     allEl: $('#partAll'),
     noneEl: $('#partNone'),
     invEl: $('#partInv'),
+    getAllTargets: () => layers,
     getTargets: () => {
       if (!layers.length) return null;
       if (selIdx >= 0 && layers[selIdx]) return [layers[selIdx]];
@@ -1901,8 +1902,7 @@
   $('#btnGlobalSearch').onclick = () => K.openSearchPalette?.();
   $('#btnRestoreParts').onclick = () => {
     if (!curEntry) return;
-    const hidden = store.get('hiddenMap', {}); delete hidden[curEntry.id]; store.set('hiddenMap', hidden);
-    loadSelection(curEntry);
+    partsCtl.restoreAll();
   };
   // ---------- 自动待机 ----------
   setInterval(() => {

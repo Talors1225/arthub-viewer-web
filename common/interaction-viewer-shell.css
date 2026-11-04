@@ -289,6 +289,13 @@ body.game-interaction-viewer #floatPanel .rp-tabs {
 body.game-interaction-viewer #floatPanel .rp-panel-head .rp-tabs {
   padding: 0 !important;
 }
+body.game-interaction-viewer #floatPanel .rp-panel-head .viewer-editor-tabs {
+  display: flex !important; flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: none;
+}
+body.game-interaction-viewer #floatPanel .viewer-editor-tabs::-webkit-scrollbar { display: none; }
+html[data-gav-ui="clean"] body.game-interaction-viewer #floatPanel .viewer-editor-tabs button {
+  flex: 1 0 auto; min-width: 42px; min-height: 34px; padding: 5px 7px; white-space: nowrap; font-size: 12px;
+}
 
 body.game-interaction-viewer .rail-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
 body.game-interaction-viewer .viewer-legacy-controls[hidden] { display: none !important; }
@@ -656,8 +663,7 @@ body.game-interaction-viewer.fold :is(.rail, .status, .tool-strip, .playbar, .hi
   body.game-interaction-viewer .rp-extra-tabs:empty { display: none; }
   body.game-interaction-viewer #floatPanel .rp-page { padding: 8px; }
   body.game-interaction-viewer #floatPanel [data-panel-page="parts"].on {
-    display: grid !important; grid-template-columns: auto minmax(0,1fr);
-    grid-template-rows: 34px 34px minmax(0,1fr); gap: 6px; padding: 8px; overflow: hidden;
+    display: flex !important; flex-direction: column; gap: 0; padding: 8px; overflow: hidden;
   }
   body.game-interaction-viewer #partEditHint { display: none; }
   body.game-interaction-viewer #floatPanel #exitPartEdit { grid-row: 1; grid-column: 1; width: auto; margin: 0; padding: 5px 9px; font-size: 12px; }

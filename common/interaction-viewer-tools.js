@@ -263,15 +263,13 @@
     const button = document.createElement('button'); button.type = 'button'; button.id = id; button.title = title; button.setAttribute('aria-label', title); strip.append(button);
   }
   const tabs = document.querySelector('#floatPanel .rp-tabs');
-  const extras = document.createElement('div'); extras.className = 'rp-extra-tabs'; extras.setAttribute('role', 'tablist'); extras.setAttribute('aria-label', '立绘互动');
-  for (const tab of [...tabs.children]) if (tab.dataset.panelTab !== 'anim') extras.append(tab);
-  document.querySelector('#floatPanel .rp-panel-head').after(extras);
+  const extraTabs = [...tabs.children].filter(tab => tab.dataset.panelTab !== 'anim');
+  for (const tab of extraTabs) tab.remove();
   for (const [name, label] of [['parts', '部件'], ...(poseTools ? [['pose', '姿势']] : [])]) {
     const tab = document.createElement('button'); tab.type = 'button'; tab.dataset.panelTab = name; tab.textContent = label; tab.setAttribute('aria-selected', 'false'); tabs.append(tab);
   }
-  const extraTabs = [...extras.children], phonePanel = matchMedia('(max-width: 720px)');
-  const arrangeTabs = () => { const target = phonePanel.matches ? tabs : extras; for (const tab of extraTabs) target.append(tab); };
-  phonePanel.addEventListener('change', arrangeTabs); arrangeTabs();
+  tabs.classList.add('viewer-editor-tabs');
+  tabs.append(...extraTabs);
   $('floatPanel').insertAdjacentHTML('beforeend', `
     <div class="rp-page" data-panel-page="parts">
       <p id="partEditHint" class="muted">开启动画部件编辑后，点击画面可选择隐藏部件。</p>
@@ -332,7 +330,7 @@
       const modeButtons = [['btnPartEdit', 'parts']];
       if (poseTools) modeButtons.push(['btnBoneEdit', 'pose']);
       for (const [id, value] of modeButtons) { const button = $(id); if (!button) continue; button.classList.toggle('on', mode === value); button.setAttribute('aria-pressed', String(mode === value)); }
-      $('exitPartEdit').textContent = mode === 'parts' ? '结束点选' : '开启点选';
+      $('exitPartEdit').textContent = mode === 'parts' ? '结束点选' : '画面点选';
       $('exitPartEdit').title = mode === 'parts' ? '结束部件点选，恢复拖动画面和点击互动' : '在画面中点选需要隐藏的部件';
       $('exitPartEdit').setAttribute('aria-pressed', String(mode === 'parts'));
       $('partEditHint').textContent = mode === 'parts' ? '部件编辑已开启：点击画面选择部件，确认后隐藏。' : '部件列表可切换显示；开启编辑后可在画面点选。';
@@ -340,18 +338,13 @@
       if (next) { const tab = next === 'parts' ? 'parts' : 'pose'; if ($('floatPanel').dataset.tab === tab) cfg.openPanel(true); else openTab(tab); }
     }
     function renderParts() {
-      const list = $('slotList'), query = $('partFilter').value.toLocaleLowerCase(), fragment = document.createDocumentFragment();
-      for (const part of editor?.parts() || []) {
-        if (query && !part.name.toLocaleLowerCase().includes(query)) continue;
-        const row = document.createElement('div'); row.className = 'viewer-part-row';
-        const button = document.createElement('button'); button.type = 'button'; button.className = 'eye';
-        const visible = !editor.hidden.has(part.id); button.innerHTML = K.uiIcon(visible ? 'eye' : 'eyeOff'); button.setAttribute('aria-label', (visible ? '隐藏 ' : '显示 ') + part.name); button.setAttribute('aria-pressed', String(visible));
-        button.onclick = () => { if (editor.hidden.has(part.id)) editor.hidden.delete(part.id); else editor.hidden.add(part.id); renderParts(); };
-        const name = document.createElement('span'); name.textContent = part.name; name.title = part.id; row.append(button, name); fragment.append(row);
-        row.onpointerenter = () => { selectedPart = part; }; row.onpointerleave = () => { selectedPart = null; };
-      }
-      list.replaceChildren(fragment); $('btnRestoreParts').dataset.hiddenCount = String(editor?.hidden.size || 0);
+      partsCtl.refresh();
     }
+    const partsCtl = K.mountPartsPanel({ listEl: $('slotList'), filterEl: $('partFilter'), allEl: $('partAll'), noneEl: $('partNone'), invEl: $('partInv'), rowClass: 'viewer-part-row',
+      getTargets: () => editor ? [{ key: editor, hidden: editor.hidden, parts: editor.parts() }] : [],
+      onHover: id => { selectedPart = id == null ? null : editor?.parts().find(part => part.id === id) || null; },
+      onRefresh: () => { $('btnRestoreParts').dataset.hiddenCount = String(editor?.hidden.size || 0); },
+    });
     function renderBones() {
       const list = $('boneSelect'), query = $('boneFilter').value.toLocaleLowerCase(), old = list.value;
       const items = editor?.type === 'live2d' ? editor.parameters() : editor?.bones() || [];
@@ -480,7 +473,7 @@
     }
     const toolActions = [
       ['btnRetry', () => { setMode(''); return cfg.reload(); }],
-      ['btnRestoreParts', () => { requireEditor().hidden.clear(); renderParts(); toast('已恢复默认部件显示', 'ok'); }],
+      ['btnRestoreParts', () => { requireEditor(); partsCtl.restoreAll(); toast('已恢复默认部件显示', 'ok'); }],
       ['btnGlobalSearch', () => K.openSearchPalette?.()],
       ['btnPartEdit', () => setMode(mode === 'parts' ? '' : 'parts')],
       ['exitPartEdit', () => setMode(mode === 'parts' ? '' : 'parts')],
@@ -494,8 +487,6 @@
       ['poseSave', () => { requireEditor(); const poses = storedPoses(), name = '姿势 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }); poses[name] = editor.capturePose(); localStorage.setItem(poseKey(), JSON.stringify(poses)); renderPoses(); toast('姿势已保存到本机', 'ok'); }],
     );
     for (const [id, action] of toolActions) $(id)?.addEventListener('click', () => run(() => { closePopup(); return action(); }));
-    for (const [id, action] of [['partAll', () => editor.hidden.clear()], ['partNone', () => editor.parts().forEach(part => editor.hidden.add(part.id))], ['partInv', () => editor.parts().forEach(part => editor.hidden.has(part.id) ? editor.hidden.delete(part.id) : editor.hidden.add(part.id))]]) $(id).onclick = () => run(() => { requireEditor(); action(); renderParts(); });
-    $('partFilter').oninput = renderParts;
     if (poseTools) { $('boneFilter').oninput = renderBones; $('boneSelect').onchange = renderBoneFields; }
     document.querySelectorAll('[data-panel-tab]').forEach(button => button.addEventListener('click', () => { if (mode && button.dataset.panelTab !== (mode === 'parts' ? 'parts' : 'pose')) setMode(''); refresh(); }));
     $('panel-close').addEventListener('click', () => setMode(''));
@@ -556,7 +547,7 @@
       if (editor.type === 'live2d') candidates.sort((a, b) => cfg.drawableOrder(b) - cfg.drawableOrder(a));
       else if (editor.drawOrder) candidates.sort((a, b) => editor.drawOrder(b) - editor.drawOrder(a));
       const part = candidates.find(part => editor.pickable?.(part) !== false && partHit(x, y, editor.geometry(part)));
-      if (part) { selectedPart = part; K.showMenu([{ heading: part.name }, { label: '隐藏此部件', fn: () => { editor.hidden.add(part.id); selectedPart = null; renderParts(); } }, { label: '取消', fn: () => { selectedPart = null; } }], tap.x, tap.y); }
+      if (part) { partsCtl.focus(part.id); selectedPart = part; K.showMenu([{ heading: part.name }, { label: '隐藏此部件', fn: () => { partsCtl.hide(part.id); selectedPart = null; } }, { label: '取消', fn: () => { selectedPart = null; } }], tap.x, tap.y); }
     }, true);
     function drawOverlay() {
       const width = $('stage').clientWidth, height = $('stage').clientHeight, dpr = Math.min(devicePixelRatio || 1, 2);

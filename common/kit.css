@@ -1781,6 +1781,37 @@ html[data-gav-ui="clean"] body #gridView .grid-head > .kit-actions .kit-home-act
   .stage-popup .col-title { line-height: 1.5; }
 }
 
+/* Keep visibility controls in place while only the part rows scroll. */
+#floatPanel .rp-page.parts-panel.on { display: flex !important; flex-direction: column; min-height: 0; overflow: hidden; }
+#floatPanel .parts-controls { flex: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 7px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+#floatPanel .parts-controls .parts-search-row { position: relative; flex: none; display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; flex-wrap: nowrap; }
+#floatPanel .parts-controls .text-input { flex: 1 1 0; width: 0; min-width: 0; height: 34px; min-height: 34px; box-sizing: border-box; padding: 6px 9px 6px 30px; border: 1px solid var(--border2); border-radius: 8px; background: var(--panel2); color: var(--text); font: 12px/1.4 var(--font, sans-serif); }
+#floatPanel .parts-search-icon { position: absolute; left: 9px; top: 10px; display: flex; color: var(--text-faint); pointer-events: none; }
+#floatPanel .parts-toolbar, #floatPanel .parts-filters { display: flex; align-items: center; gap: 4px; min-width: 0; }
+#floatPanel .parts-toolbar { gap: 3px; }
+html[data-gav-ui="clean"] #floatPanel .parts-panel .parts-controls button { flex: none; min-width: 0; min-height: 32px; padding: 5px 8px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--text-dim); font: 12px/1.35 var(--font, sans-serif); white-space: nowrap; cursor: pointer; }
+html[data-gav-ui="clean"] #floatPanel .parts-panel .parts-controls button[aria-pressed="true"] { border-color: transparent; background: var(--accent-dim-bg); color: var(--accent-hi); }
+html[data-gav-ui="clean"] #floatPanel .parts-panel .parts-controls button:hover:not(:disabled) { background: var(--panel2); color: var(--text); }
+html[data-gav-ui="clean"] #floatPanel .parts-panel .parts-controls button:disabled { opacity: .35; cursor: default; }
+html[data-gav-ui="clean"] #floatPanel .parts-panel .parts-controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#floatPanel .parts-toolbar .parts-undo { margin-left: auto; }
+#floatPanel .parts-toolbar .parts-more { display: inline-flex; align-items: center; gap: 3px; }
+#floatPanel .parts-panel .parts-actions, #floatPanel .parts-panel > #partEditHint { display: none !important; }
+#floatPanel .parts-controls .parts-pick-control { flex: none; margin: 0; min-width: 0; flex-wrap: nowrap !important; }
+#floatPanel .parts-controls .parts-pick-control > :is(small, .vp-mode-state) { display: none; }
+#floatPanel .parts-panel .parts-controls #exitPartEdit { width: auto; min-height: 34px !important; height: 34px; margin: 0; padding: 5px 9px; border: 1px solid var(--border2); font-size: 12px; }
+#floatPanel .parts-panel .parts-controls #exitPartEdit[aria-pressed="true"] { border-color: var(--accent); }
+#floatPanel .parts-panel .parts-list { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+#floatPanel .parts-list > :is(.slot-row, .viewer-part-row) { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 2px 4px; border-radius: 8px; }
+html[data-gav-ui="clean"] #floatPanel .parts-panel .parts-list .eye { display: grid; place-items: center; flex: none; width: 32px; height: 32px; min-height: 32px; padding: 6px !important; border: 0; border-radius: 6px; background: transparent; color: var(--text-dim); }
+html[data-gav-ui="clean"] #floatPanel .parts-panel .parts-list .eye:hover { background: var(--panel2); color: var(--text); }
+#floatPanel .parts-list .parts-part-name { flex: 1; min-width: 0; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; line-height: 1.5; }
+#floatPanel .parts-list .off .parts-part-name { color: var(--text-faint); text-decoration: line-through; }
+#floatPanel .parts-list .parts-focused { background: var(--accent-dim-bg); box-shadow: inset 0 0 0 1px var(--accent); }
+@media (max-height: 560px) {
+  html[data-gav-ui="clean"] body #floatPanel[aria-label].open:has(> .parts-panel.on) { top: 8px !important; bottom: 8px !important; height: auto !important; max-height: calc(100dvh - 16px) !important; transform: none !important; }
+}
+
 .png-size-settings { padding: 8px 0; border-top: 1px solid var(--border2); }
 .png-size-settings summary { cursor: pointer; color: var(--text-dim); line-height: 1.6; }
 .png-size-settings label { display: grid; gap: 6px; margin-top: 10px; }
