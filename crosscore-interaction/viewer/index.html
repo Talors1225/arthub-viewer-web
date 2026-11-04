@@ -1,18 +1,19 @@
 <!doctype html>
-<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
+<html data-site-ui="1" lang="zh-CN" data-accent="gold" data-gav-ui="clean">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>交错战线 · 互动立绘 | ArtHub</title>
-<link rel="stylesheet" href="../../common/kit.css?v=20261104-parts2">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261104-parts2">
-<link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261017-sound1">
-  <script src="../../arthub-cos-config.js?v=907de18ef2f5"></script>
-  <script src="../../arthub-cos.js?v=13c1a4323109"></script>
+<link rel="stylesheet" href="../../common/kit.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261104-unified-final">
+<link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
 </head>
-<body class="game-interaction-viewer crosscore-interaction-viewer" data-pose-tools="disabled">
+<body class="game-interaction-viewer crosscore-interaction-viewer">
   <main id="stage" class="stage" aria-label="交错战线互动立绘舞台">
     <canvas id="scene"></canvas>
     <canvas id="overlay" aria-hidden="true"></canvas>
@@ -155,15 +156,15 @@
     window.addEventListener('unhandledrejection', event => window.__crosscoreBootError(event.reason));
   })();
   </script>
-  <script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-  <script src="../../common/kit.js?v=20261104-parts2"></script>
-  <script src="../../common/asset-loader.js?v=13c1a4323109"></script>
-  <script src="../../common/stage-ui.js?v=13c1a4323109"></script>
-  <script src="../../common/library-ui.js?v=13c1a4323109"></script>
-  <script src="../../common/interaction-viewer-tools.js?v=20261104-parts2"></script>
-  <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
-  <script src="../vendor/spine-webgl-4.2.js?v=20261015-2"></script>
-  <script>import('./app.mjs?v=20261018-png-fullframe1').catch(window.__crosscoreBootError);</script>
+  <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
+  <script src="../../common/kit.js?v=20261104-unified-final"></script>
+  <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+  <script src="../../common/stage-ui.js?v=20261104-unified-final"></script>
+  <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
+  <script src="../../common/interaction-viewer-tools.js?v=20261104-unified-final"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261104-unified-final"></script>
+  <script src="../vendor/spine-webgl-4.2.js?v=20261104-unified-final"></script>
+  <script>import('./app.mjs?v=20261104-unified-final').catch(window.__crosscoreBootError);</script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

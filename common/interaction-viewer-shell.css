@@ -646,6 +646,13 @@ body.game-interaction-viewer.fold :is(.rail, .status, .tool-strip, .playbar, .hi
   }
 }
 
+body.game-interaction-viewer #floatPanel .viewer-sound-volume {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin: 12px 0;
+}
+body.game-interaction-viewer #floatPanel .viewer-sound-volume input[type="range"] {
+  flex: 1; width: auto; min-width: 0;
+}
+
 /* Phone tools use one compact bottom drawer, leaving the portrait visible. */
 @media (max-width: 720px) {
   html[data-gav-ui="clean"] body.game-interaction-viewer #floatPanel {

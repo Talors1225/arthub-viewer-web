@@ -5,7 +5,7 @@
   if (!K) return;
   let ui = null;
   let stageReady = false;
-  const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'azurlane-interaction', 'crosscore-interaction', 'crosscore'].includes(part)) || 'viewer';
+  const route = location.pathname.split('/').find(part => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'azurlane-interaction', 'crosscore-interaction', 'crosscore', 'riichicity'].includes(part)) || 'viewer';
   const setText = (node, text) => { if (node && node.textContent !== text) node.textContent = text; };
   const setAttribute = (node, name, value) => { if (node && node.getAttribute(name) !== value) node.setAttribute(name, value); };
   const make = (tag, className) => {
@@ -46,6 +46,8 @@
       if (title) titleBlock.appendChild(title);
       titleBlock.appendChild(make('span', 'library-mobile-total'));
     }
+    const titles = {bd2:'棕色尘埃 2',bd2mod:'棕色尘埃 2',nikki:'NIKKE',nikke:'NIKKE',majsoul:'雀魂麻将','azurlane-interaction':'碧蓝航线','crosscore-interaction':'交错战线',crosscore:'交错战线',riichicity:'麻雀一番街'};
+    if (titles[route]) setText(title, titles[route] + ' · 资源库');
     const total = summary?.textContent.match(/[\d,]+/);
     setText(titleBlock.querySelector('.library-mobile-total'), total ? total[0] + ' 项' : '');
     const search = head.querySelector('.kit-grid-search') || head.querySelector('#gridSearch');
@@ -99,10 +101,20 @@
     if (!filters) return;
     let tabs = filters.querySelector('.library-category-tabs');
     let tools = filters.querySelector('.library-sort-tools');
-    const chips = [...filters.querySelectorAll('.filter-chip')];
+    const modes = [...filters.querySelectorAll('[data-crosscore-mode]')];
+    if (modes.length) {
+      let switcher = filters.querySelector('.library-mode-switch');
+      if (!switcher) {
+        switcher = make('nav','library-mode-switch');
+        switcher.setAttribute('aria-label','资源类型');
+        filters.prepend(switcher);
+      }
+      for (const mode of modes) if (mode.parentElement !== switcher) switcher.append(mode);
+    }
+    const chips = [...filters.querySelectorAll('.filter-chip:not([data-crosscore-mode])')];
     if (chips.length && !tabs) {
       tabs = make('div', 'library-category-tabs');
-      filters.insertBefore(tabs, filters.firstChild);
+      filters.insertBefore(tabs, filters.querySelector('.library-mode-switch')?.nextSibling || filters.firstChild);
     }
     if (!tools) {
       tools = make('div', 'library-sort-tools');
@@ -140,6 +152,16 @@
         }
       }
       setAttribute(chip, 'aria-pressed', String(chip.classList.contains('on')));
+    }
+    if (tabs) {
+      const favorite = tabs.querySelector('.library-favorites');
+      if (favorite) {
+        if (!favorite.querySelector('.library-favorite-label')) {
+          const text = make('span','library-favorite-label'); text.textContent = '收藏';
+          favorite.querySelector('svg')?.after(text);
+        }
+        if (favorite !== tabs.lastElementChild) tabs.appendChild(favorite);
+      }
     }
     for (const node of [...filters.querySelectorAll('.sort-sel, .sort-dir-toggle')]) {
       if (node.parentElement !== tools) tools.appendChild(node);
@@ -202,8 +224,23 @@
     setAttribute(name, 'title', fullName);
     const variant = card.querySelector('.tv')?.textContent.trim();
     setAttribute(card, 'aria-label', fullName + (variant ? ' · ' + variant : ''));
+    if (card.tagName !== 'BUTTON' && card.tagName !== 'A') {
+      setAttribute(card, 'role', 'button');
+      setAttribute(card, 'tabindex', '0');
+      if (!card.dataset.libraryKeys) {
+        card.dataset.libraryKeys = '1';
+        card.addEventListener('keydown', event => {
+          if (event.defaultPrevented || event.target !== card || !['Enter', ' '].includes(event.key)) return;
+          event.preventDefault(); event.stopPropagation(); card.click();
+        });
+      }
+    }
     const star = card.querySelector('.tstar');
     if (star && !star.querySelector('svg.arthub-icon')) star.innerHTML = K.uiIcon('star', 18, star.classList.contains('on'));
+    if (star) {
+      setAttribute(star, 'aria-pressed', String(star.classList.contains('on')));
+      setAttribute(star, 'aria-label', star.classList.contains('on') ? '取消收藏' : '收藏');
+    }
   }
 
   function patchPageNames() {

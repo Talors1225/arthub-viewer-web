@@ -280,7 +280,7 @@
     </div>
     <div class="rp-page" data-panel-page="pose">
       <p id="poseHint" class="muted"></p><button id="poseEditToggle" class="edit-btn" type="button">开启姿势编辑</button>
-      <div class="opt-row"><button id="poseSave" type="button">保存姿势</button><button id="poseReset" type="button">恢复姿势</button><button id="poseLock" type="button" aria-pressed="false">锁定姿势</button></div>
+      <div class="opt-row"><input id="poseName" type="text" placeholder="姿势名称（可选）" aria-label="姿势名称"><button id="poseSave" type="button">保存姿势</button><button id="poseReset" type="button">恢复姿势</button><button id="poseLock" type="button" aria-pressed="false">锁定姿势</button></div>
       <input id="boneFilter" class="text-input" type="search" placeholder="过滤骨骼名 / 参数名" aria-label="过滤骨骼名或参数名">
       <select id="boneSelect" class="text-input" aria-label="选择骨骼或参数"></select>
       <div id="boneFields"></div><div id="poseList" class="anim-list"></div>
@@ -334,7 +334,7 @@
       $('exitPartEdit').title = mode === 'parts' ? '结束部件点选，恢复拖动画面和点击互动' : '在画面中点选需要隐藏的部件';
       $('exitPartEdit').setAttribute('aria-pressed', String(mode === 'parts'));
       $('partEditHint').textContent = mode === 'parts' ? '部件编辑已开启：点击画面选择部件，确认后隐藏。' : '部件列表可切换显示；开启编辑后可在画面点选。';
-      if (poseTools) $('poseEditToggle').textContent = mode === 'pose' ? '结束编辑，恢复点击互动' : '开启姿势编辑';
+      if (poseTools) $('poseEditToggle').textContent = mode === 'pose' ? '结束姿势编辑' : '开启姿势编辑';
       if (next) { const tab = next === 'parts' ? 'parts' : 'pose'; if ($('floatPanel').dataset.tab === tab) cfg.openPanel(true); else openTab(tab); }
     }
     function renderParts() {
@@ -484,10 +484,10 @@
       ['poseEditToggle', () => setMode(mode === 'pose' ? '' : 'pose')],
       ['poseReset', () => { requireEditor().resetPose(); poseLocked = false; $('poseLock').setAttribute('aria-pressed', 'false'); $('poseLock').classList.remove('on'); renderBoneFields(); toast('已恢复姿势', 'ok'); }],
       ['poseLock', () => { requireEditor(); poseLocked = !poseLocked; $('poseLock').setAttribute('aria-pressed', String(poseLocked)); $('poseLock').classList.toggle('on', poseLocked); toast(poseLocked ? '姿势已锁定' : '已取消姿势锁定'); }],
-      ['poseSave', () => { requireEditor(); const poses = storedPoses(), name = '姿势 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }); poses[name] = editor.capturePose(); localStorage.setItem(poseKey(), JSON.stringify(poses)); renderPoses(); toast('姿势已保存到本机', 'ok'); }],
+      ['poseSave', () => { requireEditor(); const poses = storedPoses(), name = $('poseName').value.trim() || '姿势 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }); Object.defineProperty(poses, name, { value: editor.capturePose(), enumerable: true, configurable: true, writable: true }); localStorage.setItem(poseKey(), JSON.stringify(poses)); $('poseName').value = ''; renderPoses(); toast('姿势已保存到本机', 'ok'); }],
     );
     for (const [id, action] of toolActions) $(id)?.addEventListener('click', () => run(() => { closePopup(); return action(); }));
-    if (poseTools) { $('boneFilter').oninput = renderBones; $('boneSelect').onchange = renderBoneFields; }
+    if (poseTools) { $('poseName').addEventListener('keydown', event => { event.stopPropagation(); if (event.key === 'Enter') { event.preventDefault(); $('poseSave').click(); } }); $('boneFilter').oninput = renderBones; $('boneSelect').onchange = renderBoneFields; }
     document.querySelectorAll('[data-panel-tab]').forEach(button => button.addEventListener('click', () => { if (mode && button.dataset.panelTab !== (mode === 'parts' ? 'parts' : 'pose')) setMode(''); refresh(); }));
     $('panel-close').addEventListener('click', () => setMode(''));
     $('btnAnimTab').addEventListener('click', () => { closePopup(); if (mode) setMode(''); });
@@ -499,7 +499,15 @@
       }
       if (editor?.type === 'live2d') { const hint = document.createElement('p'); hint.className = 'muted'; hint.textContent = 'Live2D 没有 Spine 骨骼，使用网格与参数查看变形。'; pop.firstChild.append(hint); }
     });
-    $('btnVoiceSettings').onclick = () => showPopup($('btnVoiceSettings'), '角色声音设置', pop => {
+    const voicePage = document.querySelector('[data-panel-page="voice"]');
+    if (voicePage && $('sound')) {
+      const label = document.createElement('label'); label.className = 'viewer-sound-volume'; label.textContent = '音量 ';
+      const volume = document.createElement('input'); volume.type = 'range'; volume.min = '0'; volume.max = '1'; volume.step = '.05'; volume.value = cfg.volume(); volume.setAttribute('aria-label','角色声音音量');
+      volume.addEventListener('input',() => cfg.setVolume(Number(volume.value)));
+      label.append(volume); $('sound').after(label);
+      document.querySelector('[data-panel-tab="voice"]')?.addEventListener('click',() => { volume.value = cfg.volume(); });
+      $('btnVoiceSettings').onclick = () => openTab('voice');
+    } else $('btnVoiceSettings').onclick = () => showPopup($('btnVoiceSettings'), '角色声音设置', pop => {
       pop.innerHTML = '<div class="col"><div class="col-title">角色声音设置</div><label><input type="checkbox" id="viewerSoundEnabled"> 启用角色声音</label><label>音量 <input type="range" min="0" max="1" step=".05" id="viewerSoundVolume" aria-label="角色声音音量"></label><button type="button">打开声音与互动</button></div>';
       const enabled = pop.querySelector('input[type=checkbox]'), volume = pop.querySelector('input[type=range]'); enabled.checked = cfg.soundEnabled(); volume.value = cfg.volume();
       enabled.onchange = () => cfg.setSoundEnabled(enabled.checked); volume.oninput = () => cfg.setVolume(Number(volume.value));

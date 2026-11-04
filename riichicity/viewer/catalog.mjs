@@ -1,5 +1,5 @@
-import {LocalBundle} from './bundle.mjs?v=20261102-riichi-ui-2';
-import {createVoicePanel} from './voices.mjs?v=20261102-riichi-ui-2';
+import {LocalBundle} from './bundle.mjs?v=20261104-unified-final';
+import {createVoicePanel} from './voices.mjs?v=20261104-unified-final';
 
 export async function fetchModelBundle(model,signal,assetBase='/riichicity/assets/'){
  const paths=[...new Set([model.path,model.atlas,...model.pages])];
@@ -34,6 +34,10 @@ export async function createCatalog({selectModel,status}){
  const choose=model=>{entryRequested=true;navigationModel=model;selectModel(model);};
  const query=new URL(location.href).searchParams;
  let role=characters.some(c=>c.id===query.get('character'))?query.get('character'):'',mode='skins',selected=null,page=1,descending=false;
+ const railStar=document.createElement('button');railStar.id='railStar';railStar.type='button';railStar.disabled=true;
+ $('rail').insertBefore(railStar,$('homeAction'));
+ function syncStar(){const on=!!selected&&K.favs.has(favorite(selected).k);railStar.disabled=!selected;railStar.classList.toggle('on',on);railStar.setAttribute('aria-pressed',String(on));railStar.title=on?'取消收藏 (S)':'收藏 (S)';railStar.setAttribute('aria-label',railStar.title);railStar.dataset.actionLabel=on?'已收藏':'收藏';railStar.innerHTML=K.uiIcon('star',18,on);}
+ railStar.onclick=()=>{if(selected){K.favs.toggle(favorite(selected));render();}};
  const select=$('characterSelect'),search=$('gridSearch'),list=$('thumbGrid');
  select.replaceChildren(new Option('全部角色',''),...characters.map(c=>new Option(c.name,c.id)));
  $('modelSection').hidden=false;
@@ -61,6 +65,7 @@ export async function createCatalog({selectModel,status}){
  }
  function render(current=selected){
   selected=current;select.value=role;
+  syncStar();
   const q=search.value.trim().toLocaleLowerCase(),fragment=document.createDocumentFragment();
   const isRole=false;
   const rows=matchingRows();

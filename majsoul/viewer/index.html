@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-accent="blue" data-gav-ui="clean">
+<html data-site-ui="1" lang="zh-CN" data-accent="blue" data-gav-ui="clean">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🀄</text></svg>">
 <title>雀魂 Spine 角色查看器</title>
-<link rel="stylesheet" href="../../common/kit.css?v=20261104-parts2">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
+<link rel="stylesheet" href="../../common/kit.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -269,8 +269,9 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-  <script src="../../arthub-cos-config.js?v=907de18ef2f5"></script>
-  <script src="../../arthub-cos.js?v=13c1a4323109"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -334,13 +335,13 @@
       <a class="grid-sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer" title="爱发电 · 支持 ArtHub">♥ 爱发电</a>
       <span class="grid-title" id="brandTitle">雀魂资源库</span>
       <span class="grid-sub" id="gridSub"></span>
-      <input id="gridSearch" class="text-input" placeholder="搜索名称 / 编号 / 分组...">
+      <input id="gridSearch" class="text-input" placeholder="搜索名称 / 编号...">
       <div id="filterChips" class="kit-majsoul-filters">
-        <select id="majsoulGroupFilter" class="kit-facet-select" aria-label="按分组筛选"><option value="">全部分组</option></select>
+        <button type="button" id="majsoulAll" class="filter-chip on">全部 <span class="n">0</span></button>
+        <button type="button" id="majsoulFavorites" class="filter-chip">☆ <span class="n">0</span></button>
         <select id="majsoulSort" class="sort-sel" aria-label="排序方式">
           <option value="default">默认顺序</option>
           <option value="name">名称</option>
-          <option value="group">分组</option>
         </select>
         <button id="majsoulSortDir" type="button" class="sort-dir-toggle" aria-label="切换排序方向" title="当前正序，点击切换为倒序">↑</button>
       </div>
@@ -394,11 +395,11 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-<script src="../../common/kit.js?v=20261104-parts2"></script>
-<script src="../../common/asset-loader.js?v=13c1a4323109"></script>
-<script src="../../common/stage-ui.js?v=13c1a4323109"></script>
-<script src="../../common/library-ui.js?v=13c1a4323109"></script>
+<script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
+<script src="../../common/kit.js?v=20261104-unified-final"></script>
+<script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+<script src="../../common/stage-ui.js?v=20261104-unified-final"></script>
+<script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -564,7 +565,7 @@
 
   // ---------- 网格视图 ----------
   let gridQuery = '';
-  let gridGroup = '';
+  let gridFavorites = false;
   let sortMode = store.get('sortMode', 'default');
   let sortDirection = store.get('sortDirection', 'asc');
   let gridPage = 1;
@@ -632,7 +633,12 @@
     (window.__obsFlow = window.__obsFlow || []).push('renderGrid:' + characters.length);
     const grid = $('#thumbGrid');
     const q = gridQuery.trim().toLowerCase();
-    let arr = characters.filter(c => !gridGroup || String(c.group || '') === gridGroup);
+    const favoriteIds = new Set(store.get('stars', []));
+    $('#majsoulAll .n').textContent = String(characters.length);
+    $('#majsoulFavorites .n').textContent = String(characters.filter(c => favoriteIds.has(c.id)).length);
+    $('#majsoulAll').classList.toggle('on', !gridFavorites);
+    $('#majsoulFavorites').classList.toggle('on', gridFavorites);
+    let arr = characters.filter(c => (!gridFavorites || favoriteIds.has(c.id)));
     if (q) arr = arr.filter(c => {
       const label = String(c.label || c.id).replace(/\s*\[[^\]]*\]\s*$/, '');
       return label.toLowerCase().includes(q) || String(c.group || '').toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
@@ -738,9 +744,11 @@
   function toggleGrid() { stageMode ? openGrid() : closeGrid(); }
   $('#railGrid').addEventListener('click', toggleGrid);
   $('#gridSearch').addEventListener('input', (e) => { gridQuery = e.target.value; gridPage = 1; renderGrid(); });
-  const groupFilter = $('#majsoulGroupFilter');
+  $('#majsoulAll').addEventListener('click', () => { gridFavorites = false; gridPage = 1; renderGrid(); });
+  $('#majsoulFavorites').addEventListener('click', () => { gridFavorites = true; gridPage = 1; renderGrid(); });
   const sortSelect = $('#majsoulSort');
   const sortDirButton = $('#majsoulSortDir');
+  if (sortMode === 'group') { sortMode = 'name'; store.set('sortMode',sortMode); }
   sortSelect.value = sortMode;
   const syncSortDirection = () => {
     sortDirButton.textContent = sortDirection === 'desc' ? '\u2193' : '\u2191';
@@ -748,7 +756,6 @@
     sortDirButton.setAttribute('aria-label', sortDirButton.title);
   };
   syncSortDirection();
-  groupFilter.addEventListener('change', () => { gridGroup = groupFilter.value; store.set('groupFilter', gridGroup); gridPage = 1; renderGrid(); });
   sortSelect.addEventListener('change', () => { sortMode = sortSelect.value; store.set('sortMode', sortMode); gridPage = 1; renderGrid(); });
   sortDirButton.addEventListener('click', () => { sortDirection = sortDirection === 'desc' ? 'asc' : 'desc'; store.set('sortDirection', sortDirection); gridPage = 1; syncSortDirection(); renderGrid(); });
 
@@ -1042,7 +1049,11 @@
       buildSkinChips();
       status('就绪: ' + entry.label + ' · ' + layers.length + ' 层');
       lastManual = Date.now();
-      $('#railStar').innerHTML = K.uiIcon('star', 18, store.get('stars', []).includes(entry.id));
+      const starredNow = store.get('stars', []).includes(entry.id);
+      $('#railStar').innerHTML = K.uiIcon('star', 18, starredNow);
+      $('#railStar').classList.toggle('on', starredNow);
+      $('#railStar').setAttribute('aria-pressed', String(starredNow));
+      $('#railStar').title = starredNow ? '取消收藏 (S)' : '收藏 (S)';
       // 在下一帧渲染循环里截取缩略图 (WebGL 需同步截取)
       capturePending = entry.id;
       playerReady(seq);
@@ -1194,10 +1205,12 @@
       const row = document.createElement('div');
       row.className = 'layer-row' + (i === selIdx ? ' sel' : '');
       const eye = document.createElement('button');
-      eye.textContent = L.visible ? '👁' : '🚫';
-      eye.title = '显示/隐藏整层';
+      eye.innerHTML = K.uiIcon(L.visible ? 'eye' : 'eyeOff');
+      eye.title = L.visible ? '隐藏图层' : '显示图层';
+      eye.setAttribute('aria-label',eye.title); eye.setAttribute('aria-pressed',String(L.visible));
       eye.onclick = () => { L.visible = !L.visible; buildLayerPanel(); };
-      const nm = document.createElement('span');
+      const nm = document.createElement('button');
+      nm.type = 'button';
       nm.className = 'nm';
       nm.textContent = L.entry.label;
       nm.title = '点击选中(画布拖拽移动此层)';
@@ -1205,12 +1218,13 @@
       const op = document.createElement('input');
       op.type = 'range'; op.min = '0'; op.max = '100'; op.value = String(Math.round(L.opacity * 100));
       op.title = '不透明度';
+      op.setAttribute('aria-label','图层不透明度');
       op.oninput = () => {
         L.opacity = Number(op.value) / 100;
         L.skeleton.color.a = L.opacity;
       };
       const up = document.createElement('button');
-      up.textContent = '↑'; up.title = '上移一层';
+      up.innerHTML = K.uiIcon('up'); up.title = '上移一层'; up.setAttribute('aria-label',up.title); up.disabled = i === 0;
       up.onclick = () => {
         if (i > 0) {
           const t = layers[i]; layers[i] = layers[i - 1]; layers[i - 1] = t;
@@ -1219,16 +1233,16 @@
         }
       };
       const dn = document.createElement('button');
-      dn.textContent = '↓'; dn.title = '下移一层';
+      dn.innerHTML = K.uiIcon('down'); dn.title = '下移一层'; dn.setAttribute('aria-label',dn.title); dn.disabled = i === layers.length - 1;
       dn.onclick = () => {
         if (i < layers.length - 1) {
           const t = layers[i]; layers[i] = layers[i + 1]; layers[i + 1] = t;
-          if (selIdx === i) selIdx = i + 1; else if (selIdx === i - 1) selIdx = i;
+          if (selIdx === i) selIdx = i + 1; else if (selIdx === i + 1) selIdx = i;
           buildLayerPanel();
         }
       };
       const rm = document.createElement('button');
-      rm.textContent = '✕'; rm.title = '移除图层';
+      rm.innerHTML = K.uiIcon('close'); rm.title = '移除图层'; rm.setAttribute('aria-label',rm.title);
       rm.onclick = () => {
         disposeLayer(layers[i]);
         layers.splice(i, 1);
@@ -1355,7 +1369,11 @@
     });
     renderGrid();
     const entry2 = characters.find(x => x.id === id);
-    if (curEntry?.id === id) $('#railStar').innerHTML = K.uiIcon('star', 18, starred.includes(id));
+    if (curEntry?.id === id) {
+      const star = $('#railStar'), on = starred.includes(id);
+      star.innerHTML = K.uiIcon('star', 18, on); star.classList.toggle('on', on);
+      star.setAttribute('aria-pressed', String(on)); star.title = on ? '取消收藏 (S)' : '收藏 (S)';
+    }
     K.toast(starred.includes(id) ? '已收藏: ' + (entry2 ? entry2.label : id) : '已取消收藏', 'ok');
   }
   function nav(delta) {
@@ -1871,16 +1889,7 @@
       all.filter(c => c.composite).flatMap(c => c.layers.map(l => l.id))
     );
     characters = all.filter(c => c.composite || !compositeLayerIds.has(c.id));
-    const groups = [...new Set(characters.map(c => String(c.group || '').trim()).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    for (const group of groups) {
-      const option = document.createElement('option');
-      option.value = group;
-      option.textContent = group;
-      groupFilter.appendChild(option);
-    }
-    gridGroup = store.get('groupFilter', '');
-    if (gridGroup && groups.includes(gridGroup)) groupFilter.value = gridGroup;
+    store.del('groupFilter'); // Retired numeric grouping must not hide resources.
     const hashId = new URLSearchParams(location.hash.replace(/^#/, '')).get('sel');
     const lastId = store.get('lastChar', null);
     const first = (hashId && characters.find(x => x.id === hashId))

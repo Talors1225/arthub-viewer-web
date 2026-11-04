@@ -1,18 +1,19 @@
 <!doctype html>
-<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
+<html data-site-ui="1" lang="zh-CN" data-accent="gold" data-gav-ui="clean">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>碧蓝航线 · ArtHub 互动立绘</title>
-<link rel="stylesheet" href="../../common/kit.css?v=20261104-parts2">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261104-parts2">
+<link rel="stylesheet" href="../../common/kit.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261104-unified-final">
 <link rel="stylesheet" href="azurlane.css">
-  <script src="../../arthub-cos-config.js?v=907de18ef2f5"></script>
-  <script src="../../arthub-cos.js?v=13c1a4323109"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
 </head>
-<body class="game-interaction-viewer azurlane-viewer" data-pose-tools="disabled">
+<body class="game-interaction-viewer azurlane-viewer">
   <main class="stage" id="stage" aria-label="碧蓝航线动态立绘舞台">
     <canvas id="canvas"></canvas>
     <svg id="hit-overlay" aria-hidden="true"></svg>
@@ -131,18 +132,18 @@
     </div>
   </aside>
 
-  <script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-  <script src="../../common/kit.js?v=20261104-parts2"></script>
-  <script src="../../common/asset-loader.js?v=13c1a4323109"></script>
-  <script src="../../common/stage-ui.js?v=13c1a4323109"></script>
-  <script src="../../common/library-ui.js?v=13c1a4323109"></script>
-  <script src="../../common/interaction-viewer-tools.js?v=20261104-parts2"></script>
-  <script src="../../common/interaction-viewer-ui.js?v=20261017-sound1"></script>
+  <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
+  <script src="../../common/kit.js?v=20261104-unified-final"></script>
+  <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+  <script src="../../common/stage-ui.js?v=20261104-unified-final"></script>
+  <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
+  <script src="../../common/interaction-viewer-tools.js?v=20261104-unified-final"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261104-unified-final"></script>
   <script src="vendor/spine-player.js"></script>
   <script src="vendor/live2d/live2dcubismcore.min.js"></script>
   <script src="vendor/live2d/pixi-6.5.10.min.js"></script>
   <script src="vendor/live2d/cubism4-0.4.0.min.js"></script>
-  <script type="module" src="viewer.mjs?v=20261031-ui-consistency1"></script>
+  <script type="module" src="viewer.mjs?v=20261104-unified-final"></script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

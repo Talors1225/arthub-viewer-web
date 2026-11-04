@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-accent="gold" data-gav-ui="clean">
+<html data-site-ui="1" lang="zh-CN" data-accent="gold" data-gav-ui="clean">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="../../common/kit.css?v=20261104-parts2">
-<link rel="stylesheet" href="../../common/stage-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/library-ui.css?v=13c1a4323109">
-<link rel="stylesheet" href="../../common/visual.css?v=13c1a4323109">
+<link rel="stylesheet" href="../../common/kit.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/stage-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
+<link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
 <style>
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
@@ -276,8 +276,9 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-  <script src="../../arthub-cos-config.js?v=907de18ef2f5"></script>
-  <script src="../../arthub-cos.js?v=13c1a4323109"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
 </head>
 <body class="crosscore-viewer">
   <div class="stage" id="stage">
@@ -392,8 +393,12 @@
       <div id="slotList" class="slot-list"></div>
     </div>
     <div class="rp-page" data-page="pose">
+      <button id="poseEditToggle" type="button" aria-pressed="false">开启姿势编辑</button>
+      <button id="poseReset" type="button">恢复姿势</button>
       <div class="lbl">骨骼编辑: 点击骨骼选中 · 拖拽本体平移 · 拖拽末端旋转</div>
       <div class="row"><input id="poseName" type="text" class="text-input" placeholder="快照名称"><button id="poseSave" class="ctl">保存</button></div>
+      <input id="boneFilter" type="search" placeholder="搜索骨骼名称" aria-label="搜索骨骼名称">
+      <select id="boneSelect" aria-label="选择骨骼"></select><div id="boneFields"></div>
       <div id="poseList" class="anim-list"></div>
       <div class="parts-tools" style="margin-top:8px">
         <button id="poseExport" title="导出全部快照为 JSON">导出</button>
@@ -405,12 +410,12 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=13c1a4323109"></script>
-<script src="../../common/kit.js?v=20261104-parts2"></script>
-<script src="../../common/asset-loader.js?v=13c1a4323109"></script>
-<script src="../../common/portrait-audio.js?v=13c1a4323109"></script>
-<script src="../../common/stage-ui.js?v=13c1a4323109"></script>
-<script src="../../common/library-ui.js?v=13c1a4323109"></script>
+<script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
+<script src="../../common/kit.js?v=20261104-unified-final"></script>
+<script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+<script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
+<script src="../../common/stage-ui.js?v=20261104-unified-final"></script>
+<script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script>
 
 (() => {
@@ -470,7 +475,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const indexUrl = '../' + indexFile + '?v=883f797d8680';
+  const indexUrl = '../' + indexFile + '?v=96baf99a9d3b';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
@@ -520,7 +525,7 @@
   let editWasPlaying = false;
   let hoverBoneName = null;
   const editOrig = {};   // 编辑过的骨骼在动画暂停帧的原始姿态, 右键恢复用
-  let filterType = store.get('filterType', 'lobby');
+  let filterType = store.get('filterType', 'all');
   let sortMode = store.get('sortMode', 'default');
   let sortDirection = store.get('sortDirection', 'asc');
   let gridQuery = '';
@@ -602,9 +607,10 @@
     for (const c of chars) { const t = displayType(c); counts[t] = (counts[t] || 0) + 1; }
     const types = Object.keys(counts).sort((a, b) => (TYPE_ORDER[a] ?? 8) - (TYPE_ORDER[b] ?? 8));
     const starred = new Set(store.get('stars', []));
-    const chips = [['star', '★', starred.size],
-      ...types.map(t => [t, TYPE_LABEL[t] || t, counts[t]])];
-    if (!chips.some(c => c[0] === filterType)) filterType = counts.lobby ? 'lobby' : types[0] || 'other';
+    const chips = [['all', '全部', chars.length],
+      ...types.filter(t => !['other','unknown'].includes(t)).map(t => [t, TYPE_LABEL[t] || t, counts[t]]),
+      ['star', '★', starred.size]];
+    if (!chips.some(c => c[0] === filterType)) filterType = 'all';
     row.innerHTML = '';
     if (routeSource === 'crosscore') {
       for (const [mode, label] of [['interaction', '互动立绘'], ['spine', 'Spine']]) {
@@ -905,7 +911,7 @@
     card.innerHTML = '<div class="ph">预览暂缺</div>'
       + '<div class="tm"><div class="tn">' + K.esc(alias || c.displayName || c.name || c.id) + '</div>'
       + '<div class="ts">' + K.esc(routeSource === 'crosscore' ? '' : (alias ? c.name || '' : (c.source || ''))) + '</div></div>'
-      + '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '其它') + '</span>'
+      + (['other','unknown'].includes(displayType(c)) ? '' : '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '') + '</span>')
       + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + K.uiIcon('star', 18, starred.has(c.id)) + '</button>';
     card.onclick = () => { selectChar(c); closeGrid(); };
     card.querySelector('.tstar').onclick = (e) => {
@@ -976,8 +982,8 @@
     let arr = getFilteredChars();
     if (q) arr = arr.filter(c => {
       const alias = aliasOf(c.id);
-      return [alias, c.displayName, c.name, c.originalName, c.sourceBundle, c.source, c.id]
-        .filter(Boolean).join(' ').toLowerCase().includes(q);
+      return (alias || c.name || '').toLowerCase().includes(q)
+        || (c.source || '').toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
     });
     grid.innerHTML = '';
     const starred = new Set(store.get('stars', []));
@@ -1185,9 +1191,20 @@
   // ---------- 骨骼编辑模式 ----------
   const btnBoneEdit = $('#btnBoneEdit');
   let editWasPlaying2 = false;
+  $('#poseEditToggle').addEventListener('click', () => { if (cut) btnBoneEdit.click(); });
+  $('#poseReset').addEventListener('click', () => {
+    if (!cut || !editBaseline) return;
+    applyPoseToSkeleton(cut.skeleton, editBaseline);
+    K.updateWorldTransform(cut.skeleton);
+    poseLocked = null; for (const key of Object.keys(editOrig)) delete editOrig[key]; $('#poseLock').classList.remove('on');
+    $('#poseLock').setAttribute('aria-pressed', 'false');
+    refreshBoneEditor(); K.toast('已恢复编辑前的姿势', 'ok');
+  });
   btnBoneEdit.addEventListener('click', () => {
     if (!boneEditMode && partEditMode) setPartEditMode(false);
     boneEditMode = !boneEditMode;
+    $('#poseEditToggle').textContent = boneEditMode ? '结束姿势编辑' : '开启姿势编辑';
+    $('#poseEditToggle').setAttribute('aria-pressed', String(boneEditMode));
     btnBoneEdit.classList.toggle('on', boneEditMode);
     btnBoneEdit.setAttribute('aria-pressed', String(boneEditMode));
     if (boneEditMode) {
@@ -1207,6 +1224,7 @@
     }
     btnBoneEdit.setAttribute('aria-pressed', String(boneEditMode));
     stage.dataset.clickMode = boneEditMode ? 'pose' : partEditMode ? 'part-editing' : 'audio';
+    $('#poseReset').disabled = !cut || !editBaseline;
     panelUI?.refresh(); K.refreshStageUI?.();
   });
 
@@ -1296,7 +1314,41 @@
       if (p) { b.rotation = p.rotation; b.x = p.x; b.y = p.y; b.scaleX = p.scaleX; b.scaleY = p.scaleY; }
     }
   }
+  // Pose fields use the same skeleton and edit lifecycle as canvas dragging.
+  function refreshBoneFields() {
+    const box = $('#boneFields'); box.replaceChildren();
+    const bone = cut?.skeleton.findBone($('#boneSelect').value);
+    if (!bone) return;
+    for (const [key,label] of [['x','X'],['y','Y'],['rotation','旋转'],['scaleX','缩放 X'],['scaleY','缩放 Y']]) {
+      const row = document.createElement('label'); row.className = 'viewer-bone-field'; row.textContent = label;
+      const input = document.createElement('input'); input.type = 'number'; input.step = key.startsWith('scale') ? '.01' : '.1';
+      input.value = Number(bone[key].toFixed(3)); input.setAttribute('aria-label',label);
+      input.addEventListener('input', () => {
+        const value = input.valueAsNumber; if (!Number.isFinite(value) || !cut) return;
+        if (!boneEditMode) btnBoneEdit.click();
+        bone[key] = value; if (poseLocked) poseLocked = capturePose();
+        K.updateWorldTransform(cut.skeleton);
+      });
+      row.append(input); box.append(row);
+    }
+  }
+  function refreshBoneEditor() {
+    const select = $('#boneSelect'), previous = editBoneName || select.value;
+    const query = $('#boneFilter').value.trim().toLowerCase();
+    select.replaceChildren();
+    for (const bone of cut?.skeleton.bones || []) {
+      if (query && !bone.data.name.toLowerCase().includes(query)) continue;
+      select.append(new Option(bone.data.name,bone.data.name));
+    }
+    if ([...select.options].some(option => option.value === previous)) select.value = previous;
+    refreshBoneFields();
+  }
+  $('#boneFilter').addEventListener('input',refreshBoneEditor);
+  $('#boneSelect').addEventListener('change',() => { editBoneName = $('#boneSelect').value; refreshBoneFields(); });
   function refreshPoseList() {
+    refreshBoneEditor();
+    for (const id of ['poseEditToggle','poseSave','poseLock','boneFilter','boneSelect']) $( '#' + id).disabled = !cut;
+    $('#poseReset').disabled = !cut || !editBaseline;
     const listEl = $('#poseList');
     if (!cur) { listEl.innerHTML = '<div class="empty-tip">未加载骨架</div>'; return; }
     const snaps = poseStore()[cur.id] || {};
@@ -1339,7 +1391,7 @@
     if (!cut) { K.toast('没有可保存的骨架', 'err'); return; }
     const name = $('#poseName').value.trim() || ('姿势 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }));
     const m = poseStore();
-    m[cur.id][name] = { ts: Date.now(), bones: capturePose() };
+    Object.defineProperty(m[cur.id], name, { value: { ts: Date.now(), bones: capturePose() }, enumerable: true, configurable: true, writable: true });
     store.set('poseSnaps', m);
     $('#poseName').value = '';
     refreshPoseList();
@@ -2150,6 +2202,7 @@
       };
       if (animCtl) animCtl.refresh();
       playAnimation(def);
+      refreshPoseList();
       if (fitMode) refit(); else set100();
       status((cur.name || cur.id) + ' · ' + data.animations.length + ' 动画 · ' + data.bones.length + ' 骨骼 · ' + cut.layers.length + ' 层');
       syncUrl(def);
@@ -2528,7 +2581,7 @@
       const hit = hitBoneAt(e.clientX, e.clientY);
       if (hit) {
         const [swx, swy] = wpt(e.clientX, e.clientY);
-        editBoneName = hit.bone.data.name;
+        editBoneName = hit.bone.data.name; $('#boneFilter').value = ''; refreshBoneEditor();
         dragPoseBefore = capturePose(); panelUI?.refresh();
         if (!(editBoneName in editOrig)) {
           editOrig[editBoneName] = { rotation: hit.bone.rotation, x: hit.bone.x, y: hit.bone.y };
@@ -2609,6 +2662,7 @@
   stage.addEventListener('pointerup', (e) => {
     if (boneDrag) {
       boneDrag = null;
+      refreshBoneFields();
       if (dragPoseBefore && cut) { const after = capturePose(); panelUI?.recordEdit(dragPoseBefore, after); if (poseLocked) poseLocked = after; }
       dragPoseBefore = null; panelUI?.refresh(); return;
     }

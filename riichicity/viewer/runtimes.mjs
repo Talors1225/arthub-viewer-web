@@ -1,4 +1,4 @@
-import {liveDefinition} from './bundle.mjs?v=20261102-riichi-ui-2';
+import {liveDefinition} from './bundle.mjs?v=20261104-unified-final';
 const K=window.SpineKit;
 let runtimeQueue=Promise.resolve();
 async function spineRuntime(version){
@@ -123,7 +123,7 @@ export async function loadLive2D(bundle,model,canvas,signal,onProgress){
   // Local imports do not infer game voice rules or start sound on their own.
   for(const motions of Object.values(data.FileReferences.Motions||{}))for(const motion of motions)delete motion.Sound;
   const app=new PIXI.Application({view:canvas,width:1,height:1,autoStart:false,antialias:true,backgroundAlpha:0,resolution:1,autoDensity:false,preserveDrawingBuffer:true});
-  let live,disposed=false,tools,lastView,current='',loop=true;
+  let live,disposed=false,tools,lastView,current='',loop=true,fittingBounds;
   // The bundled Cubism adapter releases its native Moc on internalModel destroy.
   const dispose=()=>{if(disposed)return;disposed=true;const gl=app.renderer?.gl;try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
   try{
@@ -150,7 +150,7 @@ export async function loadLive2D(bundle,model,canvas,signal,onProgress){
       loop(value){loop=value;for(const item of queue?._motions||[])item._motion?.setIsLoop(value);},
       playback(){const item=[...(queue?._motions||[])].reverse().find(i=>!i.isFinished()&&i._motion),duration=animations.find(a=>a.name===current)?.duration||item?._motion?.getLoopDuration?.()||0,elapsed=item?.isStarted()?Math.max(0,item.getStateTime()-item.getStartTime()):0;return {name:current,duration,time:duration?(loop?elapsed%duration:Math.min(duration,elapsed)):0,loop};},
       seek(seconds,delta=0){const item=[...(queue?._motions||[])].reverse().find(i=>!i.isFinished()&&i._motion);if(!item)return;const time=Math.max(0,Math.min(api.playback().duration-.0001,seconds)),clock=live.elapsedTime/1000;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time);item.setEndTime(loop?-1:clock-time+api.playback().duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;app.render();},
-      render(dt,view){if(disposed)return;lastView=view;tools?.before();const {w,h}=resize(canvas);app.renderer.resolution=Math.min(2,devicePixelRatio||1);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const f=stageFrame(canvas),scale=Math.min(f.width/natural.width,f.height/natural.height)*.94*view.zoom;live.scale.set(scale);live.position.set(f.left+f.width/2+view.x,f.top+f.height/2+view.y);editor.applyParameters();if(view.playing)live.update(dt*1000*view.speed);app.render();},
+      render(dt,view){if(disposed)return;lastView=view;tools?.before();const {w,h}=resize(canvas);app.renderer.resolution=Math.min(2,devicePixelRatio||1);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const f=stageFrame(canvas),fit=fittingBounds||=K.live2DViewBounds(internal,natural,data.HitAreas?.map(a=>a.Id)||[]),scale=Math.min(f.width/fit.width,f.height/fit.height)*.92*view.zoom;live.scale.set(scale);live.position.set(f.left+f.width/2+view.x+(natural.width/2-fit.x)*scale,f.top+f.height/2+view.y+(natural.height/2-fit.y)*scale);editor.applyParameters();if(view.playing)live.update(dt*1000*view.speed);app.render();},
       capture(){
         const hit=new Set(data.HitAreas?.map(a=>a.Id)||[]);
         const measure=()=>{const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};

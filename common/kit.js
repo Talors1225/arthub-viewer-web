@@ -36,6 +36,7 @@
     interact: '<path d="M8 12V5a2 2 0 0 1 4 0v5m0-2a2 2 0 0 1 4 0v3m0-1a2 2 0 0 1 4 0v5c0 4-2 6-6 6h-1c-2 0-3-1-4-2l-5-6a2 2 0 0 1 3-2l1 1Z"/>',
     more: '<circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/>',
     close: '<path d="m6 6 12 12M6 18 18 6"/>',
+    focus: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
   };
   K.uiIcon = (name, size = 18, filled = false) => uiIconPaths[name]
     ? '<svg class="arthub-icon" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + (filled ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + uiIconPaths[name] + '</svg>' : '';
@@ -1809,7 +1810,7 @@
     }
     return output;
   };
-  K.loadPNGEncoder = () => import('./png-encoder.mjs?v=20261103-png1');
+  K.loadPNGEncoder = () => import('./png-encoder.mjs?v=20261104-unified-final');
   K.pngTileSize = (size, tile, yUp = true) => ({ ...size,
     width: tile.width, height: tile.height, tile: true, tiled: false, fullFrame: true,
     centerX: size.centerX + (tile.x + tile.width / 2 - size.width / 2) / size.scale,
@@ -1968,9 +1969,13 @@
       dismiss.onclick = event => { event.stopPropagation(); K.hideMenu(); options.owner?.focus(); };
       head.append(title, dismiss); menu.append(head);
     }
+    if (options.moreMenu) menu.classList.add('site-more-menu');
     for (const it of items) {
       if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; menu.appendChild(s); continue; }
-      if (it.heading) { const h = document.createElement('div'); h.className = 'menu-heading'; h.textContent = it.heading; menu.appendChild(h); continue; }
+      if (it.heading) {
+        const h = document.createElement('div'); h.className = 'menu-heading'; h.textContent = it.heading; menu.appendChild(h);
+        continue;
+      }
       const b = document.createElement('button');
       b.type = 'button';
       const text = document.createElement('span'); text.textContent = it.label; b.appendChild(text);
@@ -2148,7 +2153,7 @@
     }
     toolStrip.dataset.kitClean = '1';
 
-    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'stageClickMode', 'btnStagePan']);
+    const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'siteAnim', 'siteParts']);
     const secondary = [...toolStrip.querySelectorAll('button')]
       .filter(button => button.parentElement === toolStrip)
       .filter(button => !primary.has(button.id));
@@ -2201,23 +2206,33 @@
       if (more.getAttribute('aria-expanded') === 'true') { K.hideMenu(); return; }
       const rect = more.getBoundingClientRect();
       const groups = [
+        ['播放', []],
         ['导出', ['btnPng', 'btnGif']],
-        ['画面', ['btnBg', 'btnPresetImmersive', 'btnDebug']],
-        ['编辑', ['btnPartEdit', 'btnBoneEdit']],
+        ['画面', ['btnBg', 'btnPresetImmersive']],
         ['声音', ['btnVoiceSettings', 'btnVoice']],
-        ['资源', ['btnGlobalSearch', 'btnRestoreParts', 'btnRetry']],
+        ['互动', ['btnStagePan', 'stageClickMode']],
+        ['工具', ['btnDebug', 'btnPartEdit', 'btnBoneEdit']],
+        ['资源', ['btnRestoreParts', 'btnRetry']],
       ];
-      const pending = new Map(secondary.filter(button => button.isConnected && !button.hidden).map(button => [button.id, button]));
+      const pending = new Map(secondary.filter(button => button.isConnected && !button.hidden && button.id !== 'btnGlobalSearch').map(button => [button.id, button]));
+      const buckets = new Map(groups.map(([heading]) => [heading, []]));
+      for (const item of K.getSiteMoreItems?.() || []) {
+        if (item.heading) continue;
+        for (const id of item.replaces || []) pending.delete(id);
+        (buckets.get(item.group) || buckets.get('工具')).push(item);
+      }
       const items = [], itemFor = button => ({ label: labelOf(button), disabled: button.disabled,
         ...(button.hasAttribute('aria-pressed') ? { checked: button.getAttribute('aria-pressed') === 'true' } : {}),
         fn: () => invokeSecondary(button),
       });
       for (const [heading, ids] of groups) {
-        const buttons = ids.map(id => pending.get(id)).filter(Boolean); if (!buttons.length) continue;
-        items.push({heading}); for (const button of buttons) { items.push(itemFor(button)); pending.delete(button.id); }
+        for (const id of ids) { const button = pending.get(id); if (button) { buckets.get(heading).push(itemFor(button)); pending.delete(id); } }
       }
-      if (pending.size) { items.push({heading:'其他'}); for (const button of pending.values()) items.push(itemFor(button)); }
-      K.showMenu(items, rect.left, rect.bottom + 6, {title:'更多功能', owner:more});
+      // Advanced/unclassified tools stay before Resources, never after it.
+      for (const button of pending.values()) buckets.get('工具').push(itemFor(button));
+      for (const [heading, entries] of buckets) if (entries.length) items.push({heading},...entries);
+      document.querySelector('#floatPanel.open [data-panel-close],#floatPanel.open #panel-close')?.click();
+      K.showMenu(items, rect.left, rect.bottom + 6, {title:'更多功能', owner:more, moreMenu:true});
     });
     toolStrip.appendChild(more);
     // Reveal navigation and tools together only after the compact menu is ready.
@@ -2231,8 +2246,20 @@
     const root = document.documentElement;
     root.removeAttribute('data-theme');
     if (store && store.get('theme', null)) store.del('theme');
-    const background = store && store.get('backgroundColor', null);
-    if (background) K.setBackground(background);
+    let background = store && store.get('backgroundColor', null);
+    try {
+      const shared = localStorage.getItem('arthub:site-theme:v1');
+      if (shared !== null) background = JSON.parse(shared).color;
+      else localStorage.setItem('arthub:site-theme:v1', JSON.stringify({ color: background || null }));
+    } catch (_) { /* Storage may be unavailable; the current page still works. */ }
+    K.setBackground(background);
+    if (!K._siteThemeBound) {
+      K._siteThemeBound = true;
+      window.addEventListener('storage', event => {
+        if (event.key !== 'arthub:site-theme:v1') return;
+        try { K.setBackground(event.newValue ? JSON.parse(event.newValue).color : null); } catch (_) {}
+      });
+    }
     return 'deep';
   };
 
@@ -2241,6 +2268,7 @@
   const BACKGROUND_STYLE_KEYS = [
     '--bg', '--bg-glow', '--panel', '--panel-grad', '--panel2', '--panel3', '--glass', '--glass-hi',
     '--border', '--border2', '--text', '--text-dim', '--text-faint', '--shadow-1', '--shadow-2',
+    '--accent', '--accent-hi', '--accent-dim-bg', '--star',
   ];
   const normalizeHex = (value) => {
     const raw = String(value || '').trim().replace(/^#/, '');
@@ -2258,6 +2286,10 @@
   K.setBackground = (value, store) => {
     const root = document.documentElement;
     const hex = normalizeHex(value);
+    if (store) {
+      try { localStorage.setItem('arthub:site-theme:v1', JSON.stringify({ color: hex })); } catch (_) {}
+    }
+    root.style.colorScheme = hex && hexRgb(hex).reduce((sum,c,i) => sum + c * [299,587,114][i],0) / 1000 > 156 ? 'light' : 'dark';
     if (!hex) {
       BACKGROUND_STYLE_KEYS.forEach(key => root.style.removeProperty(key));
       root.removeAttribute('data-user-background');
@@ -2267,6 +2299,10 @@
     const rgb = hexRgb(hex);
     const luminance = ((rgb[0] * 299) + (rgb[1] * 587) + (rgb[2] * 114)) / 1000;
     const light = luminance > 156;
+    root.style.setProperty('--accent', light ? '#765319' : '#e2c288');
+    root.style.setProperty('--accent-hi', light ? '#5b3b09' : '#f2dcae');
+    root.style.setProperty('--accent-dim-bg', light ? 'rgba(118,83,25,.10)' : 'rgba(226,194,136,.10)');
+    root.style.setProperty('--star', light ? '#765319' : '#e2c288');
     const surfaceTarget = light ? [0, 0, 0] : [255, 255, 255];
     const panel = rgbHex(mixRgb(rgb, surfaceTarget, light ? .06 : .10));
     const panel2 = rgbHex(mixRgb(rgb, surfaceTarget, light ? .11 : .16));
@@ -2366,7 +2402,7 @@
       const picker = panel.querySelector('input[type="color"]');
       const fallbackBackground = () => normalizeHex(getComputedStyle(root).getPropertyValue('--bg')) || '#0b0d12';
       const updateState = () => {
-        picker.value = (store && normalizeHex(store.get('backgroundColor', null))) || fallbackBackground();
+        picker.value = fallbackBackground();
       };
       const applyPicker = () => { K.setBackground(picker.value, store); updateState(); };
       picker.addEventListener('input', applyPicker);

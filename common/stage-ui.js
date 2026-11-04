@@ -92,7 +92,7 @@
       stage.dataset.panMode = mode;
       if (modeSelect) modeSelect.value = mode;
       button.setAttribute('aria-pressed', String(interactiveButton ? mode === 'interact' : mode === 'pan'));
-      button.title = interactiveButton ? (mode === 'pan' ? '开启立绘互动' : '关闭立绘互动，恢复拖动画面') : (mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面');
+      button.title = interactiveButton ? (mode === 'pan' ? '开启互动' : '关闭互动') : (mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面');
       button.setAttribute('aria-label', button.title);
       button.setAttribute('data-action-label', interactiveButton ? (mode === 'pan' ? '互动' : '互动中') : (mode === 'pan' ? '拖动' : '互动'));
       K.setUiIcon(button, interactiveButton ? 'interact' : 'move');
@@ -122,7 +122,7 @@
       if (!pointer || pointer.id !== event.pointerId) return;
       consume(event); if (ready()) update(event);
       const down = pointer; cancel();
-      if (ready() && !down.moved && performance.now() - down.at < 500) tap(event);
+      if (!interactiveButton && ready() && !down.moved && performance.now() - down.at < 500) tap(event);
     }, true);
     stage.addEventListener('pointercancel', event => {
       if (pointer?.id === event.pointerId) { consume(event); cancel(); }
@@ -137,29 +137,48 @@
     const style = getComputedStyle(element);
     return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0;
   };
+  // Authored Live2D canvases can have asymmetric padding or art outside their
+  // nominal dimensions. Fit actual visible geometry once, without per-frame jitter.
+  K.live2DViewBounds = (internal, natural, hitIds = []) => {
+    const core = internal.coreModel.getModel(), excluded = new Set(hitIds);
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for (let i=0;i<core.drawables.ids.length;i++) {
+      if (excluded.has(core.drawables.ids[i]) || core.drawables.opacities[i]<=.001 || !core.drawables.indices[i].length || !internal.coreModel.getDrawableDynamicFlagIsVisible(i)) continue;
+      const vertices=internal.getDrawableVertices(i); let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      for(let j=0;j<vertices.length;j+=2) {
+        const p=internal.localTransform.apply({x:vertices[j],y:vertices[j+1]});
+        x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);
+      }
+      // Infinite backdrop meshes use the same authored-canvas clipping as export.
+      if(x1-x0>natural.width*4 || y1-y0>natural.height*4) { x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(natural.width,x1);y1=Math.min(natural.height,y1); }
+      if(x1>x0 && y1>y0) { minX=Math.min(minX,x0);minY=Math.min(minY,y0);maxX=Math.max(maxX,x1);maxY=Math.max(maxY,y1); }
+    }
+    if(!(maxX>minX && maxY>minY))return {width:natural.width,height:natural.height,x:natural.width/2,y:natural.height/2};
+    return {width:maxX-minX,height:maxY-minY,x:(minX+maxX)/2,y:(minY+maxY)/2};
+  };
   K.stageViewArea = canvas => {
     const rect = canvas.getBoundingClientRect();
     let left = rect.left + 12, right = rect.right - 12;
     let top = rect.top + 12, bottom = rect.bottom - 12;
-    if (!document.body.classList.contains('immersive') && !document.documentElement.classList.contains('arthub-embedded')) {
+    if (!document.body.classList.contains('immersive') && !document.body.classList.contains('viewer-immersive') && !document.documentElement.classList.contains('arthub-embedded')) {
       const phone = matchMedia('(max-width: 720px)').matches;
-      for (const id of ['rail', 'toolStrip', 'playbar', 'status']) {
+      for (const id of ['rail', 'toolStrip', 'siteMobileDock', 'status']) {
         const node = document.getElementById(id);
         if (!visible(node) || node.classList.contains('hide') || node.classList.contains('status-quiet')) continue;
         const r = node.getBoundingClientRect();
         if (r.width < 1 || r.height < 1) continue;
         if (phone) {
-          if (id === 'toolStrip') right = Math.min(right, r.left - 10);
-          else if (id !== 'status') bottom = Math.min(bottom, r.top - 10);
-        } else if (id === 'playbar') bottom = Math.min(bottom, r.top - 12);
-        else if (r.top < rect.top + rect.height * .3) top = Math.max(top, r.bottom + 10);
+          // Horizontal tools occupy a top row, not a right-hand sidebar.
+          // Reserving their left edge as the stage width shrinks and offsets art.
+          if (id === 'toolStrip') {
+            if (r.width >= r.height && r.top < rect.top + rect.height * .35) top = Math.max(top, r.bottom + 10);
+            else right = Math.min(right, r.left - 10);
+          } else if (id === 'status') top = Math.max(top, r.bottom + 8);
+          else bottom = Math.min(bottom, r.top - 10);
+        } else if (r.top < rect.top + rect.height * .3) top = Math.max(top, r.bottom + 10);
       }
-      const panel = document.getElementById('floatPanel');
-      if (panel?.classList.contains('open') && getComputedStyle(panel).display !== 'none') {
-        const r = panel.getBoundingClientRect();
-        if (phone) bottom = Math.min(bottom, r.top - 12);
-        else right = Math.min(right, r.left - 16);
-      }
+      // Transient panels overlay the stage. Their open/close state must not
+      // change framing, zoom, or the user's chosen position.
     }
     const width = Math.max(80, right - left), height = Math.max(100, bottom - top);
     const sx = canvas.width / Math.max(1, rect.width), sy = canvas.height / Math.max(1, rect.height);
@@ -199,7 +218,7 @@
       requestAnimationFrame(() => {
         queued = false;
         const phone = matchMedia('(max-width: 720px)').matches;
-        const bottomControls = [playbar, ...(phone ? [document.getElementById('rail')] : [])].filter(visible);
+        const bottomControls = [playbar, ...(phone ? [document.getElementById('siteMobileDock'),document.getElementById('rail')] : [])].filter(visible);
         if (bottomControls.length) {
           const bottom = Math.max(phone ? 72 : 12, ...bottomControls.map(node => document.documentElement.clientHeight - node.getBoundingClientRect().top + 12));
           root.style.setProperty('--stage-panel-bottom', bottom + 'px');

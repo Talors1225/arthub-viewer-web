@@ -1,4 +1,4 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=13c1a4323109';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261104-unified-final';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
 let stageFrameCache=null;
@@ -248,7 +248,8 @@ async function live2dPortrait(model,generation){
     if(time!==null)advance(time);else app.render();return canvas;},
    dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
- render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const frame=stageFrame(),scale=Math.min(frame.width/natural.width,frame.height/natural.height)*.93*view.zoom;live.scale.set(scale);live.position.set(frame.x+view.panX,frame.y+view.panY);if(view.playing){effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();};
+ let fittingBounds;
+ render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const frame=stageFrame(),fit=fittingBounds||=K.live2DViewBounds(internal,natural,model.interaction.hitAreas.map(a=>a.id)),scale=Math.min(frame.width/fit.width,frame.height/fit.height)*.92*view.zoom;live.scale.set(scale);live.position.set(frame.x+view.panX+(natural.width/2-fit.x)*scale,frame.y+view.panY+(natural.height/2-fit.y)*scale);if(view.playing){effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();};
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
 }
 async function spinePortrait(model,generation){
