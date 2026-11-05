@@ -1,6 +1,6 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=dd26cfcbf3ab';
-import {EffectTimeline} from './effect-timeline.mjs?v=dd26cfcbf3ab';
-import {hasEffectControls} from './effect-controls.mjs?v=dd26cfcbf3ab';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=52d31805288c';
+import {EffectTimeline} from './effect-timeline.mjs?v=52d31805288c';
+import {hasEffectControls} from './effect-controls.mjs?v=52d31805288c';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
 let stageFrameCache=null;
@@ -104,7 +104,7 @@ $('azurlaneSort').value=sortMode;$('azurlaneSort').onchange=event=>{sortMode=eve
 matchMedia('(max-width: 720px)').addEventListener('change',()=>{const firstIndex=(gridPage-1)*gridPageSize;gridPageSize=K.libraryPageSize();gridPage=Math.floor(firstIndex/gridPageSize)+1;populate();});
 function setPanelOpen(name,open){document.body.classList.toggle(name+'-open',open);$(name==='library'?'gridView':'floatPanel').classList.toggle('open',open);$(name==='library'?'railGrid':'btnAnimTab').setAttribute('aria-expanded',String(open));}
 $('railGrid').onclick=()=>{const open=!document.body.classList.contains('library-open');setPanelOpen('library',open);if(open&&innerWidth<=760)setPanelOpen('interaction',false);};
-$('btnAnimTab').onclick=()=>{const open=!document.body.classList.contains('interaction-open')||$('floatPanel').dataset.tab==='interaction';if(open){stagePan.setMode('pan');viewerUI.showTab('anim');}setPanelOpen('interaction',open);if(open&&innerWidth<=760)setPanelOpen('library',false);};
+$('btnAnimTab').onclick=()=>{const open=!document.body.classList.contains('interaction-open')||$('floatPanel').dataset.tab==='interaction';if(open)viewerUI.showTab('anim');setPanelOpen('interaction',open);if(open&&innerWidth<=760)setPanelOpen('library',false);};
 $('gridClose').onclick=()=>setPanelOpen('library',false);$('panel-close').onclick=()=>setPanelOpen('interaction',false);
 document.querySelectorAll('[data-panel-tab]').forEach(tab=>tab.addEventListener('click',()=>{const name=tab.dataset.panelTab;document.querySelectorAll('[data-panel-tab]').forEach(button=>{const active=button===tab;button.classList.toggle('on',active);button.setAttribute('aria-selected',String(active));});document.querySelectorAll('[data-panel-page]').forEach(page=>page.classList.toggle('on',page.dataset.panelPage===name));if(name==='interaction'&&view.ready)stagePan.setMode('interact');}));
 $('railStar').onclick=()=>{if(selected){K.favs.toggle(entry(selected));populate();}};
@@ -123,10 +123,10 @@ function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.client
 const stagePan=K.createStagePan({stage,button:$('btnStagePan'),modeSelect:$('pointer-mode'),interactiveButton:true,accepts:target=>target===canvas,ready:()=>view.ready&&!exporting,
  onModeChange:mode=>{if(pointer&&controller instanceof Live2DController)controller.end(pointer.x,pointer.y,true);pointer=null;look.targetX=look.targetY=0;if(mode==='interact'){viewerUI.tools.exitEditing();$('interaction-more').open=false;if(!view.playing)$('play').click();unlockAudio().catch(()=>{});viewerUI.showTab('interaction');setPanelOpen('library',false);setPanelOpen('interaction',true);}else if($('floatPanel').dataset.tab==='interaction')setPanelOpen('interaction',false);},
  move:(dx,dy)=>{view.panX+=dx;view.panY+=dy;},
- tap:event=>{unlockAudio().catch(()=>{});const p=localPoint(event),hits=adapter.hits(p.x,p.y);evidence.interaction.hits=hits;if(selected.type==='live2d'){controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));controller.end(p.x,p.y);}else{const hit=hits[0];if(!hit||!controller.touch(hit,{drag:false}))spineBasic(hit);}}
+ tap:event=>{if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(event),hits=adapter.hits(p.x,p.y);evidence.interaction.hits=hits;if(selected.type==='live2d'){controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));controller.end(p.x,p.y);}else{const hit=hits[0];if(!hit||!controller.touch(hit,{drag:false}))spineBasic(hit);}}
 });
 stage.addEventListener('pointerdown',e=>{
- if(e.target!==canvas||e.button!==0||!view.ready)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
+ if(e.target!==canvas||e.button!==0||!view.ready||exporting)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
  if(!pan&&selected.type==='live2d')controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));
 });
 stage.addEventListener('pointermove',e=>{

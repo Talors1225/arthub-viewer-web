@@ -92,7 +92,7 @@
       stage.dataset.panMode = mode;
       if (modeSelect) modeSelect.value = mode;
       button.setAttribute('aria-pressed', String(interactiveButton ? mode === 'interact' : mode === 'pan'));
-      button.title = interactiveButton ? (mode === 'pan' ? '开启互动' : '关闭互动') : (mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面');
+      button.title = interactiveButton ? (mode === 'pan' ? '开启拖动互动（轻点仍可互动）' : '关闭拖动互动（轻点仍可互动）') : (mode === 'pan' ? '拖动画面：拖动移动，轻点互动；点击切换为模型互动' : '模型互动：拖动触发原有互动；点击切换为拖动画面');
       button.setAttribute('aria-label', button.title);
       button.setAttribute('data-action-label', interactiveButton ? (mode === 'pan' ? '互动' : '互动中') : (mode === 'pan' ? '拖动' : '互动'));
       K.setUiIcon(button, interactiveButton ? 'interact' : 'move');
@@ -122,7 +122,7 @@
       if (!pointer || pointer.id !== event.pointerId) return;
       consume(event); if (ready()) update(event);
       const down = pointer; cancel();
-      if (!interactiveButton && ready() && !down.moved && performance.now() - down.at < 500) tap(event);
+      if (ready() && !down.moved && performance.now() - down.at < 500) tap(event);
     }, true);
     stage.addEventListener('pointercancel', event => {
       if (pointer?.id === event.pointerId) { consume(event); cancel(); }

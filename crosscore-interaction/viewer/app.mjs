@@ -539,7 +539,7 @@ function setPanelOpen(name, open) {
   button.setAttribute('aria-expanded', String(open));
 }
 $('#railGrid').addEventListener('click', () => setPanelOpen('library', !$('#gridView').classList.contains('open')));
-$('#btnAnimTab').addEventListener('click', () => { const open = !$('#floatPanel').classList.contains('open') || $('#floatPanel').dataset.tab === 'interaction'; if (open) { stagePan.setMode('pan'); viewerUI.showTab('anim'); } setPanelOpen('interaction', open); });
+$('#btnAnimTab').addEventListener('click', () => { const open = !$('#floatPanel').classList.contains('open') || $('#floatPanel').dataset.tab === 'interaction'; if (open) viewerUI.showTab('anim'); setPanelOpen('interaction', open); });
 $('#gridClose').addEventListener('click', () => setPanelOpen('library', false));
 $('#panel-close').addEventListener('click', () => setPanelOpen('interaction', false));
 document.querySelectorAll('[data-panel-tab]').forEach(tab => tab.addEventListener('click', () => {

@@ -48,6 +48,10 @@
       this.raw = new Map();
       this.buffers = new Map();
       this.pending = new Map();
+      this.requests = new Map();
+      this.loadErrors = new Map();
+      this.loadTimeout = 15000;
+      this.warmJob = null;
       this.previous = new Map();
       this.failures = new Set();
       this.history = [];
@@ -147,22 +151,38 @@
       const clip = this.index && this.index.clips[name];
       if (!clip) return null;
       const resourceId = this.resourceId;
-      const job = (async () => {
+      const request = new AbortController();
+      this.requests ||= new Map(); this.loadErrors ||= new Map();
+      this.requests.set(name, request);
+      let timer;
+      const deadline = new Promise((_, reject) => {
+        timer = setTimeout(() => { request.abort(); reject(Error('声音加载超时，请再点一次重试')); }, this.loadTimeout || 15000);
+      });
+      const read = async () => {
         let raw = this.raw.get(name);
         if (!raw) {
-          const response = await fetch(this.audioURL(clip));
+          const response = await fetch(this.audioURL(clip), { signal: request.signal });
           if (!response.ok) throw Error(name + ': HTTP ' + response.status);
           raw = await response.arrayBuffer();
-          if (resourceId === this.resourceId) this.raw.set(name, raw);
+          if (!request.signal.aborted && resourceId === this.resourceId) this.raw.set(name, raw);
         }
-        if (!this.context) return null;
+        if (!this.context || request.signal.aborted) return null;
         const buffer = await this.context.decodeAudioData(raw.slice(0));
-        if (resourceId === this.resourceId) this.buffers.set(name, buffer);
+        if (request.signal.aborted || resourceId !== this.resourceId || this.disposed) return null;
+        this.buffers.set(name, buffer); this.loadErrors.delete(name); this.failures.delete(name);
         return buffer;
-      })().catch(error => {
-        if (!this.failures.has(name)) { this.failures.add(name); this.record('load-error', { name, error: error.message }); }
+      };
+      const job = Promise.race([read(), deadline]).catch(error => {
+        if (resourceId === this.resourceId && !this.disposed) {
+          this.loadErrors.set(name, request.signal.aborted ? '声音加载超时，请再点一次重试' : error.message);
+          if (!this.failures.has(name)) { this.failures.add(name); this.record('load-error', { name, error: this.loadErrors.get(name) }); }
+        }
         return null;
-      }).finally(() => { if (this.pending.get(name) === job) this.pending.delete(name); });
+      }).finally(() => {
+        clearTimeout(timer);
+        if (this.pending.get(name) === job) this.pending.delete(name);
+        if (this.requests.get(name) === request) this.requests.delete(name);
+      });
       this.pending.set(name, job);
       return job;
     }
@@ -174,7 +194,17 @@
       if (voiceSet) Object.values(voiceSet.set).forEach(group => Object.values(group).flat().forEach(name => names.add(name)));
       return [...names];
     }
-    warm() { return Promise.all(this.relevantNames().map(name => this.buffer(name))); }
+    warm() {
+      const id = this.resourceId;
+      if (!id || !this.index || this.disposed) return Promise.resolve();
+      if (this.warmJob?.id === id) return this.warmJob.promise;
+      // Background preloading must leave room for the voice the user just chose.
+      const names = this.relevantNames(); let cursor = 0;
+      const worker = async () => { while (this.resourceId === id && !this.disposed && cursor < names.length) await this.buffer(names[cursor++]); };
+      const task = { id };
+      task.promise = Promise.all([worker(), worker()]).finally(() => { if (this.warmJob === task) this.warmJob = null; });
+      this.warmJob = task; return task.promise;
+    }
     async unlock() {
       if (this.disposed) return;
       if (this.unlocked) { if (!this.index?.lazy) this.warm(); this.syncPause(); return; }
@@ -195,6 +225,8 @@
       const id = snapshot && snapshot.id || '';
       if (id === this.resourceId) return;
       this.reset();
+      for (const request of this.requests?.values() || []) request.abort();
+      this.requests?.clear(); this.loadErrors?.clear(); this.warmJob = null;
       this.resourceId = id;
       // Keep decoding memory bounded as users page through hundreds of models.
       this.raw.clear(); this.buffers.clear(); this.pending.clear(); this.failures.clear();
@@ -315,25 +347,31 @@
       const intent = this.intentVersion || 0;
       this.loading = true;
       this.idleFor = 0;
-      this.unlock().then(() => this.index.lazy ? null : this.warm()).then(async () => {
+      this.unlock().then(async () => {
         if (token !== this.generation || snapshot.id !== this.adapter.snapshot()?.id) return;
-        if (intent !== (this.intentVersion || 0)) { this.loading = false; return; }
+        if (intent !== (this.intentVersion || 0) || !this.prefs.enabled || this.disposed) return;
         let names = voiceSet ? (voiceSet.set[category]?.[this.prefs.affinity] || []) : [];
         // A missing affection set may use that same character's normal set, never another costume/character.
         if (!names.length && voiceSet) names = voiceSet.set[category]?.normal || [];
-        names = names.filter(name => this.index.clips[name] && (this.index.lazy || this.buffers.has(name)));
+        names = names.filter(name => this.index.clips[name]);
         const cursorKey = (voiceSet && voiceSet.id) + ':' + category + ':' + this.prefs.affinity;
         const name = this.prefs.voices ? chooseVoice(names, this.previous.get(cursorKey)) : null;
-        if (name && this.index.lazy) await this.buffer(name);
+        if (name && !this.buffers.has(name)) {
+          this.adapter.status('正在加载角色台词…');
+          let buffer = await this.buffer(name);
+          // A prefetch may have finished before AudioContext was unlocked.
+          if (!buffer && this.raw.has(name) && !this.loadErrors?.has(name)) buffer = await this.buffer(name);
+          if (!buffer && token === this.generation && snapshot.id === this.adapter.snapshot()?.id) throw Error(this.loadErrors?.get(name) || '台词读取失败，请再点一次重试');
+        }
         if (token !== this.generation || snapshot.id !== this.adapter.snapshot()?.id) return;
-        this.loading = false;
+        if (intent !== (this.intentVersion || 0) || !this.prefs.enabled || this.disposed) return;
         if (category === 'touch' && hasReaction) {
           this.reaction = true;
           this.adapter.react('action');
         }
         this.adapter.play();
         this.syncPause();
-        if (name && this.buffers.has(name) && this.context && this.unlocked && !document.hidden) {
+        if (name && this.prefs.voices && this.buffers.has(name) && this.context && this.unlocked && !document.hidden) {
           this.previous.set(cursorKey, name);
           this.voice = this.playBuffer(name, 'voice', this.context.currentTime, 0, 1, 0);
           this.adapter.talk(true);
@@ -341,7 +379,9 @@
         } else if (this.prefs.voices && voiceSet && !names.length) {
           this.adapter.status('当前台词未加载成功，动画仍可播放；声音设置里可查看台词组');
         }
-      }).catch(error => { this.loading = false; this.adapter.status('角色声音加载失败：' + error.message); });
+      }).catch(error => {
+        if (token === this.generation && snapshot.id === this.adapter.snapshot()?.id && !this.disposed) this.adapter.status('角色声音加载失败：' + error.message);
+      }).finally(() => { if (token === this.generation) { this.loading = false; this.reportState(); } });
       return true;
     }
     tick() {
@@ -413,6 +453,8 @@
     }
     dispose() {
       this.reset(); this.disposed = true;
+      for (const request of this.requests?.values() || []) request.abort();
+      this.requests?.clear(); this.warmJob = null;
       document.getElementById('stage').removeEventListener('pointerdown', this.onGesture, { capture: true });
       document.removeEventListener('visibilitychange', this.onVisibility);
       this.context?.close().catch(() => {});
