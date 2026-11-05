@@ -7,6 +7,18 @@
     let animations = [], renderedName = null, thumbnailKey = null, lastUpdate = -Infinity, scrubbing = false;
     const rows = new Map();
     const invoke = action => { try { Promise.resolve(action()).catch(driver.onError || console.error); } catch (error) { (driver.onError || console.error)(error); } };
+    let effectControls = null, effectScrubbing = false, effectKey = null;
+    if (driver.effectPlayback && controls.animFilter?.closest('[data-panel-page]')) {
+      const section = document.createElement('details'); section.className = 'viewer-effect-timeline'; section.hidden = true;
+      section.innerHTML = '<summary><span class="viewer-effect-chevron" aria-hidden="true">' + K.uiIcon('chevronDown', 14) + '</span>背景特效<span data-effect-status></span></summary><div class="viewer-effect-body"><label class="viewer-effect-progress" for="effectProgress">特效进度<output id="effectTime" for="effectProgress"></output></label><input id="effectProgress" type="range" min="0" max="1000" step="1" value="0" aria-label="背景特效进度"><div class="viewer-effect-actions"><label for="effectFixed"><input id="effectFixed" type="checkbox">固定特效</label><button type="button" id="effectRestart">重播</button></div><p>拖动进度后固定特效，角色继续播放。</p></div>';
+      controls.animFilter.closest('[data-panel-page]').prepend(section);
+      effectControls = { section, range: section.querySelector('#effectProgress'), time: section.querySelector('#effectTime'), fixed: section.querySelector('#effectFixed'), restart: section.querySelector('#effectRestart'), status: section.querySelector('[data-effect-status]') };
+      effectControls.range.addEventListener('pointerdown', () => { effectScrubbing = true; });
+      effectControls.range.addEventListener('input', () => invoke(() => { const state = driver.effectPlayback(); if (state?.ready) driver.seekEffect(Number(effectControls.range.value)); update(true); }));
+      for (const event of ['change', 'pointercancel', 'blur']) effectControls.range.addEventListener(event, () => { effectScrubbing = false; update(true); });
+      effectControls.fixed.addEventListener('change', () => invoke(() => { driver.setEffectFixed(effectControls.fixed.checked); update(true); }));
+      effectControls.restart.addEventListener('click', () => invoke(() => { driver.restartEffect(); update(true); }));
+    }
     const icon = (button, name) => { if (button.dataset.icon !== name) { button.innerHTML = K.uiIcon(name, 15); button.dataset.icon = name; } };
     function showTab(name) {
       byId('floatPanel').dataset.tab = name;
@@ -68,6 +80,21 @@
       if (renderedName !== state.name) { rows.forEach((button, name) => { button.classList.toggle('on', name === state.name); button.setAttribute('aria-pressed', String(name === state.name)); }); renderedName = state.name; }
       const row = rows.get(state.name); if (row && duration) row.querySelector('.ad').textContent = duration.toFixed(2) + 's';
       captureThumbnail(state);
+      if (effectControls) {
+        const effect = driver.effectPlayback(), key = state.key;
+        if (key !== effectKey) { effectControls.section.open = false; effectScrubbing = false; effectKey = key; }
+        effectControls.section.hidden = !effect;
+        if (effect) {
+          effectControls.range.max = String(effect.duration);
+          effectControls.range.step = String(1 / (effect.fps || 30));
+          if (!effectScrubbing) effectControls.range.value = String(effect.time);
+          effectControls.time.textContent = `${effect.time.toFixed(2)} / ${effect.duration.toFixed(2)}s`;
+          effectControls.range.setAttribute('aria-valuetext', effect.time.toFixed(2) + ' 秒，共 ' + effect.duration.toFixed(2) + ' 秒');
+          effectControls.fixed.checked = effect.fixed;
+          effectControls.status.textContent = effect.fixed ? '已固定' : '随动画播放';
+          for (const control of [effectControls.range, effectControls.fixed, effectControls.restart]) control.disabled = !effect.ready;
+        }
+      }
     }
     controls.pbPlay.addEventListener('click', () => invoke(() => { driver.setPlaying(!driver.playback().playing); update(true); }));
     controls.pbLoop.addEventListener('click', () => invoke(() => { driver.setLoop(!driver.playback().loop); update(true); }));

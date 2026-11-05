@@ -1,4 +1,6 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261104-unified-final';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=dd26cfcbf3ab';
+import {EffectTimeline} from './effect-timeline.mjs?v=dd26cfcbf3ab';
+import {hasEffectControls} from './effect-controls.mjs?v=dd26cfcbf3ab';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
 let stageFrameCache=null;
@@ -150,18 +152,22 @@ K.bindPinch(stage,{
 window.addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){space=true;e.preventDefault();}if(e.key==='Escape'){fold(false);setPanelOpen('library',false);setPanelOpen('interaction',false);}});window.addEventListener('keyup',e=>{if(e.code==='Space')space=false;});window.addEventListener('blur',()=>{space=false;if(pointer&&controller instanceof Live2DController)controller.end(pointer.x,pointer.y,true);pointer=null;look.targetX=look.targetY=0;});
 function spineBasic(hit){if(controller.state.busy)return;let event=selected.interaction.hitAreas.find(h=>h.id===hit)?.event;if(selected.id.endsWith('_hx')&&event==='TouchSpecial')event='TouchBody';if(event){const action=basicActions[event];if(!controller.action(action,{interactive:true}))sound(selected.voiceBank,motionCue(action),{voice:true});return;}const candidates=selected.animations.filter(n=>/^main_\d+$/.test(n));if(candidates.length)controller.action(candidates[Math.floor(Math.random()*candidates.length)],{interactive:true});else{const clips=selected.voice.activeClips.filter(c=>/^main_\d+$/.test(c.cue));const c=clips[Math.floor(Math.random()*clips.length)];if(c)sound(selected.voiceBank,c.cue,{voice:true});}}
 const viewerUI=window.createInteractionViewerUI({
- animations:()=>array(selected?.animations).map(name=>({name,duration:selected.motionDurations?.[name]||adapter?.duration?.(name)||0})),
- playback:()=>{const timeline=adapter?.timeline?.()||{};return {ready:view.ready&&view.frames>2,key:selected?.id+':'+loadGeneration,name:timeline.name||controller?.state.motion,time:timeline.time??controller?.state.actionTime??0,duration:timeline.duration||selected?.motionDurations?.[controller?.state.motion]||0,loop:timeline.loop??$('loop').checked,playing:view.playing,speed:view.speed,canSeek:!!adapter?.seek};},
- setPlaying:playing=>{if(view.playing!==playing)$('play').click();},
- setSpeed:speed=>{view.speed=speed;},
- setLoop:loop=>{$('loop').checked=loop;$('loop').onchange();},
- selectAnimation:name=>{if(!view.playing)$('play').click();$('animation').value=name;$('animation').onchange();},
- seek:time=>{adapter?.seek?.(time);if(controller){controller.state.actionTime=time;controller.state.normalizedTime=time/Math.max(.001,controller.duration||adapter?.timeline?.().duration||1);for(const event of controller.events||[])event.fired=event.time<=time;controller.pendingVoicePlayed=true;}stopAudio();},
+ animations:()=>array(selected?.animations).filter(name=>name!=='effect'||!adapter?.effectTimeline).map(name=>({name,duration:selected.motionDurations?.[name]||adapter?.duration?.(name)||0})),
+ playback:()=>{const timeline=adapter?.timeline?.()||{};return {ready:view.ready&&view.frames>2&&!exporting,key:selected?.id+':'+loadGeneration,name:timeline.name||controller?.state.motion,time:timeline.time??controller?.state.actionTime??0,duration:timeline.duration||selected?.motionDurations?.[controller?.state.motion]||0,loop:timeline.loop??$('loop').checked,playing:view.playing,speed:view.speed,canSeek:!!adapter?.seek};},
+ setPlaying:playing=>{if(!exporting&&view.playing!==playing)$('play').click();},
+ setSpeed:speed=>{if(!exporting)view.speed=speed;},
+ setLoop:loop=>{if(exporting)return;$('loop').checked=loop;$('loop').onchange();},
+ selectAnimation:name=>{if(!view.ready||exporting||name==='effect'&&adapter?.effectTimeline)return;if(!view.playing)$('play').click();$('animation').value=name;$('animation').onchange();},
+ seek:time=>{if(!view.ready||exporting)return;adapter?.seek?.(time);if(controller){controller.state.actionTime=time;controller.state.normalizedTime=time/Math.max(.001,controller.duration||adapter?.timeline?.().duration||1);for(const event of controller.events||[])event.fired=event.time<=time;controller.pendingVoicePlayed=true;}stopAudio();},
+ effectPlayback:()=>view.ready&&adapter?.effectTimeline?{...adapter.effectTimeline.state(),ready:!exporting}:null,
+ seekEffect:time=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.seek(time);adapter?.refreshEffect?.();},
+ setEffectFixed:fixed=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.setFixed(fixed);adapter?.refreshEffect?.();},
+ restartEffect:()=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.restart();adapter?.refreshEffect?.();},
  canvas:()=>canvas,onError:fail,
  tools:{
   identity:()=>selected?.id+':'+loadGeneration,editor:()=>editor,name:()=>selected?.name||selected?.id||'azurlane',
   reload:()=>selected&&loadModel(selected.id),openPanel:open=>setPanelOpen('interaction',open),stopAudio,
-  setExporting:value=>{exporting=value;},capture:state=>adapter.capture(state),setBackground:()=>{},
+  setExporting:value=>{exporting=value;viewerUI.update(true);},capture:state=>adapter.capture(state),setBackground:()=>{},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume:value=>{volume=value;localStorage.setItem('arthub:azurlane:volume',value);for(const job of channels.values())if(job.gain)job.gain.gain.value=(job.baseVolume??1)*value;},voiceTab:'voice',
   drawableOrder:part=>evidence.model?.internalModel.coreModel.getModel().drawables.renderOrders[part.index]||0,
@@ -186,24 +192,36 @@ async function live2dPortrait(model,generation){
  // inside app.render. Apply visibility after that update and before drawing.
  const nativeDraw=internal.draw.bind(internal);internal.draw=gl=>{viewerUI.tools.after();nativeDraw(gl);};
  const lookParams=array(model.interaction.lookParameters).filter(p=>indexes.has(p.id));
- let effectManager,effectTime=0;
+ let effectManager,effectTimeline,effectTime=0;const renderedParameters=core.parameters.values.slice();
  const manager=internal.motionManager,queue=manager.queueManager||manager.motionManager;
  // A separate queue retains the Unity effect layer when the base motion changes.
- if(model.animations.includes('effect')&&queue?.constructor){try{effectManager=new queue.constructor();const motion=await manager.loadMotion('effect',0);if(motion){motion.setIsLoop(true);effectManager.startMotion?.(motion,false,0);}}catch(e){evidence.effectLayerError=String(e);}}
+ if(model.animations.includes('effect')&&queue?.constructor){try{effectManager=new queue.constructor();const motion=await manager.loadMotion('effect',0);if(motion){if(hasEffectControls(model.id))effectTimeline=new EffectTimeline(effectManager,motion);else{motion.setIsLoop(true);effectManager.startMotion(motion,false,0);}}}catch(e){evidence.effectLayerError=String(e);effectManager=null;}}
  if(generation!==loadGeneration){dispose();return null;}
+ const effectBaseParameters=effectTimeline?core.parameters.values.slice():null,effectParameterIndices=new Set((effectTimeline?.parameterIds||[]).map(id=>indexes.get(id)).filter(index=>index!==undefined));
  internal.on('beforeModelUpdate',()=>{
   const parameters=core.parameters;
-  if(effectManager){try{effectManager.doUpdateMotion?.(internal.coreModel,effectTime);}catch(e){evidence.effectLayerError=String(e);effectManager=null;}}
+  effectBaseParameters?.set(parameters.values);
+  if(effectManager){try{if(effectTimeline)effectTimeline.sample(internal.coreModel);else effectManager.doUpdateMotion(internal.coreModel,effectTime);}catch(e){evidence.effectLayerError=String(e);effectManager=null;effectTimeline=null;api.effectTimeline=null;}}
   const ignoreLook=controller?.states?.some(s=>s.active&&s.config.ignore_react===1);
   if(!ignoreLook)for(const p of lookParams){const i=indexes.get(p.id),rates=model.skinConfig.l2d_drag_rate,rate=Array.isArray(rates)?rates[p.axis]??1:1,value=p.factor*(p.axis===0?look.x:p.axis===1?look.y:look.x*look.y)*rate,range=model.skinConfig.l2d_para_range?.[p.id]||[parameters.minimumValues[i],parameters.maximumValues[i]];parameters.values[i]=Math.max(range[0],Math.min(range[1],parameters.values[i]+value));}
   const applied={};for(const p of controller?.parameters?.()||[]){const i=indexes.get(p.id);if(i===undefined)continue;let value=p.mode===2?parameters.values[i]+p.value:p.mode===3?parameters.values[i]*p.value:p.value;value=Math.max(parameters.minimumValues[i],Math.min(parameters.maximumValues[i],value));parameters.values[i]=value;applied[p.id]=value;}evidence.interaction.appliedParameters=applied;
   const gain=model.skinConfig.lip_sync_gain||model.interaction.mouth?.Gain||4;
   const ring=indexes.get('Paramring');if(ring!==undefined)parameters.values[ring]=controller?.state.favor>=1000?1:0;
   for(const id of mouthIds){const i=indexes.get(id);if(i!==undefined&&evidence.audio.state==='playing')parameters.values[i]=Math.max(parameters.values[i],Math.min(1,mouth*gain));}
-  evidence.audio.mouthValues=Object.fromEntries(mouthIds.map(id=>[id,parameters.values[indexes.get(id)]]));editor?.applyParameters?.();
+  evidence.audio.mouthValues=Object.fromEntries(mouthIds.map(id=>[id,parameters.values[indexes.get(id)]]));editor?.applyParameters?.();renderedParameters.set(parameters.values);
  });
  let playSerial=0;
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
+  effectTimeline,
+  refreshEffect:()=>{
+   if(!effectTimeline)return;
+   // A paused background seek must not rerun character fades or physics.
+   const base=core.parameters.values.slice(),frame=renderedParameters.slice();
+   core.parameters.values.set(effectBaseParameters);internal.emit('beforeModelUpdate');
+   for(let i=0;i<frame.length;i++)if(!effectParameterIndices.has(i))core.parameters.values[i]=frame[i];
+   renderedParameters.set(core.parameters.values);internal.coreModel.update();core.parameters.values.set(base);
+   live.deltaTime=0;app.render();evidence.effect=effectTimeline.state();
+  },
   play:async(name,loop,options={})=>{const serial=++playSerial,motion=await manager.loadMotion(name,0);if(generation!==loadGeneration||serial!==playSerial)return;if(!motion)throw Error('动作不可用 '+name);if(model.animator?.states?.[options.state||name]?.writeDefaults){for(let i=0;i<core.parameters.ids.length;i++){const id=core.parameters.ids[i];core.parameters.values[i]=model.animator.defaultParameters?.[id]??core.parameters.defaultValues[i];}internal.coreModel.saveParameters();}motion.setIsLoop(loop);await live.motion(name,0,3);evidence.animation=name;$('animation').value=name;},
   world:(x,y)=>{const p=live.toModelPosition(new PIXI.Point(x,y));return {x:p.x,y:p.y};},
   hits:(x,y)=>{
@@ -235,10 +253,12 @@ async function live2dPortrait(model,generation){
   }
   return bounds;};
   const bounds=measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y};
-  const parameters=core.parameters.values.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
-  const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffectTime=effectTime;let lastTime=0;
-  const rewind=()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=nativeSaved.slice();internal.coreModel.update();lastTime=0;};
-  const advance=time=>{live.elapsedTime=elapsed+time*1000;effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;};
+  const parameters=core.parameters.values.slice(),renderedFrame=renderedParameters.slice(),effectBaseFrame=effectBaseParameters?.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
+  const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot(),savedEffectTime=effectTime;let lastTime=0;
+  // The SDK restores base parameters after deforming a frame. Rebuild from
+  // the actual rendered parameters, then restore the base values separately.
+  const rewind=()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);if(savedEffect)effectTimeline.restore(savedEffect);if(effectBaseFrame)effectBaseParameters.set(effectBaseFrame);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(renderedFrame);core.parts.opacities.set(parts);internal.coreModel.update();core.parameters.values.set(parameters);renderedParameters.set(renderedFrame);internal.coreModel._savedParameters=nativeSaved.slice();lastTime=0;};
+  const advance=time=>{live.elapsedTime=elapsed+time*1000;if(savedEffect){effectTimeline.restore(savedEffect);effectTimeline.advance(time);}else effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;};
   return {pixelYUp:false,pngSize:quality=>({...K.exportDimensions(bounds,quality),fullFrame:true}),
    measure:time=>{editor.before();advance(time);return measure();},rewind,
    draw:(time,size,background)=>{editor.before();
@@ -249,7 +269,7 @@ async function live2dPortrait(model,generation){
    dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
  let fittingBounds;
- render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const frame=stageFrame(),fit=fittingBounds||=K.live2DViewBounds(internal,natural,model.interaction.hitAreas.map(a=>a.id)),scale=Math.min(frame.width/fit.width,frame.height/fit.height)*.92*view.zoom;live.scale.set(scale);live.position.set(frame.x+view.panX+(natural.width/2-fit.x)*scale,frame.y+view.panY+(natural.height/2-fit.y)*scale);if(view.playing){effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();};
+ render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const frame=stageFrame(),fit=fittingBounds||=K.live2DViewBounds(internal,natural,model.interaction.hitAreas.map(a=>a.id)),scale=Math.min(frame.width/fit.width,frame.height/fit.height)*.92*view.zoom;live.scale.set(scale);live.position.set(frame.x+view.panX+(natural.width/2-fit.x)*scale,frame.y+view.panY+(natural.height/2-fit.y)*scale);if(view.playing){if(effectTimeline)effectTimeline.advance(dt*view.speed);else effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();evidence.effect=effectTimeline?.state()||null;};
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
 }
 async function spinePortrait(model,generation){
@@ -283,11 +303,12 @@ async function spinePortrait(model,generation){
 }
 async function getJson(url,required=true){const r=await fetch(url);if(!r.ok){if(!required&&r.status===404)return null;throw Error(r.status+' '+url);}return r.json();}
 async function loadModel(id,{history=true}={}){
+ if(exporting)return false;
  stagePan.cancel();
  $('btnStagePan').disabled=true;for(const key of ['reset-state','show-hits'])$(key).disabled=true;$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
- const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp',label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
+ const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp',label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
  const next=canvas.cloneNode(false);canvas.replaceWith(next);canvas=next;Object.assign(view,{zoom:1,panX:0,panY:0,playing:true,frames:0});look.x=look.y=look.targetX=look.targetY=0;portraitTime=0;zoomTo(1);$('status').textContent=id+' · 正在读取模型和交互…';
  const data=await Promise.all([getJson(BASE+'/catalog/'+encodeURIComponent(id)+'.json'),getJson(BASE+'/model-audio/'+encodeURIComponent(id)+'.json',false),allModels.find(m=>m.id===id)?.type==='live2d'?getJson(BASE+'/animators/'+encodeURIComponent(id)+'.json',false):null]).catch(e=>{if(generation!==loadGeneration)return null;throw e;});
  if(!data)return false;const [model,audio,animator]=data;
