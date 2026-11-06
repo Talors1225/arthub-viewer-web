@@ -133,6 +133,10 @@
         setImage(seq, options.path);
       },
       setImage,
+      progress(seq, text) {
+        if (!owns(seq) || current.state !== 'loading') return;
+        message.textContent = String(text || '动态加载中');
+      },
       ready(seq) {
         if (!owns(seq) || current.state !== 'loading') return;
         this.cancel();

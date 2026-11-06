@@ -1,6 +1,8 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=52d31805288c';
-import {EffectTimeline} from './effect-timeline.mjs?v=52d31805288c';
-import {hasEffectControls} from './effect-controls.mjs?v=52d31805288c';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=499c19e6892b';
+import {EffectTimeline} from './effect-timeline.mjs?v=499c19e6892b';
+import {hasEffectControls} from './effect-controls.mjs?v=499c19e6892b';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames} from './portrait-frame.mjs?v=499c19e6892b';
+import {readPortraitAsset,loadPortraitSpineAssets} from './portrait-assets.mjs?v=499c19e6892b';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
 let stageFrameCache=null;
@@ -17,6 +19,7 @@ const previewContext=previewSample.getContext('2d',{willReadFrequently:true});
 const bootPreviewId=new URL(location.href).searchParams.get('id');
 if(/^[a-z0-9_-]+$/i.test(bootPreviewId||''))loadingPreview.begin(0,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(bootPreviewId)+'.webp',label:'当前立绘',trimImage:true});
 const view={zoom:1,panX:0,panY:0,playing:true,speed:1,frames:0,ready:false};
+let loadAbort=null,retryId=null;
 let editor=null,exporting=false,volume=Number(localStorage.getItem('arthub:azurlane:volume')??1);
 const evidence=window.__azurlane=window.__dynamicViewer={view,ready:false,errors:[],interaction:{},audio:{state:'idle',plays:0,maxRms:0,missing:[]}};
 // pixi-live2d-display 0.4 releases the Model but leaves its native Moc allocated.
@@ -166,7 +169,7 @@ const viewerUI=window.createInteractionViewerUI({
  canvas:()=>canvas,onError:fail,
  tools:{
   identity:()=>selected?.id+':'+loadGeneration,editor:()=>editor,name:()=>selected?.name||selected?.id||'azurlane',
-  reload:()=>selected&&loadModel(selected.id),openPanel:open=>setPanelOpen('interaction',open),stopAudio,
+  reload:()=>{const id=retryId||selected?.id;if(id)return loadModel(id).catch(fail);},openPanel:open=>setPanelOpen('interaction',open),stopAudio,
   setExporting:value=>{exporting=value;viewerUI.update(true);},capture:state=>adapter.capture(state),setBackground:()=>{},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume:value=>{volume=value;localStorage.setItem('arthub:azurlane:volume',value);for(const job of channels.values())if(job.gain)job.gain.gain.value=(job.baseVolume??1)*value;},voiceTab:'voice',
@@ -239,19 +242,20 @@ async function live2dPortrait(model,generation){
  };
  api.capture=()=>{
   const hitMeshes=new Set(model.interaction.hitAreas.map(area=>area.id));
+  const surrounds=model.id==='guanghui_9'?portraitSurroundNames(model.id):new Set();
   const measure=()=>{
-  const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+  const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},rectangles=[];
   for(let i=0;i<core.drawables.ids.length;i++){
-   if(hitMeshes.has(core.drawables.ids[i])||!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
+   if(hitMeshes.has(core.drawables.ids[i])||surrounds.has(core.drawables.ids[i])||!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
    const vertices=internal.getDrawableVertices(i);
    const b={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
    for(let j=0;j<vertices.length;j+=2){const p=internal.localTransform.apply(new PIXI.Point(vertices[j],vertices[j+1]));b.minX=Math.min(b.minX,p.x);b.maxX=Math.max(b.maxX,p.x);b.minY=Math.min(b.minY,p.y);b.maxY=Math.max(b.maxY,p.y);}
    // Screen-filling backdrop meshes can span over 100,000 pixels. Their
    // meaningful frame is the authored model canvas, not an infinite backdrop.
    if(b.maxX-b.minX>natural.width*4||b.maxY-b.minY>natural.height*4){b.minX=Math.max(0,b.minX);b.maxX=Math.min(natural.width,b.maxX);b.minY=Math.max(0,b.minY);b.maxY=Math.min(natural.height,b.maxY);}
-   if(b.maxX>b.minX&&b.maxY>b.minY)for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);
+   if(b.maxX>b.minX&&b.maxY>b.minY){rectangles.push({name:core.drawables.ids[i],bounds:[b.minX,b.minY,b.maxX,b.maxY]});for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);}
   }
-  return bounds;};
+  return model.id==='guanghui_9'?portraitFrameBounds(model.id,rectangles)||bounds:bounds;};
   const bounds=measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y};
   const parameters=core.parameters.values.slice(),renderedFrame=renderedParameters.slice(),effectBaseFrame=effectBaseParameters?.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
   const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot(),savedEffectTime=effectTime;let lastTime=0;
@@ -261,11 +265,11 @@ async function live2dPortrait(model,generation){
   const advance=time=>{live.elapsedTime=elapsed+time*1000;if(savedEffect){effectTimeline.restore(savedEffect);effectTimeline.advance(time);}else effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;};
   return {pixelYUp:false,pngSize:quality=>({...K.exportDimensions(bounds,quality),fullFrame:true}),
    measure:time=>{editor.before();advance(time);return measure();},rewind,
-   draw:(time,size,background)=>{editor.before();
+   draw:(time,size,background)=>{const added=[...surrounds].filter(id=>!editor.hidden.has(id));for(const id of added)editor.hidden.add(id);try{editor.before();
     if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;},background);
     if(size.fullFrame){app.renderer.resolution=1;app.renderer.resize(size.width,size.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale,size.height/2-size.centerY*size.scale);}
     else{app.renderer.resolution=size.width/stage.clientWidth;app.renderer.resize(stage.clientWidth,stage.clientHeight);}
-    if(time!==null)advance(time);else app.render();return canvas;},
+    if(time!==null)advance(time);else app.render();return canvas;}finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
    dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
  let fittingBounds;
@@ -273,11 +277,12 @@ async function live2dPortrait(model,generation){
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
 }
 async function spinePortrait(model,generation){
- const context=new spine.webgl.ManagedWebGLRenderingContext(canvas,{alpha:true,antialias:true,preserveDrawingBuffer:true}),gl=context.gl,scene=new spine.webgl.SceneRenderer(canvas,context,true),assets=new spine.webgl.AssetManager(context);
- const dispose=()=>{try{assets.dispose();scene.dispose();gl.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
- for(const spec of model.layers){spec.skelUrl=BASE+'/assets/spinepainting/'+enc(spec.folder+spec.skeleton);spec.atlasUrl=BASE+'/assets/spinepainting/'+enc(spec.atlas);assets.loadBinary(spec.skelUrl);assets.loadTextureAtlas(spec.atlasUrl);}
- try{await new Promise((resolve,reject)=>{const start=performance.now();function check(){if(generation!==loadGeneration)return reject(Error('superseded'));if(assets.hasErrors())return reject(Error(JSON.stringify(assets.getErrors())));if(assets.isLoadingComplete())return resolve();if(performance.now()-start>60000)return reject(Error('骨骼或纹理读取超时'));setTimeout(check,25);}check();});}catch(e){dispose();throw e;}
- let layers;try{layers=model.layers.map(spec=>{const loader=new spine.AtlasAttachmentLoader(assets.get(spec.atlasUrl)),reader=spec.format==='json'?new spine.SkeletonJson(loader):new spine.SkeletonBinary(loader),bytes=assets.get(spec.skelUrl),data=reader.readSkeletonData(spec.format==='json'?JSON.parse(new TextDecoder().decode(bytes)):bytes),skeleton=new spine.Skeleton(data);if(spec.initialSkin&&data.findSkin(spec.initialSkin))skeleton.setSkinByName(spec.initialSkin);skeleton.setToSetupPose();Object.assign(skeleton,{x:spec.x||0,y:spec.y||0,scaleX:spec.scaleX||1,scaleY:spec.scaleY||1});if(spec.rotation)skeleton.bones[0].rotation+=spec.rotation;if(spec.color)Object.assign(skeleton.color,spec.color);const stateData=new spine.AnimationStateData(data);stateData.defaultMix=.15;const state=new spine.AnimationState(stateData);skeleton.updateWorldTransform();return {data,skeleton,state,spec};});}catch(e){dispose();throw e;}
+ const context=new spine.webgl.ManagedWebGLRenderingContext(canvas,{alpha:true,antialias:true,preserveDrawingBuffer:true}),gl=context.gl,scene=new spine.webgl.SceneRenderer(canvas,context,true);let assets;
+ const dispose=()=>{try{assets?.dispose();scene.dispose();gl.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
+ for(const spec of model.layers){spec.skelUrl=BASE+'/assets/spinepainting/'+enc(spec.folder+spec.skeleton);spec.atlasUrl=BASE+'/assets/spinepainting/'+enc(spec.atlas);}
+ try{assets=await loadPortraitSpineAssets(spine,context,model.layers,{base:BASE+'/assets/spinepainting/',signal:loadAbort.signal,onProgress:text=>{if(generation===loadGeneration){$('status').textContent=text;loadingPreview.progress(generation,text);}},onTransport:(file,kind)=>{if(generation===loadGeneration)(evidence.loadTransports||={})[file]=kind;}});}catch(e){dispose();throw e;}
+ if(generation!==loadGeneration){dispose();return null;}
+ let layers;try{layers=assets.layers.map(({spec,atlas,bytes})=>{const loader=new spine.AtlasAttachmentLoader(atlas),reader=spec.format==='json'?new spine.SkeletonJson(loader):new spine.SkeletonBinary(loader),data=reader.readSkeletonData(spec.format==='json'?JSON.parse(new TextDecoder().decode(bytes)):bytes),skeleton=new spine.Skeleton(data);if(spec.initialSkin&&data.findSkin(spec.initialSkin))skeleton.setSkinByName(spec.initialSkin);skeleton.setToSetupPose();Object.assign(skeleton,{x:spec.x||0,y:spec.y||0,scaleX:spec.scaleX||1,scaleY:spec.scaleY||1});if(spec.rotation)skeleton.bones[0].rotation+=spec.rotation;if(spec.color)Object.assign(skeleton.color,spec.color);const stateData=new spine.AnimationStateData(data);stateData.defaultMix=.15;const state=new spine.AnimationState(stateData);skeleton.updateWorldTransform();return {data,skeleton,state,spec,atlas};});}catch(e){dispose();throw e;}
  evidence.layers=layers;evidence.renderer=scene;model.animations=[...new Set(layers.flatMap(l=>l.data.animations.map(a=>a.name)))].sort();
  let mainLayer=0,sequence=0;
  for(let i=0;i<layers.length;i++)layers[i].state.addListener({event:(entry,event)=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion)controller.event(event.data.name);},complete:entry=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion&&controller.state.busy)controller.finish();}});
@@ -297,20 +302,21 @@ async function spinePortrait(model,generation){
  const framing=fitSceneBounds(rectangles),bounds=framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
- api.capture=animation=>window.createInteractionSpineCapture({layers,ns:spine,canvas,renderer:scene,gl,editor,animation,restore:()=>render(0)});
+ api.capture=animation=>{const hidden=new Set(editor.hidden),surrounds=portraitSurroundNames(model.id);layers.forEach((layer,i)=>{for(const slot of layer.skeleton.slots)if(surrounds.has(slot.data.name))hidden.add(i+':'+slot.data.name);});const session=window.createInteractionSpineCapture({layers,ns:spine,canvas,renderer:scene,gl,editor:{...editor,hidden},animation,restore:()=>render(0)}),frame=spinePortraitFrameBounds(model.id,layers,spine,hidden);if(frame)session.pngSize=quality=>({...K.exportDimensions(frame,quality),fullFrame:true});return session;};
  render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight),density=Math.min(Math.max(2,devicePixelRatio||1),maxBuffer/Math.max(w,h)),bw=Math.round(w*density),bh=Math.round(h*density);if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}gl.viewport(0,0,bw,bh);scene.camera.setViewport(bw,bh);const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;scene.camera.zoom=units/density;scene.camera.position.x=bounds.x-(view.panX+frame.x-w/2)*units;scene.camera.position.y=bounds.y+(view.panY+frame.y-h/2)*units;scene.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);for(const l of layers){if(view.playing){l.state.update(dt*view.speed);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}}viewerUI.tools.after();scene.begin();for(const l of layers)scene.drawSkeleton(l.skeleton,true);scene.end();};
  disposeRenderer=dispose;return api;
 }
-async function getJson(url,required=true){const r=await fetch(url);if(!r.ok){if(!required&&r.status===404)return null;throw Error(r.status+' '+url);}return r.json();}
+async function getJson(url,required=true,signal){try{return JSON.parse(new TextDecoder().decode(await readPortraitAsset(url,{signal})));}catch(error){if(!required&&error.status===404)return null;throw error;}}
 async function loadModel(id,{history=true}={}){
  if(exporting)return false;
+ loadAbort?.abort();loadAbort=new AbortController();retryId=id;
  stagePan.cancel();
  $('btnStagePan').disabled=true;for(const key of ['reset-state','show-hits'])$(key).disabled=true;$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
  const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp',label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
  const next=canvas.cloneNode(false);canvas.replaceWith(next);canvas=next;Object.assign(view,{zoom:1,panX:0,panY:0,playing:true,frames:0});look.x=look.y=look.targetX=look.targetY=0;portraitTime=0;zoomTo(1);$('status').textContent=id+' · 正在读取模型和交互…';
- const data=await Promise.all([getJson(BASE+'/catalog/'+encodeURIComponent(id)+'.json'),getJson(BASE+'/model-audio/'+encodeURIComponent(id)+'.json',false),allModels.find(m=>m.id===id)?.type==='live2d'?getJson(BASE+'/animators/'+encodeURIComponent(id)+'.json',false):null]).catch(e=>{if(generation!==loadGeneration)return null;throw e;});
+ const data=await Promise.all([getJson(BASE+'/catalog/'+encodeURIComponent(id)+'.json',true,loadAbort.signal),getJson(BASE+'/model-audio/'+encodeURIComponent(id)+'.json',false,loadAbort.signal),allModels.find(m=>m.id===id)?.type==='live2d'?getJson(BASE+'/animators/'+encodeURIComponent(id)+'.json',false,loadAbort.signal):null]).catch(e=>{if(generation!==loadGeneration)return null;loadAbort.abort(e);throw e;});
  if(!data)return false;const [model,audio,animator]=data;
  if(generation!==loadGeneration)return false;selected=model;if(audio)Object.assign(model,audio);if(animator)model.animator=animator;evidence.selected=model;$('active-name').textContent=stageName(model);populate();
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
@@ -325,7 +331,7 @@ function record(){
  const state={id:selected.id,type:selected.type,ready:evidence.ready,frames:view.frames,pose,zoom:view.zoom,animation:evidence.animation,canvas:[canvas.width,canvas.height],state:{...controller.state},voiceCount:selected.voice.activeClips.length,interaction:evidence.interaction,audio:evidence.audio,trace:controller.trace.slice(-12),errors:evidence.errors};evidenceNode.textContent=JSON.stringify(state);
  if(showHits){const polygons=adapter.polygons?.()||[];$('hit-overlay').setAttribute('viewBox',`0 0 ${stage.clientWidth} ${stage.clientHeight}`);$('hit-overlay').replaceChildren(...polygons.map(h=>{const polygon=document.createElementNS('http://www.w3.org/2000/svg','polygon');polygon.setAttribute('points',h.vertices.map(p=>p.join(',')).join(' '));polygon.setAttribute('fill','#ffce6e22');polygon.setAttribute('stroke','#ffce6e');polygon.setAttribute('stroke-width','1');return polygon;}));}else $('hit-overlay').replaceChildren();
 }
-window.__loadAzurLane=loadModel;window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('id'),match=allModels.find(m=>m.id===canonicalModelId(id));if(match){setPanelOpen('library',false);loadModel(id,{history:false}).catch(fail);}else setPanelOpen('library',true);});window.addEventListener('pagehide',()=>{loadGeneration++;controller?.dispose();disposeRenderer?.();ctx?.close().catch(()=>{});});
+window.__loadAzurLane=loadModel;window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('id'),match=allModels.find(m=>m.id===canonicalModelId(id));if(match){setPanelOpen('library',false);loadModel(id,{history:false}).catch(fail);}else setPanelOpen('library',true);});window.addEventListener('pagehide',()=>{loadGeneration++;loadAbort?.abort();controller?.dispose();disposeRenderer?.();ctx?.close().catch(()=>{});});
 let previous=performance.now(),nextEvidence=0;
 function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;try{if(!exporting&&view.ready&&controller){updateAudio(dt);if(view.playing){portraitTime+=dt*view.speed;const d=1-Math.exp(-dt/(selected.interaction.settings?.DampingTime||.3));look.x+=(look.targetX-look.x)*d;look.y+=(look.targetY-look.y)*d;controller.tick(dt*view.speed);}render?.(dt);view.frames++;
  if(previewPending&&view.frames>2&&!controller.state.motionPending&&now>=nextPreviewCheck){nextPreviewCheck=now+100;const gl=evidence.app?.renderer?.gl||canvas.getContext('webgl2')||canvas.getContext('webgl');if(gl&&!gl.isContextLost()&&canvas.width>1&&canvas.height>1){previewContext.clearRect(0,0,64,64);previewContext.drawImage(canvas,0,0,64,64);const pixels=previewContext.getImageData(0,0,64,64).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>8){loadingPreview.ready(loadGeneration);previewPending=false;break;}}}
