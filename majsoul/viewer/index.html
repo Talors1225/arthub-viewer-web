@@ -870,21 +870,24 @@
   }
   function applyAllTransforms() {
     for (const L of layers) applyLayerTransform(L);
-    zPct.textContent = Math.round(globalZoom * 100) + '%';
+    const zoomLabel = Math.round(globalZoom * 100) + '%';
+    if (zPct.textContent !== zoomLabel) zPct.textContent = zoomLabel;
     zoomRange.value = String(globalZoom);
   }
 
-  function computeRawBounds(L, useIdlePose) {
-    const sk = L.skeleton;
-    sk.scaleX = 1; sk.scaleY = 1; sk.x = 0; sk.y = 0; sk.rotation = 0;
-    if (useIdlePose && L.state && L.idleAnim) {
+  function computeRawBounds(L) {
+    // Sample the idle pose without changing the live skeleton or playback track.
+    const sk = new spine.Skeleton(L.data);
+    sk.setSkin(L.skeleton.skin);
+    sk.setToSetupPose();
+    if (L.idleAnim) {
+      const state = new spine.AnimationState(L.state.data);
+      state.setAnimation(0, L.idleAnim, true);
       for (let i = 0; i < 30; i++) {
-        L.state.update(1 / 30);
-        L.state.apply(sk);
+        state.update(1 / 30);
+        state.apply(sk);
         updWT(sk);
       }
-      L.state.clearTracks();
-      L.state.setAnimation(0, L.idleAnim, true);
     }
     updWT(sk);
     let b = K.measureBounds(sk);
@@ -908,7 +911,7 @@
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const L of layers) {
       if (!L.visible) continue;
-      const b = computeRawBounds(L, true);
+      const b = computeRawBounds(L);
       minX = Math.min(minX, b.minX);
       minY = Math.min(minY, b.minY);
       maxX = Math.max(maxX, b.maxX);
@@ -1315,7 +1318,15 @@
       b.textContent = animCN(n);
       b.title = '原名: ' + n;
       if (n === curAnimName) b.classList.add('on');
-      b.onclick = () => { curAnimName = n; playAll(n, false); buildAnimChips(); };
+      b.onclick = () => {
+        if (pausedAll) {
+          pausedAll = false;
+          setPbPlay();
+        }
+        curAnimName = n;
+        playAll(n, false);
+        buildAnimChips();
+      };
       animChips.appendChild(b);
     }
   }
