@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN" data-accent="gold">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>棕色尘埃 2 · 有缘之客 | ArtHub</title>
+  <link rel="stylesheet" href="../../common/kit.css">
+  <link rel="stylesheet" href="./fated.css">
+  <script defer src="../../arthub-cos-config.js?v=20261108-bd2-r2"></script>
+  <script defer src="../../common/kit.js"></script>
+  <script defer src="../../common/asset-loader.js"></script>
+  <script type="module" src="./viewer.mjs"></script>
+</head>
+<body>
+  <main id="library">
+    <header class="library-bar">
+      <a class="action" href="../viewer/cutscene.html">‹ 普通资源库</a>
+      <div class="heading"><h1>有缘之客</h1><p id="count" role="status"></p></div>
+      <a class="action sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer">♡ 爱发电</a>
+      <input id="search" type="search" aria-label="搜索有缘之客" placeholder="搜索名称或编号" autocomplete="off">
+    </header>
+    <section id="cards" aria-label="互动立绘"></section>
+    <nav id="pages" aria-label="资源库分页" hidden>
+      <button class="action" id="previous" type="button">上一页</button>
+      <span id="page-label"></span>
+      <button class="action" id="next" type="button">下一页</button>
+    </nav>
+  </main>
+  <section id="stage" aria-label="有缘之客互动立绘" hidden>
+    <canvas id="portrait" aria-label="可点按、长按和拖动的立绘"></canvas>
+    <div id="gesture-hints" aria-hidden="true" hidden></div>
+    <label id="score-meter" hidden>互动计量 <progress max="100" value="0"></progress><span></span></label>
+    <p id="hint-status" role="status" hidden></p>
+    <button class="action return" id="back" type="button">‹ 资源库</button>
+    <div class="controls" aria-label="立绘工具">
+      <select class="action" id="tool" aria-label="选择道具" hidden></select>
+      <select class="action" id="sound-mode" aria-label="互动声音" hidden>
+        <option value="all">韩语＋音效</option>
+        <option value="effects">仅音效</option>
+        <option value="off">静音</option>
+      </select>
+      <button class="action" id="hints" type="button" aria-label="互动提示" aria-pressed="false" disabled>提示</button>
+      <button class="action" id="zoom-out" type="button" aria-label="缩小">−</button>
+      <button class="action" id="fit" type="button" aria-label="适应窗口">适应</button>
+      <button class="action" id="zoom-in" type="button" aria-label="放大">＋</button>
+      <button class="action" id="restart" type="button" aria-label="重新开始互动">重来</button>
+    </div>
+    <div class="load" id="load" role="status" hidden>
+      <p id="message"></p>
+      <button class="action" id="retry" type="button" hidden>重试</button>
+    </div>
+  </section>
+</body>
+</html>

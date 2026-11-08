@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const cfg = window.ARTHUB_COS_CONFIG || {};
+  const bd2Root = String(cfg.bd2AssetsRoot || '').replace(/\/+$/, '');
   const root = String(cfg.root || '').replace(/\/+$/, '');
   const gameRoot = String(cfg.gameAssetsRoot || '').replace(/\/+$/, '');
   const crosscoreRoot = String(cfg.crosscoreAssetsRoot || '').replace(/\/+$/, '');
@@ -51,6 +52,13 @@
     const source = input instanceof Request ? input.url : String(input);
     const url = new URL(source, location.href);
     if (url.origin !== location.origin) return url.href;
+    if (bd2Root) {
+      const coverAt = url.pathname.indexOf('/thumbs/bd2/portraits/');
+      const bd2Path = coverAt >= 0
+        ? '/bd2/portraits' + url.pathname.slice(coverAt)
+        : url.pathname.match(/\/bd2\/(?:spine|portraits)\/.*/)?.[0];
+      if (bd2Path) return bd2Root + bd2Path + url.search + url.hash;
+    }
     const remotePath = markerPath(url.pathname);
     if (!remotePath) return url.href;
     const gameAsset = GAME_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);

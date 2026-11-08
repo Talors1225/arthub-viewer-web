@@ -277,8 +277,12 @@
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos-config.js?v=20261108-bd2-r2"></script>
+  <script src="../../arthub-cos.js?v=20261108-bd2-r2"></script>
+<style>
+  .bd2-voice-controls { position: fixed; z-index: 12; left: 16px; bottom: calc(66px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 5px; padding: 5px; border-radius: 12px; background: var(--panel); }
+  .bd2-voice-controls[hidden], .bd2-voice-controls > [hidden] { display: none !important; }
+</style>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -416,6 +420,7 @@
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=20261104-unified-final"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
+<script src="./voice.js"></script>
 <script>
 
 (() => {
@@ -502,6 +507,7 @@
   let mgl = null, renderer = null;
   let cut = null;
   let portraitAudio = null;
+  let bd2Voice = null;
   let cutLoadSeq = 0;
   let playing = true;
   let loopAnim = true;
@@ -592,7 +598,7 @@
 
   const aliasMap = store.get('aliasMap', {});
   const aliasOf = id => aliasMap[id] || '';
-  const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
+  const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: routeSource === 'bd2' ? '普通立绘' : '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
   const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, other: 9, store: 10, catalog: 10, unknown: 9 };
   function displayType(c) {
     const type = String(c && (c.resourceType || c.type) || 'unknown').toLowerCase();
@@ -621,6 +627,14 @@
         link.textContent = label;
         row.appendChild(link);
       }
+    }
+    if (routeSource === 'bd2' && window.ARTHUB_COS_CONFIG?.fatedGuestAssetsRoot) {
+      const link = document.createElement('a');
+      link.className = 'filter-chip';
+      link.href = '../fated/';
+      link.style.textDecoration = 'none';
+      link.textContent = '有缘之客';
+      row.appendChild(link);
     }
     for (const [val, label, n] of chips) {
       const b = document.createElement('button');
@@ -924,7 +938,7 @@
     card.querySelector('.tstar').setAttribute('aria-pressed', String(starred.has(c.id)));
     const ph = card.querySelector('.ph');
     const variant = String(c.cutscenes?.[0]?.variant || '0');
-    const thumbPath = webThumbs[routeSource + ':' + c.id + ':' + variant];
+    const thumbPath = c.thumbnail || webThumbs[routeSource + ':' + c.id + ':' + variant];
     K.setPreview(ph, thumbPath ? THUMB_PREFIX + thumbPath : null);
     grid.appendChild(card);
   }
@@ -1006,6 +1020,7 @@
   let gridScroll = 0;
   function openGrid() {
     stageMode = false;
+    bd2Voice?.frame();
     portraitAudio?.playbackChanged();
     gridView.classList.add('open');
     setChrome(false);
@@ -1445,6 +1460,7 @@
   // ---------- 播放条 ----------
   const getTrack = () => { const t = cut && cut.state.getCurrent(0); return t && t.animation ? t : null; };
   function seekTo(ratio) {
+    bd2Voice?.stop();
     const track = getTrack();
     if (!track) return;
     const time = ratio * (track.animation.duration || 0.0001);
@@ -1457,6 +1473,7 @@
     syncTimeline();
   }
   function stepFrame(dir) {
+    bd2Voice?.stop();
     const track = getTrack();
     if (!track) return;
     const dur = track.animation.duration || 0.0001;
@@ -1489,8 +1506,9 @@
     store.set('loop', loopAnim);
     if (cut && animSel.value) playAnimation(animSel.value);
   });
-  pbPlay.addEventListener('click', () => { playing = !playing; setPlayBtn(); });
+  pbPlay.addEventListener('click', () => { playing = !playing; if (!playing) bd2Voice?.stop(); setPlayBtn(); });
   pbSpeed.addEventListener('input', () => {
+    bd2Voice?.stop();
     pbSpeedVal.textContent = fmtSpeed(pbSpeed.value);
     store.set('speed', Number(pbSpeed.value));
     if (cut) for (const layer of cutLayers()) if (layer.state) layer.state.timeScale = Number(pbSpeed.value);
@@ -1503,6 +1521,7 @@
     requestAnimationFrame(loop);
     let dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
     lastT = t;
+    const voiceDrivesMotion = bd2Voice?.frame();
     if (K.pngExporting) return;
     if (document.hidden || (!embedded && !stageMode)) { portraitAudio?.syncPause(); return; }
     if (portraitAudio) dt = portraitAudio.animationDelta(dt);
@@ -1510,7 +1529,7 @@
     if (cut) {
       for (const layer of cutLayers()) {
         if (layer.active === false) continue;
-        if (playing && layer.state) layer.state.update(dt);
+        if (playing && layer.state && !voiceDrivesMotion) layer.state.update(dt);
         if (layer.state && !boneEditMode) layer.state.apply(layer.skeleton);
         if (poseLocked && !boneEditMode && layer === cutLayers()[0]) applyPoseToSkeleton(layer.skeleton, poseLocked);
         K.updateWorldTransform(layer.skeleton);
@@ -1657,6 +1676,7 @@
 
   function playAnimation(name, options = {}) {
     if (!cut) return;
+    if (!options.bd2VoiceTimeline) bd2Voice?.stop();
     portraitAudio?.animationChanged(name, options);
     let bounds = null;
     for (const layer of cutLayers()) {
@@ -1896,7 +1916,7 @@
     $('#railStar').innerHTML = K.uiIcon('star', 18, store.get('stars', []).includes(c.id));
     const rt = $('#railThumb');
     rt.innerHTML = '';
-    const preview = webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
+    const preview = c.thumbnail || webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
     K.setPreview(rt, preview ? THUMB_PREFIX + preview : null);
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
@@ -1973,6 +1993,7 @@
     }
   }
   function disposeCut() {
+    bd2Voice?.select(null);
     portraitAudio?.reset();
     if (cut) {
       for (const layer of cutLayers(cut)) disposeAtlas(layer.atlas);
@@ -2185,6 +2206,7 @@
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
       target.layers.push(...loadedLayers);
       cut = target;
+      bd2Voice?.select(cur.id, v.variant ?? idx);
       for (const layer of cut.layers) layer.hiddenSlots = cut.hiddenSlots;
 
       restoreHidden();
@@ -2687,7 +2709,7 @@
           const hint = portraitAudio ? portraitAudio.interactionHint() : '角色声音模块尚未就绪，请稍后重试';
           if (hint) K.toast(hint, 'info', 3500, 'voice');
           portraitAudio?.interact();
-        }
+        } else if (routeSource === 'bd2') bd2Voice?.tap();
       } else hidePartPopup();
     }
   });
@@ -2768,6 +2790,27 @@
   (async () => {
     setupDesktopBridge();
     initPortraitAudio();
+    const voiceRoot = window.ARTHUB_COS_CONFIG?.bd2PortraitVoiceRoot;
+    if (routeSource === 'bd2' && !embedded && voiceRoot && window.ArtHubBd2Voice) {
+      bd2Voice = new ArtHubBd2Voice({
+        root: voiceRoot,
+        active: () => Boolean(cut && stageMode && !boneEditMode && !partEditMode && !K.pngExporting && !document.hidden),
+        error: message => K.toast(message, 'err', 3000, 'voice'),
+        resume: () => { playing = true; setPlayBtn(); },
+        motion: (clip, time, changed) => {
+          if (changed) {
+            animSel.value = clip.animation;
+            playAnimation(clip.animation, {loop:clip.loop, keepView:true, bd2VoiceTimeline:true});
+          }
+          for (const layer of cutLayers()) {
+            const track = layer.state?.getCurrent(0);
+            if (track) track.trackTime = time;
+          }
+          syncTimeline();
+        },
+      });
+      document.addEventListener('visibilitychange', () => { if (document.hidden) bd2Voice.stop(); });
+    }
     K.initSearchPalette();
     K.captureSpine('4.1');
     // Other runtime versions load only when a selected model needs them.

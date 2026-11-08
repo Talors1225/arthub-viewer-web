@@ -4,5 +4,9 @@ window.ARTHUB_COS_CONFIG = {
   "crosscoreAssetsRoot": "https://pub-3be583976a374ca9aacd740e9d14ad96.r2.dev",
   "staticCatalog": true,
   "release": "c6bdfeb264f4",
-  "riichicityAssetsRoot": "https://pub-3be583976a374ca9aacd740e9d14ad96.r2.dev"
+  "riichicityAssetsRoot": "https://pub-3be583976a374ca9aacd740e9d14ad96.r2.dev",
+  "bd2AssetsRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev",
+  "bd2PortraitVoiceRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev/bd2/portrait-voice/",
+  "fatedGuestAssetsRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev/bd2/fated/20261107/",
+  "fatedGuestAudioRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev/bd2/fated-audio/20261107/"
 };

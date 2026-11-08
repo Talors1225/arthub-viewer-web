@@ -1,0 +1,404 @@
+{
+  "schemaVersion": 1,
+  "models": [
+    {
+      "id": "dating1",
+      "name": "有缘之客 01",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating1.prefab",
+      "dir": "Illust_dating1/",
+      "skel": "illust_dating1.skel",
+      "atlas": "illust_dating1.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 68,
+      "pages": 5,
+      "frame": {
+        "minX": -1675.0,
+        "minY": -1900.0,
+        "maxX": 1675.0,
+        "maxY": 1900.0
+      }
+    },
+    {
+      "id": "dating2",
+      "name": "有缘之客 02",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating2.prefab",
+      "dir": "Illust_dating2/",
+      "skel": "illust_dating2.skel",
+      "atlas": "illust_dating2.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 60,
+      "pages": 8,
+      "frame": {
+        "minX": -2130.0,
+        "minY": -1565.0,
+        "maxX": 2130.0,
+        "maxY": 1565.0
+      }
+    },
+    {
+      "id": "dating3",
+      "name": "有缘之客 03",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating3.prefab",
+      "dir": "Illust_dating3/",
+      "skel": "illust_dating3.skel",
+      "atlas": "illust_dating3.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 39,
+      "pages": 8,
+      "frame": {
+        "minX": -1212.5,
+        "minY": -1432.5,
+        "maxX": 1212.5,
+        "maxY": 1432.5
+      }
+    },
+    {
+      "id": "dating4",
+      "name": "有缘之客 04",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating4.prefab",
+      "dir": "Illust_dating4/",
+      "skel": "illust_dating4.skel",
+      "atlas": "illust_dating4.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 58,
+      "pages": 6,
+      "frame": {
+        "minX": -1525.0,
+        "minY": -1550.0,
+        "maxX": 1525.0,
+        "maxY": 1550.0
+      }
+    },
+    {
+      "id": "dating5",
+      "name": "有缘之客 05",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating5.prefab",
+      "dir": "Illust_dating5/",
+      "skel": "illust_dating5.skel",
+      "atlas": "illust_dating5.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 50,
+      "pages": 7,
+      "frame": {
+        "minX": -1525.0,
+        "minY": -1550.0,
+        "maxX": 1525.0,
+        "maxY": 1550.0
+      }
+    },
+    {
+      "id": "dating6",
+      "name": "有缘之客 06",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating6.prefab",
+      "dir": "Illust_dating6/",
+      "skel": "illust_dating6.skel",
+      "atlas": "illust_dating6.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 6,
+      "points": 49,
+      "pages": 9,
+      "frame": {
+        "minX": -1750.0,
+        "minY": -2500.0,
+        "maxX": 1750.0,
+        "maxY": 2500.0
+      }
+    },
+    {
+      "id": "dating7",
+      "name": "有缘之客 07",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating7.prefab",
+      "dir": "Illust_dating7/",
+      "skel": "illust_dating7.skel",
+      "atlas": "illust_dating7.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 63,
+      "pages": 14,
+      "frame": {
+        "minX": -900.0,
+        "minY": -1000.0,
+        "maxX": 900.0,
+        "maxY": 1000.0
+      }
+    },
+    {
+      "id": "dating8",
+      "name": "有缘之客 08",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating8.prefab",
+      "dir": "Illust_dating8/",
+      "skel": "illust_dating8.skel",
+      "atlas": "illust_dating8.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 62,
+      "pages": 6,
+      "frame": {
+        "minX": -2400.0,
+        "minY": -2250.0,
+        "maxX": 2400.0,
+        "maxY": 2250.0
+      }
+    },
+    {
+      "id": "dating9",
+      "name": "有缘之客 09",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating9.prefab",
+      "dir": "Illust_dating9/",
+      "skel": "illust_dating9.skel",
+      "atlas": "illust_dating9.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 77,
+      "pages": 13,
+      "frame": {
+        "minX": -1425.0,
+        "minY": -1750.0,
+        "maxX": 1425.0,
+        "maxY": 1750.0
+      }
+    },
+    {
+      "id": "dating10",
+      "name": "有缘之客 10",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating10.prefab",
+      "dir": "Illust_dating10/",
+      "skel": "illust_dating10.skel",
+      "atlas": "illust_dating10.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 58,
+      "pages": 8,
+      "frame": {
+        "minX": -1500.0,
+        "minY": -2000.0,
+        "maxX": 1500.0,
+        "maxY": 2000.0
+      }
+    },
+    {
+      "id": "dating11",
+      "name": "有缘之客 11",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating11.prefab",
+      "dir": "Illust_dating11/",
+      "skel": "illust_dating11.skel",
+      "atlas": "illust_dating11.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 4,
+      "points": 61,
+      "pages": 7,
+      "frame": {
+        "minX": -2000.0,
+        "minY": -2250.0,
+        "maxX": 2000.0,
+        "maxY": 2250.0
+      }
+    },
+    {
+      "id": "dating12",
+      "name": "有缘之客 12",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating12.prefab",
+      "dir": "Illust_dating12/",
+      "skel": "illust_dating12.skel",
+      "atlas": "illust_dating12.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 87,
+      "pages": 10,
+      "frame": {
+        "minX": -1750.0,
+        "minY": -1850.0,
+        "maxX": 1750.0,
+        "maxY": 1850.0
+      }
+    },
+    {
+      "id": "dating13",
+      "name": "有缘之客 13",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating13.prefab",
+      "dir": "Illust_dating13/",
+      "skel": "illust_dating13.skel",
+      "atlas": "illust_dating13.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 52,
+      "pages": 6,
+      "frame": {
+        "minX": -2000.0,
+        "minY": -1500.0,
+        "maxX": 2000.0,
+        "maxY": 1500.0
+      }
+    },
+    {
+      "id": "dating14",
+      "name": "有缘之客 14",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating14.prefab",
+      "dir": "Illust_dating14/",
+      "skel": "illust_dating14.skel",
+      "atlas": "illust_dating14.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 132,
+      "pages": 11,
+      "frame": {
+        "minX": -4000.0,
+        "minY": -2800.0,
+        "maxX": 4000.0,
+        "maxY": 2800.0
+      }
+    },
+    {
+      "id": "dating15",
+      "name": "有缘之客 15",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating15.prefab",
+      "dir": "Illust_dating15/",
+      "skel": "illust_dating15.skel",
+      "atlas": "illust_dating15.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 68,
+      "pages": 7,
+      "frame": {
+        "minX": -1500.0,
+        "minY": -1300.0,
+        "maxX": 1500.0,
+        "maxY": 1300.0
+      }
+    },
+    {
+      "id": "dating16",
+      "name": "有缘之客 16",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating16.prefab",
+      "dir": "Illust_dating16/",
+      "skel": "illust_dating16.skel",
+      "atlas": "illust_dating16.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 119,
+      "pages": 8,
+      "frame": {
+        "minX": -1500.0,
+        "minY": -1500.0,
+        "maxX": 1500.0,
+        "maxY": 1500.0
+      }
+    },
+    {
+      "id": "dating17",
+      "name": "有缘之客 17",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating17.prefab",
+      "dir": "Illust_dating17/",
+      "skel": "illust_dating17.skel",
+      "atlas": "illust_dating17.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 62,
+      "pages": 8,
+      "frame": {
+        "minX": -2000.0,
+        "minY": -2250.0,
+        "maxX": 2000.0,
+        "maxY": 2250.0
+      }
+    },
+    {
+      "id": "dating18",
+      "name": "有缘之客 18",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating18.prefab",
+      "dir": "Illust_dating18/",
+      "skel": "illust_dating18.skel",
+      "atlas": "illust_dating18.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 7,
+      "points": 92,
+      "pages": 11,
+      "frame": {
+        "minX": -2000.0,
+        "minY": -2750.0,
+        "maxX": 2000.0,
+        "maxY": 2750.0
+      }
+    },
+    {
+      "id": "dating19",
+      "name": "有缘之客 19",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating19.prefab",
+      "dir": "Illust_dating19/",
+      "skel": "illust_dating19.skel",
+      "atlas": "illust_dating19.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 58,
+      "pages": 8,
+      "frame": {
+        "minX": -2000.0,
+        "minY": -2000.0,
+        "maxX": 2000.0,
+        "maxY": 2000.0
+      }
+    },
+    {
+      "id": "dating20",
+      "name": "有缘之客 20",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating20.prefab",
+      "dir": "Illust_dating20/",
+      "skel": "illust_dating20.skel",
+      "atlas": "illust_dating20.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 7,
+      "points": 83,
+      "pages": 8,
+      "frame": {
+        "minX": -1500.0,
+        "minY": -1500.0,
+        "maxX": 1500.0,
+        "maxY": 1500.0
+      }
+    },
+    {
+      "id": "dating21",
+      "name": "有缘之客 21",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating21.prefab",
+      "dir": "Illust_dating21/",
+      "skel": "illust_dating21.skel",
+      "atlas": "illust_dating21.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 3,
+      "points": 54,
+      "pages": 13,
+      "frame": {
+        "minX": -2000.0,
+        "minY": -1750.0,
+        "maxX": 2000.0,
+        "maxY": 1750.0
+      }
+    }
+  ]
+}
