@@ -8,5 +8,6 @@ window.ARTHUB_COS_CONFIG = {
   "bd2AssetsRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev",
   "bd2PortraitVoiceRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev/bd2/portrait-voice/",
   "fatedGuestAssetsRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev/bd2/fated/20261107/",
-  "fatedGuestAudioRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev/bd2/fated-audio/20261107/"
+  "fatedGuestAudioRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev/bd2/fated-audio/20261107/",
+  "majsoulAssetsRoot": "https://pub-2a2fb9d525814c49bc1e9b659bd9618c.r2.dev"
 };

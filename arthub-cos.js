@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const cfg = window.ARTHUB_COS_CONFIG || {};
+  const majsoulRoot = String(cfg.majsoulAssetsRoot || '').replace(/\/+$/, '');
   const bd2Root = String(cfg.bd2AssetsRoot || '').replace(/\/+$/, '');
   const root = String(cfg.root || '').replace(/\/+$/, '');
   const gameRoot = String(cfg.gameAssetsRoot || '').replace(/\/+$/, '');
@@ -29,6 +30,18 @@
     '/crosscore/spine/', '/crosscore/audio/', '/crosscore-interaction/audio/', '/crosscore-interaction/catalog/',
     '/crosscore-interaction/spine/', '/crosscore-interaction/voices/',
   ];
+
+  // These atlas page names use different casing from the stored textures.
+  const MAJSOUL_ATLAS_PAGE_CASE = new Set([
+    "/majsoul/assets_raw/myassets/spine/401906/1/Character_XNY_sy_Back.png",
+    "/majsoul/assets_raw/myassets/spine/401906/2/Character_XNY_sy_Centre.png",
+    "/majsoul/assets_raw/myassets/spine/401906/3/Character_XNY_sy_Front.png",
+    "/majsoul/assets_raw/myassets/spine/401906/3/Character_XNY_sy_Front_2.png",
+    "/majsoul/assets_raw/myassets/spine/401709/Character_winter_gh.png",
+    "/majsoul/assets_raw/myassets/spine/403304/Character_SQQHL_Summer.png",
+    "/majsoul/assets_raw/myassets/spine/409502/Character_NFH2.png",
+    "/majsoul/assets_raw/myassets/spine/409502/Character_NFH2_2.png",
+  ]);
 
   const PATH_REWRITES = {
     // 页面索引沿用本地的 spine/ 相对路径；COS 里已上传的妮姬目录名是 spine_carved。
@@ -61,6 +74,10 @@
     }
     const remotePath = markerPath(url.pathname);
     if (!remotePath) return url.href;
+    if (majsoulRoot && remotePath.startsWith('/majsoul/')) {
+      const key = MAJSOUL_ATLAS_PAGE_CASE.has(remotePath) ? remotePath.toLowerCase() : remotePath;
+      return majsoulRoot + key + url.search + url.hash;
+    }
     const gameAsset = GAME_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);
     const crosscoreAsset = CROSSCORE_ASSET_MARKERS.some(marker => url.pathname.indexOf(marker) >= 0);
     const riichicityAsset = ['/riichicity/assets/', '/riichicity/thumbs/', '/riichicity/characters.json'].some(marker => url.pathname.indexOf(marker) >= 0);
