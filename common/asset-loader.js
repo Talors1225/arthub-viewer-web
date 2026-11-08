@@ -170,19 +170,55 @@
       if (parent.aborted) cancel();
       else parent.addEventListener('abort', cancel, { once: true });
     }
-    const timer = setTimeout(() => controller.abort(new Error('加载超时，请检查网络后重试')), timeout);
-    return { controller, signal: controller.signal, close() {
+    let timer;
+    const touch = () => {
+      clearTimeout(timer);
+      if (!controller.signal.aborted) {
+        timer = setTimeout(() => controller.abort(new Error('加载超时，请检查网络后重试')), timeout);
+      }
+    };
+    touch();
+    return { controller, signal: controller.signal, touch, close() {
       clearTimeout(timer);
       if (parent) parent.removeEventListener('abort', cancel);
     } };
   };
-  const readResponse = async (url, signal, method) => {
-    const response = await fetch(url, { signal });
+  const readResponse = async (url, signal, method, transfer) => {
+    const response = await fetch(url, transfer ? { signal, cache: transfer.cache } : { signal });
     if (!response.ok) {
       const kind = response.status === 404 ? '资源不存在' : response.status === 403 ? '资源访问被拒绝' : '资源请求失败';
       throw new Error(kind + ' (HTTP ' + response.status + ')');
     }
-    return response[method]();
+    if (!transfer || !response.body) return response[method]();
+    transfer.touch();
+    const body = response.body.pipeThrough(new TransformStream({
+      transform(chunk, stream) {
+        transfer.touch();
+        stream.enqueue(chunk);
+      },
+    }), { signal });
+    return new Response(body, { headers: response.headers })[method]();
+  };
+  const readSpineResponse = async (url, signal, method, options) => {
+    if (!options.retryIdleMs || typeof TransformStream !== 'function') {
+      return readResponse(url, signal, method);
+    }
+    for (let retry = false; ; retry = true) {
+      const transfer = scope(signal, options.retryIdleMs);
+      try {
+        return await readResponse(url, transfer.signal, method, {
+          cache: retry ? 'reload' : 'default', touch: transfer.touch,
+        });
+      } catch (cause) {
+        const error = transfer.signal.reason || cause;
+        if (retry || signal.aborted || (!transfer.signal.aborted && !(error instanceof TypeError))) {
+          throw error;
+        }
+        options.onProgress?.('资源传输中断，正在重试…');
+      } finally {
+        transfer.close();
+      }
+    }
   };
   K.fetchJSON = async (url, options = {}) => {
     const request = scope(options.signal, options.timeout || 15000);
@@ -223,8 +259,8 @@
     try {
       options.onProgress?.('正在读取骨骼与图集');
       const [text, buffer] = await Promise.all([
-        readResponse(options.atlasURL, signal, 'text'),
-        readResponse(options.skeletonURL, signal, 'arrayBuffer'),
+        readSpineResponse(options.atlasURL, signal, 'text', options),
+        readSpineResponse(options.skeletonURL, signal, 'arrayBuffer', options),
       ]);
       if (signal.aborted) throw signal.reason || abortError();
       atlas = new SP.TextureAtlas(text);
@@ -235,7 +271,7 @@
             if (signal.aborted) throw signal.reason || abortError();
             const page = atlas.pages[next++];
             const url = new URL(page.name, new URL(options.atlasURL, location.href)).href;
-            const blob = await readResponse(url, signal, 'blob');
+            const blob = await readSpineResponse(url, signal, 'blob', options);
             const img = await decodeImage(blob, signal);
             if (signal.aborted) throw signal.reason || abortError();
             const texture = new SP.GLTexture(gl, img);

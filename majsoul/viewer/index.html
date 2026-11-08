@@ -397,7 +397,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261104-unified-final"></script>
-<script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+<script src="../../common/asset-loader.js?v=20261108-majsoul-retry"></script>
 <script src="../../common/stage-ui.js?v=20261104-unified-final"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script>
@@ -931,9 +931,10 @@
   }
 
   let selectionRequest = null;
-  async function loadLayerModel(entry, signal, context = gl) {
+  async function loadLayerModel(entry, signal, context = gl, onProgress) {
     const files = await K.loadSpineFiles(spine, context, {
       atlasURL: '../' + entry.atlas, skeletonURL: '../' + entry.skel, signal,
+      timeout: 120000, retryIdleMs: 15000, onProgress,
     });
     const atlas = files.atlas;
     try {
@@ -1026,7 +1027,9 @@
       K.resizeCanvas(canvas, renderer);
       const list = entry.composite ? entry.layers : [entry];
       const charHidden = (store.get('hiddenMap', {})[entry.id]) || {};
-      const results = await Promise.allSettled(list.map(e => loadLayerModel(e, request.signal)));
+      const results = await Promise.allSettled(list.map(e => loadLayerModel(e, request.signal, gl, message => {
+        if (seq === loadSeq) status(message);
+      })));
       loaded = results.filter(r => r.status === 'fulfilled').map(r => r.value);
       const failed = results.find(r => r.status === 'rejected');
       if (failed) throw failed.reason;
