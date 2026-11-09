@@ -1479,6 +1479,9 @@
     return { ...K.exportDimensions(bounds, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
   };
   K.illustrationExportSize = (session, quality, kind = 'png') => {
+    if (session.fixedFrame) {
+      return { ...K.exportDimensions(session.fixedFrame, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
+    }
     const reference = session.pngSize('medium'), source = session.draw(null, reference, null);
     return K.refineIllustrationSize(reference, source, quality, kind, session.pixelYUp !== false);
   };
@@ -1490,21 +1493,31 @@
       await onProgress?.(1); check(); return size;
     } finally { session.rewind(); }
   };
-  K.pngExportPose = (skeletons, quality, ns) => {
+  K.pngExportPose = (skeletons, quality, ns, fixedFrame) => {
     const transform = skeleton => K.updateWorldTransform(skeleton, (ns || window.spine)?.Physics?.pose);
     const saved = skeletons.map(skeleton => ({ skeleton, scaleX: skeleton.scaleX, scaleY: skeleton.scaleY, x: skeleton.x, y: skeleton.y }));
     const reference = Math.abs(saved[0]?.scaleX) || 1;
-    const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-    for (const skeleton of skeletons) {
-      transform(skeleton);
-      const b = K.measureBounds(skeleton, ns);
-      if (!b) continue;
-      bounds.minX = Math.min(bounds.minX, b.minX); bounds.minY = Math.min(bounds.minY, b.minY);
-      bounds.maxX = Math.max(bounds.maxX, b.maxX); bounds.maxY = Math.max(bounds.maxY, b.maxY);
+    let native;
+    if (fixedFrame && saved.length) {
+      const { x, y } = saved[0];
+      native = {
+        minX: fixedFrame.minX + x / reference, maxX: fixedFrame.maxX + x / reference,
+        minY: fixedFrame.minY + y / reference, maxY: fixedFrame.maxY + y / reference,
+      };
+    } else {
+      const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      for (const skeleton of skeletons) {
+        transform(skeleton);
+        const b = K.measureBounds(skeleton, ns);
+        if (!b) continue;
+        bounds.minX = Math.min(bounds.minX, b.minX); bounds.minY = Math.min(bounds.minY, b.minY);
+        bounds.maxX = Math.max(bounds.maxX, b.maxX); bounds.maxY = Math.max(bounds.maxY, b.maxY);
+      }
+      native = Object.fromEntries(Object.entries(bounds).map(([key, value]) => [key, value / reference]));
     }
-    const native = Object.fromEntries(Object.entries(bounds).map(([key, value]) => [key, value / reference]));
-    const size = K.exportDimensions(native, quality);
-    return { size, quality, probeSize: () => K.exportDimensions(native, 'medium'), useSize: next => Object.assign(size, next),
+    const padding = fixedFrame ? 0 : undefined;
+    const size = K.exportDimensions(native, quality, 'png', padding);
+    return { size, quality, fixedFrame, probeSize: () => K.exportDimensions(native, 'medium', 'png', padding), useSize: next => Object.assign(size, next),
       apply(tile) { const factor = size.scale / reference, centerX = size.centerX * reference, centerY = size.centerY * reference; for (const item of saved) {
         const sk = item.skeleton;
         sk.scaleX = item.scaleX * factor; sk.scaleY = item.scaleY * factor;
@@ -1879,7 +1892,7 @@
     K.pngExporting = true;
     try {
       await job.update(0, '正在识别立绘范围…');
-      if (o.pose) {
+      if (o.pose && !o.pose.fixedFrame) {
         const probe = o.pose.probeSize(); o.pose.useSize(probe);
         canvas.width = probe.width; canvas.height = probe.height;
         o.resize?.(1, { x: 0, y: 0, width: probe.width, height: probe.height }); o.draw(true);

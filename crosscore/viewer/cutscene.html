@@ -411,7 +411,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261104-unified-final"></script>
+<script src="../../common/kit.js?v=20261109-portrait-frame1"></script>
 <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -471,6 +471,23 @@
   })();
   if (routeSource === 'nikki') document.title = '妮姬 · Spine 动态查看器';
   if (routeSource === 'crosscore') document.title = '交错战线 · Spine 动态查看器';
+  // These bounds are in model space. Each uses the scene inside the authored matte.
+  const crosscoreFrames = new Map([
+    ['70310_skin_Atum06b.json', { minX: -2940, minY: -980, maxX: 2680, maxY: 2640 }],
+    ['40230_skin_Scorching03b.json', { minX: -1930, minY: -1250, maxX: 1980, maxY: 1070 }],
+    ['60310_skin_Tizona04a.json', { minX: -2050, minY: -1440, maxX: 2060, maxY: 1450 }],
+    ['60310_skin_Tizona04b.json', { minX: -1420, minY: -1300, maxX: 1375, maxY: 1180 }],
+    // The envelope and birds first appear after the opening fade.
+    ['60310_skin_Tizona04c.json', { minX: -4800, minY: -2750, maxX: 7600, maxY: 6300 }],
+    ['30180_skin_Machairodus05b.json', { minX: -4855, minY: -70, maxX: 2260, maxY: 4690 }],
+    ['20140_skin_Capriccio04b.json', { minX: -2690, minY: -1770, maxX: 2680, maxY: 1290 }],
+    ['70400_skin_LycorisRadiata03b.json', { minX: -2465, minY: 570, maxX: 2355, maxY: 3025 }],
+    ['30300_skin_Bluebuck03c.json', { minX: -2890, minY: -1740, maxX: 2740, maxY: 1690 }],
+    ['20030_skin_Pyrock03b.json', { minX: -2470, minY: -1740, maxX: 2860, maxY: 1430 }],
+    ['78050_skin_Osiris03a.json', { minX: -2840, minY: -2150, maxX: 2760, maxY: 2240 }],
+    ['78050_skin_Osiris03b.json', { minX: -2850, minY: -1790, maxX: 2840, maxY: 2300 }],
+    ['78050_skin_Osiris03b_ASMR.json', { minX: -2940, minY: -1860, maxX: 2935, maxY: 2040 }],
+  ]);
   if (routeSource === 'nikki' || routeSource === 'crosscore') stage.dataset.clickMode = 'audio';
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
@@ -1532,17 +1549,31 @@
         raw.clearColor(c[0], c[1], c[2], 1);
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
-      renderer.begin();
-      if (cut) for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
-      if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
-      if (cut && K.debugActive(debugFlags)) {
-        K.applyDebugFlags(renderer, debugFlags);
-        K.drawDebug(renderer, cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton));
+      const clip = !cmpOn && cut?.fixedFrame;
+      if (clip) {
+        const { x, y, scaleX, scaleY } = cut.skeleton;
+        const left = Math.floor(cv.width / 2 + x + clip.minX * scaleX);
+        const bottom = Math.floor(cv.height / 2 + y + clip.minY * scaleY);
+        const right = Math.ceil(cv.width / 2 + x + clip.maxX * scaleX);
+        const top = Math.ceil(cv.height / 2 + y + clip.maxY * scaleY);
+        raw.enable(raw.SCISSOR_TEST);
+        raw.scissor(left, bottom, right - left, top - bottom);
       }
-      if (cut && highlightSlot) for (const layer of cutLayers()) if (layer.active !== false) K.drawSlotHighlight(renderer, layer.skeleton, highlightSlot);
-      if (boneEditMode) drawEditSkeleton(renderer);
-      drawBoneMarker(renderer);
-      renderer.end();
+      try {
+        renderer.begin();
+        if (cut) for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
+        if (cut && K.debugActive(debugFlags)) {
+          K.applyDebugFlags(renderer, debugFlags);
+          K.drawDebug(renderer, cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton));
+        }
+        if (cut && highlightSlot) for (const layer of cutLayers()) if (layer.active !== false) K.drawSlotHighlight(renderer, layer.skeleton, highlightSlot);
+        if (boneEditMode) drawEditSkeleton(renderer);
+        drawBoneMarker(renderer);
+        renderer.end();
+      } finally {
+        if (clip) raw.disable(raw.SCISSOR_TEST);
+      }
       if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
         playerDrawnSeq = cutLoadSeq;
         loadingPreview.ready(cutLoadSeq);
@@ -1570,7 +1601,7 @@
   // ---------- 视图 ----------
   function computeView() {
     if (!cut) return;
-    const b = cut.bounds;
+    const b = cut.fixedFrame || cut.bounds;
     cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
     cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
     const area = K.stageViewArea(cv);
@@ -1627,7 +1658,7 @@
   }
 
   // Sample the active animation so transitions cannot grow beyond a fit based on its first frame.
-  function measureAnimationBounds(target, name) {
+  function measureAnimationBounds(target, name, allowAnimationFallback = true) {
     if (!target || !target.data || !name) return target && target.bounds ? target.bounds : null;
     const SP = K.getSpine(cur && cur.spineVersion);
     const anim = target.data.animations && target.data.animations.find(a => a.name === name);
@@ -1640,6 +1671,7 @@
     let bounds = null;
     try {
       const sample = new SP.Skeleton(target.data);
+      if (target.skeleton?.skin) sample.setSkin(target.skeleton.skin);
       for (const time of times) {
         sample.setToSetupPose();
         const stateData = new SP.AnimationStateData(target.data);
@@ -1650,7 +1682,7 @@
         state.apply(sample);
         K.updateWorldTransform(sample);
         K.applyHiddenSlots(sample, target.hiddenSlots);
-        bounds = mergeBounds(bounds, K.measureBounds(sample, SP));
+        bounds = mergeBounds(bounds, K.measureBounds(sample, SP, allowAnimationFallback));
       }
     } catch {}
     return bounds || target.bounds || null;
@@ -1676,10 +1708,12 @@
       if (layer.active) {
         K.updateWorldTransform(layer.skeleton);
         K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
-        const layerBounds = layer.source && layer.source.static
-          ? layer.bounds
-          : (layerName ? measureAnimationBounds(layer, layerName) : layer.bounds);
-        bounds = mergeBounds(bounds, layerBounds);
+        if (!cut.fixedFrame) {
+          const layerBounds = layer.source && layer.source.static
+            ? layer.bounds
+            : (layerName ? measureAnimationBounds(layer, layerName) : layer.bounds);
+          bounds = mergeBounds(bounds, layerBounds);
+        }
       }
     }
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
@@ -2155,19 +2189,37 @@
         || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
         || data.animations.find(a => /^loop/i.test(a.name))
         || data.animations[0];
-      const def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)
+      let def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)
         || (previewAnim && previewAnim.name);
       state.setAnimation(0, def, loopAnim);
       state.update(0);
       state.apply(skeleton);
       K.updateWorldTransform(skeleton);
       const stageNS = K.getSpine(cur && cur.spineVersion);
-      let bounds = K.measureBounds(skeleton, stageNS);
+      const crosscore = routeSource === 'crosscore';
+      const fixedFrame = crosscore ? crosscoreFrames.get(v.skel) : undefined;
+      let bounds = fixedFrame || K.measureBounds(skeleton, stageNS, !crosscore);
       if (!bounds && data.skins && data.skins.length) {
         // 部分 4.0 模型附件挂在皮肤上, 不设皮肤量不出包围盒
         const skin = data.skins.find(s => s.name === 'default') || data.skins[0];
         try { skeleton.setSkin(skin); skeleton.setSlotsToSetupPose(); state.apply(skeleton); K.updateWorldTransform(skeleton); } catch {}
-        bounds = K.measureBounds(skeleton, stageNS);
+        bounds = K.measureBounds(skeleton, stageNS, !crosscore);
+      }
+      if (!bounds && crosscore) {
+        // A transition can be empty on frame zero. Measure a copy so playback
+        // still starts at the original opening frame.
+        const target = { data, skeleton };
+        bounds = measureAnimationBounds(target, def, false);
+        if (!bounds) {
+          for (const animation of data.animations) {
+            if (animation.name === def) continue;
+            bounds = measureAnimationBounds(target, animation.name, false);
+            if (bounds) {
+              def = animation.name;
+              break;
+            }
+          }
+        }
       }
       if (!bounds) throw new Error('empty bounds');
       if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
@@ -2176,7 +2228,7 @@
         pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma),
         active: true,
       };
-      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds,
+      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds, fixedFrame,
               centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(), layers: [baseLayer], pma: baseLayer.pma };
       const results = await Promise.allSettled((v.compositeLayers || []).map(layerEntry =>
         loadCompositeLayer(layerEntry, SP, seq, request.signal, baseLayer)));
@@ -2237,6 +2289,7 @@
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
+    const fixedFrame = cut.fixedFrame;
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
     const SP = K.getSpine(cur && cur.spineVersion);
@@ -2288,34 +2341,42 @@
           K.updateWorldTransform(L.skeleton); K.applyHiddenSlots(L.skeleton, hiddenSlots);
         }
       };
-      // 第一遍: 推进并求动画全程包围盒
-      let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
-      for (let k = 0; k < frames; k++) {
-        job.check();
-        applyExportFrame(timeline.timeAt(k));
-        for (const L of exportLayers) {
-          if (!L.active) continue;
-          const b = K.measureBounds(L.skeleton, SP);
-          if (b) {
-            bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
-            bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+      const kind = video ? 'video' : 'gif';
+      let size = fixedFrame && K.exportDimensions(fixedFrame, quality, kind, 0);
+      if (!size) {
+        // 第一遍: 推进并求动画全程包围盒
+        let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+        for (let k = 0; k < frames; k++) {
+          job.check();
+          applyExportFrame(timeline.timeAt(k));
+          for (const L of exportLayers) {
+            if (!L.active) continue;
+            const b = K.measureBounds(L.skeleton, SP, routeSource !== 'crosscore');
+            if (b) {
+              bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
+              bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+            }
           }
+          if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
         }
-        if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
+        if (!isFinite(bMinX)) throw new Error('空包围盒');
+        const animationBounds = { minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY };
+        const reference = K.exportDimensions(animationBounds, 'medium');
+        cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
+        for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
+          applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
+          raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
+          for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+          r2.end();
+          try { size = K.refineIllustrationSize(reference, cv2, quality, kind); break; }
+          catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
+        }
+        if (!size && routeSource === 'crosscore') {
+          // Some transitions stay transparent through the early pixel probes.
+          size = K.exportDimensions(animationBounds, quality, kind, 0);
+        }
+        if (!size) throw new Error('没有可导出的可见立绘');
       }
-      if (!isFinite(bMinX)) throw new Error('空包围盒');
-      const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
-      cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
-      let size;
-      for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
-        applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
-        raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
-        for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
-        r2.end();
-        try { size = K.refineIllustrationSize(reference, cv2, quality, video ? 'video' : 'gif'); break; }
-        catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
-      }
-      if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;
       if (Math.max(W, H) > raw2.getParameter(raw2.MAX_TEXTURE_SIZE)) throw new Error('原始尺寸超过设备支持，请选择高等质量');
       cv2.width = W; cv2.height = H; K.syncRendererSize(cv2, mgl2, r2);
@@ -2429,10 +2490,13 @@
   });
 
   // ---------- PNG 导出 ----------
+  const pngPose = quality => K.pngExportPose(
+    cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton),
+    quality, K.getSpine(cur && cur.spineVersion), cut?.fixedFrame);
   function exportFrame(transparent, mode, done, quality = exportQuality) {
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     let pose;
-    try { pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)); }
+    try { pose = pngPose(quality); }
     catch (error) { K.toast('导出失败: ' + error.message, 'err'); return; }
     K.exportPNG({
       canvas: cv, size: pose.size, pose, tiled: true, transparent, background: getBg(), copy: mode === 'copy',
@@ -2494,10 +2558,10 @@
     K.mountExportOptions(pop, {
       kind: 'png', quality: exportQuality, transparent: getBg() === 'checker',
       onChange: quality => { exportQuality = quality; store.set('pngExportQuality', quality); },
-      getSize: quality => K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)).size,
+      getSize: quality => pngPose(quality).size,
       getDetail: quality => {
         if (!cut) throw new Error('请先加载一个资源');
-        const pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion));
+        const pose = pngPose(quality);
         return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码';
       },
       onExport: (quality, transparent) => exportFrame(transparent, 'download', () => closePopups(), quality),

@@ -37,6 +37,69 @@ export async function readPortraitAsset(url, options={}) {
   await sleep(options.retryMs??400,signal);
  }
 }
+// Stage the first-frame files so Cubism can reuse completed downloads on a retry.
+export async function prepareLive2DSettings(url, options = {}) {
+ const { signal: parent, onProgress, motions = ['idle', 'effect'], ...transport } = options;
+ const controller = new AbortController(), signal = controller.signal;
+ const cancel = () => controller.abort(parent.reason || abortError());
+ if (parent?.aborted) cancel();
+ else parent?.addEventListener('abort', cancel, { once: true });
+ const objectURLs = [];
+ const release = () => {
+  for (const objectURL of objectURLs.splice(0)) URL.revokeObjectURL(objectURL);
+ };
+ const read = (file, progress) => readPortraitAsset(file, { idleMs: 15000, ...transport, signal, onProgress: progress });
+ try {
+  const settingsURL = new URL(url, globalThis.location?.href).href;
+  const settings = JSON.parse(new TextDecoder().decode(await read(settingsURL)));
+  const references = settings.FileReferences;
+  const files = [];
+  const add = (file, type, assign) => {
+   if (file) files.push({ url: new URL(file, settingsURL).href, type, assign, bytes: 0, complete: false, retrying: false });
+  };
+  add(references.Moc, 'application/octet-stream', value => { references.Moc = value; });
+  references.Textures.forEach((file, index) => add(file, 'image/png', value => { references.Textures[index] = value; }));
+  for (const field of ['Physics', 'Pose']) add(references[field], 'application/json', value => { references[field] = value; });
+  for (const motion of new Set(motions)) {
+   for (const clip of references.Motions?.[motion] || []) add(clip.File, 'application/json', value => { clip.File = value; });
+  }
+  const report = () => {
+   if (signal.aborted) return;
+   const bytes = files.reduce((sum, file) => sum + file.bytes, 0);
+   const completed = files.filter(file => file.complete).length;
+   const stage = files.some(file => file.retrying) ? '连接停顿，正在重试' : '正在下载模型和贴图';
+   onProgress?.(stage + ' · ' + completed + '/' + files.length + ' 文件 · ' + (bytes / 1048576).toFixed(1) + ' MiB',
+    { completed, total: files.length, bytes, unit: '文件' });
+  };
+  report();
+  const results = await Promise.allSettled(files.map(async file => {
+   try {
+    const bytes = await read(file.url, progress => {
+     file.bytes = progress.retry ? 0 : progress.loaded;
+     if (progress.retry || file.bytes) file.retrying = !!progress.retry;
+     report();
+    });
+    const objectURL = URL.createObjectURL(new Blob([bytes], { type: file.type }));
+    objectURLs.push(objectURL);
+    file.assign(objectURL);
+    file.complete = true;
+    file.retrying = false;
+    report();
+   } catch (error) {
+    controller.abort(error);
+    throw error;
+   }
+  }));
+  const failed = results.find(result => result.status === 'rejected');
+  if (signal.aborted || failed) throw signal.reason || failed.reason;
+  return { settings: { ...settings, url: settingsURL }, release };
+ } catch (error) {
+  release();
+  throw error;
+ } finally {
+  parent?.removeEventListener('abort', cancel);
+ }
+}
 const packedSkeletons={
  'yunlong_2_res/yunlong_2.skel':{path:'yunlong_2_res/optimized/ed4457c74e1e7c32.skel.gz',bytes:85071015},
 };

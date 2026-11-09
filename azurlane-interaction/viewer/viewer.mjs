@@ -1,10 +1,11 @@
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=499c19e6892b';
 import {EffectTimeline} from './effect-timeline.mjs?v=499c19e6892b';
 import {hasEffectControls} from './effect-controls.mjs?v=499c19e6892b';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames} from './portrait-frame.mjs?v=499c19e6892b';
-import {readPortraitAsset,loadPortraitSpineAssets} from './portrait-assets.mjs?v=499c19e6892b';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261109-portrait-frame2';
+import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
+const isStagePointer = target => target === canvas || (target === stage && canvas.style.clipPath !== '');
 let stageFrameCache=null;
 K.initStageUI({canvas,refit:()=>{stageFrameCache=null;}});
 function stageFrame(){
@@ -55,7 +56,7 @@ function stageName(m){const variant=variantLabel(m);return portraitName(m)+(vari
 function entry(m){const url=new URL(BASE+'/viewer/index.html?id='+encodeURIComponent(m.id),location.href);return {k:'azurlane:'+m.id,src:'azurlane-interaction',t:stageName(m),s:m.type==='live2d'?'Live2D':'Spine',u:url.pathname+url.search};}
 function zoomTo(next,x,y){if(!Number.isFinite(next)||next<=0)return;next=Math.max(.1,Math.min(8,next));if(Number.isFinite(x)){const r=canvas.getBoundingClientRect(),frame=stageFrame(),f=next/view.zoom;view.panX=f*view.panX+(1-f)*(x-r.left-frame.x);view.panY=f*view.panY+(1-f)*(y-r.top-frame.y);}view.zoom=next;for(const id of ['zOut','zPct','zIn'])$(id).disabled=!view.ready;$('zPct').textContent=next<100?Math.round(next*100)+'%':next.toPrecision(3)+'×';}
 $('zIn').onclick=()=>zoomTo(view.zoom*1.25);$('zOut').onclick=()=>zoomTo(view.zoom/1.25);$('fit').onclick=()=>{view.panX=view.panY=0;zoomTo(1);};$('zPct').onclick=()=>$('fit').click();
-stage.addEventListener('wheel',e=>{if(e.target!==canvas)return;e.preventDefault();zoomTo(view.zoom*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY);},{passive:false});
+stage.addEventListener('wheel',e=>{if(!isStagePointer(e.target))return;e.preventDefault();zoomTo(view.zoom*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY);},{passive:false});
 let ctx,muted=false,audioSerial=0,audioScope=0,voiceAnalyser,mouth=0;const channels=new Map(),buffers=new Map();
 async function unlockAudio(){ctx||=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')await ctx.resume();evidence.audio.contextState=ctx.state;}
 function stopChannel(channel){const job=channels.get(channel);if(job){job.cancelled=true;try{job.source?.stop();}catch{}job.source?.disconnect();job.gain?.disconnect();channels.delete(channel);}if(channel==='voice'){voiceAnalyser=null;evidence.audio.state='idle';adapter?.expression?.(null);}}
@@ -123,13 +124,13 @@ $('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'声音：关'
 $('voice-play').onclick=()=>{const c=selected?.voice?.activeClips?.find(c=>c.name===$('voice').value);if(c)sound(selected.voiceBank,c.name,{voice:true,exact:true});};
 $('voice-stop').onclick=()=>stopChannel('voice');$('reset-state').onclick=()=>{stopAudio();controller?.reset();};$('show-hits').onclick=()=>{showHits=!showHits;$('show-hits').textContent=showHits?'隐藏热点':'显示热点';$('show-hits').setAttribute('aria-pressed',String(showHits));};
 function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
-const stagePan=K.createStagePan({stage,button:$('btnStagePan'),modeSelect:$('pointer-mode'),interactiveButton:true,accepts:target=>target===canvas,ready:()=>view.ready&&!exporting,
+const stagePan=K.createStagePan({stage,button:$('btnStagePan'),modeSelect:$('pointer-mode'),interactiveButton:true,accepts:isStagePointer,ready:()=>view.ready&&!exporting,
  onModeChange:mode=>{if(pointer&&controller instanceof Live2DController)controller.end(pointer.x,pointer.y,true);pointer=null;look.targetX=look.targetY=0;if(mode==='interact'){viewerUI.tools.exitEditing();$('interaction-more').open=false;if(!view.playing)$('play').click();unlockAudio().catch(()=>{});viewerUI.showTab('interaction');setPanelOpen('library',false);setPanelOpen('interaction',true);}else if($('floatPanel').dataset.tab==='interaction')setPanelOpen('interaction',false);},
  move:(dx,dy)=>{view.panX+=dx;view.panY+=dy;},
  tap:event=>{if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(event),hits=adapter.hits(p.x,p.y);evidence.interaction.hits=hits;if(selected.type==='live2d'){controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));controller.end(p.x,p.y);}else{const hit=hits[0];if(!hit||!controller.touch(hit,{drag:false}))spineBasic(hit);}}
 });
 stage.addEventListener('pointerdown',e=>{
- if(e.target!==canvas||e.button!==0||!view.ready||exporting)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
+ if(!isStagePointer(e.target)||e.button!==0||!view.ready||exporting)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
  if(!pan&&selected.type==='live2d')controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));
 });
 stage.addEventListener('pointermove',e=>{
@@ -148,7 +149,7 @@ function release(e,cancel=false){if(!pointer)return;const p=localPoint(e),down=p
 }
 stage.addEventListener('pointerup',e=>release(e));stage.addEventListener('pointercancel',e=>release(e,true));
 K.bindPinch(stage,{
- isChrome:target=>target!==canvas,ready:()=>view.ready&&!exporting,
+ isChrome:target=>!isStagePointer(target),ready:()=>view.ready&&!exporting,
  cancelDrag:()=>{stagePan.cancel();if(pointer){release({clientX:pointer.x+canvas.getBoundingClientRect().left,clientY:pointer.y+canvas.getBoundingClientRect().top},true);stopAudio();}},
  zoom:(factor,x,y)=>zoomTo(view.zoom*factor,x,y),
 });
@@ -184,18 +185,64 @@ function controls(){
  $('voice').replaceChildren(...selected.voice.activeClips.map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=(labels[c.cue]||c.cue)+(c.variant==='skin'?' · 皮肤':'')+(c.threshold?' · '+(c.threshold>=1000?'誓约':'好感')+' '+(c.threshold>=1000?c.threshold-1000:c.threshold):'');return o;}));
  $('interaction-note').textContent='直接点击、拖动或长按立绘热点进行互动。';
 }
+function stageBoundsForFrame(frame) {
+ return {
+  width: frame.maxX - frame.minX,
+  height: frame.maxY - frame.minY,
+  x: (frame.minX + frame.maxX) / 2,
+  y: (frame.minY + frame.maxY) / 2,
+ };
+}
 async function live2dPortrait(model,generation){
  const app=new PIXI.Application({view:canvas,resizeTo:stage,autoStart:false,antialias:true,backgroundAlpha:0,resolution:Math.max(2,devicePixelRatio||1),autoDensity:true,preserveDrawingBuffer:true});
- let live;
- const dispose=()=>{const gl=app.renderer?.gl,core=live?.internalModel?.coreModel,native=core?.getModel(),moc=native&&mocOwners.get(native);try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}if(moc&&!core?.getModel()&&!releasedMocs.has(moc)){moc._release();releasedMocs.add(moc);releasedMocCount++;}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
- try{live=await PIXI.live2d.Live2DModel.from(model.modelUrl,{autoInteract:false,autoUpdate:false,motionPreload:PIXI.live2d.MotionPreloadStrategy.IDLE});if(generation!==loadGeneration){dispose();return null;}}catch(e){dispose();throw e;}
+ let live, preparedSettings;
+ const dispose=()=>{const gl=app.renderer?.gl,core=live?.internalModel?.coreModel,native=core?.getModel(),moc=native&&mocOwners.get(native);try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}finally{preparedSettings?.release();}if(moc&&!core?.getModel()&&!releasedMocs.has(moc)){moc._release();releasedMocs.add(moc);releasedMocCount++;}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
+ try {
+  let settings = model.modelUrl;
+  if (model.id === 'zhenzhuhao_2') {
+   let lastProgress = '';
+   preparedSettings = await prepareLive2DSettings(model.modelUrl, {
+    signal: loadAbort.signal, motions: [model.defaultAnimation, 'idle', 'effect'],
+    onProgress(text, metrics) {
+     if (generation !== loadGeneration || text === lastProgress) return;
+     lastProgress = text;
+     $('status').textContent = text;
+     loadingPreview.progress(generation, text, metrics);
+    },
+   });
+   loadingPreview.progress(generation, '正在解码珍珠号立绘');
+   settings = new PIXI.live2d.Cubism4ModelSettings(preparedSettings.settings);
+   const resolveFile = settings.resolveURL.bind(settings);
+   // The SDK's legacy URL resolver rewrites the scheme inside blob URLs.
+   settings.resolveURL = file => file.startsWith('blob:') ? file : resolveFile(file);
+  }
+  live = await PIXI.live2d.Live2DModel.from(settings, {
+   autoInteract: false, autoUpdate: false, motionPreload: PIXI.live2d.MotionPreloadStrategy.IDLE,
+  });
+  if (generation !== loadGeneration) { dispose(); return null; }
+ } catch (error) { dispose(); throw error; }
  app.stage.addChild(live);live.anchor.set(.5,.5);const natural={width:live.internalModel.width,height:live.internalModel.height},internal=live.internalModel,core=internal.coreModel.getModel(),indexes=new Map(core.parameters.ids.map((id,i)=>[id,i]));
+ const authoredFrame = authoredLive2DFrame(model.id);
  evidence.model=live;evidence.app=app;editor=window.createInteractionLive2DEditor({live,core,hitAreas:model.interaction.hitAreas});const mouthIds=internal.settings.json.Groups?.find(g=>g.Name==='LipSync')?.Ids||[];
+ let effectManager,effectTimeline,effectTime=0;const renderedParameters=core.parameters.values.slice();
+ const dragCover = model.id === 'wuqi_3' ? core.drawables.ids.indexOf('ArtMesh766') : -1;
+ const coverDragParameter = indexes.get('touch_drag6');
  // PIXI's Live2DModel.update only queues elapsed time; native deformation runs
  // inside app.render. Apply visibility after that update and before drawing.
- const nativeDraw=internal.draw.bind(internal);internal.draw=gl=>{viewerUI.tools.after();nativeDraw(gl);};
+ const nativeDraw = internal.draw.bind(internal);
+ internal.draw = gl => {
+  viewerUI.tools.after();
+  // The converted drag cover is opaque at rest and hides the entire room.
+  if (dragCover < 0 || coverDragParameter === undefined || renderedParameters[coverDragParameter] > .001) {
+   nativeDraw(gl);
+   return;
+  }
+  const opacity = core.drawables.opacities[dragCover];
+  core.drawables.opacities[dragCover] = 0;
+  try { nativeDraw(gl); }
+  finally { core.drawables.opacities[dragCover] = opacity; }
+ };
  const lookParams=array(model.interaction.lookParameters).filter(p=>indexes.has(p.id));
- let effectManager,effectTimeline,effectTime=0;const renderedParameters=core.parameters.values.slice();
  const manager=internal.motionManager,queue=manager.queueManager||manager.motionManager;
  // A separate queue retains the Unity effect layer when the base motion changes.
  if(model.animations.includes('effect')&&queue?.constructor){try{effectManager=new queue.constructor();const motion=await manager.loadMotion('effect',0);if(motion){if(hasEffectControls(model.id))effectTimeline=new EffectTimeline(effectManager,motion);else{motion.setIsLoop(true);effectManager.startMotion(motion,false,0);}}}catch(e){evidence.effectLayerError=String(e);effectManager=null;}}
@@ -256,14 +303,14 @@ async function live2dPortrait(model,generation){
    if(b.maxX>b.minX&&b.maxY>b.minY){rectangles.push({name:core.drawables.ids[i],bounds:[b.minX,b.minY,b.maxX,b.maxY]});for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);}
   }
   return model.id==='guanghui_9'?portraitFrameBounds(model.id,rectangles)||bounds:bounds;};
-  const bounds=measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y};
+  const bounds=authoredFrame || measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y};
   const parameters=core.parameters.values.slice(),renderedFrame=renderedParameters.slice(),effectBaseFrame=effectBaseParameters?.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
   const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot(),savedEffectTime=effectTime;let lastTime=0;
   // The SDK restores base parameters after deforming a frame. Rebuild from
   // the actual rendered parameters, then restore the base values separately.
   const rewind=()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);if(savedEffect)effectTimeline.restore(savedEffect);if(effectBaseFrame)effectBaseParameters.set(effectBaseFrame);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(renderedFrame);core.parts.opacities.set(parts);internal.coreModel.update();core.parameters.values.set(parameters);renderedParameters.set(renderedFrame);internal.coreModel._savedParameters=nativeSaved.slice();lastTime=0;};
   const advance=time=>{live.elapsedTime=elapsed+time*1000;if(savedEffect){effectTimeline.restore(savedEffect);effectTimeline.advance(time);}else effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;};
-  return {pixelYUp:false,pngSize:quality=>({...K.exportDimensions(bounds,quality),fullFrame:true}),
+  return {pixelYUp:false,fixedFrame:authoredFrame,pngSize:quality=>({...K.exportDimensions(bounds,quality,'png',authoredFrame ? 0 : undefined),fullFrame:true}),
    measure:time=>{editor.before();advance(time);return measure();},rewind,
    draw:(time,size,background)=>{const added=[...surrounds].filter(id=>!editor.hidden.has(id));for(const id of added)editor.hidden.add(id);try{editor.before();
     if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;},background);
@@ -272,8 +319,38 @@ async function live2dPortrait(model,generation){
     if(time!==null)advance(time);else app.render();return canvas;}finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
    dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
- let fittingBounds;
- render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const frame=stageFrame(),fit=fittingBounds||=K.live2DViewBounds(internal,natural,model.interaction.hitAreas.map(a=>a.id)),scale=Math.min(frame.width/fit.width,frame.height/fit.height)*.92*view.zoom;live.scale.set(scale);live.position.set(frame.x+view.panX+(natural.width/2-fit.x)*scale,frame.y+view.panY+(natural.height/2-fit.y)*scale);if(view.playing){if(effectTimeline)effectTimeline.advance(dt*view.speed);else effectTime+=dt*view.speed;live.update(dt*1000*view.speed);}app.render();evidence.effect=effectTimeline?.state()||null;};
+ let fittingBounds = authoredFrame && stageBoundsForFrame(authoredFrame);
+ let stageClipPath = '';
+ render = dt => {
+  viewerUI.tools.before();
+  const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
+  if (app.renderer.screen.width !== w || app.renderer.screen.height !== h) app.renderer.resize(w, h);
+  const frame = stageFrame();
+  const fit = fittingBounds ||= K.live2DViewBounds(internal, natural, model.interaction.hitAreas.map(a => a.id));
+  const scale = Math.min(frame.width / fit.width, frame.height / fit.height) * .92 * view.zoom;
+  live.scale.set(scale);
+  live.position.set(frame.x + view.panX + (natural.width / 2 - fit.x) * scale,
+   frame.y + view.panY + (natural.height / 2 - fit.y) * scale);
+  if (authoredFrame) {
+   // Cubism manages its own WebGL scissor state. Clip only the displayed canvas.
+   const halfWidth = fit.width * scale / 2, halfHeight = fit.height * scale / 2;
+   const x = frame.x + view.panX, y = frame.y + view.panY;
+   const insets = [y - halfHeight, w - x - halfWidth, h - y - halfHeight, x - halfWidth];
+   const clip = 'inset(' + insets.map(inset => Math.max(0, inset).toFixed(2) + 'px').join(' ') + ')';
+   if (stageClipPath !== clip) {
+    if (!stageClipPath) stage.style.touchAction = 'none';
+    stageClipPath = clip;
+    canvas.style.clipPath = clip;
+   }
+  }
+  if (view.playing) {
+   if (effectTimeline) effectTimeline.advance(dt * view.speed);
+   else effectTime += dt * view.speed;
+   live.update(dt * 1000 * view.speed);
+  }
+  app.render();
+  evidence.effect = effectTimeline?.state() || null;
+ };
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
 }
 async function spinePortrait(model,generation){
@@ -297,13 +374,68 @@ async function spinePortrait(model,generation){
   polygons:()=>{const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;return array(model.interaction.hitAreas).map(area=>({id:area.id,vertices:area.vertices.map(p=>[(p[0]-bounds.x)/units+frame.x+view.panX,(bounds.y-p[1])/units+frame.y+view.panY])}));}
  };
  for(const l of layers){const a=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(a)l.state.setAnimation(0,a.name,true);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}
+ const authoredFrame = authoredSpineFrame(model.id);
  const rectangles=[];
- for(const l of layers)for(const slot of l.skeleton.drawOrder){const a=slot.attachment;let vertices;if(a instanceof spine.RegionAttachment){vertices=new Float32Array(8);a.computeWorldVertices(slot.bone,vertices,0,2);}else if(a instanceof spine.MeshAttachment){vertices=new Float32Array(a.worldVerticesLength);a.computeWorldVertices(slot,0,a.worldVerticesLength,vertices,0,2);}if(!vertices?.length)continue;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(let i=0;i<vertices.length;i+=2){minX=Math.min(minX,vertices[i]);maxX=Math.max(maxX,vertices[i]);minY=Math.min(minY,vertices[i+1]);maxY=Math.max(maxY,vertices[i+1]);}rectangles.push({name:slot.data.name,bounds:[minX,minY,maxX,maxY]});}
- const framing=fitSceneBounds(rectangles),bounds=framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+ if (!authoredFrame) for(const l of layers)for(const slot of l.skeleton.drawOrder){const a=slot.attachment;let vertices;if(a instanceof spine.RegionAttachment){vertices=new Float32Array(8);a.computeWorldVertices(slot.bone,vertices,0,2);}else if(a instanceof spine.MeshAttachment){vertices=new Float32Array(a.worldVerticesLength);a.computeWorldVertices(slot,0,a.worldVerticesLength,vertices,0,2);}if(!vertices?.length)continue;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(let i=0;i<vertices.length;i+=2){minX=Math.min(minX,vertices[i]);maxX=Math.max(maxX,vertices[i]);minY=Math.min(minY,vertices[i+1]);maxY=Math.max(maxY,vertices[i+1]);}rectangles.push({name:slot.data.name,bounds:[minX,minY,maxX,maxY]});}
+ const framing = authoredFrame ? { bounds: stageBoundsForFrame(authoredFrame), excluded: [] } : fitSceneBounds(rectangles);
+ const bounds=framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
- api.capture=animation=>{const hidden=new Set(editor.hidden),surrounds=portraitSurroundNames(model.id);layers.forEach((layer,i)=>{for(const slot of layer.skeleton.slots)if(surrounds.has(slot.data.name))hidden.add(i+':'+slot.data.name);});const session=window.createInteractionSpineCapture({layers,ns:spine,canvas,renderer:scene,gl,editor:{...editor,hidden},animation,restore:()=>render(0)}),frame=spinePortraitFrameBounds(model.id,layers,spine,hidden);if(frame)session.pngSize=quality=>({...K.exportDimensions(frame,quality),fullFrame:true});return session;};
- render=dt=>{viewerUI.tools.before();const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight),density=Math.min(Math.max(2,devicePixelRatio||1),maxBuffer/Math.max(w,h)),bw=Math.round(w*density),bh=Math.round(h*density);if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}gl.viewport(0,0,bw,bh);scene.camera.setViewport(bw,bh);const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;scene.camera.zoom=units/density;scene.camera.position.x=bounds.x-(view.panX+frame.x-w/2)*units;scene.camera.position.y=bounds.y+(view.panY+frame.y-h/2)*units;scene.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);for(const l of layers){if(view.playing){l.state.update(dt*view.speed);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}}viewerUI.tools.after();scene.begin();for(const l of layers)scene.drawSkeleton(l.skeleton,true);scene.end();};
+ api.capture = animation => {
+  const hidden = new Set(editor.hidden), surrounds = portraitSurroundNames(model.id);
+  layers.forEach((layer, i) => {
+   for (const slot of layer.skeleton.slots) if (surrounds.has(slot.data.name)) hidden.add(i + ':' + slot.data.name);
+  });
+  const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
+   editor:{...editor, hidden}, animation, restore:()=>render(0) });
+  if (authoredFrame) session.fixedFrame = authoredFrame;
+  else {
+   const frame = spinePortraitFrameBounds(model.id, layers, spine, hidden);
+   if (frame) session.pngSize = quality => ({ ...K.exportDimensions(frame, quality), fullFrame:true });
+  }
+  return session;
+ };
+ render = dt => {
+  viewerUI.tools.before();
+  const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
+  const density = Math.min(Math.max(2, devicePixelRatio || 1), maxBuffer / Math.max(w, h));
+  const bw = Math.round(w * density), bh = Math.round(h * density);
+  if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
+  gl.viewport(0, 0, bw, bh);
+  const camera = scene.camera, frame = stageFrame();
+  const units = Math.max(bounds.width / frame.width, bounds.height / frame.height) * 1.1 / view.zoom;
+  camera.setViewport(bw, bh);
+  camera.zoom = units / density;
+  camera.position.x = bounds.x - (view.panX + frame.x - w / 2) * units;
+  camera.position.y = bounds.y + (view.panY + frame.y - h / 2) * units;
+  camera.update();
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  for (const layer of layers) {
+   if (view.playing) {
+    layer.state.update(dt * view.speed);
+    layer.state.apply(layer.skeleton);
+    layer.skeleton.updateWorldTransform();
+   }
+  }
+  viewerUI.tools.after();
+  if (authoredFrame) {
+   const scale = density / units;
+   const left = Math.floor(bw / 2 + (authoredFrame.minX - camera.position.x) * scale);
+   const right = Math.ceil(bw / 2 + (authoredFrame.maxX - camera.position.x) * scale);
+   const bottom = Math.floor(bh / 2 + (authoredFrame.minY - camera.position.y) * scale);
+   const top = Math.ceil(bh / 2 + (authoredFrame.maxY - camera.position.y) * scale);
+   gl.enable(gl.SCISSOR_TEST);
+   gl.scissor(left, bottom, right - left, top - bottom);
+  }
+  try {
+   scene.begin();
+   for (const layer of layers) scene.drawSkeleton(layer.skeleton, true);
+   scene.end();
+  } finally {
+   if (authoredFrame) gl.disable(gl.SCISSOR_TEST);
+  }
+ };
  disposeRenderer=dispose;return api;
 }
 async function getJson(url,required=true,signal){try{return JSON.parse(new TextDecoder().decode(await readPortraitAsset(url,{signal})));}catch(error){if(!required&&error.status===404)return null;throw error;}}
@@ -315,7 +447,8 @@ async function loadModel(id,{history=true}={}){
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
  const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp',label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
- const next=canvas.cloneNode(false);canvas.replaceWith(next);canvas=next;Object.assign(view,{zoom:1,panX:0,panY:0,playing:true,frames:0});look.x=look.y=look.targetX=look.targetY=0;portraitTime=0;zoomTo(1);$('status').textContent=id+' · 正在读取模型和交互…';
+ if (canvas.style.clipPath) stage.style.removeProperty('touch-action');
+ const next=canvas.cloneNode(false);next.style.clipPath='';canvas.replaceWith(next);canvas=next;Object.assign(view,{zoom:1,panX:0,panY:0,playing:true,frames:0});look.x=look.y=look.targetX=look.targetY=0;portraitTime=0;zoomTo(1);$('status').textContent=id+' · 正在读取模型和交互…';
  const data=await Promise.all([getJson(BASE+'/catalog/'+encodeURIComponent(id)+'.json',true,loadAbort.signal),getJson(BASE+'/model-audio/'+encodeURIComponent(id)+'.json',false,loadAbort.signal),allModels.find(m=>m.id===id)?.type==='live2d'?getJson(BASE+'/animators/'+encodeURIComponent(id)+'.json',false,loadAbort.signal):null]).catch(e=>{if(generation!==loadGeneration)return null;loadAbort.abort(e);throw e;});
  if(!data)return false;const [model,audio,animator]=data;
  if(generation!==loadGeneration)return false;selected=model;if(audio)Object.assign(model,audio);if(animator)model.animator=animator;evidence.selected=model;$('active-name').textContent=stageName(model);populate();
