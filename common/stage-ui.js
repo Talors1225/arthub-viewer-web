@@ -156,13 +156,14 @@
     if(!(maxX>minX && maxY>minY))return {width:natural.width,height:natural.height,x:natural.width/2,y:natural.height/2};
     return {width:maxX-minX,height:maxY-minY,x:(minX+maxX)/2,y:(minY+maxY)/2};
   };
+  const stageInsetIds = ['rail', 'toolStrip', 'siteMobileDock', 'status'];
   K.stageViewArea = canvas => {
     const rect = canvas.getBoundingClientRect();
     let left = rect.left + 12, right = rect.right - 12;
     let top = rect.top + 12, bottom = rect.bottom - 12;
     if (!document.body.classList.contains('immersive') && !document.body.classList.contains('viewer-immersive') && !document.documentElement.classList.contains('arthub-embedded')) {
       const phone = matchMedia('(max-width: 720px)').matches;
-      for (const id of ['rail', 'toolStrip', 'siteMobileDock', 'status']) {
+      for (const id of stageInsetIds) {
         const node = document.getElementById(id);
         if (!visible(node) || node.classList.contains('hide') || node.classList.contains('status-quiet')) continue;
         const r = node.getBoundingClientRect();
@@ -207,10 +208,26 @@
     const toggle = document.getElementById('playbarToggle');
     const progress = document.getElementById('pbRange');
     const speed = document.getElementById('pbSpeed');
+    const zoom = document.getElementById('zPct');
     playbar?.classList.toggle('playbar-speed-only', !progress);
     progress?.setAttribute('aria-label', '动画播放进度');
     speed?.setAttribute('aria-label', '播放倍速');
     speed?.setAttribute('title', '拖动调节播放倍速');
+    if (zoom) {
+      zoom.setAttribute('role', 'button');
+      zoom.setAttribute('tabindex', '0');
+      zoom.title = '适应窗口 (F)';
+      const syncZoomLabel = () => {
+        const label = '适应窗口，当前 ' + zoom.textContent.trim();
+        if (zoom.getAttribute('aria-label') !== label) zoom.setAttribute('aria-label', label);
+      };
+      syncZoomLabel();
+      // A refit can write the zoom text. Keep its observer out of the layout queue.
+      new MutationObserver(syncZoomLabel).observe(zoom, { childList: true, subtree: true, characterData: true });
+    }
+    const stage = document.getElementById('stage');
+    const insets = stageInsetIds.map(id => document.getElementById(id)).filter(Boolean);
+    let fittedCanvas, fittedArea, observedDock;
     let queued = false;
     const refresh = () => {
       if (queued) return;
@@ -218,11 +235,21 @@
       requestAnimationFrame(() => {
         queued = false;
         const phone = matchMedia('(max-width: 720px)').matches;
-        const bottomControls = [playbar, ...(phone ? [document.getElementById('siteMobileDock'),document.getElementById('rail')] : [])].filter(visible);
+        const dock = document.getElementById('siteMobileDock');
+        if (dock && dock !== observedDock) {
+          observedDock = dock;
+          sizeObserver?.observe(dock);
+        }
+        const bottomControls = [playbar, ...(phone ? [dock, document.getElementById('rail')] : [])].filter(visible);
+        let panelBottom = '';
         if (bottomControls.length) {
           const bottom = Math.max(phone ? 72 : 12, ...bottomControls.map(node => document.documentElement.clientHeight - node.getBoundingClientRect().top + 12));
-          root.style.setProperty('--stage-panel-bottom', bottom + 'px');
-        } else root.style.removeProperty('--stage-panel-bottom');
+          panelBottom = bottom + 'px';
+        }
+        if (root.style.getPropertyValue('--stage-panel-bottom') !== panelBottom) {
+          if (panelBottom) root.style.setProperty('--stage-panel-bottom', panelBottom);
+          else root.style.removeProperty('--stage-panel-bottom');
+        }
         if (toggle) {
           const collapsed = playbar?.classList.contains('collapsed');
           K.setUiIcon(toggle, collapsed ? 'controls' : 'chevronDown');
@@ -234,8 +261,6 @@
         if (star && !star.querySelector('svg.arthub-icon')) star.innerHTML = K.uiIcon('star', 18, star.textContent.trim() === '★');
         if (star?.title) star.setAttribute('aria-label', star.title);
         if (star) star.dataset.actionLabel = star.classList.contains('on') || star.classList.contains('active') || star.getAttribute('aria-pressed') === 'true' ? '已收藏' : '收藏';
-        const zoom = document.getElementById('zPct');
-        if (zoom) { zoom.setAttribute('role', 'button'); zoom.setAttribute('tabindex', '0'); zoom.title = '适应窗口 (F)'; zoom.setAttribute('aria-label', '适应窗口，当前 ' + zoom.textContent.trim()); }
         for (const [id, icon, label] of [['pbStepB', 'chevL', '后退 1 帧'], ['pbStepF', 'chevR', '前进 1 帧']]) {
           const button = document.getElementById(id); K.setUiIcon(button, icon); if (button) { button.title = label; button.setAttribute('aria-label', label); }
         }
@@ -272,21 +297,31 @@
           panelTrigger.setAttribute('aria-controls', 'floatPanel');
         }
         K.setUiIcon(document.querySelector('.kit-more-tool'), 'more');
-        if (canvas && refit) refit();
+        if (!canvas || !refit) return;
+        // Some runtimes replace the canvas when loading another resource.
+        const activeCanvas = canvas.isConnected ? canvas : document.getElementById(canvas.id);
+        if (!activeCanvas) return;
+        const area = K.stageViewArea(activeCanvas);
+        if (activeCanvas === fittedCanvas && Object.keys(area).every(key => area[key] === fittedArea[key])) return;
+        fittedCanvas = activeCanvas;
+        fittedArea = area;
+        refit();
       });
     };
     const observer = new MutationObserver(refresh);
-    for (const node of [panel, playbar, document.body, document.getElementById('stage')]) {
+    for (const node of [panel, playbar, document.body, stage]) {
       if (node) observer.observe(node, { attributes: true, attributeFilter: ['class'] });
     }
     if (document.getElementById('railStar')) observer.observe(document.getElementById('railStar'), {attributes:true,attributeFilter:['class','title']});
     if (document.getElementById('pbLoop')) observer.observe(document.getElementById('pbLoop'), {attributes:true,attributeFilter:['class']});
-    if (document.getElementById('zPct')) observer.observe(document.getElementById('zPct'), {childList:true,subtree:true,characterData:true});
     if (panel) observer.observe(panel, {subtree:true,attributes:true,attributeFilter:['class']});
+    for (const node of insets) observer.observe(node, { attributes: true, attributeFilter: ['class', 'hidden'] });
     window.addEventListener('resize', refresh);
     window.visualViewport?.addEventListener('resize', refresh);
-    if (panel && typeof ResizeObserver !== 'undefined') new ResizeObserver(refresh).observe(panel);
-    if (playbar && typeof ResizeObserver !== 'undefined') new ResizeObserver(refresh).observe(playbar);
+    const sizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(refresh);
+    for (const node of [stage, panel, playbar, ...insets]) {
+      if (node) sizeObserver?.observe(node);
+    }
     panel?.addEventListener('transitionend', refresh);
     K.refreshStageUI = refresh;
     refresh();

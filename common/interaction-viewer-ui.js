@@ -78,7 +78,9 @@
       controls.pbTime.textContent = `${time.toFixed(2)} / ${duration.toFixed(2)}s`;
       controls.pbSpeed.value = String(state.speed || 1); controls.pbSpeedVal.textContent = Number(state.speed || 1).toFixed(2).replace(/\.?0+$/, '') + 'x';
       if (renderedName !== state.name) { rows.forEach((button, name) => { button.classList.toggle('on', name === state.name); button.setAttribute('aria-pressed', String(name === state.name)); }); renderedName = state.name; }
-      const row = rows.get(state.name); if (row && duration) row.querySelector('.ad').textContent = duration.toFixed(2) + 's';
+      const durationLabel = rows.get(state.name)?.querySelector('.ad');
+      const durationText = duration ? duration.toFixed(2) + 's' : '';
+      if (durationLabel && durationText && durationLabel.textContent !== durationText) durationLabel.textContent = durationText;
       captureThumbnail(state);
       if (effectControls) {
         const effect = driver.effectPlayback(), key = state.key;
