@@ -3878,6 +3878,10 @@
     "crosscore-interaction:1010": "crosscore/interaction-1010.webp",
     "crosscore-interaction:1021": "crosscore/interaction-1021.webp",
     "crosscore-interaction:1026": "crosscore/interaction-1026.webp",
-    "crosscore-interaction:1001": "crosscore/interaction-1001.webp"
+    "crosscore-interaction:1001": "crosscore/interaction-1001.webp",
+    "crosscore:role_角色动态_10220_skin_garnet03a_spine_10220_skin_garnet03a:默认": "crosscore/spine-45142bb04eb2cbd2.webp",
+    "crosscore:role_角色动态_30180_skin_machairodus05e_spine_30180_skin_machairodus05e:默认": "crosscore/spine-af4a6a21674f0d12.webp",
+    "crosscore:role_角色动态_30300_skin_bluebuck03a_spine_30300_skin_bluebuck03a:默认": "crosscore/spine-6a82a8c1a9ff8e47.webp",
+    "crosscore:role_角色动态_70430_skin_harvest03d_spine_70430_skin_harvest03d:默认": "crosscore/spine-e88a4be600ff0084.webp"
   }
 }
