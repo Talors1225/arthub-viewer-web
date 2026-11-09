@@ -696,7 +696,7 @@
     if (intro) stage.dataset.skillBurst = 'loading';
     syncBurstUI();
     try {
-      const {openSkillBurst} = await import('./burst-inline.js');
+      const {openSkillBurst} = await import('./burst-inline.js?v=20261109-audio-start');
       signal.throwIfAborted();
       const session = await openSkillBurst({
         canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),

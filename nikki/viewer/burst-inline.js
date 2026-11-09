@@ -5,8 +5,8 @@ import {clockAt} from './timelines.js';
 export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hiddenSlots,getAudio,changed,finished,progress}){
   const root=new URL(assetsRoot.replace(/\/$/,'')+'/',location.href);
   const objectURL=key=>new URL(key.split('/').map(encodeURIComponent).join('/'),root).href;
-  const read=async(url,method)=>{
-    const response=await fetch(url,{signal});
+  const read=async(url,method,requestSignal=signal)=>{
+    const response=await fetch(url,{signal:requestSignal});
     if(!response.ok) throw new Error('资源读取失败 ('+response.status+')');
     return response[method]();
   };
@@ -22,7 +22,8 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
   const duration=scene.duration;
   let time=0, playing=false, starting=false, disposed=false, revision=0, dirty=true;
   let speed=settings.speed, loop=false, volume=settings.volume, muted=settings.muted;
-  let audio=null, mix=null, analyser=null, decoded=null, clock=null, sources=[], cues=[], counts={};
+  let audio=null, mix=null, analyser=null, clock=null, sources=[], cues=[], counts={};
+  const decoded=new Map();
   const notes=[...engine.failedModels.map(item=>'骨骼 '+item.name),...engine.failedTextures.map(item=>item.split('/').at(-1))];
   const observer=new ResizeObserver(()=>{dirty=true;});
   observer.observe(canvas);
@@ -50,7 +51,7 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     mix.gain.cancelScheduledValues(at);
     mix.gain.setTargetAtTime(muted ? 0 : volume,at,.018);
   }
-  async function loadAudio(){
+  function prepareAudio(){
     if(!engine.timeline.audio.length) return [];
     if(!audio){
       audio=getAudio();
@@ -59,40 +60,57 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
       mix.gain.value=muted ? 0 : volume;
       analyser=audio.createAnalyser();
       mix.connect(analyser); analyser.connect(audio.destination);
-    }
-    if(audio.state!=='running'){
-      const ready=await Promise.race([audio.resume().then(()=>true,()=>false),new Promise(resolve=>setTimeout(()=>resolve(false),800))]);
-      if(!ready || audio.state!=='running') return [];
-    }
-    decoded ||= Promise.all(engine.timeline.audio.map(async clip=>({
-      ...clip,buffer:await audio.decodeAudioData(await read(asset(clip.file),'arrayBuffer')),
-    })));
-    return decoded;
+    }else if(audio.state!=='running') getAudio();
+    return engine.timeline.audio.map(async clip=>{
+      if(!decoded.has(clip.file)){
+        const requestSignal=AbortSignal.any?.([signal,AbortSignal.timeout(15000)]) || signal;
+        const pending=Promise.resolve()
+          .then(()=>read(asset(clip.file),'arrayBuffer',requestSignal))
+          .then(bytes=>audio.decodeAudioData(bytes))
+          .catch(()=>{
+            decoded.delete(clip.file);
+            if(!signal.aborted && !disposed && !notes.includes('原音轨读取失败')) notes.push('原音轨读取失败');
+            return null;
+          });
+        decoded.set(clip.file,pending);
+      }
+      const buffer=await decoded.get(clip.file);
+      return buffer ? {...clip,buffer} : null;
+    });
+  }
+  function scheduleSound(clip){
+    const current=now();
+    const at=Math.max(current,clip.start), end=Math.min(duration,clip.start+clip.duration);
+    if(at>=end) return;
+    const input=clockAt(clip,at);
+    const samples=Math.min((end-at)*clip.rate,clip.buffer.duration-input);
+    if(samples<=0) return;
+    const source=audio.createBufferSource(), gain=audio.createGain();
+    const begin=clock.audio ? clock.start+(at-clock.offset)/speed : audio.currentTime+(at-current)/speed;
+    source.buffer=clip.buffer; source.playbackRate.value=clip.rate*speed; gain.gain.value=clip.volume;
+    source.connect(gain); gain.connect(mix); source.start(Math.max(begin,audio.currentTime),input,samples);
+    sources.push([source,gain]); cues.push({name:clip.name,start:at,offset:input});
   }
   async function start(offset){
     stop();
     const token=++revision;
     time=offset; starting=true;
     draw(); changed();
-    let sounds=[];
-    try{sounds=await loadAudio();}
-    catch(error){ if(signal.aborted||disposed) return; notes.push('原音轨读取失败'); }
-    if(disposed||signal.aborted||token!==revision) return;
-    const audible=!!sounds.length && audio.state==='running';
-    const begin=audible ? audio.currentTime+.03 : performance.now()/1000;
-    clock={audio:audible,start:begin,offset};
-    if(audible) for(const clip of sounds){
-      const at=Math.max(offset,clip.start), end=Math.min(duration,clip.start+clip.duration);
-      if(at>=end) continue;
-      const input=clockAt(clip,at);
-      const samples=Math.min((end-at)*clip.rate,clip.buffer.duration-input);
-      if(samples<=0) continue;
-      const source=audio.createBufferSource(), gain=audio.createGain();
-      source.buffer=clip.buffer; source.playbackRate.value=clip.rate*speed; gain.gain.value=clip.volume;
-      source.connect(gain); gain.connect(mix); source.start(begin+(at-offset)/speed,input,samples);
-      sources.push([source,gain]); cues.push({name:clip.name,start:at,offset:input});
+    const pending=prepareAudio();
+    // Give the audio a short head start. A slow clip can join at the current timeline time.
+    if(pending.length){
+      let timer;
+      await Promise.race([Promise.all(pending),new Promise(resolve=>{timer=setTimeout(resolve,1800);})])
+        .finally(()=>clearTimeout(timer));
     }
+    if(disposed||signal.aborted||token!==revision) return;
+    const audioClock=audio?.state==='running';
+    const begin=audioClock ? audio.currentTime+.03 : performance.now()/1000;
+    clock={audio:audioClock,start:begin,offset};
     starting=false; playing=true;
+    for(const ready of pending) void ready.then(clip=>{
+      if(clip && playing && token===revision && audio.state==='running') scheduleSound(clip);
+    });
     changed();
   }
   function pause(){
