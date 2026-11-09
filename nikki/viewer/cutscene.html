@@ -1173,7 +1173,7 @@
     const ph = card.querySelector('.ph');
     const variant = String(c.cutscenes?.[0]?.variant || '0');
     const thumbPath = webThumbs[routeSource + ':' + c.id + ':' + variant];
-    K.setPreview(ph, thumbPath ? THUMB_PREFIX + thumbPath : c.burst?.cover || null);
+    K.setPreview(ph, c.burst?.cover || (thumbPath ? THUMB_PREFIX + thumbPath : null));
     grid.appendChild(card);
   }
 
@@ -2189,7 +2189,7 @@
     const rt = $('#railThumb');
     rt.innerHTML = '';
     const preview = webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
-    K.setPreview(rt, preview ? THUMB_PREFIX + preview : c.burst?.cover || null);
+    K.setPreview(rt, c.burst?.cover || (preview ? THUMB_PREFIX + preview : null));
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
     vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
@@ -2393,7 +2393,8 @@
   }
 
   function stagePreviewPath(v) {
-    if (v.nativeBurst) return cur.burst?.cover || null;
+    const cover = cur.burst?.cover;
+    if (cover || v.nativeBurst) return cover || null;
     if (routeSource === 'crosscore') {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
       return thumbnail ? THUMB_PREFIX + thumbnail : null;
@@ -2713,7 +2714,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261109-nikke-bursts' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261109-burst-idle-covers' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));
