@@ -165,7 +165,7 @@
     const characters = data.characters.reduce((out, originalEntry) => {
       const entry = displayOverrides.apply('nikki', originalEntry);
       if (entry !== originalEntry) changed = true;
-      if (K.shouldOmitNikkeViewerEntry(entry)) {
+      if (K.shouldOmitNikkeViewerEntry(entry) && !/^core-\d+$/.test(entry.burst?.key || '')) {
         changed = true;
         return out;
       }
@@ -752,7 +752,7 @@
       let n = 0;
       if (a instanceof sp.RegionAttachment) {
         n = 8;
-        a.computeWorldVertices(slot, SCRATCH, 0, 2);
+        a.computeWorldVertices(sp === K.spineNS['4.0'] ? slot.bone : slot, SCRATCH, 0, 2);
       } else if (a instanceof sp.MeshAttachment) {
         n = a.worldVerticesLength;
         if (n > 0 && n < SCRATCH.length) a.computeWorldVertices(slot, 0, n, SCRATCH, 0, 2);

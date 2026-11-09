@@ -270,7 +270,7 @@
           while (next < atlas.pages.length) {
             if (signal.aborted) throw signal.reason || abortError();
             const page = atlas.pages[next++];
-            const url = new URL(page.name, new URL(options.atlasURL, location.href)).href;
+            const url = options.atlasPageURL?.(page.name) || new URL(page.name, new URL(options.atlasURL, location.href)).href;
             const blob = await readSpineResponse(url, signal, 'blob', options);
             const img = await decodeImage(blob, signal);
             if (signal.aborted) throw signal.reason || abortError();

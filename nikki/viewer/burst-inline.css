@@ -1,0 +1,42 @@
+/* A second timeline in the existing ArtHub stage. The original toolbar remains above both canvases. */
+#skillBurstLayer {
+  position:absolute; inset:0; display:grid; place-items:center; overflow:hidden;
+  background:radial-gradient(ellipse at center,#17171a,#080809 70%);
+  visibility:hidden; pointer-events:none;
+}
+#skillBurstLayer canvas {
+  position:relative; inset:auto; align-self:center; justify-self:center;
+  width:min(100%, 780px, calc(100dvh * .8)); aspect-ratio:4 / 5; height:auto;
+  display:block; background:#050505; transform-origin:center;
+}
+#skillBurstLoading { display:none; color:var(--text-dim); font-size:14px; }
+#stage[data-skill-burst="loading"] #skillBurstLoading { display:block; }
+#stage[data-skill-burst="loading"] #skillBurstLayer canvas { display:none; }
+#stage:is([data-skill-burst="loading"],[data-skill-burst="on"]) #cv { visibility:hidden; }
+#stage:is([data-skill-burst="loading"],[data-skill-burst="on"],[data-skill-burst="idle"]) #skillBurstLayer { visibility:visible; }
+#stage[data-skill-burst="idle"] #skillBurstLayer { z-index:0; }
+#stage[data-skill-burst="idle"] #skillBurstLayer canvas { width:100%; height:100%; aspect-ratio:auto; }
+#stage[data-skill-burst="idle"] #cv { z-index:1; background:transparent; }
+#burstAccess { position:fixed; left:16px; top:106px; z-index:21; }
+#burstAccess[hidden], #skillBurstActions[hidden] { display:none!important; }
+#burstAccess button, #skillBurstActions button {
+  padding:6px 10px; min-height:31px; border-radius:9px; border:1px solid var(--border2);
+  color:var(--accent); background:var(--panel); font:inherit; font-size:12px; cursor:pointer;
+}
+#burstAccess button[aria-pressed="true"], #skillBurstActions button[aria-pressed="true"] {
+  background:var(--accent-dim-bg); border-color:var(--accent); color:var(--accent);
+}
+#burstAccess button:focus-visible, #skillBurstActions button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+#skillBurstActions { flex:none; display:grid; gap:6px; padding-bottom:7px; margin-bottom:4px; border-bottom:1px solid var(--border2); }
+#skillBurstActions .skill-burst-sound { display:grid; grid-template-columns:minmax(40px,1fr) auto auto; align-items:center; gap:5px; }
+#skillBurstActions button:disabled { opacity:.45; cursor:default; }
+#skillBurstActions label { color:var(--text-dim); font-size:11px; white-space:nowrap; }
+#skillBurstActions output { font-size:11px; font-variant-numeric:tabular-nums; }
+#skillBurstActions input { grid-column:1 / -1; width:100%; margin:0; accent-color:var(--accent); }
+#skillBurstActions .skill-burst-sound button { padding-inline:6px; }
+body.immersive #burstAccess, body:has(#gridView.open) #burstAccess { display:none!important; }
+@media (max-width:720px) and (orientation:portrait) {
+  #burstAccess { left:12px; top:calc(max(8px,env(safe-area-inset-top)) + 32px); }
+  #burstAccess button { min-height:34px; }
+  #skillBurstLayer canvas { width:min(100%,calc((100dvh - 94px) * .8)); }
+}

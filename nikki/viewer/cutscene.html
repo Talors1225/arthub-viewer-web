@@ -4,11 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
+<link rel="stylesheet" href="burst-inline.css">
 <link rel="stylesheet" href="../../common/kit.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/stage-ui.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
 <style>
+  .burst-card-badge {
+    position:absolute; left:8px; top:8px; padding:3px 6px; border-radius:6px;
+    background:#15131de6; color:var(--accent); font-size:11px; line-height:1.2; pointer-events:none;
+  }
   /* Keep legacy controls out of the first paint while shared scripts initialize. */
   html:not([data-gav-chrome="ready"]) :is(#rail, #topPill, #toolStrip, #playbar, #floatPanel) {
     visibility: hidden !important;
@@ -283,6 +288,10 @@
 <body>
   <div class="stage" id="stage">
     <canvas id="cv"></canvas>
+    <div id="skillBurstLayer">
+      <div id="skillBurstLoading" role="status">正在加载技能合播…</div>
+    </div>
+    <div id="burstAccess" hidden><button id="btnSkillBurst" type="button">重播合播</button></div>
     <div class="status" id="status">加载中…</div>
 
     <div class="rail" id="rail">
@@ -376,6 +385,16 @@
       <button class="rp-panel-close" type="button" data-panel-close title="关闭面板" aria-label="关闭面板">×</button>
     </div>
     <div class="rp-page on" data-page="anim">
+      <section id="skillBurstActions" aria-label="技能合播" hidden>
+        <button id="btnSkillBurstPanel" type="button">重播合播</button>
+        <button id="btnSkillBackdrop" type="button" aria-pressed="false" disabled>游戏背景</button>
+        <div class="skill-burst-sound">
+          <label for="skillBurstVolume">合播音量</label>
+          <output id="skillBurstVolumeValue" for="skillBurstVolume">30%</output>
+          <button id="skillBurstMute" type="button" aria-pressed="false">静音</button>
+          <input id="skillBurstVolume" type="range" min="0" max="100" value="30">
+        </div>
+      </section>
       <div class="row"><input id="animFilter" type="text" class="text-input" placeholder="&#x8fc7;&#x6ee4;&#x52a8;&#x753b;&#x540d;"></div>
       <div id="animList" class="anim-list"></div>
     </div>
@@ -411,8 +430,8 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261104-unified-final"></script>
-<script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+<script src="../../common/kit.js?v=20261109-nikke-bursts"></script>
+<script src="../../common/asset-loader.js?v=20261109-nikke-bursts"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -475,7 +494,8 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const embedded = new URLSearchParams(location.search).get('embed') === '1';
+  const viewerParams = new URLSearchParams(location.search);
+  const embedded = viewerParams.get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
   const loadingPreview = K.createLoadingPreview(stage);
@@ -524,15 +544,228 @@
   let editWasPlaying = false;
   let hoverBoneName = null;
   const editOrig = {};   // 编辑过的骨骼在动画暂停帧的原始姿态, 右键恢复用
-  let filterType = store.get('filterType', 'all');
+  let filterType = viewerParams.get('filter') === 'skill' && routeSource === 'nikki' ? 'skill' : store.get('filterType', 'all');
   let sortMode = store.get('sortMode', 'default');
   let sortDirection = store.get('sortDirection', 'asc');
-  let gridQuery = '';
+  let gridQuery = routeSource === 'nikki' ? viewerParams.get('q') || '' : '';
   let immersive = false;
   let exportQuality = K.exportPreset(store.get('pngExportQuality', 'high')).id;
   let animationExportQuality = K.animationExportPreset(store.get('animationExportQuality', 'high')).id;
   let animationExportFormat = store.get('animationExportFormat', 'gif') === 'video' ? 'video' : 'gif';
   let animationExportRunning = false;
+
+  // ---------- 技能合播 ----------
+  const burstAccess = $('#burstAccess'), burstLayer = $('#skillBurstLayer');
+  const burstToggle = $('#btnSkillBurst'), burstInPanel = $('#btnSkillBurstPanel');
+  const burstBgButton = $('#btnSkillBackdrop');
+  const burstMix = $('#skillBurstVolume'), burstPercent = $('#skillBurstVolumeValue'), burstMute = $('#skillBurstMute');
+  const burstEnabled = routeSource === 'nikki' && !embedded;
+  const skipInitialBurst = viewerParams.get('view') === 'spine';
+  let burstSession = null, burstBackdrop = null, burstPending = null, burstCanvas = null;
+  let classicStage = null, burstAudio = null, burstIdle = null, burstLoop = false;
+  let showGameBackground = true;
+  const savedBurstVolume = store.get('burstVolume', .3);
+  let burstVolume = Number.isFinite(savedBurstVolume) ? Math.max(0, Math.min(1, savedBurstVolume)) : .3;
+  let burstMuted = !!store.get('burstMuted', false);
+
+  function burstAssetsRoot() {
+    const config = window.ARTHUB_COS_CONFIG;
+    return config.nikkiBurstAssetsRoot || config.root;
+  }
+  function burstObjectURL(key) {
+    if (!key) throw new Error('技能贴图缺少路径');
+    return new URL(key.split('/').map(encodeURIComponent).join('/'), burstAssetsRoot().replace(/\/$/,'') + '/').href;
+  }
+  function unlockBurstAudio() {
+    const Audio = window.AudioContext || window.webkitAudioContext;
+    if (!Audio || (!burstAudio && navigator.userActivation?.hasBeenActive === false)) return null;
+    try {
+      burstAudio ||= new Audio();
+      if (burstAudio.state !== 'running') burstAudio.resume().catch(() => {});
+      return burstAudio;
+    } catch { return null; }
+  }
+  function syncBurstUI() {
+    const enabled = burstEnabled && !!cur?.burst && !!cut;
+    burstAccess.hidden = !enabled;
+    $('#skillBurstActions').hidden = !enabled;
+    const intro = !!burstSession || !!burstPending?.intro;
+    const label = intro ? '跳过合播' : burstPending ? '加载背景…' : '重播合播';
+    for (const button of [burstToggle, burstInPanel]) {
+      button.textContent = label;
+      button.disabled = !!burstPending && !intro;
+      button.title = intro && burstPending ? '正在加载，可跳过合播' : label;
+    }
+    burstBgButton.disabled = burstBackdrop?.backdrop?.time == null || !!burstSession;
+    burstBgButton.setAttribute('aria-pressed', String(stage.dataset.skillBurst === 'idle'));
+    burstMix.value = String(Math.round(burstVolume * 100));
+    burstPercent.textContent = burstMix.value + '%';
+    burstMute.setAttribute('aria-pressed', String(burstMuted));
+    burstMute.textContent = burstMuted ? '已静音' : '静音';
+  }
+
+  function renderSkillBackdrop() {
+    if (burstSession || burstPending?.intro) return;
+    if (burstBackdrop && showGameBackground && burstBackdrop.backdrop?.time !== null) {
+      stage.dataset.skillBurst = 'idle';
+      if (burstBackdrop.showBackdrop()) return;
+    }
+    delete stage.dataset.skillBurst;
+  }
+  function findSkillIdle(fallback) {
+    const candidates = cut.data.animations.filter(a => a.duration > 0 &&
+      /(?:^|_)idle(?:_all|_?\d+)?$|^(?:stand(?:ing)?|loop(?:_.*)?)$/i.test(a.name));
+    const exact = candidates.findIndex(a => /^idle$/i.test(a.name));
+    if (exact > 0) candidates.unshift(candidates.splice(exact, 1)[0]);
+    return candidates.find(a => a.name === fallback || measureAnimationBounds(cut, a.name, false))?.name || fallback;
+  }
+  function startSkillIdle() {
+    if (!burstIdle || !cut) return;
+    playing = true;
+    loopAnim = true;
+    animSel.value = burstIdle;
+    playAnimation(burstIdle, { loop: true });
+  }
+  function restoreClassicStage() {
+    if (!classicStage) return;
+    playing = classicStage.playing;
+    status(classicStage.caption);
+    classicStage = null;
+  }
+  function parkSkillBurst(toIdle = false) {
+    if (!burstSession && !burstPending?.intro) return;
+    if (burstPending) burstPending.intro = false;
+    if (burstSession) {
+      burstSession.stop();
+      burstBackdrop = burstSession;
+      burstSession = null;
+    }
+    restoreClassicStage();
+    renderSkillBackdrop();
+    if (toIdle) startSkillIdle();
+    partsCtl?.refresh(); animCtl?.refresh();
+    setPlayBtn(); setLoopBtn(); syncTimeline(); updateZoomPct(); syncBurstUI();
+  }
+  function leaveSkillBurst() {
+    if (!burstPending && !burstSession && !burstBackdrop) return;
+    burstPending?.controller.abort();
+    burstPending = null;
+    burstSession?.dispose();
+    burstBackdrop?.dispose();
+    burstSession = burstBackdrop = null;
+    if (burstCanvas) {
+      burstCanvas.remove();
+      burstCanvas.getContext('webgl')?.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+    burstCanvas = null;
+    delete stage.dataset.skillBurst;
+    showGameBackground = true;
+    restoreClassicStage();
+    setPlayBtn(); setLoopBtn(); syncBurstUI();
+  }
+  function playSkillIntro(session) {
+    if (boneEditMode) btnBoneEdit.click();
+    closePopups();
+    hidePartPopup();
+    classicStage = { playing, caption: statusEl.textContent };
+    playing = false;
+    burstSession = session;
+    burstBackdrop = null;
+    burstLoop = false;
+    session.fit();
+    session.mix(burstVolume, burstMuted);
+    session.setLoop(false);
+    session.setSpeed(Number(pbSpeed.value) || 1);
+    portraitAudio?.reset();
+    stage.dataset.skillBurst = 'on';
+    status((cur.name || cur.id) + ' · 技能合播');
+    partsCtl?.refresh(); animCtl?.refresh();
+    setPlayBtn(); setLoopBtn(); syncTimeline(); updateZoomPct(); syncBurstUI();
+    session.replay();
+    if (session.notes.length) K.toast('部分技能资源读取失败', 'info');
+  }
+  async function loadSkillBurst(intro) {
+    if (!burstEnabled || !cur?.burst || !cut || !stageMode || burstPending) return;
+    const request = { controller: new AbortController(), intro };
+    const signal = request.controller.signal;
+    burstPending = request;
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    burstLayer.appendChild(canvas);
+    burstCanvas = canvas;
+    if (intro) stage.dataset.skillBurst = 'loading';
+    syncBurstUI();
+    try {
+      const {openSkillBurst} = await import('./burst-inline.js');
+      signal.throwIfAborted();
+      const session = await openSkillBurst({
+        canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),
+        settings: { speed: Number(pbSpeed.value) || 1, volume: burstVolume, muted: burstMuted },
+        hiddenSlots: cut.hiddenSlots, getAudio: unlockBurstAudio,
+        changed: () => { setPlayBtn(); syncTimeline(); },
+        finished: () => parkSkillBurst(true),
+        progress: (loaded,total) => {
+          if (burstPending !== request || !request.intro) return;
+          burstToggle.title = burstInPanel.title = '加载合播 ' + loaded + '/' + total + '，可跳过';
+        },
+      });
+      if (burstPending !== request) { session.dispose(); return; }
+      burstPending = null;
+      if (request.intro) playSkillIntro(session);
+      else {
+        burstBackdrop = session;
+        renderSkillBackdrop();
+        syncBurstUI();
+      }
+    } catch (error) {
+      if (signal.aborted || (burstPending && burstPending !== request)) return;
+      // The original renderer is already ready, including when the intro fails to load.
+      if (burstPending === request) {
+        leaveSkillBurst();
+        if (request.intro) startSkillIdle();
+      } else if (burstSession) parkSkillBurst(true);
+      K.toast('技能合播加载失败：' + error.message, 'err');
+    }
+  }
+  function toggleSkillBurst() {
+    if (burstSession || burstPending?.intro) { parkSkillBurst(true); return; }
+    unlockBurstAudio();
+    if (burstBackdrop) playSkillIntro(burstBackdrop);
+    else void loadSkillBurst(true);
+  }
+  if (burstEnabled) {
+    burstToggle.onclick = burstInPanel.onclick = toggleSkillBurst;
+    burstBgButton.onclick = () => {
+      showGameBackground = !showGameBackground;
+      renderSkillBackdrop(); syncBurstUI();
+    };
+    burstMix.oninput = () => {
+      burstVolume = Number(burstMix.value) / 100;
+      store.set('burstVolume', burstVolume);
+      burstSession?.mix(burstVolume, burstMuted); syncBurstUI();
+    };
+    burstMute.onclick = () => {
+      burstMuted = !burstMuted; store.set('burstMuted', burstMuted);
+      burstSession?.mix(burstVolume, burstMuted); syncBurstUI();
+    };
+    document.addEventListener('click', event => {
+      if (event.target.closest?.('#btnPng,#btnGif,#btnDebug,#btnBg,#btnBoneEdit,#poseEditToggle,#floatPanel [data-tab="pose"],#btnVoiceSettings,#btnVoice')) {
+        parkSkillBurst();
+      }
+    }, true);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) burstSession?.pause(); });
+    window.addEventListener('pagehide', leaveSkillBurst);
+    if (viewerParams.has('verify')) window.__burstInlineProbe = {
+      phase: () => burstSession ? 'intro' : burstPending ? 'loading' : burstBackdrop ? 'idle' : 'classic',
+      snapshot: () => burstSession?.snapshot() || null,
+      background: () => ({ ...burstBackdrop?.backdrop, visible: stage.dataset.skillBurst === 'idle' }),
+      seek: (time,resume = false) => burstSession?.seek(time,resume),
+      classic: () => {
+        const track = getTrack();
+        return track && {name: track.animation.name, time: track.trackTime, duration: track.animation.duration, loop: track.loop, playing};
+      },
+    };
+  }
 
   // ---------- 弹窗基建 ----------
   const allPopups = [];
@@ -545,13 +778,14 @@
 
   // ---------- 图标初始化 ----------
   const setPlayBtn = () => {
-    pbPlay.innerHTML = playing ? I('pause', 15) : I('play', 15);
-    pbPlay.classList.toggle('active', playing);
+    const running = burstSession ? burstSession.playing : playing;
+    pbPlay.innerHTML = running ? I('pause', 15) : I('play', 15);
+    pbPlay.classList.toggle('active', running);
     portraitAudio?.playbackChanged();
   };
   const setLoopBtn = () => {
     pbLoop.innerHTML = I('loop', 14);
-    pbLoop.classList.toggle('active', loopAnim);
+    pbLoop.classList.toggle('active', burstSession ? burstLoop : loopAnim);
   };
   $('#railGrid').innerHTML = I('grid', 16);
   $('#btnPrev').innerHTML = I('chevL', 13);
@@ -587,14 +821,19 @@
   K.bindThemePalette($('#btnTheme'), store);
 
   // ---------- 背景 ----------
-  const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: value => store.set('bg', value) });
+  const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: value => {
+    store.set('bg', value);
+    showGameBackground = false;
+    renderSkillBackdrop(); syncBurstUI();
+  } });
   const getBg = stageBackground.get;
 
   const aliasMap = store.get('aliasMap', {});
   const aliasOf = id => aliasMap[id] || '';
-  const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
+  const TYPE_LABEL = { cutscene: '过场', skill: '技能动画', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
   const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, other: 9, store: 10, catalog: 10, unknown: 9 };
   function displayType(c) {
+    if (routeSource === 'nikki' && c?.burst) return 'skill';
     const type = String(c && (c.resourceType || c.type) || 'unknown').toLowerCase();
     if (routeSource !== 'nikki') return type;
     return ['skill', 'battle', 'lobby'].includes(type) ? type : 'other';
@@ -603,10 +842,10 @@
   function buildFilterChips() {
     const row = $('#filterChips');
     const counts = {};
-    for (const c of chars) { const t = displayType(c); counts[t] = (counts[t] || 0) + 1; }
+    for (const c of chars) { if (c.burst?.alias) continue; const t = displayType(c); counts[t] = (counts[t] || 0) + 1; }
     const types = Object.keys(counts).sort((a, b) => (TYPE_ORDER[a] ?? 8) - (TYPE_ORDER[b] ?? 8));
     const starred = new Set(store.get('stars', []));
-    const chips = [['all', '全部', chars.length],
+    const chips = [['all', '全部', chars.filter(c => !c.burst?.alias).length],
       ...types.filter(t => !['other','unknown'].includes(t)).map(t => [t, TYPE_LABEL[t] || t, counts[t]]),
       ['star', '★', starred.size]];
     if (!chips.some(c => c[0] === filterType)) filterType = 'all';
@@ -654,8 +893,9 @@
   function getFilteredChars() {
     const starred = new Set(store.get('stars', []));
     let arr = chars.filter(c => {
-      if (filterType === 'all') return true;
       if (filterType === 'star') return starred.has(c.id);
+      if (c.burst?.alias && !gridQuery) return false;
+      if (filterType === 'all') return true;
       return displayType(c) === filterType;
     });
     const direction = sortDirection === 'desc' ? -1 : 1;
@@ -891,7 +1131,7 @@
   let GRID_PAGE = K.libraryPageSize();
   let gridArr = [];
   let gridShown = 0;
-  let gridPage = 1;
+  let gridPage = routeSource === 'nikki' ? Math.max(1, parseInt(viewerParams.get('page'),10) || 1) : 1;
   matchMedia('(max-width: 720px)').addEventListener('change', () => {
     const size = K.libraryPageSize();
     if (size === GRID_PAGE) return;
@@ -904,15 +1144,23 @@
   function buildCard(grid, starred, c) {
     const alias = aliasOf(c.id);
     const card = document.createElement('div');
-    card.className = 'thumb-card' + (cur && cur.id === c.id ? ' active' : '');
+    card.className = 'thumb-card' + (cur && cur.id === c.id ? ' active' : '') + (c.burst ? ' nikke-burst-card' : '');
     card.dataset.id = c.id;
     card.style.setProperty('--i', Math.min(gridShown % GRID_PAGE, 16));
     card.innerHTML = '<div class="ph">预览暂缺</div>'
       + '<div class="tm"><div class="tn">' + K.esc(alias || c.name || c.id) + '</div>'
       + '<div class="ts">' + K.esc(alias ? c.name || '' : (c.source || '')) + '</div></div>'
-      + (['other','unknown'].includes(displayType(c)) ? '' : '<span class="tt">' + (TYPE_LABEL[displayType(c)] || '') + '</span>')
+      + (['other','unknown'].includes(displayType(c)) ? '' : '<span class="tt">' + (c.burst ? '技能合播' : TYPE_LABEL[displayType(c)] || '') + '</span>')
+      + (c.burst ? '<span class="burst-card-badge">合播</span>' : '')
       + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + K.uiIcon('star', 18, starred.has(c.id)) + '</button>';
-    card.onclick = () => { selectChar(c); closeGrid(); };
+    if (c.burst) {
+      card.tabIndex = 0;
+      card.setAttribute('role', 'link');
+      card.addEventListener('keydown', e => {
+        if (e.target === card && e.key === 'Enter') selectChar(c);
+      });
+    }
+    card.onclick = () => selectChar(c);
     card.querySelector('.tstar').onclick = (e) => {
       e.stopPropagation();
       toggleStarById(c.id);
@@ -925,7 +1173,7 @@
     const ph = card.querySelector('.ph');
     const variant = String(c.cutscenes?.[0]?.variant || '0');
     const thumbPath = webThumbs[routeSource + ':' + c.id + ':' + variant];
-    K.setPreview(ph, thumbPath ? THUMB_PREFIX + thumbPath : null);
+    K.setPreview(ph, thumbPath ? THUMB_PREFIX + thumbPath : c.burst?.cover || null);
     grid.appendChild(card);
   }
 
@@ -1005,6 +1253,7 @@
 
   let gridScroll = 0;
   function openGrid() {
+    parkSkillBurst(true);
     stageMode = false;
     portraitAudio?.playbackChanged();
     gridView.classList.add('open');
@@ -1016,7 +1265,7 @@
     gridScroll = gridView.scrollTop;
     if (!cur && chars.length) {
       const last = store.get('lastChar', {});
-      selectChar(chars.find(c => c.id === last.id) || gridArr[0] || chars[0], last);
+      if (selectChar(chars.find(c => c.id === last.id) || gridArr[0] || chars[0], last) === false) return;
     }
     stageMode = true;
     portraitAudio?.playbackChanged();
@@ -1066,6 +1315,8 @@
     if (enabled && boneEditMode) btnBoneEdit.click();
     const changed = partEditMode !== !!enabled;
     partEditMode = !!enabled;
+    if (partEditMode && burstPending?.intro) parkSkillBurst();
+    if (partEditMode && burstSession?.playing) burstSession.pause();
     stage.dataset.clickMode = partEditMode ? 'part-editing' : 'audio';
     btnPartEdit.classList.toggle('on', partEditMode);
     btnPartEdit.title = '部件编辑（' + (partEditMode ? '开启' : '关闭') + '）';
@@ -1098,9 +1349,9 @@
     allEl: $('#partAll'),
     noneEl: $('#partNone'),
     invEl: $('#partInv'),
-    getTargets: () => (cut ? cutLayers(cut) : null),
+    getTargets: () => burstSession?.partTargets || (cut ? cutLayers(cut) : null),
     onHover: (name) => { highlightSlot = name; },
-    onChange: () => { persistHidden(); updatePartsBadge(); },
+    onChange: () => { persistHidden(); updatePartsBadge(); burstSession?.redraw(); },
   });
   function persistHidden() {
     if (!cur || !cut) return;
@@ -1167,7 +1418,7 @@
       for (const a of cut.data.animations) {
         if (q && !a.name.toLowerCase().includes(q)) continue;
         const b = document.createElement('button');
-        b.className = 'anim-row' + (a.name === curName ? ' on' : '');
+        b.className = 'anim-row' + (!burstSession && a.name === curName ? ' on' : '');
         b.innerHTML = '<span class="an">' + K.esc(a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
         b.onclick = () => {
           animSel.value = a.name;
@@ -1445,6 +1696,7 @@
   // ---------- 播放条 ----------
   const getTrack = () => { const t = cut && cut.state.getCurrent(0); return t && t.animation ? t : null; };
   function seekTo(ratio) {
+    if (burstSession) { burstSession.seek(ratio * burstSession.duration); return; }
     const track = getTrack();
     if (!track) return;
     const time = ratio * (track.animation.duration || 0.0001);
@@ -1457,6 +1709,7 @@
     syncTimeline();
   }
   function stepFrame(dir) {
+    if (burstSession) { burstSession.step(dir); return; }
     const track = getTrack();
     if (!track) return;
     const dur = track.animation.duration || 0.0001;
@@ -1472,6 +1725,12 @@
     syncTimeline();
   }
   function syncTimeline() {
+    if (burstSession) {
+      const {time,duration} = burstSession;
+      pbRange.value = String(Math.round(time / duration * 1000));
+      pbTime.textContent = time.toFixed(2) + ' / ' + duration.toFixed(2) + 's';
+      return;
+    }
     const track = getTrack();
     if (!track) { pbTime.textContent = '0.00 / 0.00s'; return; }
     const dur = track.animation.duration || 0.0001;
@@ -1484,16 +1743,27 @@
   $('#pbStepB').addEventListener('click', () => stepFrame(-1));
   $('#pbStepF').addEventListener('click', () => stepFrame(1));
   pbLoop.addEventListener('click', () => {
+    if (burstSession) {
+      burstLoop = !burstLoop;
+      burstSession.setLoop(burstLoop);
+      setLoopBtn();
+      return;
+    }
     loopAnim = !loopAnim;
     setLoopBtn();
     store.set('loop', loopAnim);
     if (cut && animSel.value) playAnimation(animSel.value);
   });
-  pbPlay.addEventListener('click', () => { playing = !playing; setPlayBtn(); });
+  pbPlay.addEventListener('click', () => {
+    if (burstSession) { burstSession.toggle(); return; }
+    if (burstPending?.intro) parkSkillBurst();
+    playing = !playing; setPlayBtn();
+  });
   pbSpeed.addEventListener('input', () => {
     pbSpeedVal.textContent = fmtSpeed(pbSpeed.value);
     store.set('speed', Number(pbSpeed.value));
     if (cut) for (const layer of cutLayers()) if (layer.state) layer.state.timeScale = Number(pbSpeed.value);
+    burstSession?.setSpeed(Number(pbSpeed.value));
     portraitAudio?.speedChanged();
   });
   function fmtSpeed(v) { return Number(v).toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + 'x'; }
@@ -1504,7 +1774,14 @@
     let dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
     lastT = t;
     if (K.pngExporting) return;
-    if (document.hidden || (!embedded && !stageMode)) { portraitAudio?.syncPause(); return; }
+    if (document.hidden || (!embedded && !stageMode)) {
+      if (burstSession?.playing) burstSession.pause();
+      portraitAudio?.syncPause(); return;
+    }
+    if (burstSession) {
+      burstSession.tick(); syncTimeline(); return;
+    }
+    if (stage.dataset.skillBurst === 'idle') burstBackdrop?.tickBackdrop();
     if (portraitAudio) dt = portraitAudio.animationDelta(dt);
     try {
     if (cut) {
@@ -1525,7 +1802,7 @@
     if (mgl && renderer) {
       const raw = mgl.gl || mgl;
       const bgv = getBg();
-      if (bgv === 'checker') raw.clearColor(0, 0, 0, 0);
+      if (bgv === 'checker' || stage.dataset.skillBurst === 'idle') raw.clearColor(0, 0, 0, 0);
       else {
         const c = K.parseColor(bgv, [0.06, 0.07, 0.09]);
         raw.clearColor(c[0], c[1], c[2], 1);
@@ -1593,14 +1870,19 @@
     }
     updateZoomPct();
   }
-  function refit() { if (!cut) return; panX = 0; panY = 0; if (cmpOn && cmp) computeCompareView(); computeView(); applyView(); }
-  function set100() { if (!cut) return; fitMode = false; userScale = 1; panX = 0; panY = 0; applyView(); }
+  function refit() { if (burstSession) { burstSession.fit(); updateZoomPct(); return; } if (!cut) return; panX = 0; panY = 0; if (cmpOn && cmp) computeCompareView(); computeView(); applyView(); }
+  function set100() { if (burstSession) { burstSession.fit(); updateZoomPct(); return; } if (!cut) return; fitMode = false; userScale = 1; panX = 0; panY = 0; applyView(); }
   function resetViewForLoad() {
     fitMode = true; userScale = 1; panX = 0; panY = 0;
     viewerUiReady = false; editBaseline = null; dragPoseBefore = null;
     K.setLibraryStageReady?.(false); K.clearToasts?.(); panelUI?.resourceChanged();
   }
   function zoomBy(factor, anchorX, anchorY) {
+    if (burstSession) {
+      const dpr = devicePixelRatio || 1;
+      burstSession.zoomBy(factor, (anchorX || 0) / dpr, -(anchorY || 0) / dpr);
+      updateZoomPct(); return;
+    }
     if (!cut) return;
     const old = fitMode ? cut.fitScale : userScale;
     const next = Math.min(8, Math.max(0.05, old * factor));
@@ -1614,6 +1896,10 @@
     btn100.classList.add('active'); btnFit.classList.remove('active');
   }
   function updateZoomPct() {
+    if (burstSession) {
+      $('#zPct').textContent = burstSession.zoom === 1 ? '适应' : Math.round(burstSession.zoom * 100) + '%';
+      return;
+    }
     $('#zPct').textContent = (!cut || fitMode) ? '适应' : Math.round(userScale / (cut.fitScale || 1) * 100) + '%';
   }
   function mergeBounds(a, b) {
@@ -1626,11 +1912,12 @@
   }
 
   // Sample the active animation so transitions cannot grow beyond a fit based on its first frame.
-  function measureAnimationBounds(target, name) {
-    if (!target || !target.data || !name) return target && target.bounds ? target.bounds : null;
+  function measureAnimationBounds(target, name, allowFallback = true) {
+    const fallback = allowFallback ? target?.bounds || null : null;
+    if (!target?.data || !name) return fallback;
     const SP = K.getSpine(cur && cur.spineVersion);
     const anim = target.data.animations && target.data.animations.find(a => a.name === name);
-    if (!SP || !anim || !SP.AnimationState || !SP.AnimationStateData) return target.bounds || null;
+    if (!SP || !anim || !SP.AnimationState || !SP.AnimationStateData) return fallback;
     const duration = Math.max(0, Number(anim.duration) || 0);
     const times = duration > 0
       ? [0, duration * 0.125, duration * 0.25, duration * 0.375, duration * 0.5,
@@ -1639,6 +1926,7 @@
     let bounds = null;
     try {
       const sample = new SP.Skeleton(target.data);
+      if (!allowFallback && target.skeleton.skin) sample.setSkin(target.skeleton.skin);
       for (const time of times) {
         sample.setToSetupPose();
         const stateData = new SP.AnimationStateData(target.data);
@@ -1648,14 +1936,15 @@
         state.update(time);
         state.apply(sample);
         K.updateWorldTransform(sample);
-        K.applyHiddenSlots(sample, target.hiddenSlots);
-        bounds = mergeBounds(bounds, K.measureBounds(sample, SP));
+        if (allowFallback) K.applyHiddenSlots(sample, target.hiddenSlots);
+        bounds = mergeBounds(bounds, K.measureBounds(sample, SP, allowFallback));
       }
     } catch {}
-    return bounds || target.bounds || null;
+    return bounds || fallback;
   }
 
   function playAnimation(name, options = {}) {
+    parkSkillBurst();
     if (!cut) return;
     portraitAudio?.animationChanged(name, options);
     let bounds = null;
@@ -1733,7 +2022,7 @@
         if (!cut || !cur || !track) return null;
         return { id: cur.id, animation: track.animation.name, time: track.trackTime,
           duration: track.animation.duration, loop: track.loop, speed: Number(pbSpeed.value) || 1,
-          playing, active: (embedded || stageMode) && !boneEditMode && !partEditMode,
+          playing, active: (embedded || stageMode) && !boneEditMode && !partEditMode && !burstSession,
           animations: cut.data.animations.map(a => a.name) };
       },
       talk,
@@ -1877,6 +2166,9 @@
 
   // ---------- 资源选择 ----------
   function selectChar(c, restore) {
+    leaveSkillBurst();
+    showGameBackground = true;
+    if (burstEnabled && c.burst && navigator.userActivation?.isActive) unlockBurstAudio();
     cur = c;
     cutLoadSeq++;
     resetViewForLoad();
@@ -1897,7 +2189,7 @@
     const rt = $('#railThumb');
     rt.innerHTML = '';
     const preview = webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
-    K.setPreview(rt, preview ? THUMB_PREFIX + preview : null);
+    K.setPreview(rt, preview ? THUMB_PREFIX + preview : c.burst?.cover || null);
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
     vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
@@ -2101,6 +2393,7 @@
   }
 
   function stagePreviewPath(v) {
+    if (v.nativeBurst) return cur.burst?.cover || null;
     if (routeSource === 'crosscore') {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
       return thumbnail ? THUMB_PREFIX + thumbnail : null;
@@ -2109,11 +2402,13 @@
   }
 
   async function loadCutscene(idx, restoreAnim) {
+    leaveSkillBurst();
     const seq = ++cutLoadSeq;
     cutRequest?.abort();
     const request = cutRequest = new AbortController();
     let loadedAtlas = null, loadedLayers = [];
     disposeCut();
+    syncBurstUI();
     resetViewForLoad();
     hidePartPopup();
     highlightSlot = null;
@@ -2128,7 +2423,10 @@
       if (seq !== cutLoadSeq) return;
       if (!ensureGL()) throw new Error('WebGL 不可用');
       const files = await K.loadSpineFiles(SP, mgl, {
-        atlasURL: dir + v.atlas, skeletonURL: dir + encodeURIComponent(v.skel), signal: request.signal,
+        atlasURL: v.nativeBurst ? burstObjectURL(v.nativeBurst.atlas) : dir + v.atlas,
+        skeletonURL: v.nativeBurst ? burstObjectURL(v.nativeBurst.skeleton) : dir + encodeURIComponent(v.skel),
+        atlasPageURL: v.nativeBurst ? page => burstObjectURL(v.nativeBurst.pages[page]) : undefined,
+        signal: request.signal,
         onProgress: message => { if (seq === cutLoadSeq) status(message); },
       });
       const atlas = loadedAtlas = files.atlas;
@@ -2142,6 +2440,8 @@
       } catch (error) { throw new Error('骨骼解析失败: ' + error.message); }
 
       const skeleton = new SP.Skeleton(data);
+      const nativeSkin = v.nativeBurst?.skin && data.findSkin(v.nativeBurst.skin);
+      if (nativeSkin) skeleton.setSkin(nativeSkin);
       skeleton.setToSetupPose();
       const stateData = new SP.AnimationStateData(data);
       stateData.defaultMix = 0.15;
@@ -2167,6 +2467,16 @@
         const skin = data.skins.find(s => s.name === 'default') || data.skins[0];
         try { skeleton.setSkin(skin); skeleton.setSlotsToSetupPose(); state.apply(skeleton); K.updateWorldTransform(skeleton); } catch {}
         bounds = K.measureBounds(skeleton, stageNS);
+      }
+      if (!bounds && v.nativeBurst) {
+        const track = state.getCurrent(0);
+        if (track) for (const fraction of [.2,.45,.7,.9]) {
+          track.trackTime = fraction * track.animation.duration;
+          state.apply(skeleton);
+          K.updateWorldTransform(skeleton);
+          bounds = K.measureBounds(skeleton, stageNS, false);
+          if (bounds) break;
+        }
       }
       if (!bounds) throw new Error('empty bounds');
       if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
@@ -2211,6 +2521,12 @@
         u: location.pathname + '?id=' + encodeURIComponent(cur.id),
       });
       playerReady(seq);
+      syncBurstUI();
+      if (burstEnabled && cur.burst) {
+        burstIdle = saved || findSkillIdle(previewAnim?.name || def);
+        if (skipInitialBurst && animSel.value !== burstIdle) startSkillIdle();
+        void loadSkillBurst(!skipInitialBurst);
+      }
     } catch (e) {
       request.abort(e);
       K.disposeAtlas(loadedAtlas);
@@ -2226,6 +2542,7 @@
 
   // ---------- 动画导出：GIF 和视频均为两档 ----------
   async function exportAnimation(quality, format = 'gif') {
+    parkSkillBurst();
     if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     const animName = animSel.value;
@@ -2396,17 +2713,19 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const data = await K.fetchJSON('../' + indexFile);
-    chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
+    const catalogRev = routeSource === 'nikki' ? '?v=20261109-nikke-bursts' : '';
+    const data = await K.fetchJSON('../' + indexFile + catalogRev);
+    chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));
     $('#gridSub').textContent = chars.length + ' 个资源';
     buildFilterChips();
-    const params = new URLSearchParams(location.search);
+    $('#gridSearch').value = gridQuery;
+    const params = viewerParams;
     const byUrl = chars.find(x => x.id === params.get('id'));
     const last = store.get('lastChar', {});
     if (byUrl || embedded) {
       const first = byUrl || chars.find(x => x.id === last.id) || chars[0];
-      if (first) { selectChar(first, byUrl ? { anim: params.get('anim') } : last); closeGrid(); }
+      if (first) selectChar(first, byUrl ? { anim: params.get('anim') } : last);
       else status('没有可用资源');
     } else {
       openGrid();
@@ -2429,6 +2748,7 @@
 
   // ---------- PNG 导出 ----------
   function exportFrame(transparent, mode, done, quality = exportQuality) {
+    parkSkillBurst();
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     let pose;
     try { pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)); }
@@ -2557,7 +2877,7 @@
 
   // ---------- 平移/缩放/点选 ----------
   let down = null, moved = false;
-  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit') || t.closest('.stage-loading-preview')));
+  const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit') || t.closest('#burstAccess') || t.closest('.stage-loading-preview')));
   stage.addEventListener('contextmenu', (e) => {
     if (isChrome(e.target)) return;
     e.preventDefault();
@@ -2631,6 +2951,11 @@
     const dpr = devicePixelRatio || 1;
     if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) > 2) moved = true;
     if (!moved) return;
+    if (burstSession) {
+      burstSession.pan(e.clientX - down.x, e.clientY - down.y);
+      down = {x:e.clientX,y:e.clientY};
+      return;
+    }
     panX += (e.clientX - down.x) * dpr;
     panY -= (e.clientY - down.y) * dpr;
     down = { x: e.clientX, y: e.clientY };
@@ -2671,6 +2996,13 @@
     down = null;
     stage.classList.remove('panning');
     if (wasTap && cut && !isChrome(e.target)) {
+      if (burstSession) {
+        if (partEditMode) {
+          const name = burstSession.hit(tapX,tapY);
+          if (name) showPartPopup(name,tapX,tapY); else hidePartPopup();
+        } else burstSession.toggle();
+        return;
+      }
       if (boneEditMode) {
         const hit = hitBoneAt(tapX, tapY);
         editBoneName = hit ? hit.bone.data.name : null;
