@@ -1,5 +1,5 @@
 import {clamp,rotate,point,mulRotation} from './burst-math.js';
-import {makePostProcess,loadImage} from './burst-post.js';
+import {makePostProcess,loadImage} from './burst-post.js?v=20261109-skill-background';
 import {compileTimeline,clockAt} from './timelines.js';
 import {createParticles} from './burst_particles.js';
 import {spineParts,applyPartVisibility,pickSpinePart} from './burst-parts.js';
@@ -145,9 +145,10 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
   const buffer=new Float32Array(48);
   let width=0,height=0,currentRenderer=null;
 
-  function resize(maxSize=Infinity) {
-    const dpr=Math.min(window.devicePixelRatio||1,1.5,maxSize/Math.max(1,canvas.clientWidth,canvas.clientHeight));
-    const w=Math.max(2,Math.round(canvas.clientWidth*dpr)),h=Math.max(2,Math.round(canvas.clientHeight*dpr));
+  function resize(frame) {
+    const dpr=Math.min(window.devicePixelRatio||1,1.5);
+    const w=frame?.width ?? Math.max(2,Math.round(canvas.clientWidth*dpr));
+    const h=frame?.height ?? Math.max(2,Math.round(canvas.clientHeight*dpr));
     if(w===width && h===height) return;
     width=canvas.width=w;height=canvas.height=h;
     for(const context of contexts.values()) context.renderer.camera.setViewport(width,height);
@@ -291,8 +292,8 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     return queue.slice(0,character).filter(item=>!item.model && !foreground.test(path(item))
       && !/\/(?:cha_root|screen_root)\//i.test(path(item)));
   }
-  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, maxSize=Infinity) {
-    resize(maxSize);
+  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, frame) {
+    resize(frame);
     const t=clamp(time,0,scene.duration-1e-6);
     const poses=timeline.sampleScene(t);
     const camera=selectedCamera(scene,poses,height);
@@ -327,7 +328,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     }
     for(const item of queue) item.depth=camera.depth(item.position);
     queue.sort((a,b)=>Number(!!b.backdrop)-Number(!!a.backdrop) || a.layer-b.layer || a.order-b.order || b.depth-a.depth);
-    post.start(width,height);
+    post.start(width,height,backdropOnly);
     const counts={spine:0,background:0,effect:0,nodes:[]};
     for(const item of backdropOnly ? backdropItems(queue) : queue){
       let drawn;
@@ -342,7 +343,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     }
     currentRenderer?.end();
     currentRenderer=null;
-    post.end();
+    post.end(backdropOnly);
     return counts;
   }
   function bindPartState(hidden){
@@ -351,5 +352,5 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       return {skeleton:model.instance,hiddenSlots:hidden,data:{slots:model.parts}};
     });
   }
-  return {render,renderBackdrop:(time,maxSize)=>render(time,true,true,true,maxSize),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
+  return {render,renderBackdrop:(time,frame)=>render(time,true,true,true,frame),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
 }

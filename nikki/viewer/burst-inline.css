@@ -13,10 +13,7 @@
 #stage[data-skill-burst="loading"] #skillBurstLoading { display:block; }
 #stage[data-skill-burst="loading"] #skillBurstLayer canvas { display:none; }
 #stage:is([data-skill-burst="loading"],[data-skill-burst="on"]) #cv { visibility:hidden; }
-#stage:is([data-skill-burst="loading"],[data-skill-burst="on"],[data-skill-burst="idle"]) #skillBurstLayer { visibility:visible; }
-#stage[data-skill-burst="idle"] #skillBurstLayer { z-index:0; }
-#stage[data-skill-burst="idle"] #skillBurstLayer canvas { width:100%; height:100%; aspect-ratio:auto; }
-#stage[data-skill-burst="idle"] #cv { z-index:1; background:transparent; }
+#stage:is([data-skill-burst="loading"],[data-skill-burst="on"]) #skillBurstLayer { visibility:visible; }
 #burstAccess { position:fixed; left:16px; top:106px; z-index:21; }
 #burstAccess[hidden], #skillBurstActions[hidden] { display:none!important; }
 #burstAccess button, #skillBurstActions button {

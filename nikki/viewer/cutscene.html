@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>棕色尘埃2 · Spine 资源库</title>
-<link rel="stylesheet" href="burst-inline.css">
+<link rel="stylesheet" href="burst-inline.css?v=20261109-skill-background">
 <link rel="stylesheet" href="../../common/kit.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/stage-ui.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
@@ -563,7 +563,7 @@
   const skipInitialBurst = viewerParams.get('view') === 'spine';
   let burstSession = null, burstBackdrop = null, burstPending = null, burstCanvas = null;
   let classicStage = null, burstAudio = null, burstIdle = null, burstLoop = false;
-  let showGameBackground = true;
+  let showGameBackground = true, skillBackdrop = null;
   const savedBurstVolume = store.get('burstVolume', .3);
   let burstVolume = Number.isFinite(savedBurstVolume) ? Math.max(0, Math.min(1, savedBurstVolume)) : .3;
   let burstMuted = !!store.get('burstMuted', false);
@@ -604,13 +604,37 @@
     burstMute.textContent = burstMuted ? '已静音' : '静音';
   }
 
+  function activeSkillBackdrop() {
+    return showGameBackground && !burstSession ? skillBackdrop : null;
+  }
+  function drawSkillBackdrop(renderer, skeleton, backdrop, texture) {
+    if (!backdrop) return;
+    const { minX, minY, maxX, maxY } = backdrop.bounds;
+    const { x, y, scaleX, scaleY } = skeleton;
+    renderer.batcher.setBlendMode(0, false);
+    renderer.drawTexture(texture, x + minX * scaleX, y + minY * scaleY, (maxX - minX) * scaleX, (maxY - minY) * scaleY);
+  }
   function renderSkillBackdrop() {
-    if (burstSession || burstPending?.intro) return;
-    if (burstBackdrop && showGameBackground && burstBackdrop.backdrop?.time !== null) {
-      stage.dataset.skillBurst = 'idle';
-      if (burstBackdrop.showBackdrop()) return;
+    if (burstSession || burstPending?.intro || !cut) return;
+    if (cut.sourceVariant.skillBackdrop !== false && burstBackdrop && !skillBackdrop && burstBackdrop.backdrop?.time !== null) {
+      const { minX, minY, maxX, maxY } = cut.frame || cut.bounds;
+      const width = maxX - minX, height = maxY - minY;
+      const aspect = Math.max(.65, Math.min(1.6, width / height));
+      const image = burstBackdrop.buildBackdrop(aspect);
+      if (image) {
+        // Store one composition in model coordinates for both the stage and exports.
+        const ratio = image.width / image.height;
+        const halfW = Math.max(width, height * ratio) * .54;
+        const halfH = halfW / ratio;
+        const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+        const SP = K.getSpine(cur && cur.spineVersion);
+        skillBackdrop = { image, texture: new SP.GLTexture(mgl, image),
+          bounds: { minX: cx - halfW, minY: cy - halfH, maxX: cx + halfW, maxY: cy + halfH } };
+      }
     }
-    delete stage.dataset.skillBurst;
+    if (activeSkillBackdrop()) stage.dataset.skillBurst = 'idle';
+    else delete stage.dataset.skillBurst;
+    computeView(); applyView();
   }
   function findSkillIdle(fallback) {
     const candidates = cut.data.animations.filter(a => a.duration > 0 &&
@@ -641,8 +665,8 @@
       burstSession = null;
     }
     restoreClassicStage();
-    renderSkillBackdrop();
     if (toIdle) startSkillIdle();
+    renderSkillBackdrop();
     partsCtl?.refresh(); animCtl?.refresh();
     setPlayBtn(); setLoopBtn(); syncTimeline(); updateZoomPct(); syncBurstUI();
   }
@@ -653,6 +677,8 @@
     burstSession?.dispose();
     burstBackdrop?.dispose();
     burstSession = burstBackdrop = null;
+    skillBackdrop?.texture.dispose();
+    skillBackdrop = null;
     if (burstCanvas) {
       burstCanvas.remove();
       burstCanvas.getContext('webgl')?.getExtension('WEBGL_lose_context')?.loseContext();
@@ -696,7 +722,7 @@
     if (intro) stage.dataset.skillBurst = 'loading';
     syncBurstUI();
     try {
-      const {openSkillBurst} = await import('./burst-inline.js?v=20261109-audio-start');
+      const {openSkillBurst} = await import('./burst-inline.js?v=20261109-skill-background');
       signal.throwIfAborted();
       const session = await openSkillBurst({
         canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),
@@ -1781,7 +1807,6 @@
     if (burstSession) {
       burstSession.tick(); syncTimeline(); return;
     }
-    if (stage.dataset.skillBurst === 'idle') burstBackdrop?.tickBackdrop();
     if (portraitAudio) dt = portraitAudio.animationDelta(dt);
     try {
     if (cut) {
@@ -1802,23 +1827,30 @@
     if (mgl && renderer) {
       const raw = mgl.gl || mgl;
       const bgv = getBg();
-      if (bgv === 'checker' || stage.dataset.skillBurst === 'idle') raw.clearColor(0, 0, 0, 0);
+      if (bgv === 'checker') raw.clearColor(0, 0, 0, 0);
       else {
         const c = K.parseColor(bgv, [0.06, 0.07, 0.09]);
         raw.clearColor(c[0], c[1], c[2], 1);
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
-      renderer.begin();
-      if (cut) for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
-      if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
-      if (cut && K.debugActive(debugFlags)) {
-        K.applyDebugFlags(renderer, debugFlags);
-        K.drawDebug(renderer, cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton));
+      const backdrop = activeSkillBackdrop();
+      const clipped = clipSkillFrame(raw, cv, cut?.skeleton, cut?.frame);
+      try {
+        renderer.begin();
+        if (backdrop && cut) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
+        if (cut) for (const layer of cut.drawLayers) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
+        if (cut && K.debugActive(debugFlags)) {
+          K.applyDebugFlags(renderer, debugFlags);
+          K.drawDebug(renderer, cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton));
+        }
+        if (cut && highlightSlot) for (const layer of cutLayers()) if (layer.active !== false) K.drawSlotHighlight(renderer, layer.skeleton, highlightSlot);
+        if (boneEditMode) drawEditSkeleton(renderer);
+        drawBoneMarker(renderer);
+      } finally {
+        try { renderer.end(); }
+        finally { if (clipped) raw.disable(raw.SCISSOR_TEST); }
       }
-      if (cut && highlightSlot) for (const layer of cutLayers()) if (layer.active !== false) K.drawSlotHighlight(renderer, layer.skeleton, highlightSlot);
-      if (boneEditMode) drawEditSkeleton(renderer);
-      drawBoneMarker(renderer);
-      renderer.end();
       if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
         playerDrawnSeq = cutLoadSeq;
         loadingPreview.ready(cutLoadSeq);
@@ -1843,10 +1875,23 @@
     }
   }
 
+  // Apply an authored camera frame for skills whose effects extend past their illustration.
+  function clipSkillFrame(gl, canvas, skeleton, frame) {
+    if (!frame) return false;
+    const left = canvas.width / 2 + skeleton.x, bottom = canvas.height / 2 + skeleton.y;
+    const x = Math.round(left + frame.minX * skeleton.scaleX);
+    const y = Math.round(bottom + frame.minY * skeleton.scaleY);
+    const right = Math.round(left + frame.maxX * skeleton.scaleX);
+    const top = Math.round(bottom + frame.maxY * skeleton.scaleY);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(x, y, Math.max(0, right - x), Math.max(0, top - y));
+    return true;
+  }
+
   // ---------- 视图 ----------
   function computeView() {
     if (!cut) return;
-    const b = cut.bounds;
+    const b = cut.frame || mergeBounds(cut.bounds, activeSkillBackdrop()?.bounds);
     cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
     cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
     const area = K.stageViewArea(cv);
@@ -1856,12 +1901,9 @@
   function applyView() {
     if (!cut) return;
     const scale = fitMode ? ((cmpOn && cmp) ? cmp.fitScale : cut.fitScale) : userScale;
-    for (const layer of cutLayers()) {
-      layer.skeleton.scaleX = scale;
-      layer.skeleton.scaleY = scale;
-      layer.skeleton.x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
-      layer.skeleton.y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
-    }
+    const x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
+    const y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
+    for (const layer of cutLayers()) setLayerView(layer, scale, x, y);
     if (cmpOn && cmp) {
       cmp.skeleton.scaleX = scale;
       cmp.skeleton.scaleY = scale;
@@ -1926,7 +1968,7 @@
     let bounds = null;
     try {
       const sample = new SP.Skeleton(target.data);
-      if (!allowFallback && target.skeleton.skin) sample.setSkin(target.skeleton.skin);
+      if (target.skeleton.skin) sample.setSkin(target.skeleton.skin);
       for (const time of times) {
         sample.setToSetupPose();
         const stateData = new SP.AnimationStateData(target.data);
@@ -1967,7 +2009,7 @@
         const layerBounds = layer.source && layer.source.static
           ? layer.bounds
           : (layerName ? measureAnimationBounds(layer, layerName) : layer.bounds);
-        bounds = mergeBounds(bounds, layerBounds);
+        bounds = mergeBounds(bounds, compositionBounds(layer, layerBounds));
       }
     }
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
@@ -1980,6 +2022,8 @@
       K.updateWorldTransform(cmp.skeleton);
     }
     if (bounds) cut.bounds = bounds;
+    const variant = cut.sourceVariant;
+    cut.frame = name === variant.previewAnimation ? variant.previewFrame : null;
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
       if (cmpBounds) cmp.bounds = cmpBounds;
@@ -2234,6 +2278,24 @@
     if (!target) return [];
     return Array.isArray(target.layers) && target.layers.length ? target.layers : [target];
   }
+  // Keep authored layer placement independent of the current viewport and export scale.
+  function setLayerView(layer, scale, x, y) {
+    const [dx, dy, size] = layer.source.previewTransform || [0, 0, 1];
+    layer.skeleton.scaleX = layer.skeleton.scaleY = scale * size;
+    layer.skeleton.x = x + dx * scale;
+    layer.skeleton.y = y + dy * scale;
+  }
+  function compositionBounds(layer, bounds) {
+    if (!bounds || !layer.source.previewTransform) return bounds;
+    const [dx, dy, size] = layer.source.previewTransform;
+    return { minX: dx + bounds.minX * size, maxX: dx + bounds.maxX * size,
+      minY: dy + bounds.minY * size, maxY: dy + bounds.maxY * size };
+  }
+  function orderedLayers(layers) {
+    return layers.some(layer => layer.source.drawOrder)
+      ? [...layers].sort((a, b) => (a.source.drawOrder || 0) - (b.source.drawOrder || 0))
+      : layers;
+  }
   function layerAnimationName(layer, name) {
     if (!layer || !layer.data || !name) return null;
     const source = layer.source || {};
@@ -2267,7 +2329,7 @@
   function disposeCut() {
     portraitAudio?.reset();
     if (cut) {
-      for (const layer of cutLayers(cut)) disposeAtlas(layer.atlas);
+      for (const atlas of new Set(cutLayers(cut).map(layer => layer.atlas))) disposeAtlas(atlas);
       cut = null;
       if (partsCtl) partsCtl.refresh();
       if (animCtl) animCtl.refresh();
@@ -2367,13 +2429,27 @@
   }
   $('#railCompare').addEventListener('click', () => toggleCompare());
   let cutRequest = null;
+  function variantFiles(source) {
+    const original = source.nativeBurst;
+    if (original) return {
+      atlasURL: burstObjectURL(original.atlas),
+      skeletonURL: burstObjectURL(original.skeleton),
+      atlasPageURL: page => burstObjectURL(original.pages[page]),
+    };
+    const dir = '../' + source.dir;
+    return { atlasURL: dir + source.atlas, skeletonURL: dir + encodeURIComponent(source.skel) };
+  }
+  function applyVariantSkin(skeleton, source) {
+    const name = source.previewSkin ?? source.nativeBurst?.skin;
+    const skin = name && skeleton.data.findSkin(name);
+    if (skin) skeleton.setSkin(skin);
+  }
   async function loadCompositeLayer(entry, SP, seq, signal, baseLayer) {
-    const reuse = baseLayer && ['dir', 'atlas', 'skel'].every(key => entry[key] === baseLayer.source[key]);
+    const reuse = baseLayer && (entry.reuseBase || ['dir', 'atlas', 'skel'].every(key => entry[key] === baseLayer.source[key]));
     let atlas = null;
     try {
       const files = reuse ? { atlas: baseLayer.atlas } : await K.loadSpineFiles(SP, mgl, {
-        atlasURL: '../' + entry.dir + entry.atlas,
-        skeletonURL: '../' + entry.dir + encodeURIComponent(entry.skel), signal,
+        ...variantFiles(entry), signal,
       });
       atlas = files.atlas;
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
@@ -2382,6 +2458,7 @@
         ? new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
         : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes));
       const skeleton = new SP.Skeleton(data);
+      applyVariantSkin(skeleton, reuse ? baseLayer.source : entry);
       skeleton.setToSetupPose();
       const stateData = new SP.AnimationStateData(data);
       stateData.defaultMix = 0.15;
@@ -2419,14 +2496,11 @@
     status('加载: ' + (cur.name || cur.id) + ' …');
     playerPost('state', { state: 'loading', message: '正在读取骨骼、Atlas 与贴图' });
     try {
-      const dir = '../' + v.dir;
       const SP = await K.ensureSpine(cur && cur.spineVersion);
       if (seq !== cutLoadSeq) return;
       if (!ensureGL()) throw new Error('WebGL 不可用');
       const files = await K.loadSpineFiles(SP, mgl, {
-        atlasURL: v.nativeBurst ? burstObjectURL(v.nativeBurst.atlas) : dir + v.atlas,
-        skeletonURL: v.nativeBurst ? burstObjectURL(v.nativeBurst.skeleton) : dir + encodeURIComponent(v.skel),
-        atlasPageURL: v.nativeBurst ? page => burstObjectURL(v.nativeBurst.pages[page]) : undefined,
+        ...variantFiles(v),
         signal: request.signal,
         onProgress: message => { if (seq === cutLoadSeq) status(message); },
       });
@@ -2441,8 +2515,7 @@
       } catch (error) { throw new Error('骨骼解析失败: ' + error.message); }
 
       const skeleton = new SP.Skeleton(data);
-      const nativeSkin = v.nativeBurst?.skin && data.findSkin(v.nativeBurst.skin);
-      if (nativeSkin) skeleton.setSkin(nativeSkin);
+      applyVariantSkin(skeleton, v);
       skeleton.setToSetupPose();
       const stateData = new SP.AnimationStateData(data);
       stateData.defaultMix = 0.15;
@@ -2450,13 +2523,16 @@
       // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
       animSel.innerHTML = data.animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
       const urlAnim = new URLSearchParams(location.search).get('anim');
-      const saved = restoreAnim && data.animations.some(a => a.name === restoreAnim) ? restoreAnim : null;
-      const previewAnim = (v.previewAnimation && data.animations.find(a => a.name === v.previewAnimation))
+      const preferred = v.previewAnimation && data.findAnimation(v.previewAnimation);
+      const restore = name => preferred && name === v.legacyPreviewAnimation ? preferred.name : name;
+      const saved = restore(restoreAnim);
+      const previewAnim = preferred
         || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
         || data.animations.find(a => /^loop/i.test(a.name))
         || data.animations[0];
-      const def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)
-        || (previewAnim && previewAnim.name);
+      const savedAnim = saved && data.findAnimation(saved);
+      const linkedAnim = urlAnim && data.findAnimation(restore(urlAnim));
+      const def = (savedAnim || linkedAnim || previewAnim)?.name;
       state.setAnimation(0, def, loopAnim);
       state.update(0);
       state.apply(skeleton);
@@ -2495,6 +2571,7 @@
       if (failed) throw failed.reason;
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
       target.layers.push(...loadedLayers);
+      target.drawLayers = orderedLayers(target.layers);
       cut = target;
       for (const layer of cut.layers) layer.hiddenSlots = cut.hiddenSlots;
 
@@ -2524,14 +2601,13 @@
       playerReady(seq);
       syncBurstUI();
       if (burstEnabled && cur.burst) {
-        burstIdle = saved || findSkillIdle(previewAnim?.name || def);
+        burstIdle = savedAnim?.name || (v.legacyPreviewAnimation ? preferred?.name : null) || findSkillIdle(previewAnim?.name || def);
         if (skipInitialBurst && animSel.value !== burstIdle) startSkillIdle();
         void loadSkillBurst(!skipInitialBurst);
       }
     } catch (e) {
       request.abort(e);
-      K.disposeAtlas(loadedAtlas);
-      for (const layer of loadedLayers) K.disposeAtlas(layer.atlas);
+      for (const atlas of new Set([loadedAtlas, ...loadedLayers.map(layer => layer.atlas)])) K.disposeAtlas(atlas);
       if (seq !== cutLoadSeq || K.isAbort(e)) return;
       if (cut) disposeCut();
       loadingPreview.fail(seq, e.message);
@@ -2556,9 +2632,11 @@
     const sourceVariant = cut.sourceVariant;
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
+    const backdrop = activeSkillBackdrop();
+    const frame = cut.frame;
     const SP = K.getSpine(cur && cur.spineVersion);
     const exportAtlases = new Set();
-    let exportGL = null;
+    let exportGL = null, backdropTexture = null;
     const job = K.exportProgress();
     animationExportRunning = true;
     try {
@@ -2570,23 +2648,28 @@
       exportGL = raw2;
       const mgl2 = new SP.ManagedWebGLRenderingContext(raw2);
       const r2 = new SP.SceneRenderer(cv2, mgl2);
+      if (backdrop) backdropTexture = new SP.GLTexture(mgl2, backdrop.image);
       if (SP.GLTexture) SP.GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = true;
       // WebGL textures belong to their context. Reparse with an atlas loaded
       // into the export context instead of reusing the stage's attachments.
       const exportLayers = [], models = new Map();
       for (const source of [sourceVariant, ...(sourceVariant.compositeLayers || [])]) {
-        const base = '../' + source.dir, key = base + source.atlas + '|' + source.skel;
+        const assetSource = source.reuseBase ? sourceVariant : source;
+        const paths = variantFiles(assetSource);
+        const key = paths.atlasURL + '|' + paths.skeletonURL;
         let model = models.get(key);
         if (!model) {
-          const files = await K.loadSpineFiles(SP, mgl2, { atlasURL: base + source.atlas, skeletonURL: base + encodeURIComponent(source.skel), signal: job.signal });
+          const files = await K.loadSpineFiles(SP, mgl2, { ...paths, signal: job.signal });
           exportAtlases.add(files.atlas);
           const loader = new SP.AtlasAttachmentLoader(files.atlas);
-          const data = source.format === 'json' || /\.json$/i.test(source.skel)
+          const data = assetSource.format === 'json' || /\.json$/i.test(assetSource.skel)
             ? new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
             : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes);
           model = { data, atlas: files.atlas }; models.set(key, model);
         }
-        const skeleton = new SP.Skeleton(model.data); skeleton.setToSetupPose();
+        const skeleton = new SP.Skeleton(model.data);
+        applyVariantSkin(skeleton, assetSource);
+        skeleton.setToSetupPose();
         const stateData = new SP.AnimationStateData(model.data); stateData.defaultMix = 0;
         const state = new SP.AnimationState(stateData);
         const layer = { ...model, source, skeleton, state };
@@ -2595,42 +2678,46 @@
         if (mapped) state.setAnimation(0, mapped, false);
         exportLayers.push(layer);
       }
+      const exportDrawLayers = orderedLayers(exportLayers);
       const applyExportFrame = (time, scale = 1, x = 0, y = 0) => {
         for (const L of exportLayers) {
           if (!L.active) continue;
           const track = L.state.getCurrent(0); if (track) track.trackTime = time;
           L.state.apply(L.skeleton);
-          L.skeleton.scaleX = L.skeleton.scaleY = scale;
-          L.skeleton.x = x; L.skeleton.y = y;
+          setLayerView(L, scale, x, y);
           K.updateWorldTransform(L.skeleton); K.applyHiddenSlots(L.skeleton, hiddenSlots);
         }
       };
-      // 第一遍: 推进并求动画全程包围盒
-      let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
-      for (let k = 0; k < frames; k++) {
-        job.check();
-        applyExportFrame(timeline.timeAt(k));
-        for (const L of exportLayers) {
-          if (!L.active) continue;
-          const b = K.measureBounds(L.skeleton, SP);
-          if (b) {
-            bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
-            bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+      const kind = video ? 'video' : 'gif';
+      let size = frame ? K.exportDimensions(frame, quality, kind, 0) : null;
+      if (!size) {
+        // 第一遍: 推进并求动画全程包围盒
+        let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+        for (let k = 0; k < frames; k++) {
+          job.check();
+          applyExportFrame(timeline.timeAt(k));
+          for (const L of exportLayers) {
+            if (!L.active) continue;
+            const b = K.measureBounds(L.skeleton, SP);
+            if (b) {
+              bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
+              bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+            }
           }
+          if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
         }
-        if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
-      }
-      if (!isFinite(bMinX)) throw new Error('空包围盒');
-      const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
-      cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
-      let size;
-      for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
-        applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
-        raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
-        for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
-        r2.end();
-        try { size = K.refineIllustrationSize(reference, cv2, quality, video ? 'video' : 'gif'); break; }
-        catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
+        if (!isFinite(bMinX)) throw new Error('空包围盒');
+        const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
+        cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
+        size = backdrop ? K.exportDimensions(mergeBounds({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, backdrop.bounds), quality, kind, 0) : null;
+        if (!size) for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
+          applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
+          raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
+          for (const L of exportDrawLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+          r2.end();
+          try { size = K.refineIllustrationSize(reference, cv2, quality, video ? 'video' : 'gif'); break; }
+          catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
+        }
       }
       if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;
@@ -2650,7 +2737,8 @@
         applyExportFrame(time, scale, cx * scale, cy * scale);
         raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT);
         r2.begin();
-        for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+        if (backdrop) drawSkillBackdrop(r2, exportLayers[0].skeleton, backdrop, backdropTexture);
+        for (const L of exportDrawLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
         r2.end();
         K.paintExportBackground(ctx2d, W, H, exportBackground === 'checker' && !video ? null : exportBackground);
         ctx2d.drawImage(cv2, 0, 0);
@@ -2681,6 +2769,7 @@
       if (K.isAbort(e)) K.toast('已取消导出', 'info');
       else { console.error(e); K.toast('动画导出失败: ' + e.message, 'err'); }
     } finally {
+      backdropTexture?.dispose();
       for (const atlas of exportAtlases) disposeAtlas(atlas);
       exportGL?.getExtension('WEBGL_lose_context')?.loseContext();
       job.close(); animationExportRunning = false;
@@ -2714,7 +2803,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261109-burst-idle-covers' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261109-skill-background' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));
@@ -2748,11 +2837,17 @@
   });
 
   // ---------- PNG 导出 ----------
+  function pngPose(quality, backdrop = activeSkillBackdrop()) {
+    const frame = cut.frame || (backdrop ? mergeBounds(cut.bounds, backdrop.bounds) : undefined);
+    const skeletons = cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
+    return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), frame);
+  }
   function exportFrame(transparent, mode, done, quality = exportQuality) {
     parkSkillBurst();
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
+    const backdrop = activeSkillBackdrop();
     let pose;
-    try { pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)); }
+    try { pose = pngPose(quality, backdrop); }
     catch (error) { K.toast('导出失败: ' + error.message, 'err'); return; }
     K.exportPNG({
       canvas: cv, size: pose.size, pose, tiled: true, transparent, background: getBg(), copy: mode === 'copy',
@@ -2773,7 +2868,8 @@
         }
         raw.clear(raw.COLOR_BUFFER_BIT);
         renderer.begin();
-        for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        if (backdrop) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
+        for (const layer of cut.drawLayers) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
         renderer.end();
       },
       restore() {
@@ -2814,11 +2910,10 @@
     K.mountExportOptions(pop, {
       kind: 'png', quality: exportQuality, transparent: getBg() === 'checker',
       onChange: quality => { exportQuality = quality; store.set('pngExportQuality', quality); },
-      getSize: quality => K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)).size,
+      getSize: quality => pngPose(quality).size,
       getDetail: quality => {
         if (!cut) throw new Error('请先加载一个资源');
-        const pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion));
-        return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码';
+        return (activeSkillBackdrop() ? 'PNG · 包含技能背景 · ' : 'PNG · 按立绘范围裁剪 · ') + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码';
       },
       onExport: (quality, transparent) => exportFrame(transparent, 'download', () => closePopups(), quality),
       onCopy: (quality, transparent) => exportFrame(transparent, 'copy', () => closePopups(), quality),
@@ -3012,7 +3107,21 @@
       }
       const rect = cv.getBoundingClientRect();
       const dpr = devicePixelRatio || 1;
-      const name = K.hitTestSlot(cut.skeleton, (tapX - rect.left) * dpr - cv.width / 2, cv.height / 2 - (tapY - rect.top) * dpr, K.getSpine(cur && cur.spineVersion));
+      const wx = (tapX - rect.left) * dpr - cv.width / 2;
+      const wy = cv.height / 2 - (tapY - rect.top) * dpr;
+      const SP = K.getSpine(cur && cur.spineVersion);
+      let name = null;
+      if (partEditMode) {
+        const frame = cut.frame, anchor = cut.skeleton;
+        const x = (wx - anchor.x) / anchor.scaleX, y = (wy - anchor.y) / anchor.scaleY;
+        if (!frame || (x >= frame.minX && x <= frame.maxX && y >= frame.minY && y <= frame.maxY)) {
+          // Hit test in reverse paint order so an overlay can be picked independently.
+          for (let i = cut.drawLayers.length - 1; i >= 0 && !name; i--) {
+            const layer = cut.drawLayers[i];
+            if (layer.active !== false) name = K.hitTestSlot(layer.skeleton, wx, wy, SP);
+          }
+        }
+      } else name = K.hitTestSlot(cut.skeleton, wx, wy, SP);
       if (name) {
         if (partEditMode) showPartPopup(name, tapX, tapY);
         else if (routeSource === 'nikki' || routeSource === 'crosscore') {

@@ -85,11 +85,14 @@ function makePostProcess(gl, post) {
     uniform sampler2D u_bloom;
     uniform sampler2D u_grade;
     uniform float u_glow;
+    uniform float u_transparent;
     uniform vec2 u_center;
     uniform vec3 u_tint;
     uniform vec2 u_vignette;
     void main() {
-      vec3 rgb = texture2D(u_scene, v_uv).rgb + texture2D(u_bloom, v_uv).rgb * u_glow;
+      vec4 source = texture2D(u_scene, v_uv);
+      float alpha = mix(1., clamp(source.a, 0., 1.), u_transparent);
+      vec3 rgb = (source.rgb + texture2D(u_bloom, v_uv).rgb * u_glow) / max(alpha, .01);
       vec2 r = (v_uv - u_center) * u_vignette.x;
       float strength = pow(clamp(1. - dot(r,r), 0., 1.), u_vignette.y);
       vec3 adjusted = clamp(rgb * mix(u_tint, vec3(1.), strength), 0., 1.);
@@ -97,7 +100,7 @@ function makePostProcess(gl, post) {
       rgb.r = texture2D(u_grade, vec2(adjusted.r * curve.x + curve.y, .5)).r;
       rgb.g = texture2D(u_grade, vec2(adjusted.g * curve.x + curve.y, .5)).g;
       rgb.b = texture2D(u_grade, vec2(adjusted.b * curve.x + curve.y, .5)).b;
-      gl_FragColor = vec4(rgb, 1.);
+      gl_FragColor = vec4(rgb, alpha);
     }
   `);
   let width = 0, height = 0, lowWidth = 0, lowHeight = 0, hdr = false;
@@ -108,7 +111,7 @@ function makePostProcess(gl, post) {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
     return gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
   }
-  function start(w, h) {
+  function start(w, h, transparent = false) {
     gl.activeTexture(gl.TEXTURE0);
     if (w !== width || h !== height) {
       width = w;
@@ -121,7 +124,7 @@ function makePostProcess(gl, post) {
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFbo);
     gl.viewport(0, 0, w, h);
-    gl.clearColor(0, 0, 0, 1);
+    gl.clearColor(0, 0, 0, transparent ? 0 : 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
   }
   function draw(shader, framebuffer, w, h, inputs, uniforms) {
@@ -145,7 +148,7 @@ function makePostProcess(gl, post) {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.disableVertexAttribArray(attribute);
   }
-  function end() {
+  function end(transparent = false) {
     gl.disable(gl.BLEND);
     const radius = 2 + 4 * post.bloom.scatter;
     draw(blur, bloomFbo, lowWidth, lowHeight, { u_scene: scene }, {
@@ -154,6 +157,7 @@ function makePostProcess(gl, post) {
     });
     draw(finish, null, width, height, { u_scene: scene, u_bloom: bloom, u_grade: grade }, {
       u_glow: post.bloom.intensity * .24,
+      u_transparent: transparent ? 1 : 0,
       u_center: post.vignette.center, u_tint: post.vignette.color,
       u_vignette: [post.vignette.intensity * 3, post.vignette.smoothness * 5],
     });

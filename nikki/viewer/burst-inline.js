@@ -1,5 +1,5 @@
 import {clamp} from './burst-math.js';
-import {createBurst} from './burst_scene.js';
+import {createBurst} from './burst_scene.js?v=20261109-skill-background';
 import {clockAt} from './timelines.js';
 
 export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hiddenSlots,getAudio,changed,finished,progress}){
@@ -124,35 +124,51 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     else if(loop) void start(0);
     else finished();
   }
-  let backdrop=null;
-  function showBackdrop(){
-    if(!backdrop){
-      const sample=document.createElement('canvas');
-      sample.width=sample.height=24;
-      const ctx=sample.getContext('2d',{willReadFrequently:true});
-      let best=null;
-      for(const fraction of [.48,.34,.62,.22,.74,.84,.15]){
-        const at=duration*fraction;
-        const frame=engine.renderBackdrop(at,192);
-        if(!frame.background) continue;
-        ctx.drawImage(canvas,0,0,24,24);
-        const rgba=ctx.getImageData(0,0,24,24).data;
-        let lit=0, exposed=0, clipped=0;
-        for(let i=0;i<rgba.length;i+=4){
-          const hi=Math.max(rgba[i],rgba[i+1],rgba[i+2]), lo=Math.min(rgba[i],rgba[i+1],rgba[i+2]);
-          if(hi>12) lit++;
-          if(hi>22 && lo<242) exposed++;
-          if(lo>248) clipped++;
-        }
-        if(lit<22) continue;
-        const score=exposed+.18*lit-.45*clipped;
-        if(!best || score>best.score) best={time:at,score,lit,layers:frame.background};
+  let backdrop=null, backdropImage=null;
+  function buildBackdrop(aspect){
+    if(backdrop) return backdropImage;
+    const size=edge=>({width:Math.round(edge*Math.min(1,aspect)),height:Math.round(edge/Math.max(1,aspect))});
+    const sample=document.createElement('canvas');
+    sample.width=sample.height=24;
+    const ctx=sample.getContext('2d',{willReadFrequently:true});
+    let best=null;
+    for(const fraction of [.48,.34,.62,.22,.74,.84,.15]){
+      const at=duration*fraction;
+      const frame=engine.renderBackdrop(at,size(192));
+      if(!frame.background) continue;
+      ctx.clearRect(0,0,24,24);
+      ctx.drawImage(canvas,0,0,24,24);
+      const rgba=ctx.getImageData(0,0,24,24).data;
+      let lit=0, exposed=0, clipped=0;
+      for(let i=0;i<rgba.length;i+=4){
+        const hi=Math.max(rgba[i],rgba[i+1],rgba[i+2]), lo=Math.min(rgba[i],rgba[i+1],rgba[i+2]);
+        if(hi>12) lit++;
+        if(hi>22 && lo<242) exposed++;
+        if(lo>248) clipped++;
       }
-      backdrop=best || {time:null};
+      if(lit<22) continue;
+      const score=exposed+.18*lit-.45*clipped;
+      if(!best || score>best.score) best={time:at,score,lit,layers:frame.background};
     }
-    if(backdrop.time===null) return false;
-    engine.renderBackdrop(backdrop.time); dirty=false;
-    return true;
+    backdrop=best || {time:null};
+    if(!best) return null;
+    engine.renderBackdrop(best.time,size(2048));
+    const captured=document.createElement('canvas');
+    captured.width=canvas.width; captured.height=canvas.height;
+    const pixels=captured.getContext('2d',{willReadFrequently:true});
+    pixels.drawImage(canvas,0,0);
+    const {width,height}=captured, rgba=pixels.getImageData(0,0,width,height).data;
+    let left=width,top=height,right=-1,bottom=-1;
+    for(let y=0,i=3;y<height;y++) for(let x=0;x<width;x++,i+=4){
+      if(rgba[i]<12) continue;
+      left=Math.min(left,x); top=Math.min(top,y); right=Math.max(right,x); bottom=Math.max(bottom,y);
+    }
+    if(right<left || bottom<top) { backdrop={time:null}; return null; }
+    backdropImage=document.createElement('canvas');
+    backdropImage.width=right-left+1; backdropImage.height=bottom-top+1;
+    backdropImage.getContext('2d').drawImage(captured,left,top,backdropImage.width,backdropImage.height,0,0,backdropImage.width,backdropImage.height);
+    engine.renderBackdrop(best.time,size(192));
+    return backdropImage;
   }
   let zoom=1,panX=0,panY=0;
   function view(){
@@ -169,8 +185,7 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
       if(time>=duration){stop();changed();if(loop) void start(0);else finished();}
     },
     toggle(){if(playing||starting) pause(); else void start(time>=duration ? 0 : time);},
-    stop,pause,seek,showBackdrop,
-    tickBackdrop(){if(dirty && backdrop?.time!=null) showBackdrop();},
+    stop,pause,seek,buildBackdrop,
     get backdrop(){return backdrop;},
     replay(){void start(0);},
     step(direction){seek(time+direction/scene.fps,false);},
