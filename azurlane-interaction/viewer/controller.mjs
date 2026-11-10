@@ -257,10 +257,17 @@ export class Live2DController extends Controller {
 }
 export class SpineController extends Controller {
  constructor(model,adapter={},options={}){
-  super(model,adapter,options);this.rules=object(model.interaction?.spine);this.queue=[];this.state.idle=this.saved.idle||this.rules.hx_idle&&model.id.endsWith('_hx')&&this.rules.hx_idle||this.model.defaultAnimation||'normal';this.state.skin=this.saved.skin||'';this.current=null;this.dragPass=true;
+  super(model,adapter,options);
+  this.rules=object(model.interaction?.spine);
+  this.defaultSkin=model.defaultSkin||'';
+  this.queue=[];
+  this.state.idle=this.saved.idle||this.rules.hx_idle&&model.id.endsWith('_hx')&&this.rules.hx_idle||this.model.defaultAnimation||'normal';
+  this.state.skin=this.saved.skin||this.defaultSkin;
+  this.current=null;
+  this.dragPass=true;
   if(this.state.skin)this.adapter.skin?.(this.state.skin);
  }
- reset(){this.state.idle=this.model.defaultAnimation||'normal';this.state.skin='';this.state.busy=false;this.current=null;this.queue=[];this.adapter.skin?.('');this.adapter.fold?.(false);this.saveState();this.playIdle();}
+ reset(){this.state.idle=this.model.defaultAnimation||'normal';this.state.skin=this.defaultSkin;this.state.busy=false;this.current=null;this.queue=[];this.adapter.skin?.(this.state.skin);this.adapter.fold?.(false);this.saveState();this.playIdle();}
  saveState(){this.save({idle:this.state.idle,skin:this.state.skin});}
  matches(c,hit,drag){
   if(c.hit&&c.hit!==hit)return false;if(c.skin&&c.skin!==this.state.skin)return false;
@@ -310,7 +317,7 @@ export class SpineController extends Controller {
  }
  finish(){
   if(!this.state.busy)return;this.state.busy=false;
-  const c=this.current;if(c){if(c.idle)this.state.idle=c.idle;if(c.skin){this.state.skin=this.state.skin===c.skin?'':c.skin;this.adapter.skin?.(this.state.skin);}if(c.config.fold){this.state.fold=false;this.adapter.fold?.(false);}if(c.config.effect_hide)this.adapter.effects?.(true);if(c.finishCv)this.sound(this.model.voiceBank,c.finishCv+'_'+this.model.voiceVariant,{voice:true,exact:true});this.current=null;this.saveState();}
+  const c=this.current;if(c){if(c.idle)this.state.idle=c.idle;if(c.skin){this.state.skin=this.state.skin===c.skin?this.defaultSkin:c.skin;this.adapter.skin?.(this.state.skin);}if(c.config.fold){this.state.fold=false;this.adapter.fold?.(false);}if(c.config.effect_hide)this.adapter.effects?.(true);if(c.finishCv)this.sound(this.model.voiceBank,c.finishCv+'_'+this.model.voiceVariant,{voice:true,exact:true});this.current=null;this.saveState();}
   if(this.actionOptions?.sequence){this.next();return;}this.playIdle();
  }
  tick(dt){this.time+=dt;this.state.actionTime+=dt;}

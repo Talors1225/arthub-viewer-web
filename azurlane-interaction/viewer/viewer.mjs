@@ -1,4 +1,4 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=499c19e6892b';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261110-az-spine-skins';
 import {EffectTimeline} from './effect-timeline.mjs?v=499c19e6892b';
 import {hasEffectControls} from './effect-controls.mjs?v=499c19e6892b';
 import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261109-portrait-frame2';
@@ -14,11 +14,15 @@ function stageFrame(){
  return stageFrameCache={canvas,w:stage.clientWidth,h:stage.clientHeight,width:area.width,height:area.height,x:area.left-rect.left+area.width/2,y:area.top-rect.top+area.height/2};
 }
 const loadingPreview=K.createLoadingPreview(stage);
+const arromanchesPortrait = 'aluomangshi_2';
+const portraitsWithSkinOne = new Set([arromanchesPortrait, 'feiteliedadi_5', 'yuekechengii_4']);
+const thumbRevision = id => portraitsWithSkinOne.has(id) ? '?v=20261110-az-spine-skins' : '';
+const previewPath = id => K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp'+thumbRevision(id);
 let previewPending=false,nextPreviewCheck=0;
 const previewSample=document.createElement('canvas');previewSample.width=previewSample.height=64;
 const previewContext=previewSample.getContext('2d',{willReadFrequently:true});
 const bootPreviewId=new URL(location.href).searchParams.get('id');
-if(/^[a-z0-9_-]+$/i.test(bootPreviewId||''))loadingPreview.begin(0,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(bootPreviewId)+'.webp',label:'当前立绘',trimImage:true});
+if(/^[a-z0-9_-]+$/i.test(bootPreviewId||''))loadingPreview.begin(0,{path:previewPath(bootPreviewId),label:'当前立绘',trimImage:true});
 const view={zoom:1,panX:0,panY:0,playing:true,speed:1,frames:0,ready:false};
 let loadAbort=null,retryId=null;
 let editor=null,exporting=false,volume=Number(localStorage.getItem('arthub:azurlane:volume')??1);
@@ -96,7 +100,9 @@ function populate(){
  else if(sortDirection==='desc')items=[...items].reverse();
  gridPageSize=K.libraryPageSize();const pageCount=Math.max(1,Math.ceil(items.length/gridPageSize));gridPage=Math.min(Math.max(1,gridPage),pageCount);const pageItems=items.slice((gridPage-1)*gridPageSize,gridPage*gridPageSize),fragment=document.createDocumentFragment();
  for(const m of pageItems){const card=document.createElement('div');card.className='thumb-card'+(m.id===selected?.id?' active':'');card.dataset.id=m.id;card.setAttribute('role','button');card.tabIndex=0;card.setAttribute('aria-label',portraitName(m));
-  const preview=document.createElement('div');preview.className='ph';const text=document.createElement('div');text.className='tm';const name=document.createElement('div'),tag=document.createElement('span'),star=document.createElement('button');name.className='tn';tag.className='tt';star.className='tstar'+(K.favs.has(entry(m).k)?' on':'');name.textContent=portraitName(m);tag.textContent=m.type==='live2d'?'Live2D':'Spine';star.type='button';star.title=K.favs.has(entry(m).k)?'取消收藏':'收藏';star.setAttribute('aria-label',star.title);star.setAttribute('aria-pressed',String(K.favs.has(entry(m).k)));star.innerHTML=K.uiIcon('star',18,K.favs.has(entry(m).k));text.append(name);card.append(preview,text,tag,star);const thumb=libraryThumbs['azurlane:'+m.id];K.setPreview(preview,thumb?THUMB_PREFIX+thumb:null);
+  const preview=document.createElement('div');preview.className='ph';const text=document.createElement('div');text.className='tm';const name=document.createElement('div'),tag=document.createElement('span'),star=document.createElement('button');name.className='tn';tag.className='tt';star.className='tstar'+(K.favs.has(entry(m).k)?' on':'');name.textContent=portraitName(m);tag.textContent=m.type==='live2d'?'Live2D':'Spine';star.type='button';star.title=K.favs.has(entry(m).k)?'取消收藏':'收藏';star.setAttribute('aria-label',star.title);star.setAttribute('aria-pressed',String(K.favs.has(entry(m).k)));star.innerHTML=K.uiIcon('star',18,K.favs.has(entry(m).k));text.append(name);card.append(preview,text,tag,star);
+  const thumb=libraryThumbs['azurlane:'+m.id];
+  K.setPreview(preview,thumb?THUMB_PREFIX+thumb+thumbRevision(m.id):null);
   const variant=variantLabel(m);if(variant){const badge=document.createElement('span');badge.className='tv';badge.textContent=variant;badge.title=variant==='HX版'?'原游戏 HX 变体，模型或动作配置与标准版存在差异':variant;card.append(badge);}
   card.addEventListener('click',event=>{if(event.target.closest('.tstar'))return;setPanelOpen('library',false);loadModel(m.id).catch(fail);});card.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&!event.target.closest('.tstar')){event.preventDefault();setPanelOpen('library',false);loadModel(m.id).catch(fail);}});star.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();K.favs.toggle(entry(m));populate();});fragment.append(card);
  }
@@ -354,23 +360,57 @@ async function live2dPortrait(model,generation){
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
 }
 async function spinePortrait(model,generation){
+ // The setup skin for these portraits omits body attachments supplied by skin 1.
+ if (portraitsWithSkinOne.has(model.id)) model.defaultSkin ||= '1';
  const context=new spine.webgl.ManagedWebGLRenderingContext(canvas,{alpha:true,antialias:true,preserveDrawingBuffer:true}),gl=context.gl,scene=new spine.webgl.SceneRenderer(canvas,context,true);let assets;
  const dispose=()=>{try{assets?.dispose();scene.dispose();gl.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
  for(const spec of model.layers){spec.skelUrl=BASE+'/assets/spinepainting/'+enc(spec.folder+spec.skeleton);spec.atlasUrl=BASE+'/assets/spinepainting/'+enc(spec.atlas);}
  try{assets=await loadPortraitSpineAssets(spine,context,model.layers,{base:BASE+'/assets/spinepainting/',signal:loadAbort.signal,onProgress:text=>{if(generation===loadGeneration){$('status').textContent=text;loadingPreview.progress(generation,text);}},onTransport:(file,kind)=>{if(generation===loadGeneration)(evidence.loadTransports||={})[file]=kind;}});}catch(e){dispose();throw e;}
  if(generation!==loadGeneration){dispose();return null;}
- let layers;try{layers=assets.layers.map(({spec,atlas,bytes})=>{const loader=new spine.AtlasAttachmentLoader(atlas),reader=spec.format==='json'?new spine.SkeletonJson(loader):new spine.SkeletonBinary(loader),data=reader.readSkeletonData(spec.format==='json'?JSON.parse(new TextDecoder().decode(bytes)):bytes),skeleton=new spine.Skeleton(data);if(spec.initialSkin&&data.findSkin(spec.initialSkin))skeleton.setSkinByName(spec.initialSkin);skeleton.setToSetupPose();Object.assign(skeleton,{x:spec.x||0,y:spec.y||0,scaleX:spec.scaleX||1,scaleY:spec.scaleY||1});if(spec.rotation)skeleton.bones[0].rotation+=spec.rotation;if(spec.color)Object.assign(skeleton.color,spec.color);const stateData=new spine.AnimationStateData(data);stateData.defaultMix=.15;const state=new spine.AnimationState(stateData);skeleton.updateWorldTransform();return {data,skeleton,state,spec,atlas};});}catch(e){dispose();throw e;}
+ let layers;
+ try {
+  layers = assets.layers.map(({spec,atlas,bytes})=>{
+   const loader = new spine.AtlasAttachmentLoader(atlas);
+   const reader = spec.format === 'json' ? new spine.SkeletonJson(loader) : new spine.SkeletonBinary(loader);
+   const data = reader.readSkeletonData(spec.format === 'json' ? JSON.parse(new TextDecoder().decode(bytes)) : bytes);
+   const skeleton = new spine.Skeleton(data);
+   const initialSkin = spec.initialSkin || model.defaultSkin;
+   if (initialSkin && data.findSkin(initialSkin)) skeleton.setSkinByName(initialSkin);
+   skeleton.setToSetupPose();
+   Object.assign(skeleton,{x:spec.x||0,y:spec.y||0,scaleX:spec.scaleX||1,scaleY:spec.scaleY||1});
+   if (spec.rotation) skeleton.bones[0].rotation += spec.rotation;
+   if (spec.color) Object.assign(skeleton.color,spec.color);
+   const stateData = new spine.AnimationStateData(data);
+   stateData.defaultMix = .15;
+   const state = new spine.AnimationState(stateData);
+   skeleton.updateWorldTransform();
+   return {data,skeleton,state,spec,atlas};
+  });
+ } catch (error) {
+  dispose();
+  throw error;
+ }
  evidence.layers=layers;evidence.renderer=scene;model.animations=[...new Set(layers.flatMap(l=>l.data.animations.map(a=>a.name)))].sort();
  let mainLayer=0,sequence=0;
  for(let i=0;i<layers.length;i++)layers[i].state.addListener({event:(entry,event)=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion)controller.event(event.data.name);},complete:entry=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion&&controller.state.busy)controller.finish();}});
- const api={sound,stopAudio,fold,assistantEvent:area=>{if(basicActions[area])sound(model.voiceBank,motionCue(basicActions[area]),{voice:true});},skin:name=>{for(const l of layers){const skin=l.data.findSkin(name||l.spec.initialSkin||'default');if(skin){l.skeleton.setSkin(skin);l.skeleton.setSlotsToSetupPose();}}},effects:visible=>{evidence.effectsVisible=visible;},alpha:data=>{evidence.alphaData=data;},
+ const api={sound,stopAudio,fold,assistantEvent:area=>{if(basicActions[area])sound(model.voiceBank,motionCue(basicActions[area]),{voice:true});},skin:name=>{for(const l of layers){const skin=l.data.findSkin(name||l.spec.initialSkin||model.defaultSkin||'default');if(skin){l.skeleton.setSkin(skin);l.skeleton.setSlotsToSetupPose();}}},effects:visible=>{evidence.effectsVisible=visible;},alpha:data=>{evidence.alphaData=data;},
   expression:cue=>{if(!cue){for(const l of layers)l.state.setEmptyAnimation(1,.15);return;}if(controller?.state.busy)return;const field=({touch_1:'touch',touch_2:'touch2',touch_head:'headtouch',task:'mission',get:'unlock'})[cue]||cue;let name=model.expression?.base?.[field]||model.expression?.base?.default;const extra=model.expression?.extra?.[field];for(const row of array(extra))if(row[0]<=controller.state.favor)name=row[1];if(name===undefined||name===null||name==='')return;const multiple=model.interaction.spine?.multiple_face;if(array(multiple?.name).length&&Number.isFinite(Number(name))){const offset=array(multiple.data).find(r=>r[0]===controller.state.idle)?.[1]||0;name=String(Number(name)+offset);}name=String(name);for(const l of layers)if(l.data.findAnimation(name))l.state.setAnimation(1,name,true);evidence.expression={cue,name};},
   play:async(name,loop,options={})=>{sequence++;let max=-1;for(let i=0;i<layers.length;i++){const a=layers[i].data.findAnimation(name);if(a&&a.duration>max){max=a.duration;mainLayer=i;}}for(const l of layers){const a=l.data.findAnimation(name);if(a&&!l.spec.freeze){for(const track of array(options.clear))l.state.setEmptyAnimation(track,0);l.state.setAnimation(0,name,loop);}else if(!l.state.getCurrent(0)){const def=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(def)l.state.setAnimation(0,def.name,true);}l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}evidence.animation=name;$('animation').value=name;},
   duration:name=>Math.max(0,...layers.map(layer=>layer.data.findAnimation(name)?.duration||0)),
   timeline:()=>{const item=layers[mainLayer]?.state.getCurrent(0),duration=item?.animation?.duration||0,elapsed=Math.max(0,item?.trackTime||0);return {name:item?.animation?.name,time:duration?(item.loop?elapsed%duration:Math.min(duration,elapsed)):0,duration,loop:!!item?.loop};},
   seek:seconds=>{for(const layer of layers){const item=layer.state.getCurrent(0);if(!item)continue;const time=Math.max(0,Math.min(item.animation.duration-.0001,seconds));item.trackTime=item.trackLast=item.nextTrackLast=time;item.animationLast=item.nextAnimationLast=time;layer.state.apply(layer.skeleton);layer.skeleton.updateWorldTransform();}},
   world:(x,y)=>{const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;return {x:bounds.x+(x-frame.x-view.panX)*units,y:bounds.y-(y-frame.y-view.panY)*units};},
-  hits:(x,y)=>{const p=api.world(x,y);return array(model.interaction.hitAreas).filter(h=>polygonContains(p.x,p.y,h.vertices)).map(h=>h.id);},
+  hits:(x,y)=>{
+   const p = api.world(x,y);
+   const hits = array(model.interaction.hitAreas).filter(h=>polygonContains(p.x,p.y,h.vertices)).map(h=>h.id);
+   const skin = controller?.state.skin;
+   // The two skin switch hotspots have identical geometry.
+   if (model.id === arromanchesPortrait && (skin === '1' || skin === '2')) {
+    const inactive = skin === '1' ? 'skin_2' : 'skin_1';
+    return hits.filter(id=>id!==inactive);
+   }
+   return hits;
+  },
   polygons:()=>{const frame=stageFrame(),units=Math.max(bounds.width/frame.width,bounds.height/frame.height)*1.1/view.zoom;return array(model.interaction.hitAreas).map(area=>({id:area.id,vertices:area.vertices.map(p=>[(p[0]-bounds.x)/units+frame.x+view.panX,(bounds.y-p[1])/units+frame.y+view.panY])}));}
  };
  for(const l of layers){const a=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(a)l.state.setAnimation(0,a.name,true);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}
@@ -446,7 +486,7 @@ async function loadModel(id,{history=true}={}){
  $('btnStagePan').disabled=true;for(const key of ['reset-state','show-hits'])$(key).disabled=true;$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
- const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp',label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
+ const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:previewPath(id),label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
  if (canvas.style.clipPath) stage.style.removeProperty('touch-action');
  const next=canvas.cloneNode(false);next.style.clipPath='';canvas.replaceWith(next);canvas=next;Object.assign(view,{zoom:1,panX:0,panY:0,playing:true,frames:0});look.x=look.y=look.targetX=look.targetY=0;portraitTime=0;zoomTo(1);$('status').textContent=id+' · 正在读取模型和交互…';
  const data=await Promise.all([getJson(BASE+'/catalog/'+encodeURIComponent(id)+'.json',true,loadAbort.signal),getJson(BASE+'/model-audio/'+encodeURIComponent(id)+'.json',false,loadAbort.signal),allModels.find(m=>m.id===id)?.type==='live2d'?getJson(BASE+'/animators/'+encodeURIComponent(id)+'.json',false,loadAbort.signal):null]).catch(e=>{if(generation!==loadGeneration)return null;loadAbort.abort(e);throw e;});
