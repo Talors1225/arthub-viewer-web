@@ -1,6 +1,12 @@
 import {clamp} from './burst-math.js';
-import {createBurst} from './burst_scene.js?v=20261109-skill-background';
+import {createBurst} from './burst_scene.js?v=20261110-ending-lighting';
 import {clockAt} from './timelines.js';
+
+// Last visible composition before the closing flash on the authored timeline.
+const endingBackdrops = {
+  'core-26015': { frame: 214, branch: 'c195_00_cut_scene/root/fx_root/back_loop/' },
+  'core-26115': { frame: 223 },
+};
 
 export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hiddenSlots,getAudio,changed,finished,progress}){
   const root=new URL(assetsRoot.replace(/\/$/,'')+'/',location.href);
@@ -20,6 +26,7 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
   signal.throwIfAborted();
   const partTargets=engine.bindPartState(hiddenSlots);
   const duration=scene.duration;
+  const endingBackdrop=endingBackdrops[key];
   let time=0, playing=false, starting=false, disposed=false, revision=0, dirty=true;
   let speed=settings.speed, loop=false, volume=settings.volume, muted=settings.muted;
   let audio=null, mix=null, analyser=null, clock=null, sources=[], cues=[], counts={};
@@ -128,13 +135,16 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
   function buildBackdrop(aspect){
     if(backdrop) return backdropImage;
     const size=edge=>({width:Math.round(edge*Math.min(1,aspect)),height:Math.round(edge/Math.max(1,aspect))});
+    const renderBackdrop=(time,edge)=>engine.renderBackdrop(time,size(edge),endingBackdrop?.branch);
     const sample=document.createElement('canvas');
     sample.width=sample.height=24;
     const ctx=sample.getContext('2d',{willReadFrequently:true});
+    const endingTime=endingBackdrop ? endingBackdrop.frame/scene.fps : null;
+    const sampleTimes=[.48,.34,.62,.22,.74,.84,.15].map(fraction=>duration*fraction);
+    if(endingTime!==null && endingTime<duration) sampleTimes.unshift(endingTime);
     let best=null;
-    for(const fraction of [.48,.34,.62,.22,.74,.84,.15]){
-      const at=duration*fraction;
-      const frame=engine.renderBackdrop(at,size(192));
+    for(const at of sampleTimes){
+      const frame=renderBackdrop(at,192);
       if(!frame.background) continue;
       ctx.clearRect(0,0,24,24);
       ctx.drawImage(canvas,0,0,24,24);
@@ -148,11 +158,15 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
       }
       if(lit<22) continue;
       const score=exposed+.18*lit-.45*clipped;
+      if(at===endingTime){
+        best={time:at,score,lit,layers:frame.background};
+        break;
+      }
       if(!best || score>best.score) best={time:at,score,lit,layers:frame.background};
     }
     backdrop=best || {time:null};
     if(!best) return null;
-    engine.renderBackdrop(best.time,size(2048));
+    renderBackdrop(best.time,2048);
     const captured=document.createElement('canvas');
     captured.width=canvas.width; captured.height=canvas.height;
     const pixels=captured.getContext('2d',{willReadFrequently:true});
@@ -167,7 +181,7 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     backdropImage=document.createElement('canvas');
     backdropImage.width=right-left+1; backdropImage.height=bottom-top+1;
     backdropImage.getContext('2d').drawImage(captured,left,top,backdropImage.width,backdropImage.height,0,0,backdropImage.width,backdropImage.height);
-    engine.renderBackdrop(best.time,size(192));
+    renderBackdrop(best.time,192);
     return backdropImage;
   }
   let zoom=1,panX=0,panY=0;

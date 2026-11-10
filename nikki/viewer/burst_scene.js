@@ -277,13 +277,16 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     const y=height/2-(clientY-rect.top)/rect.height*height;
     return pickSpinePart(drawnSpines,frameCamera,x,y);
   }
-  function backdropItems(queue){
+  function backdropItems(queue,extraBranch){
     const leaf=/(?:^|[\/_\s])(?:bg|background|backdrop)(?:[_\/\s.]|$)/i;
     const foreground=/(?:^|[\/_\s])(?:fg|front|foreground|flash|fadeout)(?:[_\/\s.]|$)|blend_white/i;
     const path=item=>scene.nodes[item.model?.node||item.source.node].path;
-    const independent=item=>!foreground.test(path(item)) &&
-      (item.model ? leaf.test(item.model.name) || (/\/bg_root\//i.test(path(item)) && !/\/cha_root\//i.test(path(item)))
-                  : item.source.role==='background');
+    const independent=item=>{
+      const nodePath=path(item);
+      if(foreground.test(nodePath)) return false;
+      if(item.model) return leaf.test(item.model.name) || (/\/bg_root\//i.test(nodePath) && !/\/cha_root\//i.test(nodePath));
+      return item.source.role==='background' || Boolean(extraBranch && nodePath.startsWith(extraBranch));
+    };
     const named=queue.filter(independent);
     if(named.length) return named;
     const character=queue.findIndex(item=>item.model && !independent(item));
@@ -292,7 +295,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     return queue.slice(0,character).filter(item=>!item.model && !foreground.test(path(item))
       && !/\/(?:cha_root|screen_root)\//i.test(path(item)));
   }
-  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, frame) {
+  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, frame, extraBranch) {
     resize(frame);
     const t=clamp(time,0,scene.duration-1e-6);
     const poses=timeline.sampleScene(t);
@@ -330,7 +333,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     queue.sort((a,b)=>Number(!!b.backdrop)-Number(!!a.backdrop) || a.layer-b.layer || a.order-b.order || b.depth-a.depth);
     post.start(width,height,backdropOnly);
     const counts={spine:0,background:0,effect:0,nodes:[]};
-    for(const item of backdropOnly ? backdropItems(queue) : queue){
+    for(const item of backdropOnly ? backdropItems(queue,extraBranch) : queue){
       let drawn;
       if(item.model) drawn=drawSpine(item,t,camera);
       else if(item.source.mesh && !item.trail) drawn=drawMesh(item,camera);
@@ -352,5 +355,5 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       return {skeleton:model.instance,hiddenSlots:hidden,data:{slots:model.parts}};
     });
   }
-  return {render,renderBackdrop:(time,frame)=>render(time,true,true,true,frame),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
+  return {render,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
 }
