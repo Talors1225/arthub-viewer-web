@@ -18,7 +18,11 @@ export class FatedSound {
     const Audio = window.AudioContext || window.webkitAudioContext;
     if (!Audio) return;
     try {
-      this.context ||= new Audio();
+      if (!this.context) {
+        this.context = new Audio();
+        this.output = this.context.createGain();
+        this.output.connect(this.context.destination);
+      }
       this.ready = (this.context.state === 'running' ? Promise.resolve() : this.context.resume())
         .then(() => this.startAmbient())
         .catch(error => this.note({ kind: 'error', message: error.message }));
@@ -58,7 +62,7 @@ export class FatedSound {
     const source = this.context.createBufferSource();
     source.buffer = buffer;
     source.loop = loop;
-    source.connect(this.context.destination);
+    source.connect(this.output);
     source.start(time);
     return source;
   }
@@ -76,6 +80,22 @@ export class FatedSound {
       this.note({ kind: 'ambient', events: [event], duration: buffer.duration });
     });
     this.ambientJob = job;
+  }
+
+  captureAudio() {
+    this.unlock();
+    const output = this.output;
+    const destination = this.context?.createMediaStreamDestination?.();
+    const track = destination?.stream.getAudioTracks()[0];
+    if (!output || !track) return null;
+    output.connect(destination);
+    return {
+      track,
+      release() {
+        track.stop();
+        try { output.disconnect(destination); } catch {}
+      },
+    };
   }
 
   point(point, kind, index) {

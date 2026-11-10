@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>棕色尘埃 2 · 有缘之客 | ArtHub</title>
   <link rel="stylesheet" href="../../common/kit.css">
-  <link rel="stylesheet" href="./fated.css">
+  <link rel="stylesheet" href="../../common/stage-ui.css?v=93a59d25328a">
+  <link rel="stylesheet" href="./fated.css?v=20261110-fated-bg">
   <script defer src="../../arthub-cos-config.js?v=20261108-bd2-r2"></script>
   <script defer src="../../common/kit.js"></script>
   <script defer src="../../common/asset-loader.js"></script>
-  <script type="module" src="./viewer.mjs"></script>
+  <script defer src="../../common/stage-ui.js?v=93a59d25328a"></script>
+  <script type="module" src="./viewer.mjs?v=20261110-fated-bg"></script>
 </head>
 <body>
   <main id="library">
@@ -44,7 +46,15 @@
       <button class="action" id="fit" type="button" aria-label="适应窗口">适应</button>
       <button class="action" id="zoom-in" type="button" aria-label="放大">＋</button>
       <button class="action" id="restart" type="button" aria-label="重新开始互动">重来</button>
+      <button class="action" id="more" type="button" aria-haspopup="menu" aria-expanded="false" disabled>更多</button>
     </div>
+    <div class="recording-bar" id="recording-bar" aria-label="视频录制" hidden>
+      <span class="recording-indicator" id="recording-state" role="status">录制中</span>
+      <output id="recording-time" aria-label="已录制时长" aria-live="off">0:00</output>
+      <button class="action" id="video-save" type="button">停止并保存</button>
+      <button class="action" id="video-cancel" type="button" aria-label="取消录制">取消</button>
+    </div>
+    <button class="action return" id="exit-immersive" type="button" hidden>退出沉浸</button>
     <div class="load" id="load" role="status" hidden>
       <p id="message"></p>
       <button class="action" id="retry" type="button" hidden>重试</button>
