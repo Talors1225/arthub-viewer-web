@@ -13,13 +13,15 @@ const indexFile = fs.existsSync(path.join(root, 'nikki/audio-logic.json'))
   ? 'nikki/audio-logic.json' : 'data/nikki/index/nikke-audio-logic.json';
 const index = JSON.parse(fs.readFileSync(path.join(root, indexFile), 'utf8'));
 for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
-const tap = html.match(/stage\.addEventListener\('pointerup', \(e\) => \{([\s\S]*?)\n  \}\);/);
+const pointerUp = /stage\.addEventListener\('pointerup', \(e\) => \{([\s\S]*?)\n  \}\);/;
+const tap = html.match(pointerUp);
 assert.ok(tap, 'test the real viewer pointerup handler');
 let checks = 0;
-function scenario(overrides = {}) {
+function scenario(overrides = {}, handler = tap) {
   const called = [];
   const context = {down:{},moved:false,boneDrag:null,boneEditMode:false,partEditMode:false,routeSource:'nikki',
-    cut:{skeleton:{}},cur:{},devicePixelRatio:1,
+    cut:{skeleton:{x:0,y:0,scaleX:1,scaleY:1},drawLayers:[{skeleton:{}}]},cur:{},devicePixelRatio:1,
+    burstSession:null,panelUI:null,bd2Voice:{tap:()=>called.push(['bd2-voice'])},
     stage:{releasePointerCapture(){},classList:{remove(){}}},
     cv:{width:100,height:100,getBoundingClientRect:()=>({left:0,top:0})},
     isChrome:()=>false,hitBoneAt:()=>null,
@@ -29,7 +31,7 @@ function scenario(overrides = {}) {
     portraitAudio:{interact:()=>{called.push(['audio']);return false;},interactionHint:()=> '暂无匹配音频'},
     ...overrides};
   vm.createContext(context);
-  vm.runInContext('tap = (e) => {' + tap[1] + '\n};',context);
+  vm.runInContext('tap = (e) => {' + handler[1] + '\n};',context);
   context.tap({button:0,pointerId:1,clientX:50,clientY:50,target:{}});
   return called;
 }
@@ -39,8 +41,12 @@ assert.ok(events.some(e=>e[0]==='audio')); checks++;
 assert.ok(events.some(e=>e[0]==='hint')); checks++;
 events = scenario({partEditMode:true});
 assert.ok(events.some(e=>e[0]==='parts')); assert.ok(!events.some(e=>e[0]==='audio')); checks+=2;
-events = scenario({routeSource:'bd2'});
-assert.ok(events.some(e=>e[0]==='parts')); checks++;
+const bd2Viewer = path.join(root, 'bd2/viewer/cutscene.html');
+const bd2Tap = (fs.existsSync(bd2Viewer) ? fs.readFileSync(bd2Viewer, 'utf8').replace(/\r\n/g, '\n') : html).match(pointerUp);
+assert.ok(bd2Tap, 'test the BD2 pointerup handler');
+events = scenario({routeSource:'bd2'}, bd2Tap);
+assert.ok(events.some(e=>e[0]==='bd2-voice'), 'BD2 taps keep their voice action'); checks++;
+assert.ok(!events.some(e=>e[0]==='parts')); checks++;
 for (const overrides of [{moved:true},{isChrome:()=>true},{down:null},{boneEditMode:true}]) {
   events = scenario(overrides);
   assert.ok(!events.some(e=>['parts','audio'].includes(e[0]))); checks++;
@@ -49,6 +55,19 @@ events = scenario({portraitAudio:null});
 assert.ok(!events.some(e=>e[0]==='parts')); assert.ok(events.some(e=>e[0]==='hint')); checks+=2;
 events = scenario({K:{getSpine(){},hitTestSlot:()=>null,toast(){}}});
 assert.ok(!events.some(e=>['parts','audio'].includes(e[0]))); checks++;
+if (tap[1].includes('burstSession')) {
+  const actions = [];
+  const burstSession = {toggle: () => actions.push('toggle'), hit: () => { actions.push('hit'); return 'body'; }};
+  events = scenario({burstSession});
+  assert.deepEqual(actions, ['toggle']); checks++;
+  assert.ok(!events.some(e=>['parts','audio'].includes(e[0]))); checks++;
+  events = scenario({burstSession, partEditMode:true});
+  assert.deepEqual(actions, ['toggle','hit']); checks++;
+  assert.ok(events.some(e=>e[0]==='parts')); checks++;
+  const cut = {frame:{minX:10,minY:10,maxX:20,maxY:20},skeleton:{x:0,y:0,scaleX:1,scaleY:1},drawLayers:[{skeleton:{}}]};
+  events = scenario({cut,partEditMode:true});
+  assert.ok(!events.some(e=>e[0]==='parts'), 'the authored frame clips hit testing'); checks++;
+}
 const state = {id:'c010_00',animation:'idle',animations:['idle','action']};
 const controller = Object.create(Controller.prototype);
 Object.assign(controller,{index,resourceId:state.id,prefs:{enabled:true,voices:true,effects:true,affinity:'normal'},
@@ -89,6 +108,7 @@ const changes = [];
 const panelClasses = new Set();
 const buttonAttrs = {};
 const modeState = {routeSource:'nikki',boneEditMode:false,partEditMode:false,highlightSlot:'body',
+  burstPending:null,burstSession:null,panelUI:null,parkSkillBurst:()=>changes.push('park-burst'),
   stage:{dataset:{}},btnPartEdit:{classList:{toggle(){}},setAttribute:(k,v)=>{buttonAttrs[k]=v;}},
   floatPanel:{dataset:{},classList:{contains:k=>panelClasses.has(k),remove:k=>panelClasses.delete(k)}},
   btnParts:{classList:{remove(){}}},hidePartPopup:()=>changes.push('hide'),
@@ -111,12 +131,21 @@ assert.equal(buttonAttrs['aria-pressed'],'false'); checks++;
 assert.ok(!panelClasses.has('open')); checks++;
 modeState.boneEditMode=true; modeState.setMode(true);
 assert.equal(modeState.boneEditMode,false); checks++;
-modeState.setMode(false); modeState.routeSource='bd2'; modeState.setMode(true);
-assert.equal(modeState.partEditMode,false); checks++;
+if (mode[1].includes('burstSession')) {
+  modeState.setMode(false);
+  modeState.burstSession={playing:true,pause:()=>changes.push('pause-burst')};
+  changes.length=0; modeState.setMode(true);
+  assert.ok(changes.includes('pause-burst'), 'entering part edit pauses a playing burst'); checks++;
+  modeState.setMode(false);
+  modeState.burstPending={intro:true};
+  changes.length=0; modeState.setMode(true);
+  assert.ok(changes.includes('park-burst'), 'entering part edit parks the pending intro'); checks++;
+}
 assert.match(html,/let partEditMode = false/,'each visit must default to audio, not persisted editing'); checks++;
 assert.ok(!/store\.(?:get|set)\(['"]partEditMode/.test(html)); checks++;
 assert.match(html,/id="btnPartEdit"/); assert.match(html,/id="exitPartEdit"/); checks+=2;
 assert.match(html,/active:.*!partEditMode/,'editing must suspend dialogue and scheduled effects'); checks++;
 console.log(JSON.stringify({ok:true,viewer,checks,c989:{voices:0,animationEvents:0},
-  scenarios:['audio-default','missing-audio-no-parts','explicit-part-edit','bd2-preserved','drag-not-tap',
-    'bone-edit-no-audio','chrome-not-tap','module-loading','muted','no-match','index-error']}));
+  scenarios:['audio-default','missing-audio-no-parts','explicit-part-edit','bd2-voice','drag-not-tap',
+    'bone-edit-no-audio','chrome-not-tap','module-loading','muted','no-match','index-error',
+    ...(tap[1].includes('burstSession') ? ['burst-control','authored-frame-hit-test'] : [])]}));

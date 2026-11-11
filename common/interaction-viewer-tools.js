@@ -175,7 +175,7 @@
 
   // Reuse the current GL textures, but animate independent skeleton/state
   // objects. Export cannot trigger the portrait controller's events or phases.
-  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, visible = () => true, extraBounds = () => [] }) => {
+  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, fixedFrame, visible = () => true, extraBounds = () => [] }) => {
     const width = canvas.width, height = canvas.height, camera = renderer.camera;
     const saved = { width: camera.viewportWidth, height: camera.viewportHeight, zoom: camera.zoom, x: camera.position.x, y: camera.position.y, z: camera.position.z };
     const copies = layers.map((layer, index) => {
@@ -215,7 +215,8 @@
       }
     };
     return {
-      pngSize: quality => ({ ...K.exportDimensions(bounds, quality), fullFrame: true }),
+      fixedFrame,
+      pngSize: quality => ({ ...K.exportDimensions(fixedFrame || bounds, quality, 'png', fixedFrame ? 0 : undefined), fullFrame: true }),
       measure(time) {
         pose(time);
         const frame = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };

@@ -488,6 +488,10 @@
     ['78050_skin_Osiris03b.json', { minX: -2850, minY: -1790, maxX: 2840, maxY: 2300 }],
     ['78050_skin_Osiris03b_ASMR.json', { minX: -2940, minY: -1860, maxX: 2935, maxY: 2040 }],
   ]);
+  const crosscoreIdleFrames = new Map([
+    ['CG_seashore.json', { minX: -1905, minY: -82, maxX: 1922, maxY: 1990 }],
+    ['60110_skin_Burtgang03.json', { minX: -591, minY: -148, maxX: 593, maxY: 1982 }],
+  ]);
   if (routeSource === 'nikki' || routeSource === 'crosscore') stage.dataset.clickMode = 'audio';
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
@@ -1690,6 +1694,8 @@
 
   function playAnimation(name, options = {}) {
     if (!cut) return;
+    const idleFrame = crosscoreIdleFrames.get(cut.sourceVariant.skel);
+    if (idleFrame) cut.fixedFrame = name === 'idle' ? idleFrame : undefined;
     portraitAudio?.animationChanged(name, options);
     let bounds = null;
     for (const layer of cutLayers()) {

@@ -358,8 +358,12 @@ function renderFrame(t) {
   updateGuide(t);
 }
 
+function portraitExportFrame({ model, bounds }) {
+  return model.exportFrame || bounds;
+}
+
 function pngPose(quality) {
-  return K.pngExportPose([scene.skeleton], quality, runtime, scene.bounds);
+  return K.pngExportPose([scene.skeleton], quality, runtime, portraitExportFrame(scene));
 }
 
 function captureWorldPose(skeleton) {
@@ -484,7 +488,7 @@ function captureVideoFrame(now) {
 
 async function recordPortrait(quality, withAudio) {
   if (!scene || !canvas.dataset.ready || K.pngExporting || videoRecording) return;
-  const { skeleton, bounds } = scene;
+  const { skeleton } = scene;
   const { x, y, scaleX, scaleY } = skeleton;
   const view = { width: canvas.width, height: canvas.height, transform: { x, y, scaleX, scaleY } };
   const controller = new AbortController();
@@ -492,7 +496,7 @@ async function recordPortrait(quality, withAudio) {
   K.closeToolPopup();
   more.disabled = true;
   try {
-    const size = K.exportDimensions(bounds, quality, 'video', 0);
+    const size = K.exportDimensions(portraitExportFrame(scene), quality, 'video', 0);
     const applyWorldPose = captureWorldPose(skeleton);
     cancelInput();
     stage.style.setProperty('--video-aspect', String(size.width / size.height));
@@ -717,7 +721,7 @@ async function start() {
     if (url.origin === location.origin || url.protocol === 'https:') audioRoot = url;
   }
   const [catalog, rules, sound] = await Promise.all([
-    K.fetchJSON('./catalog.json'), K.fetchJSON('./rules.json'),
+    K.fetchJSON('./catalog.json?v=20261111-export-frame'), K.fetchJSON('./rules.json'),
     audioRoot ? K.fetchJSON(new URL('manifest.json', audioRoot).href).catch(() => null) : null,
   ]);
   if (catalog.schemaVersion !== 1 || !catalog.models.length) throw new Error('资源目录为空或版本不匹配');

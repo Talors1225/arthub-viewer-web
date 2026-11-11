@@ -2122,6 +2122,7 @@
   }
 
   function stagePreviewPath(v) {
+    if (routeSource === 'bd2' && cur.thumbnail) return THUMB_PREFIX + cur.thumbnail;
     if (routeSource === 'crosscore') {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
       return thumbnail ? THUMB_PREFIX + thumbnail : null;

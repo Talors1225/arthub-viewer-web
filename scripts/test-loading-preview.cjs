@@ -138,26 +138,41 @@ const viewers = fs.existsSync(path.join(root, publicViewers[0])) ? publicViewers
 for (const file of viewers) {
   const html = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
   for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new vm.Script(match[1], {filename: file});
-  const draw = html.match(/renderer\.end\(\);\n\s*if \((?:cut|layers\.length)[^\n]+\) \{\n\s*playerDrawnSeq[^\n]+\n\s*loadingPreview\.ready[^\n]+\n\s*\}/);
-  assert.ok(draw, file + ': test the actual first-draw boundary');
-  const base = {cut: {}, layers: [{visible: true}], cv: {width: 390, height: 700}, canvas: {width: 390, height: 700},
-    raw: {isContextLost: () => false}, cutLoadSeq: 11, loadSeq: 11, playerDrawnSeq: -1,
-    loadingPreview: preview, renderer: {end() {}}};
+  const isMahjong = file.includes('majsoul');
+  const ready = html.indexOf('loadingPreview.ready(');
+  const start = html.lastIndexOf(isMahjong ? '    const raw = gl.gl || gl;' : '    if (mgl && renderer) {', ready);
+  const end = html.indexOf(isMahjong ? '    if (capturePending && curEntry)' : '    if (cut && playing) syncTimeline();', ready);
+  assert.ok(start >= 0 && ready > start && end > ready, file + ': test the actual first-draw boundary');
+  const draw = new vm.Script(html.slice(start, end), {filename: file});
+  const layer = {visible: true, skeleton: {}};
+  const raw = {isContextLost: () => false, clearColor() {}, clear() {}, disable() {}};
+  const renderer = {begin() {}, drawSkeleton() {}, end() {}};
+  const size = {width: 390, height: 700};
+  const base = {cut: {drawLayers: [layer]}, cutLayers: () => [layer], layers: [layer], cv: size, canvas: size,
+    mgl: raw, gl: raw, renderer, cutLoadSeq: 11, loadSeq: 11, playerDrawnSeq: -1, viewerUiReady: true,
+    loadingPreview: preview, getBg: () => 'checker', debugFlags: {}, highlightSlot: null, cmpOn: false, boneEditMode: false,
+    K: {parseColor: (_color, fallback) => fallback, debugActive: () => false}, selIdx: -1, drawBoneMarker() {},
+    activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false};
+  const render = overrides => draw.runInNewContext({...base, ...overrides});
   preview.begin(11, {path: '/draw.webp'});
-  vm.runInNewContext(draw[0], {...base, raw: {isContextLost: () => true}});
+  const lost = {...raw, isContextLost: () => true};
+  render({mgl: lost, gl: lost});
   check(overlay.hidden, false, file + ': lost WebGL context must not hide preview');
-  vm.runInNewContext(draw[0], {...base, cv: {width: 1, height: 1}, canvas: {width: 1, height: 1}});
+  render({cv: {width: 1, height: 1}, canvas: {width: 1, height: 1}});
   check(overlay.hidden, false, file + ': invisible canvas must not complete preview');
-  vm.runInNewContext(draw[0], {...base, cut: null, layers: [{visible: false}]});
+  render({cut: null, layers: [{visible: false}]});
   check(overlay.hidden, false, file + ': no drawable model must not complete preview');
-  assert.throws(() => vm.runInNewContext(draw[0], {...base, renderer: {end() {throw new Error('draw failed');}}}), /draw failed/);
+  assert.throws(() => render({renderer: {...renderer, drawSkeleton() {throw new Error('draw failed');}}}), /draw failed/);
+  assert.throws(() => render({renderer: {...renderer, end() {throw new Error('draw failed');}}}), /draw failed/);
   check(overlay.hidden, false, file + ': completion follows successful drawing');
-  vm.runInNewContext(draw[0], base);
+  render({cutLoadSeq: 10, loadSeq: 10});
+  check(overlay.hidden, false, file + ': old draw cannot complete the active preview');
+  render();
   check(overlay.hidden, true, file + ': successful first draw reveals animation');
   const helper = html.match(/function stagePreviewPath\([^)]*\) \{[\s\S]*?\n  \}/);
   assert.ok(helper, file + ': test real variant lookup');
   const variant = {variant: 'Lobby'}, cur = {id: 'sample', cutscenes: [variant, {variant: 'Skill'}]};
-  const env = vm.createContext({K, routeSource: 'nikki', cur});
+  const env = vm.createContext({K, routeSource: 'nikki', cur, THUMB_PREFIX: '../../thumbs/', webThumbs: {}});
   vm.runInContext(helper[0], env);
   check(env.stagePreviewPath(file.includes('majsoul') ? {id: 'sample'} : variant),
     file.includes('majsoul') ? '/arthub-viewer-web/posters/majsoul/sample--binary.webp' : '/arthub-viewer-web/posters/nikki/sample--Lobby.webp', file + ': matching resource poster without gallery lookup');
@@ -165,6 +180,13 @@ for (const file of viewers) {
   else {
     check(env.stagePreviewPath({id:'sample', composite:true}), '/arthub-viewer-web/posters/majsoul/sample--layers.webp', 'composite poster contains all layers');
     check(env.stagePreviewPath({id:'sample', skel:'different.json'}), '/arthub-viewer-web/posters/majsoul/sample--json.webp', 'duplicate ID JSON variant retains separate poster');
+  }
+  if (file === 'bd2/viewer/cutscene.html') {
+    env.routeSource = 'bd2';
+    env.cur = {id: 'portrait-000101', thumbnail: 'bd2/portraits/portrait-000101.webp'};
+    check(env.stagePreviewPath({variant: '0'}), '../../thumbs/bd2/portraits/portrait-000101.webp', 'BD2 portrait uses its catalog cover');
+    env.cur = {id: '000101'};
+    check(env.stagePreviewPath({variant: '0'}), '/arthub-viewer-web/posters/bd2/000101--0.webp', 'BD2 cutscene uses its dedicated poster');
   }
   const chrome = html.match(/const isChrome = \(t\) =>[^\n]+/);
   assert.ok(chrome, file + ': test actual touch exclusion');

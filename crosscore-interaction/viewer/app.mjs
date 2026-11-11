@@ -3,6 +3,8 @@ import { SpineScene } from './scene.mjs?v=20261015-2';
 
 const $ = selector => document.querySelector(selector), SP = window.spine, K = window.SpineKit;
 const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint = overlay.getContext('2d');
+// The interaction prefab scales and offsets the same seashore artwork.
+const seashoreIdleFrame = { minX: -1334, minY: -679, maxX: 1346, maxY: 773 };
 const loadingPreview = K.createLoadingPreview(stage);
 let previewSequence = 0, previewScene = null, previewPending = false;
 window.__crosscorePreviewFailure = reason => loadingPreview.fail(previewSequence, reason);
@@ -440,6 +442,7 @@ const viewerUI = window.createInteractionViewerUI({
     capture: animation => {
       const captureScene = Object.create(scene);
       return window.createInteractionSpineCapture({ layers: scene.layers, ns: SP, canvas, renderer, gl, editor, animation,
+        fixedFrame: scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame : undefined,
         visible: layer => scene.visible(layer),
         extraBounds: () => {
           const result = [], drag = scene.objectDrag;

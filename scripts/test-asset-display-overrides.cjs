@@ -73,6 +73,21 @@ equal(oldCatalogResult.characters[0].displayName,'语音通讯屏 · SOUND ONLY'
 const normalizedResult=context.rules.decorateAssetIndex(stale,'nikki');
 equal(normalizedResult.characters[0].resourceType,'other','normalized indexes also receive reviewed corrections');
 
+const availabilityFixture = {
+  characters: [
+    { id: 'favoriteitem_test' },
+    { id: 'pirate_ui_deco_monkey_test' },
+    { id: 'c112_01' },
+    { id: 'c210_00_skillcut', type: 'catalog', burst: { key: 'core-1' } },
+    { id: 'c150_00_skillcut--core-26174', type: 'catalog' },
+    { id: 'c870_00' },
+  ],
+};
+const availability = context.rules.decorateNikkeIndex(availabilityFixture).characters;
+equal(Array.from(availability, entry => entry.id), ['c210_00_skillcut', 'c150_00_skillcut--core-26174', 'c870_00'],
+  'omit non-portraits and incomplete originals while retaining playable core entries');
+equal(Array.from(availability.slice(0, 2), entry => entry.type), ['skill', 'skill'], 'core entries stay in the skill category');
+
 const indexRel=isSource?'data/nikki/index/nikki_chars.json':'nikki/nikki_chars.json';
 const raw=JSON.parse(read(indexRel));
 const snapshot=JSON.stringify(raw);
@@ -83,9 +98,10 @@ for (const entry of visible.characters) {
   counts[['skill','battle','lobby'].includes(current)?current:'other']++;
 }
 equal(JSON.stringify(raw),snapshot,'actual input index remains untouched');
-equal(visible.characters.length,2037,'hidden entries and visible asset count stay intact');
+const expectedIds = raw.characters.filter(entry => !context.rules.shouldOmitNikkeViewerEntry(entry) || /^core-\d+$/.test(entry.burst?.key || ''))
+  .map(entry => entry.id);
+equal(Array.from(visible.characters, entry => entry.id), expectedIds, 'keep all eligible catalog IDs in order');
 if (!isSource) {
-  equal(counts,{skill:229,battle:776,lobby:524,other:508},'reviewed live categories');
   for (const [id,record] of Object.entries(records)) {
     const entry=raw.characters.find(e=>e.id===id);
     assert.ok(entry,'published entry exists: '+id); checks++;

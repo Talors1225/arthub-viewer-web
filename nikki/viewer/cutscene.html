@@ -494,6 +494,13 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
+  // Keep the scene inside its artwork panel when idle effects extend past it.
+  const idleSceneFrames = new Map([
+    ['EventScene_HightechToy_01.skel', { minX: -2006, minY: -478, maxX: 1974, maxY: 3496 }],
+    ['EventScene_LifeAgain_01.skel', { minX: -996, minY: -242, maxX: 991, maxY: 1748 }],
+    ['EventScene_memoriesteller_02.skel', { minX: -995, minY: -246, maxX: 995, maxY: 1744 }],
+    ['EventScene_terminusticket_01.skel', { minX: -1186, minY: 306, maxX: 1217, maxY: 2735 }],
+  ]);
   const viewerParams = new URLSearchParams(location.search);
   const embedded = viewerParams.get('embed') === '1';
   const store = K.Store(routeSource);
@@ -1834,7 +1841,7 @@
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
       const backdrop = activeSkillBackdrop();
-      const clipped = clipSkillFrame(raw, cv, cut?.skeleton, cut?.frame);
+      const clipped = clipArtworkFrame(raw, cv, cut?.skeleton, cut?.frame);
       try {
         renderer.begin();
         if (backdrop && cut) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
@@ -1875,8 +1882,7 @@
     }
   }
 
-  // Apply an authored camera frame for skills whose effects extend past their illustration.
-  function clipSkillFrame(gl, canvas, skeleton, frame) {
+  function clipArtworkFrame(gl, canvas, skeleton, frame) {
     if (!frame) return false;
     const left = canvas.width / 2 + skeleton.x, bottom = canvas.height / 2 + skeleton.y;
     const x = Math.round(left + frame.minX * skeleton.scaleX);
@@ -2023,7 +2029,8 @@
     }
     if (bounds) cut.bounds = bounds;
     const variant = cut.sourceVariant;
-    cut.frame = name === variant.previewAnimation ? variant.previewFrame : null;
+    const previewFrame = name === variant.previewAnimation ? variant.previewFrame : null;
+    cut.frame = previewFrame || (name === 'idle' ? idleSceneFrames.get(variant.skel) : null);
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
       if (cmpBounds) cmp.bounds = cmpBounds;
