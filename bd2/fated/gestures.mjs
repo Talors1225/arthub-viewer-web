@@ -78,6 +78,54 @@ const SPOT_SAMPLES = [
   [0.28, 0.28], [-0.28, 0.28], [0.28, -0.28], [-0.28, -0.28],
 ];
 
+function collectAnimationGroups(profile, rules, animations) {
+  const groups = profile.groups.map((group, index) => ({ key: String(group.id), label: `第 ${index + 1} 段`, clips: [] }));
+  const groupIndices = new Map(profile.groups.map((group, index) => [group.id, index]));
+  const authored = new Map();
+  const add = (name, groupIndex, label, track, details = {}) => {
+    if (animations.has(name) && !authored.has(name)) authored.set(name, { name, groupIndex, label, track, ...details });
+  };
+  const pointClips = (point, names, label, cue, track = 1, offset = 0) => {
+    const groupIndex = groupIndices.get(point.group);
+    if (groupIndex === undefined) return;
+    names.forEach((name, index) => add(name, groupIndex, label, track, { point, cue, cueIndex: index + offset }));
+  };
+  const gestureLabel = point => {
+    const action = rules.points?.[point.sourceId]?.gyro === 1 ? 1 : point.action;
+    if (action === 0) return '点按';
+    return action === 1 || action === 2 ? '拖动' : '互动';
+  };
+  profile.groups.forEach((group, index) => {
+    add(group.idle, index, '待机', 0, { idle: true });
+    add(group.switch, index, '转场', 0);
+  });
+  // A full motion can also appear in a hold-success list. Use its authored base track.
+  for (const point of profile.points) pointClips(point, point.motions, point.advance ? '转场' : gestureLabel(point), 'motion', 0);
+  profile.groups.forEach((group, index) => {
+    for (const effect of rules.groups?.[group.id]?.effects || []) add(effect.animation, index, '计量', 1, { effect });
+  });
+  for (const point of profile.points) {
+    pointClips(point, point.reactions, gestureLabel(point), 'mix');
+    pointClips(point, point.hold.loop, '长按', 'hold-enter');
+    pointClips(point, point.hold.success, '长按', 'hold-success');
+    pointClips(point, point.hold.fail, '松开', 'hold-fail');
+    pointClips(point, [point.stop], '复位', 'mix', 1, point.reactions.length);
+  }
+  const other = { key: 'other', label: '其他动画', clips: [] };
+  for (const name of animations) {
+    const mixGroup = /^mix(\d+)_/.exec(name);
+    const groupIndex = mixGroup ? groupIndices.get(Number(mixGroup[1])) : undefined;
+    const clip = authored.get(name) || { name, groupIndex, label: '其他', track: mixGroup ? 1 : 0 };
+    (groups[clip.groupIndex] || other).clips.push(clip);
+  }
+  const order = new Intl.Collator('en', { numeric: true });
+  const availableGroups = [...groups, other].filter(group => group.clips.length);
+  for (const group of availableGroups) {
+    group.clips.sort((a, b) => Number(Boolean(b.idle)) - Number(Boolean(a.idle)) || order.compare(a.name, b.name));
+  }
+  return availableGroups;
+}
+
 function positionKeys(timeline, bone, limit, duration) {
   let longest = 0, start = null, parked = false;
   const { frames } = timeline;
@@ -108,6 +156,7 @@ export class FatedGestures {
     this.bones = new Map(skeleton.bones.map(bone => [bone.data.name, bone]));
     this.rules = rules;
     this.audio = audio;
+    this.animationGroups = collectAnimationGroups(profile, rules, this.animations);
     this.hiddenOwners = new Map();
     this.points = profile.points.map(point => {
       const rule = rules.points?.[point.sourceId];
@@ -250,8 +299,14 @@ export class FatedGestures {
   get group() { return this.profile.groups[this.groupIndex]; }
   get tools() { return this.group.tools.length ? this.group.tools : [DEFAULT_TOOL]; }
   get gauge() { return this.rules.groups?.[this.group.id]; }
-  get inputLocked() { return Boolean(this.switching || this.reaction?.advance || this.reaction?.track === 0); }
-  get toolLocked() { return Boolean(this.switching || this.gesture || (this.reaction && !this.profile.allowDuringAnimation)); }
+  get inputLocked() {
+    const reaction = this.reaction;
+    return Boolean(this.switching || reaction?.advance || reaction?.track === 0 || reaction?.kind === 'preview');
+  }
+  get toolLocked() {
+    return Boolean(this.switching || this.gesture || (this.reaction &&
+      (!this.profile.allowDuringAnimation || this.reaction.kind === 'preview')));
+  }
   get activePoints() {
     return this.points.filter(point => point.group === this.group.id && point.tool === this.tool.id &&
       this.pointAvailable(point));
@@ -319,6 +374,28 @@ export class FatedGestures {
     this.audio?.stopReaction();
     this.last = null;
     this.enterGroup(0, false);
+  }
+
+  previewAnimation(clip) {
+    this.cancel();
+    this.audio?.stopReaction();
+    this.enterGroup(clip.groupIndex ?? this.groupIndex, false);
+    if (clip.point) {
+      this.chooseTool(clip.point.tool);
+      this.audio?.point(clip.point, clip.cue, clip.cueIndex);
+    } else if (clip.effect) {
+      this.audio?.score(this.group.id, clip.effect);
+    }
+    if (clip.idle) {
+      this.record(null, 'preview', clip.name);
+      return;
+    }
+    const overlay = clip.track === 1;
+    this.play(clip.point, overlay ? [clip.name] : [], 0, false, 'preview', overlay ? [] : [clip.name]);
+    const { entry } = this.reaction;
+    // Zero-duration clips store a pose. Give that pose time to appear before returning to idle.
+    if (entry.animation.duration === 0) entry.animationEnd = 1;
+    this.reaction.previewHold = clip.cue === 'hold-enter';
   }
 
   chooseTool(id) {
@@ -594,7 +671,7 @@ export class FatedGestures {
     if (track === 0 && this.state.getCurrent(1)) this.state.setEmptyAnimation(1, 0.12);
     const entry = this.state.setAnimation(track, name, false);
     const continuation = this.reveals.get(point)?.byAnimation.get(name);
-    this.reaction = { entry, track, point, continuation, advance };
+    this.reaction = { entry, track, point, continuation, advance, kind };
     this.record(point, kind, name);
   }
 
@@ -643,6 +720,7 @@ export class FatedGestures {
     const reaction = this.reaction;
     if (!reaction?.entry.isComplete()) return;
     this.reaction = null;
+    if (reaction.previewHold) this.audio?.stopHold();
     const next = reaction.advance ? this.nextIndex(reaction.point) : -1;
     if (next >= 0) {
       this.enterGroup(next, true);

@@ -1,4 +1,4 @@
-import { FatedGestures } from './gestures.mjs';
+import { FatedGestures } from './gestures.mjs?v=20261111-fated-animations';
 import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
 import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261109-fated-video';
 
@@ -11,6 +11,7 @@ const hints = $('hints'), hintLayer = $('gesture-hints'), hintStatus = $('hint-s
 const scoreMeter = $('score-meter'), scoreBar = scoreMeter.querySelector('progress'), scoreText = scoreMeter.querySelector('span');
 const controls = stage.querySelector('.controls');
 const more = $('more'), exitImmersive = $('exit-immersive');
+const animationBrowser = $('animation-browser');
 const recordingBar = $('recording-bar'), recordingTime = $('recording-time');
 const store = K.Store('bd2-fated');
 const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: color => store.set('bg', color) });
@@ -22,7 +23,7 @@ const initialParams = new URLSearchParams(location.search);
 const probe = initialParams.get('probe') === '1' && ['127.0.0.1', 'localhost'].includes(location.hostname);
 const pageSize = 12;
 let models = [], page = 1, assetsRoot, request, scene, gl, runtime, lastFrame = 0;
-let pan = null;
+let pan = null, interactionTouch = null;
 let routePending = false;
 let videoRecording = null;
 
@@ -79,6 +80,7 @@ function setMessage(text, retry = false) {
 function cancelInput(id) {
   scene?.gestures.cancel(id);
   if (id == null || pan?.id === id) pan = null;
+  if (id == null || interactionTouch === id) interactionTouch = null;
   if (!scene?.gestures.gesture) delete canvas.dataset.gesture;
 }
 
@@ -97,6 +99,7 @@ function dispose() {
   scoreMeter.hidden = true;
   hints.disabled = true;
   more.disabled = true;
+  animationBrowser.hidden = true;
   clearGuide();
   delete canvas.dataset.ready;
 }
@@ -169,8 +172,8 @@ function updateGuide(t) {
   if (!guideOn || t - lastGuideFrame < 34) return;
   lastGuideFrame = t;
   const rect = canvas.getBoundingClientRect();
-  const occlusions = [controls.getBoundingClientRect(), $('back').getBoundingClientRect()];
-  if (!scoreMeter.hidden) occlusions.push(scoreMeter.getBoundingClientRect());
+  const occlusions = [controls, $('back'), animationBrowser, scoreMeter, recordingBar]
+    .filter(element => !element.hidden).map(element => element.getBoundingClientRect());
   const usable = ({ x, y }) => x >= rect.left + 14 && x <= rect.right - 14 &&
     y >= rect.top + 14 && y <= rect.bottom - 14 &&
     !occlusions.some(box => x >= box.left - 12 && x <= box.right + 12 && y >= box.top - 12 && y <= box.bottom + 12);
@@ -205,9 +208,7 @@ function updateGuide(t) {
     if (element.firstChild.textContent !== label) element.firstChild.textContent = label;
   }
   hintLayer.hidden = !keys.size;
-  const progress = (scene.gestures.groupIndex + 1) + '/' + scene.gestures.profile.groups.length;
-  const message = progress + '　' + guide.message;
-  if (hintStatus.textContent !== message) hintStatus.textContent = message;
+  if (hintStatus.textContent !== guide.message) hintStatus.textContent = guide.message;
   hintStatus.hidden = false;
 }
 
@@ -263,7 +264,10 @@ async function showModel(model) {
     K.updateWorldTransform(skeleton, SP.Physics?.pose);
     const bounds = model.frame || K.measureBounds(skeleton, SP, false);
     if (!bounds || bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) throw new Error('立绘没有可见画面');
-    scene = { model, skeleton, state, gestures, bounds, atlas, sound, pma: Boolean(atlas.pages[0].pma) };
+    scene = {
+      model, skeleton, state, gestures, bounds, atlas, sound, pma: Boolean(atlas.pages[0].pma),
+      animationPicker: { group: '', query: '', scroll: 0 },
+    };
     atlas = null;
     soundControl.hidden = !sound;
     soundControl.value = soundMode;
@@ -352,6 +356,7 @@ function renderFrame(t) {
   if (!canvas.dataset.ready) {
     canvas.dataset.ready = 'true';
     hints.disabled = false;
+    animationBrowser.hidden = !gestures.animationGroups.length;
     more.disabled = Boolean(videoRecording);
     setMessage('');
   }
@@ -579,6 +584,86 @@ function openToolPanel(title, mount) {
   K.attachPopupChrome(panel, { button: more, title, close: () => panel.remove() });
 }
 
+function openAnimationBrowser() {
+  if (!scene || !canvas.dataset.ready || K.pngExporting) return;
+  const picture = scene;
+  const { gestures, animationPicker } = picture;
+  const panel = $('animation-browser-template').content.firstElementChild.cloneNode(true);
+  const groupFilter = panel.querySelector('select');
+  const query = panel.querySelector('input');
+  const results = panel.querySelector('.animation-results');
+  const groups = gestures.animationGroups;
+  groupFilter.append(new Option('全部', ''),
+    ...groups.map(group => new Option(group.key === 'other' ? '其他' : group.label, group.key)));
+  groupFilter.value = animationPicker.group;
+  query.value = animationPicker.query;
+
+  function renderAnimations() {
+    const needle = query.value.trim().toLocaleLowerCase();
+    const fragment = document.createDocumentFragment();
+    for (const group of groups) {
+      if (groupFilter.value && groupFilter.value !== group.key) continue;
+      const clips = group.clips.filter(clip => `${clip.name} ${clip.label} ${group.label}`.toLocaleLowerCase().includes(needle));
+      if (!clips.length) continue;
+      const section = document.createElement('section');
+      section.className = 'animation-group';
+      const heading = document.createElement('h3');
+      heading.textContent = group.label;
+      section.append(heading);
+      for (const clip of clips) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'animation-option';
+        button.dataset.animation = clip.name;
+        button.setAttribute('aria-pressed', String(gestures.last?.kind === 'preview' && gestures.last.animation === clip.name));
+        const name = document.createElement('span');
+        name.className = 'animation-name';
+        name.textContent = clip.name;
+        const kind = document.createElement('span');
+        kind.className = 'animation-kind';
+        kind.textContent = clip.label;
+        button.append(name, kind);
+        button.onclick = () => {
+          if (scene !== picture || K.pngExporting) return;
+          cancelInput();
+          picture.sound?.unlock();
+          gestures.previewAnimation(clip);
+          results.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed', 'false');
+          button.setAttribute('aria-pressed', 'true');
+          if (matchMedia('(max-width: 600px), (pointer: coarse)').matches) close(true);
+        };
+        section.append(button);
+      }
+      fragment.append(section);
+    }
+    if (!fragment.childElementCount) {
+      const empty = document.createElement('p');
+      empty.className = 'animation-empty';
+      empty.textContent = '没有匹配的动画';
+      fragment.append(empty);
+    }
+    results.replaceChildren(fragment);
+    results.scrollTop = 0;
+  }
+
+  query.oninput = groupFilter.onchange = renderAnimations;
+  renderAnimations();
+  document.body.append(panel);
+  const close = K.attachPopupChrome(panel, {
+    button: animationBrowser,
+    title: '互动动画',
+    close: () => {
+      animationPicker.group = groupFilter.value;
+      animationPicker.query = query.value;
+      animationPicker.scroll = results.scrollTop;
+      animationBrowser.setAttribute('aria-expanded', 'false');
+      panel.remove();
+    },
+  });
+  animationBrowser.setAttribute('aria-expanded', 'true');
+  results.scrollTop = animationPicker.scroll;
+}
+
 function mountBackgroundOptions(panel) {
   stageBackground.mount(panel);
   const note = document.createElement('p');
@@ -593,6 +678,8 @@ function setImmersive(enabled) {
 }
 
 K.setUiIcon(more, 'more', '更多');
+K.setUiIcon(animationBrowser, 'anim', '动画');
+animationBrowser.onclick = openAnimationBrowser;
 $('video-save').onclick = () => stopVideoRecording();
 $('video-cancel').onclick = () => stopVideoRecording(false);
 more.onclick = () => {
@@ -654,13 +741,18 @@ document.addEventListener('visibilitychange', () => {
 });
 K.observeCanvas(canvas, resize);
 K.bindPinch(stage, {
-  ready: () => Boolean(scene && canvas.dataset.ready && !K.pngExporting && !videoRecording?.capturing),
+  ready: () => Boolean(scene && canvas.dataset.ready && interactionTouch === null && !K.pngExporting && !videoRecording?.capturing),
   isChrome: target => target !== canvas,
   // The interaction handler owns single taps.
   isTap: () => false,
   cancelDrag: () => cancelInput(),
   zoom,
 });
+
+// Keep Safari's viewport zoom out of the interaction stage.
+const preventBrowserZoom = event => event.preventDefault();
+stage.addEventListener('gesturestart', preventBrowserZoom, { passive: false });
+stage.addEventListener('gesturechange', preventBrowserZoom, { passive: false });
 
 canvas.addEventListener('wheel', event => {
   event.preventDefault();
@@ -674,7 +766,10 @@ canvas.addEventListener('pointerdown', event => {
   const { pointerId, clientX, clientY } = event;
   const screen = { x: clientX, y: clientY };
   const world = toWorld(clientX, clientY);
-  if (!scene.gestures.start(pointerId, screen, world, performance.now()) && !videoRecording?.capturing) {
+  if (scene.gestures.start(pointerId, screen, world, performance.now())) {
+    // Some hotspots trigger before release. Keep the touch reserved until it ends.
+    if (event.pointerType === 'touch') interactionTouch = pointerId;
+  } else if (!videoRecording?.capturing) {
     pan = { id: pointerId, world };
   }
   canvas.setPointerCapture(pointerId);
@@ -707,6 +802,7 @@ canvas.addEventListener('lostpointercapture', event => cancelInput(event.pointer
 if (probe) {
   window.fatedGuestProbe = () => canvas.dataset.ready ? {
     ...scene.gestures.snapshot(toClient), sound: scene.sound?.snapshot(),
+    zoom: scene.skeleton.scaleX / scene.fitScale,
   } : null;
 }
 
