@@ -1,7 +1,7 @@
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261110-az-spine-skins';
 import {EffectTimeline} from './effect-timeline.mjs?v=499c19e6892b';
 import {hasEffectControls} from './effect-controls.mjs?v=499c19e6892b';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261111-az-idle-framing';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261111-az-idle-frames';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage');let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false,showHits=false;
@@ -199,6 +199,43 @@ function stageBoundsForFrame(frame) {
   y: (frame.minY + frame.maxY) / 2,
  };
 }
+function live2DFrameAtPose(frame, internal) {
+ const anchor = frame?.anchor;
+ if (!anchor) return frame;
+ const index = internal.getDrawableIndex(anchor.drawable);
+ if (index < 0) return frame;
+ if (anchor.whenVisible) {
+  const model = internal.coreModel;
+  if (editor?.hidden.has(anchor.drawable) || !model.getDrawableDynamicFlagIsVisible(index) || model.getModel().drawables.opacities[index] < .2) return frame;
+ }
+ const vertices = internal.getDrawableVertices(index);
+ if (vertices?.length !== 8) return frame;
+ const matrix = internal.localTransform, corners = [];
+ let centerX = 0, centerY = 0;
+ for (let i = 0; i < vertices.length; i += 2) {
+  const corner = matrix.apply(new PIXI.Point(vertices[i], vertices[i + 1]));
+  corners.push(corner);
+  centerX += corner.x / 4;
+  centerY += corner.y / 4;
+ }
+ const aspect = (frame.maxX - frame.minX) / (frame.maxY - frame.minY);
+ let halfHeight;
+ if (anchor.includeCorners) {
+  halfHeight = Math.max(...corners.map(corner => Math.max(Math.abs(corner.x - centerX) / aspect, Math.abs(corner.y - centerY))));
+ } else {
+  // Fit a rectangle of constant aspect ratio inside the projected artwork.
+  halfHeight = Infinity;
+  for (let i = 0; i < corners.length; i++) {
+   const a = corners[i], b = corners[(i + 1) % corners.length];
+   const nx = b.y - a.y, ny = a.x - b.x;
+   halfHeight = Math.min(halfHeight, Math.abs(nx * (centerX - a.x) + ny * (centerY - a.y)) / (Math.abs(nx) * aspect + Math.abs(ny)));
+  }
+  halfHeight *= .98;
+ }
+ if (!Number.isFinite(halfHeight) || halfHeight <= 0) return frame;
+ const halfWidth = halfHeight * aspect;
+ return { minX: centerX - halfWidth, minY: centerY - halfHeight, maxX: centerX + halfWidth, maxY: centerY + halfHeight };
+}
 async function live2dPortrait(model,generation){
  const app=new PIXI.Application({view:canvas,resizeTo:stage,autoStart:false,antialias:true,backgroundAlpha:0,resolution:Math.max(2,devicePixelRatio||1),autoDensity:true,preserveDrawingBuffer:true});
  let live, preparedSettings;
@@ -229,8 +266,17 @@ async function live2dPortrait(model,generation){
  } catch (error) { dispose(); throw error; }
  app.stage.addChild(live);live.anchor.set(.5,.5);const natural={width:live.internalModel.width,height:live.internalModel.height},internal=live.internalModel,core=internal.coreModel.getModel(),indexes=new Map(core.parameters.ids.map((id,i)=>[id,i]));
  const baseFrame = authoredLive2DFrame(model.id);
- const idleFrame = authoredLive2DFrame(model.id, 'idle');
- const idleBounds = idleFrame && idleFrame !== baseFrame ? stageBoundsForFrame(idleFrame) : null;
+ const pivotX = natural.width / 2, pivotY = natural.height / 2;
+ const stageCropForMotion = name => {
+  const crop = authoredLive2DFrame(model.id, name);
+  if (!crop) return null;
+  const rotation = crop.rotation ?? 0, cos = Math.cos(rotation), sin = Math.sin(rotation);
+  return {
+   ...stageBoundsForFrame(crop), rotation, crop,
+   pivotX: pivotX * cos - pivotY * sin,
+   pivotY: pivotX * sin + pivotY * cos,
+  };
+ };
  evidence.model=live;evidence.app=app;editor=window.createInteractionLive2DEditor({live,core,hitAreas:model.interaction.hitAreas});const mouthIds=internal.settings.json.Groups?.find(g=>g.Name==='LipSync')?.Ids||[];
  let effectManager,effectTimeline,effectTime=0;const renderedParameters=core.parameters.values.slice();
  const dragCover = model.id === 'wuqi_3' ? core.drawables.ids.indexOf('ArtMesh766') : -1;
@@ -269,6 +315,7 @@ async function live2dPortrait(model,generation){
   evidence.audio.mouthValues=Object.fromEntries(mouthIds.map(id=>[id,parameters.values[indexes.get(id)]]));editor?.applyParameters?.();renderedParameters.set(parameters.values);
  });
  let playSerial=0, activeMotion=model.defaultAnimation;
+ let stageCrop = stageCropForMotion(activeMotion);
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
   effectTimeline,
   refreshEffect:()=>{
@@ -295,6 +342,7 @@ async function live2dPortrait(model,generation){
    await live.motion(name,0,3);
    if(generation!==loadGeneration||serial!==playSerial)return;
    activeMotion=evidence.animation=name;
+   stageCrop = stageCropForMotion(name);
    $('animation').value=name;
   },
   world:(x,y)=>{const p=live.toModelPosition(new PIXI.Point(x,y));return {x:p.x,y:p.y};},
@@ -308,13 +356,14 @@ async function live2dPortrait(model,generation){
   },
   duration:name=>model.motionDurations?.[name]||0,
   timeline:()=>{const item=[...(queue?._motions||[])].reverse().find(item=>!item.isFinished()&&item._motion);const duration=model.motionDurations?.[activeMotion]||item?._motion?.getLoopDuration?.()||0,elapsed=item?.isStarted()?Math.max(0,item.getStateTime()-item.getStartTime()):0,loop=!!item?._motion?.isLoop?.();return {name:activeMotion,time:duration?(loop?elapsed%duration:Math.min(duration,elapsed)):0,duration,loop};},
-  seek:(seconds,delta=0)=>{const item=[...(queue?._motions||[])].reverse().find(item=>!item.isFinished()&&item._motion);if(!item)return;const duration=model.motionDurations?.[activeMotion]||item._motion.getLoopDuration(),time=Math.max(0,Math.min(duration-.0001,seconds)),clock=live.elapsedTime/1000;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time);item.setEndTime(item._motion.isLoop()?-1:clock-time+duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;app.render();},
+  seek:(seconds,delta=0,draw=true)=>{const item=[...(queue?._motions||[])].reverse().find(item=>!item.isFinished()&&item._motion);if(!item)return;const duration=model.motionDurations?.[activeMotion]||item._motion.getLoopDuration(),time=Math.max(0,Math.min(duration-.0001,seconds)),clock=live.elapsedTime/1000;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time);item.setEndTime(item._motion.isLoop()?-1:clock-time+duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;if(draw)app.render();},
   polygons:()=>model.interaction.hitAreas.map(h=>{const vertices=internal.getDrawableVertices(h.id);if(!vertices)return null;const pts=[];for(let j=0;j<vertices.length;j+=2){const p=new PIXI.Point(vertices[j],vertices[j+1]);internal.localTransform.apply(p,p);live.worldTransform.apply(p,p);pts.push([p.x,p.y]);}return {id:h.id,vertices:pts};}).filter(Boolean)
  };
  api.capture=(playback={})=>{
-  const authoredFrame = authoredLive2DExportFrame(model.id, playback.name || activeMotion);
+  const motionFrame = authoredLive2DExportFrame(model.id, playback.name || activeMotion);
+  const authoredFrame = live2DFrameAtPose(motionFrame, internal);
   const hitMeshes=new Set(model.interaction.hitAreas.map(area=>area.id));
-  const surrounds=model.id==='guanghui_9'?portraitSurroundNames(model.id):new Set();
+  const surrounds=model.id==='guanghui_9'?portraitSurroundNames(model.id):new Set(motionFrame?.hiddenDrawables);
   const measure=()=>{
   const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},rectangles=[];
   for(let i=0;i<core.drawables.ids.length;i++){
@@ -328,21 +377,37 @@ async function live2dPortrait(model,generation){
    if(b.maxX>b.minX&&b.maxY>b.minY){rectangles.push({name:core.drawables.ids[i],bounds:[b.minX,b.minY,b.maxX,b.maxY]});for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);}
   }
   return model.id==='guanghui_9'?portraitFrameBounds(model.id,rectangles)||bounds:bounds;};
-  const bounds=authoredFrame || measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y};
+  const bounds=authoredFrame || measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y,rotation:live.rotation};
   const parameters=core.parameters.values.slice(),renderedFrame=renderedParameters.slice(),effectBaseFrame=effectBaseParameters?.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
   const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot(),savedEffectTime=effectTime;let lastTime=0;
   // The SDK restores base parameters after deforming a frame. Rebuild from
   // the actual rendered parameters, then restore the base values separately.
   const rewind=()=>{restorePhysics();restoreEffect();for(const {item,values} of entries)Object.assign(item,values);if(savedEffect)effectTimeline.restore(savedEffect);if(effectBaseFrame)effectBaseParameters.set(effectBaseFrame);effectTime=savedEffectTime;live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(renderedFrame);core.parts.opacities.set(parts);internal.coreModel.update();core.parameters.values.set(parameters);renderedParameters.set(renderedFrame);internal.coreModel._savedParameters=nativeSaved.slice();lastTime=0;};
-  const advance=time=>{live.elapsedTime=elapsed+time*1000;if(savedEffect){effectTimeline.restore(savedEffect);effectTimeline.advance(time);}else effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime));lastTime=time;};
+  const advance=(time,draw=true)=>{live.elapsedTime=elapsed+time*1000;if(savedEffect){effectTimeline.restore(savedEffect);effectTimeline.advance(time);}else effectTime=savedEffectTime+time;api.seek(time,Math.max(0,time-lastTime),draw);lastTime=time;};
+  const setCaptureFrame = (size, tile) => {
+   live.pivot.set(0, 0);
+   live.rotation = authoredFrame?.rotation ?? 0;
+   live.scale.set(size.scale);
+   live.position.set(size.width / 2 - size.centerX * size.scale - (tile?.x ?? 0),
+    size.height / 2 - size.centerY * size.scale - (tile?.y ?? 0));
+  };
   return {pixelYUp:false,fixedFrame:authoredFrame,pngSize:quality=>({...K.exportDimensions(bounds,quality,'png',authoredFrame ? 0 : undefined),fullFrame:true}),
    measure:time=>{editor.before();advance(time);return measure();},rewind,
    draw:(time,size,background)=>{const added=[...surrounds].filter(id=>!editor.hidden.has(id));for(const id of added)editor.hidden.add(id);try{editor.before();
-    if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale-tile.x,size.height/2-size.centerY*size.scale-tile.y);live.deltaTime=0;app.render();return canvas;},background);
-    if(size.fullFrame){app.renderer.resolution=1;app.renderer.resize(size.width,size.height);live.pivot.set(0,0);live.scale.set(size.scale);live.position.set(size.width/2-size.centerX*size.scale,size.height/2-size.centerY*size.scale);}
+    if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);setCaptureFrame(size,tile);live.deltaTime=0;app.render();return canvas;},background);
+    const followArtwork = size.fullFrame && motionFrame?.anchor && time !== null;
+    if(size.fullFrame){
+     app.renderer.resolution=1;app.renderer.resize(size.width,size.height);
+     if (followArtwork) {
+      advance(time, false);
+      const fit = stageBoundsForFrame(live2DFrameAtPose(motionFrame, internal));
+      const scale = size.scale * (authoredFrame.maxX - authoredFrame.minX) / fit.width;
+      setCaptureFrame({ ...size, scale, centerX: fit.x, centerY: fit.y });
+     } else setCaptureFrame(size);
+    }
     else{app.renderer.resolution=size.width/stage.clientWidth;app.renderer.resize(stage.clientWidth,stage.clientHeight);}
-    if(time!==null)advance(time);else app.render();return canvas;}finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
-   dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
+    if(time!==null&&!followArtwork)advance(time);else app.render();return canvas;}finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
+   dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.rotation=transform.rotation;live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
  let fittingBounds = baseFrame && stageBoundsForFrame(baseFrame);
  let stageClipPath = '';
@@ -352,13 +417,13 @@ async function live2dPortrait(model,generation){
   if (app.renderer.screen.width !== w || app.renderer.screen.height !== h) app.renderer.resize(w, h);
   const frame = stageFrame();
   fittingBounds ||= K.live2DViewBounds(internal, natural, model.interaction.hitAreas.map(a => a.id));
-  const useIdleFrame = activeMotion === 'idle' && idleBounds;
-  const fit = useIdleFrame || fittingBounds;
+  const fit = stageCrop?.crop.anchor ? stageBoundsForFrame(live2DFrameAtPose(stageCrop.crop, internal)) : stageCrop || fittingBounds;
   const scale = Math.min(frame.width / fit.width, frame.height / fit.height) * .92 * view.zoom;
+  live.rotation = stageCrop?.rotation ?? 0;
   live.scale.set(scale);
-  live.position.set(frame.x + view.panX + (natural.width / 2 - fit.x) * scale,
-   frame.y + view.panY + (natural.height / 2 - fit.y) * scale);
-  if (baseFrame || useIdleFrame) {
+  live.position.set(frame.x + view.panX + ((stageCrop?.pivotX ?? pivotX) - fit.x) * scale,
+   frame.y + view.panY + ((stageCrop?.pivotY ?? pivotY) - fit.y) * scale);
+  if (stageCrop) {
    // Cubism manages its own WebGL scissor state. Clip only the displayed canvas.
    const halfWidth = fit.width * scale / 2, halfHeight = fit.height * scale / 2;
    const x = frame.x + view.panX, y = frame.y + view.panY;
