@@ -117,6 +117,7 @@
         <button id="interaction-voice" type="button" hidden>试听台词</button>
         <details class="section" id="interaction-more">
           <summary>更多设置</summary>
+          <label class="interaction-hotspots" id="fixed-view-setting" hidden><input id="fixed-view" type="checkbox" checked>固定互动视图</label>
           <label for="hit-area" class="field-label">互动区域</label>
           <select id="hit-area" aria-label="选择互动区域"></select>
           <button id="hit-trigger" type="button">触发区域动作</button>
@@ -148,7 +149,7 @@
   <script src="vendor/live2d/live2dcubismcore.min.js"></script>
   <script src="vendor/live2d/pixi-6.5.10.min.js"></script>
   <script src="vendor/live2d/cubism4-0.4.0.min.js"></script>
-  <script type="module" src="viewer.mjs?v=20261113-az-hint-cycle"></script>
+  <script type="module" src="viewer.mjs?v=20261113-az-fixed-view"></script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

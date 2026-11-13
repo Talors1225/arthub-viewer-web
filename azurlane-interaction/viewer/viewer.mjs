@@ -10,6 +10,7 @@ const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),ne
 let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false;
 let hintsEnabled=true,hintArea=null,hintInteractionCount=0,hintAdvance=false;
 const interactButton=$('btnStagePan');
+const fixedView=$('fixed-view');
 const isStagePointer = target => target === canvas || (target === stage && canvas.style.clipPath !== '');
 let stageFrameCache=null;
 K.initStageUI({canvas,refit:()=>{stageFrameCache=null;}});
@@ -65,6 +66,7 @@ Live2DCubismCore.Model.fromMoc=function(moc){const model=nativeFromMoc.call(this
 const evidenceNode=document.createElement('script');evidenceNode.type='application/json';evidenceNode.id='pilot-evidence';document.body.append(evidenceNode);
 const look={x:0,y:0,targetX:0,targetY:0};let pointer,libraryFilter='all',gridPage=1,gridPageSize=K.libraryPageSize(),libraryThumbs={},sortMode='name',sortDirection='asc';
 const libraryPrefs=K.Store('azurlane-interaction');sortMode=libraryPrefs.get('sortMode','name');sortDirection=libraryPrefs.get('sortDirection','asc');
+fixedView.checked=libraryPrefs.get('fixedInteractionView',true);
 K.initTheme(libraryPrefs);K.bindThemePalette($('btnTheme'),libraryPrefs);
 $('thumbGrid').dataset.density=libraryPrefs.get('density','standard');
 $('thumbGrid').dataset.kitDensityReady='1';
@@ -195,7 +197,11 @@ $('interaction-voice').onclick=()=>{
  auditionVoice(voiceClip(selected,'touch_head',favor)||voiceClip(selected,'touch_1',favor)||clips[0]);
 };
 $('voice-stop').onclick=()=>stopChannel('voice');
-$('reset-state').onclick=()=>{stopAudio();controller?.reset();hintArea=null;hintAdvance=false;clearHint();};
+$('reset-state').onclick=()=>{stopAudio();adapter?.setInteractionViewFixed?.(false);controller?.reset();hintArea=null;hintAdvance=false;clearHint();};
+fixedView.onchange=()=>{
+ libraryPrefs.set('fixedInteractionView',fixedView.checked);
+ adapter?.setInteractionViewFixed?.(fixedView.checked);
+};
 hintButton.onclick=()=>{
  hintsEnabled=!hintsEnabled;
  hintButton.setAttribute('aria-pressed',String(hintsEnabled));
@@ -288,6 +294,7 @@ const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('point
  onModeChange:mode=>{
   cancelInteraction();
   clearHint();
+  adapter?.setInteractionViewFixed?.(mode==='interact'&&fixedView.checked);
   K.clearToasts('azur-interaction');
   if(mode==='interact'){
    viewerUI.tools.exitEditing();
@@ -301,7 +308,20 @@ const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('point
   }else if($('floatPanel').dataset.tab==='interaction')setPanelOpen('interaction',false);
  },
  move:(dx,dy)=>{view.panX+=dx;view.panY+=dy;},
- tap:event=>{if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(event),hits=adapter.hits(p.x,p.y);evidence.interaction.hits=hits;if(selected.type==='live2d'){controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));controller.end(p.x,p.y);}else{const hit=hits[0];if(!hit||!controller.touch(hit,{drag:false}))spineBasic(hit);}}
+ tap:event=>{
+  if(!view.playing)$('play').click();
+  unlockAudio().catch(()=>{});
+  const p=localPoint(event),hits=adapter.hits(p.x,p.y);
+  evidence.interaction.hits=hits;
+  if(selected.type==='live2d'){
+   if(fixedView.checked)adapter.setInteractionViewFixed(true);
+   controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));
+   controller.end(p.x,p.y);
+  }else{
+   const hit=hits[0];
+   if(!hit||!controller.touch(hit,{drag:false}))spineBasic(hit);
+  }
+ }
 });
 stage.addEventListener('pointerdown',e=>{
  if(pointer||!isStagePointer(e.target)||e.button!==0||!view.ready||exporting)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={id:e.pointerId,x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
@@ -346,7 +366,7 @@ const viewerUI=window.createInteractionViewerUI({
  setPlaying:playing=>{if(!exporting&&view.playing!==playing)$('play').click();},
  setSpeed:speed=>{if(!exporting)view.speed=speed;},
  setLoop:loop=>{if(exporting)return;$('loop').checked=loop;$('loop').onchange();},
- selectAnimation:name=>{if(!view.ready||exporting||name==='effect'&&adapter?.effectTimeline)return;if(!view.playing)$('play').click();$('animation').value=name;$('animation').onchange();},
+ selectAnimation:name=>{if(!view.ready||exporting||name==='effect'&&adapter?.effectTimeline)return;if(stage.dataset.panMode!=='interact')adapter?.setInteractionViewFixed?.(false);if(!view.playing)$('play').click();$('animation').value=name;$('animation').onchange();},
  seek:time=>{if(!view.ready||exporting)return;adapter?.seek?.(time);if(controller){controller.state.actionTime=time;controller.state.normalizedTime=time/Math.max(.001,controller.duration||adapter?.timeline?.().duration||1);for(const event of controller.events||[])event.fired=event.time<=time;controller.pendingVoicePlayed=true;}stopAudio();},
  effectPlayback:()=>view.ready&&adapter?.effectTimeline?{...adapter.effectTimeline.state(),ready:!exporting}:null,
  seekEffect:time=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.seek(time);adapter?.refreshEffect?.();},
@@ -367,6 +387,7 @@ K.initCleanChrome();
 function controls(){
  $('animation').replaceChildren(...selected.animations.map(name=>{const o=document.createElement('option');o.value=o.textContent=name;return o;}));$('animation').disabled=false;$('play').disabled=false;viewerUI.refreshAnimations();
  for(const id of ['reset-state','show-hint'])$(id).disabled=false;
+ $('fixed-view-setting').hidden=selected.type!=='live2d';
  const areas=[...new Set(array(selected.interaction.hitAreas).map(h=>h.id))];$('hit-area').replaceChildren(...areas.map(name=>{const o=document.createElement('option');o.value=o.textContent=name;return o;}));$('hit-trigger').disabled=!areas.length;
  $('hit-trigger').onclick=()=>{const area=$('hit-area').value;unlockAudio().catch(()=>{});if(controller instanceof Live2DController){controller.start([area],0,0);controller.end(0,0);}else if(!controller.touch(area,{drag:false}))spineBasic(area);};
  $('voice').replaceChildren(...selected.voice.activeClips.map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=(labels[c.cue]||c.cue)+(c.variant==='skin'?' · 皮肤':'')+(c.threshold?' · '+(c.threshold>=1000?'誓约':'好感')+' '+(c.threshold>=1000?c.threshold-1000:c.threshold):'');return o;}));
@@ -512,8 +533,10 @@ async function live2dPortrait(model,generation){
  });
  let playSerial=0, activeMotion=model.defaultAnimation;
  let stageCrop = authoredLive2DFrame(model.id, activeMotion);
+ let displayedStageCrop, renderedStageMotion, stageCropFixed = false;
  let stageClip = null;
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
+  setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&displayedStageCrop!==undefined;},
   effectTimeline,
   refreshEffect:()=>{
    if(!effectTimeline)return;
@@ -730,7 +753,13 @@ async function live2dPortrait(model,generation){
   if (app.renderer.screen.width !== w || app.renderer.screen.height !== h) app.renderer.resize(w, h);
   const frame = stageFrame();
   fittingBounds ||= K.live2DViewBounds(internal, natural, [...model.interaction.hitAreas.map(a => a.id), ...portraitSurrounds]);
-  const crop = live2DFrameAtPose(stageCrop, internal);
+  // Interaction keeps the last displayed shot, including its rotation and crop.
+  if (!stageCropFixed) {
+   displayedStageCrop = live2DFrameAtPose(stageCrop, internal) ?? null;
+   stageCropFixed = fixedView.checked && stage.dataset.panMode === 'interact'
+    && !controller.state.motionPending && renderedStageMotion === activeMotion;
+  }
+  const crop = displayedStageCrop;
   const fit = crop ? stageBoundsForFrame(crop) : fittingBounds;
   const scale = Math.min(frame.width / fit.width, frame.height / fit.height) * .92 * view.zoom;
   const rotation = crop?.rotation ?? 0, cos = Math.cos(rotation), sin = Math.sin(rotation);
@@ -738,7 +767,7 @@ async function live2dPortrait(model,generation){
   live.scale.set(scale);
   live.position.set(frame.x + view.panX + (pivotX * cos - pivotY * sin - fit.x) * scale,
    frame.y + view.panY + (pivotX * sin + pivotY * cos - fit.y) * scale);
-  if (stageCrop) {
+  if (crop) {
    // Cubism manages its own WebGL scissor state. Clip only the displayed canvas.
    const halfWidth = fit.width * scale / 2, halfHeight = fit.height * scale / 2;
    const x = frame.x + view.panX, y = frame.y + view.panY;
@@ -762,6 +791,7 @@ async function live2dPortrait(model,generation){
    live.update(dt * 1000 * view.speed);
   }
   app.render();
+  renderedStageMotion = activeMotion;
   evidence.effect = effectTimeline?.state() || null;
  };
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
