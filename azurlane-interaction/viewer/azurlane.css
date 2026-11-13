@@ -174,7 +174,7 @@
 .azurlane-viewer #interaction-panel #reset-state,
 .azurlane-viewer #interaction-panel #show-hint,
 .azurlane-viewer #interaction-panel #interaction-voice,
-.azurlane-viewer #interaction-panel #hit-trigger {
+.azurlane-viewer #interaction-panel #refit-interaction {
   width: 100%;
   margin: 0 0 7px;
 }
@@ -224,11 +224,6 @@
 
 .azurlane-viewer #interaction-panel #dialogue:empty {
   display: none;
-}
-
-.azurlane-viewer #interaction-panel #hit-area {
-  width: 100%;
-  margin: 8px 0;
 }
 
 .azurlane-viewer .playbar-controls > label {

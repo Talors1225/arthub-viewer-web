@@ -1,6 +1,7 @@
 // Reviewed scene anchors. The original models and render order are unchanged.
 // These layers sit outside the illustrated scene and can dominate its bounds.
 const rules = {
+ dafeng_4: { surrounds:['ArtMesh149','ArtMesh269','ArtMesh270','ArtMesh271'] },
  yunlong_3: { anchors:['yc2_bj'], surrounds:['kkkkk','kkkkk2','kkkkk3','kkkkk4'] },
  guanghui_9: { anchors:['ArtMesh292'], surrounds:['ArtMesh545','ArtMesh546','ArtMesh416','ArtMesh518','ArtMesh519','ArtMesh977','ArtMesh978','ArtMesh979','ArtMesh980'] },
  baifeng: { surrounds:['bj_fw1'] },

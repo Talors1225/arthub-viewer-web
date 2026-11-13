@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261104-unified-final">
 <link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261104-unified-final">
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261113-interaction-usability"></script>
   <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
   <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
 </head>
@@ -44,7 +44,7 @@
       <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
     </div>
     <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
-    <button id="btnStagePan" type="button" title="开启立绘互动" aria-label="开启立绘互动" aria-pressed="false" disabled></button>
+    <button id="btnStagePan" type="button" data-stage-primary title="开启立绘互动" aria-label="开启立绘互动" aria-pressed="false" hidden disabled></button>
     <button id="fit" type="button" title="适应窗口" aria-label="适应窗口">适应</button>
     <button id="reset" type="button" title="恢复当前立绘初始状态" aria-label="恢复初始状态">重置</button>
   </div>
@@ -93,7 +93,7 @@
     <div class="rp-panel-head">
       <div class="rp-tabs" role="tablist" aria-label="面板分类">
         <button class="on" type="button" data-panel-tab="anim" aria-selected="true">动画</button>
-        <button type="button" data-panel-tab="interaction" aria-selected="false">互动</button>
+        <button type="button" data-panel-tab="interaction" aria-selected="false" hidden>互动</button>
         <button type="button" data-panel-tab="voice" aria-selected="false">声音</button>
       </div>
       <button id="panel-close" class="rp-panel-close" type="button" title="关闭面板" aria-label="关闭面板">×</button>
@@ -164,7 +164,7 @@
   <script src="../../common/interaction-viewer-tools.js?v=20261111-export-frame"></script>
   <script src="../../common/interaction-viewer-ui.js?v=aaa6852ff15b"></script>
   <script src="../vendor/spine-webgl-4.2.js?v=20261104-unified-final"></script>
-  <script>import('./app.mjs?v=20261112-export-repair').catch(window.__crosscoreBootError);</script>
+  <script>import('./app.mjs?v=20261113-interaction-usability').catch(window.__crosscoreBootError);</script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

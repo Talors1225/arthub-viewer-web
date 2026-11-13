@@ -133,7 +133,7 @@
     }
     function activate(name) {
       const tab = [...tabs.querySelectorAll('button')].find(node => key(node) === name);
-      if (!tab || tab.disabled) return;
+      if (!tab || tab.hidden || tab.disabled) return;
       K.hideMenu?.(); K.closeToolPopup?.();
       if (window.matchMedia?.('(max-width: 720px)').matches) collapsePlayback();
       const same = panel.classList.contains('open') && pageKey(activePage() || {dataset:{}}) === name;
@@ -225,9 +225,8 @@
         }
       }
       for (const name of ['pose','voice','interaction']) {
-        if (name === 'interaction' && document.getElementById('btnStagePan')) continue;
         const tab = [...tabs.querySelectorAll('button')].find(node => key(node) === name);
-        if (tab && !tab.hidden) items.push({group:name === 'pose' ? '工具' : labels[name],label:labels[name],replaces:name === 'voice' ? ['btnVoiceSettings','btnVoice'] : [],disabled:tab.disabled,fn:() => activate(name)});
+        if (tab && !tab.hidden) items.push({group:name === 'pose' ? '工具' : labels[name],label:name === 'interaction' ? '互动设置' : labels[name],replaces:name === 'voice' ? ['btnVoiceSettings','btnVoice'] : [],disabled:tab.disabled,fn:() => activate(name)});
       }
       const reset = document.getElementById('btnReset2');
       if (reset) items.push({group:'画面',label:'重置画面',disabled:reset.disabled,fn:() => reset.click()});
@@ -302,7 +301,7 @@
       if (queued) return; queued = true;
       requestAnimationFrame(() => { queued = false; refresh(); });
     };
-    new MutationObserver(queue).observe(tabs,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    new MutationObserver(queue).observe(tabs,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','disabled']});
     if (toolbar) new MutationObserver(queue).observe(toolbar,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
     new MutationObserver(queue).observe(panel,{subtree:true,attributes:true,attributeFilter:['class']});
     panel.addEventListener('click',queue);

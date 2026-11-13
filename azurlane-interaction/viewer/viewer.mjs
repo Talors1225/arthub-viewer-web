@@ -1,14 +1,14 @@
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261113-az-hint-cycle';
 import {EffectTimeline} from './effect-timeline.mjs?v=499c19e6892b';
 import {hasEffectControls} from './effect-controls.mjs?v=499c19e6892b';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261113-az-interaction-hint';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261113-interaction-usability';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage'),interactionHint=$('interaction-hint'),hintButton=$('show-hint');
 const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),nextHintButton=$('next-hint');
 let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false;
-let hintsEnabled=true,hintArea=null,hintInteractionCount=0,hintAdvance=false;
+let hintsEnabled=true,hintArea=null,hintInteractionCount=0,hintAdvance=false,hasInteraction=false;
 const interactButton=$('btnStagePan');
 const fixedView=$('fixed-view');
 const isStagePointer = target => target === canvas || (target === stage && canvas.style.clipPath !== '');
@@ -81,7 +81,7 @@ function variantLabel(m){return /_hx$/.test(m.id)?'HX版':/_asmr$/.test(m.id)?'A
 function stageName(m){const variant=variantLabel(m);return portraitName(m)+(variant?'（'+variant+'）':'');}
 function entry(m){const url=new URL(BASE+'/viewer/index.html?id='+encodeURIComponent(m.id),location.href);return {k:'azurlane:'+m.id,src:'azurlane-interaction',t:stageName(m),s:m.type==='live2d'?'Live2D':'Spine',u:url.pathname+url.search};}
 function zoomTo(next,x,y){if(!Number.isFinite(next)||next<=0)return;next=Math.max(.1,Math.min(8,next));if(Number.isFinite(x)){const r=canvas.getBoundingClientRect(),frame=stageFrame(),f=next/view.zoom;view.panX=f*view.panX+(1-f)*(x-r.left-frame.x);view.panY=f*view.panY+(1-f)*(y-r.top-frame.y);}view.zoom=next;for(const id of ['zOut','zPct','zIn'])$(id).disabled=!view.ready;$('zPct').textContent=next<100?Math.round(next*100)+'%':next.toPrecision(3)+'×';}
-$('zIn').onclick=()=>zoomTo(view.zoom*1.25);$('zOut').onclick=()=>zoomTo(view.zoom/1.25);$('fit').onclick=()=>{view.panX=view.panY=0;zoomTo(1);};$('zPct').onclick=()=>$('fit').click();
+$('zIn').onclick=()=>zoomTo(view.zoom*1.25);$('zOut').onclick=()=>zoomTo(view.zoom/1.25);$('fit').onclick=()=>{view.panX=view.panY=0;adapter?.refit?.();zoomTo(1);};$('zPct').onclick=()=>$('fit').click();
 stage.addEventListener('wheel',e=>{if(!isStagePointer(e.target))return;e.preventDefault();zoomTo(view.zoom*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY);},{passive:false});
 let ctx,muted=false,audioSerial=0,audioScope=0,voiceAnalyser,mouth=0;const channels=new Map(),buffers=new Map();
 async function unlockAudio(){
@@ -104,7 +104,7 @@ function stopAudio(){audioScope++;for(const ch of [...channels.keys()])stopChann
 async function playSound(bank,cue,options={}){
  if(!cue||muted||!selected)return;const model=selected,scope=audioScope;
  const clip=options.voice?voiceClip(model,cue,controller?.state.favor??0,options.exact):model.soundBanks?.[bank]?.find(c=>c.name===cue);
- if(!clip){const key=bank+':'+cue;if(!evidence.audio.missing.includes(key))evidence.audio.missing.push(key);return;}
+ if(!clip){const key=bank+':'+cue;if(!evidence.audio.missing.includes(key))evidence.audio.missing.push(key);if(options.voice){$('voice-status').textContent='这个动作暂无匹配台词。';$('dialogue').textContent='';}return;}
  const channel=options.channel||(options.voice?'voice':'sfx'+(++audioSerial%8));const previous=channels.get(channel);if(channel==='bgm'&&previous?.clip===clip.name&&previous.gain){previous.baseVolume=options.volume??1;previous.gain.gain.setTargetAtTime(previous.baseVolume*volume,ctx.currentTime,.05);return;}stopChannel(channel);
  const job={cancelled:false};channels.set(channel,job);
  let buffer=buffers.get(clip.url);
@@ -133,7 +133,7 @@ function sound(bank,cue,options){
  playSound(bank,cue,options).catch(error=>{
   evidence.audio.error=error.message;
   $('voice-status').textContent='声音暂时无法播放，可以重试。';
-  if(options?.voice)K.toast('台词播放失败。打开「互动」可以试听重试。','err',4000,'azur-audio');
+  if(options?.voice)K.toast('台词播放失败。打开「更多 → 声音」可以试听重试。','err',4000,'azur-audio');
  });
 }
 function updateAudio(dt){let rms=0;if(voiceAnalyser&&ctx?.state==='running'){const pcm=new Float32Array(voiceAnalyser.fftSize);voiceAnalyser.getFloatTimeDomainData(pcm);rms=Math.sqrt(pcm.reduce((s,v)=>s+v*v,0)/pcm.length);}evidence.audio.rms=rms;evidence.audio.maxRms=Math.max(rms,evidence.audio.maxRms);const smooth=selected?.skinConfig?.lip_smoothing||selected?.interaction?.mouth?.Smoothing||.08;mouth+=(rms-mouth)*(1-Math.exp(-dt/Math.max(.01,smooth)));}
@@ -173,7 +173,7 @@ function setPanelOpen(name,open){document.body.classList.toggle(name+'-open',ope
 $('railGrid').onclick=()=>{const open=!document.body.classList.contains('library-open');setPanelOpen('library',open);if(open&&innerWidth<=760)setPanelOpen('interaction',false);};
 $('btnAnimTab').onclick=()=>{const open=!document.body.classList.contains('interaction-open')||$('floatPanel').dataset.tab==='interaction';if(open)viewerUI.showTab('anim');setPanelOpen('interaction',open);if(open&&innerWidth<=760)setPanelOpen('library',false);};
 $('gridClose').onclick=()=>setPanelOpen('library',false);$('panel-close').onclick=()=>setPanelOpen('interaction',false);
-document.querySelectorAll('[data-panel-tab]').forEach(tab=>tab.addEventListener('click',()=>{const name=tab.dataset.panelTab;document.querySelectorAll('[data-panel-tab]').forEach(button=>{const active=button===tab;button.classList.toggle('on',active);button.setAttribute('aria-selected',String(active));});document.querySelectorAll('[data-panel-page]').forEach(page=>page.classList.toggle('on',page.dataset.panelPage===name));if(name==='interaction'&&view.ready)stagePan.setMode('interact');}));
+document.querySelectorAll('[data-panel-tab]').forEach(tab=>tab.addEventListener('click',()=>{if(tab.hidden||tab.disabled)return;const name=tab.dataset.panelTab;document.querySelectorAll('[data-panel-tab]').forEach(button=>{const active=button===tab;button.classList.toggle('on',active);button.setAttribute('aria-selected',String(active));});document.querySelectorAll('[data-panel-page]').forEach(page=>page.classList.toggle('on',page.dataset.panelPage===name));if(name==='interaction'&&view.ready&&hasInteraction){if(stage.dataset.panMode!=='interact')stagePan.setMode('interact');setPanelOpen('interaction',true);}}));
 $('railStar').onclick=()=>{if(selected){K.favs.toggle(entry(selected));populate();}};
 $('railThumb').onclick=()=>$('fit').click();
 $('btnPrev').onclick=()=>step(-1);$('btnNext').onclick=()=>step(1);
@@ -181,7 +181,7 @@ $('btnPrev').onclick=()=>step(-1);$('btnNext').onclick=()=>step(1);
 function step(direction){if(!allModels.length)return;const index=allModels.findIndex(m=>m.id===selected?.id);const next=index<0?(direction>0?0:allModels.length-1):(index+direction+allModels.length)%allModels.length;setPanelOpen('library',false);loadModel(allModels[next].id).catch(fail);}
 $('play').onclick=()=>{view.playing=!view.playing;$('play').textContent=view.playing?'暂停':'播放';if(ctx)(view.playing?ctx.resume():ctx.suspend()).catch(()=>{});};
 $('speed').onchange=()=>view.speed=Number($('speed').value);
-$('animation').onchange=()=>{unlockAudio().catch(()=>{});controller?.action($('animation').value,{force:true,idle:$('loop').checked,interactive:true});};
+$('animation').onchange=()=>{unlockAudio().catch(()=>{});controller?.action($('animation').value,{force:true,idle:$('loop').checked,interactive:true,manual:true});};
 $('loop').onchange=()=>$('animation').onchange();
 $('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'声音：关':'声音：开';evidence.audio.muted=muted;if(muted)stopAudio();else unlockAudio().catch(()=>{});};
 function auditionVoice(clip){
@@ -197,7 +197,8 @@ $('interaction-voice').onclick=()=>{
  auditionVoice(voiceClip(selected,'touch_head',favor)||voiceClip(selected,'touch_1',favor)||clips[0]);
 };
 $('voice-stop').onclick=()=>stopChannel('voice');
-$('reset-state').onclick=()=>{stopAudio();adapter?.setInteractionViewFixed?.(false);controller?.reset();hintArea=null;hintAdvance=false;clearHint();};
+$('reset-state').onclick=()=>{cancelInteraction();stopAudio();adapter?.setInteractionViewFixed?.(false);controller?.reset();$('fit').click();hintArea=null;hintAdvance=false;clearHint();};
+$('refit-interaction').onclick=()=>{$('fit').click();setPanelOpen('interaction',false);};
 fixedView.onchange=()=>{
  libraryPrefs.set('fixedInteractionView',fixedView.checked);
  adapter?.setInteractionViewFixed?.(fixedView.checked);
@@ -248,11 +249,17 @@ function findHintPoint(area,rect,gestures,live){
  return null;
 }
 function updateInteractionHint(){
- if(!hintsEnabled||!view.ready||exporting||stage.dataset.panMode!=='interact'||stage.dataset.clickMode==='part-editing'||
-    stage.dataset.clickMode==='pose'||stage.dataset.pinching||controller.state.busy||pointer||$('gridView').classList.contains('open')){
+ if(!hasInteraction||!hintsEnabled||!view.ready||exporting||stage.dataset.panMode!=='interact'||stage.dataset.clickMode==='part-editing'||
+    stage.dataset.clickMode==='pose'||stage.dataset.pinching||pointer||$('gridView').classList.contains('open')){
   clearHint();
   return;
  }
+ if(controller.state.busy||controller.state.motionPending){
+  interactionHint.hidden=true;hintNav.hidden=false;nextHintButton.disabled=true;
+  if(hintCount.textContent!=='动作播放中')hintCount.textContent='动作播放中';
+  return;
+ }
+ nextHintButton.disabled=false;
  if(controller.state.interactions!==hintInteractionCount){
   hintInteractionCount=controller.state.interactions;
   hintAdvance=true;
@@ -268,7 +275,7 @@ function updateInteractionHint(){
   const point=findHintPoint(area,rect,gestures,live);
   if(point)candidates.push({...point,index:i});
  }
- if(!candidates.length){clearHint();return;}
+ if(!candidates.length){interactionHint.hidden=true;hintNav.hidden=false;nextHintButton.disabled=true;if(hintCount.textContent!=='当前画面暂无可用提示')hintCount.textContent='当前画面暂无可用提示';return;}
  const current=source.findIndex(area=>area.id===hintArea);
  let next=hintAdvance?-1:candidates.findIndex(point=>point.id===hintArea);
  if(next<0)next=candidates.findIndex(point=>point.index>current);
@@ -298,13 +305,13 @@ const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('point
   K.clearToasts('azur-interaction');
   if(mode==='interact'){
    viewerUI.tools.exitEditing();
+   if(controller?.actionOptions?.manual){controller.playIdle();adapter.setInteractionViewFixed?.(false);adapter.refit?.();}
    $('interaction-more').open=false;
    if(!view.playing)$('play').click();
    unlockAudio().catch(()=>{});
-   viewerUI.showTab('interaction');
    setPanelOpen('library',false);
-   setPanelOpen('interaction',true);
-   K.toast(hintsEnabled?'互动已开启 · 按画面上的提示操作。':'互动已开启 · 可以直接操作立绘。','info',3600,'azur-interaction');
+   setPanelOpen('interaction',false);
+   if(!$('playbar').classList.contains('collapsed'))$('playbarToggle').click();
   }else if($('floatPanel').dataset.tab==='interaction')setPanelOpen('interaction',false);
  },
  move:(dx,dy)=>{view.panX+=dx;view.panY+=dy;},
@@ -366,7 +373,7 @@ const viewerUI=window.createInteractionViewerUI({
  setPlaying:playing=>{if(!exporting&&view.playing!==playing)$('play').click();},
  setSpeed:speed=>{if(!exporting)view.speed=speed;},
  setLoop:loop=>{if(exporting)return;$('loop').checked=loop;$('loop').onchange();},
- selectAnimation:name=>{if(!view.ready||exporting||name==='effect'&&adapter?.effectTimeline)return;if(stage.dataset.panMode!=='interact')adapter?.setInteractionViewFixed?.(false);if(!view.playing)$('play').click();$('animation').value=name;$('animation').onchange();},
+  selectAnimation:name=>{if(!view.ready||exporting||name==='effect'&&adapter?.effectTimeline)return;stagePan.setMode('pan');adapter?.setInteractionViewFixed?.(false);if(!view.playing)$('play').click();$('animation').value=name;$('animation').onchange();},
  seek:time=>{if(!view.ready||exporting)return;adapter?.seek?.(time);if(controller){controller.state.actionTime=time;controller.state.normalizedTime=time/Math.max(.001,controller.duration||adapter?.timeline?.().duration||1);for(const event of controller.events||[])event.fired=event.time<=time;controller.pendingVoicePlayed=true;}stopAudio();},
  effectPlayback:()=>view.ready&&adapter?.effectTimeline?{...adapter.effectTimeline.state(),ready:!exporting}:null,
  seekEffect:time=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.seek(time);adapter?.refreshEffect?.();},
@@ -376,7 +383,7 @@ const viewerUI=window.createInteractionViewerUI({
  tools:{
   identity:()=>selected?.id+':'+loadGeneration,editor:()=>editor,name:()=>selected?.name||selected?.id||'azurlane',
   reload:()=>{const id=retryId||selected?.id;if(id)return loadModel(id).catch(fail);},openPanel:open=>setPanelOpen('interaction',open),stopAudio,
-  setExporting:value=>{if(value){stagePan.cancel();cancelInteraction();clearHint();}exporting=value;interactButton.disabled=value||!view.ready;viewerUI.update(true);},capture:(state,format,quality)=>adapter.capture(state,format,quality),
+   setExporting:value=>{if(value){stagePan.cancel();cancelInteraction();clearHint();}exporting=value;interactButton.disabled=value||!view.ready||!hasInteraction;viewerUI.update(true);},capture:(state,format,quality)=>adapter.capture(state,format,quality),
   videoDuration:state=>adapter?.videoDuration?.(state)??state.duration,setBackground:()=>{},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume,voiceTab:'voice',
@@ -387,9 +394,17 @@ K.initCleanChrome();
 function controls(){
  $('animation').replaceChildren(...selected.animations.map(name=>{const o=document.createElement('option');o.value=o.textContent=name;return o;}));$('animation').disabled=false;$('play').disabled=false;viewerUI.refreshAnimations();
  for(const id of ['reset-state','show-hint'])$(id).disabled=false;
- $('fixed-view-setting').hidden=selected.type!=='live2d';
- const areas=[...new Set(array(selected.interaction.hitAreas).map(h=>h.id))];$('hit-area').replaceChildren(...areas.map(name=>{const o=document.createElement('option');o.value=o.textContent=name;return o;}));$('hit-trigger').disabled=!areas.length;
- $('hit-trigger').onclick=()=>{const area=$('hit-area').value;unlockAudio().catch(()=>{});if(controller instanceof Live2DController){controller.start([area],0,0);controller.end(0,0);}else if(!controller.touch(area,{drag:false}))spineBasic(area);};
+ const areas=new Set(array(selected.interaction.hitAreas).map(h=>h.id));
+ // Basic head/body voice reactions are available by tapping in view mode.
+ // The dedicated mode is only for authored gesture/state interactions.
+ hasInteraction=selected.type==='live2d'
+  ? array(selected.interaction.configs).some(config=>areas.has(config.draw_able_name)&&evidence.model.internalModel.getDrawableIndex(config.draw_able_name)>=0&&
+    (config.offset_x||config.offset_y||config.offset_circle||[2,3,6,8,9,11,15].includes(Number(config.action_trigger?.type))))
+  : areas.size>0&&array(selected.interaction.spine?.drag_data?.config_client).length>0;
+ const tab=document.querySelector('[data-panel-tab="interaction"]');
+ interactButton.hidden=!hasInteraction;tab.hidden=tab.disabled=!hasInteraction;
+ $('fixed-view-setting').hidden=!hasInteraction||selected.type!=='live2d';
+ evidence.interaction.available=hasInteraction;
  $('voice').replaceChildren(...selected.voice.activeClips.map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=(labels[c.cue]||c.cue)+(c.variant==='skin'?' · 皮肤':'')+(c.threshold?' · '+(c.threshold>=1000?'誓约':'好感')+' '+(c.threshold>=1000?c.threshold-1000:c.threshold):'');return o;}));
  $('interaction-note').textContent='按画面上的提示操作，也可以点「下一处」查看其他位置。';
  $('interaction-voice').hidden=!selected.voice.activeClips.length;
@@ -537,6 +552,7 @@ async function live2dPortrait(model,generation){
  let stageClip = null;
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
   setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&displayedStageCrop!==undefined;},
+  refit:()=>{refitPending=true;},
   effectTimeline,
   refreshEffect:()=>{
    if(!effectTimeline)return;
@@ -745,7 +761,7 @@ async function live2dPortrait(model,generation){
     if(time!==null&&!followArtwork)advance(time);else app.render();return canvas;}finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
    dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.rotation=transform.rotation;live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
- let fittingBounds = baseFrame && stageBoundsForFrame(baseFrame);
+ let fittingBounds = baseFrame && stageBoundsForFrame(baseFrame), refitPending=false;
  let stageClipPath = '';
  render = dt => {
   viewerUI.tools.before();
@@ -753,6 +769,10 @@ async function live2dPortrait(model,generation){
   if (app.renderer.screen.width !== w || app.renderer.screen.height !== h) app.renderer.resize(w, h);
   const frame = stageFrame();
   fittingBounds ||= K.live2DViewBounds(internal, natural, [...model.interaction.hitAreas.map(a => a.id), ...portraitSurrounds]);
+  if(refitPending&&!controller.state.motionPending&&renderedStageMotion===activeMotion){
+   fittingBounds=baseFrame?stageBoundsForFrame(baseFrame):K.live2DViewBounds(internal,natural,[...model.interaction.hitAreas.map(a=>a.id),...portraitSurrounds]);
+   stageCropFixed=false;refitPending=false;
+  }
   // Interaction keeps the last displayed shot, including its rotation and crop.
   if (!stageCropFixed) {
    displayedStageCrop = live2DFrameAtPose(stageCrop, internal) ?? null;
@@ -767,7 +787,7 @@ async function live2dPortrait(model,generation){
   live.scale.set(scale);
   live.position.set(frame.x + view.panX + (pivotX * cos - pivotY * sin - fit.x) * scale,
    frame.y + view.panY + (pivotX * sin + pivotY * cos - fit.y) * scale);
-  if (crop) {
+  if (crop || portraitSurrounds.size) {
    // Cubism manages its own WebGL scissor state. Clip only the displayed canvas.
    const halfWidth = fit.width * scale / 2, halfHeight = fit.height * scale / 2;
    const x = frame.x + view.panX, y = frame.y + view.panY;
@@ -919,7 +939,9 @@ async function getJson(url,required=true,signal){try{return JSON.parse(new TextD
 async function loadModel(id,{history=true}={}){
  if(exporting)return false;
  loadAbort?.abort();loadAbort=new AbortController();retryId=id;
- stagePan.cancel();cancelInteraction();
+ stagePan.cancel();stagePan.setMode('pan');cancelInteraction();hasInteraction=false;interactButton.hidden=true;
+ const interactionTab=document.querySelector('[data-panel-tab="interaction"]');interactionTab.hidden=interactionTab.disabled=true;
+ setPanelOpen('interaction',false);
  interactButton.disabled=true;for(const key of ['reset-state','show-hint'])$(key).disabled=true;$('interaction-voice').hidden=true;clearHint();hintArea=null;hintAdvance=false;hintInteractionCount=0;K.clearToasts('azur-interaction');K.clearToasts('azur-audio');$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
@@ -931,7 +953,7 @@ async function loadModel(id,{history=true}={}){
  if(generation!==loadGeneration)return false;selected=model;if(audio)Object.assign(model,audio);if(animator)model.animator=animator;evidence.selected=model;$('active-name').textContent=stageName(model);populate();
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
  controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:highestFavor(model)}):new SpineController(model,adapter,{storage:localStorage,favor:highestFavor(model)});evidence.controller=controller;evidence.adapter=adapter;controls();controller.playIdle();
- view.ready=evidence.ready=true;interactButton.disabled=false;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
+  view.ready=evidence.ready=true;interactButton.disabled=!hasInteraction;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
  if(history){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);K.history.push(entry(model));}return true;
 }
 function record(){

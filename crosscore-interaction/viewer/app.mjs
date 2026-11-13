@@ -22,7 +22,7 @@ const models = catalog.models.filter(model => model.available), modelById = new 
 let model, scene, controller, transition, transitionUntil = 0, requestId = 0, last = performance.now() / 1000;
 let audio = new Audio(), audioResult = null, cueName = null, pointer = null, lastFailure = null, lastActionState = '';
 let callbacks = [], specialMode = false, searchTimer, pendingFit = null, modelGroupFilter = 'all';
-let viewZoom = 1;
+let viewZoom = 1, hasInteraction = false;
 const viewPan = { x: 0, y: 0 };
 const playback = { playing: true, speed: 1, loop: true, time: 0 };
 let animationPreview = null, activeTrack = 0;
@@ -313,7 +313,10 @@ async function loadPrefab(key, ownerRequest) {
   viewerUI.refreshAnimations(); fit(); pendingFit = { scene: loaded, at: now() + 0.1, expires: now() + 2 }; return loaded;
 }
 async function loadModel(identity) {
-  stagePan.cancel(); viewPan.x = viewPan.y = 0;
+  stagePan.cancel(); stagePan.setMode('pan'); viewPan.x = viewPan.y = 0;
+  hasInteraction = false; $('#btnStagePan').hidden = true;
+  const interactionTab = $('[data-panel-tab="interaction"]'); interactionTab.hidden = interactionTab.disabled = true;
+  setPanelOpen('interaction', false);
   const selected = modelById.get(Number(identity));
   if (!selected?.available) throw new Error(selected?.unavailableReason || '该立绘暂无完整本地资源');
   viewerUI.tools.prepareLoad(); editor = null;
@@ -331,7 +334,9 @@ async function loadModel(identity) {
   if (!loaded || request !== requestId) return;
   previewScene = loaded;
   controller = new InteractionController({ ...model, idle: loaded.idle }, handleInteraction, track => scene?.trackStatus(track));
-  $('#loading').hidden = true; $('#btnStagePan').disabled = false; K.setLibraryStageReady(true);
+  hasInteraction = model.actions.some(action => action.sName !== 'in' && action.areas?.some(area => area[2] > 0 && area[3] > 0));
+  interactionTab.hidden = interactionTab.disabled = !hasInteraction;
+  $('#loading').hidden = true; $('#btnStagePan').disabled = $('#btnStagePan').hidden = !hasInteraction; K.setLibraryStageReady(true);
   $('#stage-info').textContent = `${model.name} · ${model.actions.length} 条互动配置`;
   const thumb = thumbnailFor(model); K.setPreview($('#railThumb'), thumb ? '../../thumbs/' + thumb : null);
   document.title = model.name + ' · ArtHub';
@@ -431,7 +436,7 @@ const viewerUI = window.createInteractionViewerUI({
   setPlaying: playing => { playback.playing = playing; if (!playing) audio.pause(); else if (audioResult?.status === 'playing') audio.play().catch(() => {}); },
   setSpeed: speed => { playback.speed = speed; },
   setLoop: loop => { const current = timeline(); if (!animationPreview) startAnimationPreview(current.name, current.time, loop); else { playback.loop = loop; for (const layer of scene.layers) { const entry = layer.state.getCurrent(PREVIEW_TRACK); if (entry) entry.loop = loop; } } },
-  selectAnimation: name => { playback.playing = true; startAnimationPreview(name); },
+  selectAnimation: name => { stagePan.setMode('pan'); playback.playing = true; startAnimationPreview(name); },
   seek: time => { const current = timeline(); startAnimationPreview(current.name, time, current.loop); },
   canvas: () => canvas, onError: fail,
   tools: {
@@ -488,13 +493,13 @@ function render() {
   requestAnimationFrame(render);
 }
 const stagePan = K.createStagePan({ stage, button: $('#btnStagePan'), interactiveButton: true, accepts: target => target === canvas || target === overlay,
-  onModeChange: mode => { if (pointer?.started) controller?.endDrag(); pointer = null; if (mode === 'interact') { viewerUI.tools.exitEditing(); $('#interaction-more').open = false; endAnimationPreview(); playback.playing = true; viewerUI.showTab('interaction'); setPanelOpen('library', false); setPanelOpen('interaction', true); } else if ($('#floatPanel').dataset.tab === 'interaction') setPanelOpen('interaction', false); },
+  onModeChange: mode => { if (pointer) releasePointer({ pointerId:pointer.id }, true); if (mode === 'interact') { viewerUI.tools.exitEditing(); $('#interaction-more').open = false; endAnimationPreview(); playback.playing = true; setPanelOpen('library', false); setPanelOpen('interaction', false); K.toast('互动已开启 · 可直接操作立绘，设置在「更多」中。','info',3600,'crosscore-interaction'); } else if ($('#floatPanel').dataset.tab === 'interaction') setPanelOpen('interaction', false); },
   ready: () => !!scene && !!controller && !previewPending && !exporting,
   move: (dx, dy) => { pendingFit = null; viewPan.x += dx; viewPan.y += dy; fit(); },
   tap: event => { const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (action && (!action.gesture || controller.restoreObjects.has(action.index))) { endAnimationPreview(); playback.playing = true; controller.trigger(action.index, now()); } }
 });
 stage.addEventListener('pointerdown', event => {
-  if (!scene || !controller || event.button !== 0 || (event.target !== canvas && event.target !== overlay)) return;
+  if (!scene || !controller || exporting || previewPending || pointer || event.button !== 0 || (event.target !== canvas && event.target !== overlay)) return;
   endAnimationPreview(); playback.playing = true;
   const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (!action) return;
   stage.setPointerCapture(event.pointerId); pointer = { id: event.pointerId, action, previous: point, start: point, at: now(), started: false };
@@ -510,9 +515,13 @@ stage.addEventListener('pointermove', event => {
 });
 function releasePointer(event, cancelled = false) {
   if (!pointer || pointer.id !== event.pointerId) return;
-  if (pointer.started) controller?.endDrag(); else if (!cancelled && (!pointer.action.gesture || controller?.restoreObjects.has(pointer.action.index))) controller?.trigger(pointer.action.index, now()); pointer = null;
+  const down = pointer; pointer = null;
+  if (stage.hasPointerCapture(down.id)) stage.releasePointerCapture(down.id);
+  if (down.started) controller?.endDrag(); else if (!cancelled && (!down.action.gesture || controller?.restoreObjects.has(down.action.index))) controller?.trigger(down.action.index, now());
 }
 stage.addEventListener('pointerup', event => releasePointer(event)); stage.addEventListener('pointercancel', event => releasePointer(event, true));
+stage.addEventListener('lostpointercapture', event => releasePointer(event, true));
+window.addEventListener('blur', () => { if (pointer) releasePointer({ pointerId:pointer.id }, true); });
 K.bindPinch(stage, {
   isChrome: target => target !== canvas && target !== overlay,
   ready: () => !!scene && !!controller && !previewPending && !exporting,
@@ -525,7 +534,12 @@ $('#gridSearch').addEventListener('input', () => {
 $('#model').addEventListener('change', () => { clearTimeout(searchTimer); loadModel($('#model').value).catch(fail); });
 $('#btnPrev').addEventListener('click', () => step(-1)); $('#btnNext').addEventListener('click', () => step(1));
 $('#reset').addEventListener('click', () => model && loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { stagePan.cancel(); viewPan.x = viewPan.y = 0; viewZoom = 1; fit(); if (scene) pendingFit = { scene, at: now(), expires: now() + 2 }; });
-$('#resetInteraction').addEventListener('click', () => model && loadModel(model.id).catch(fail));
+$('#resetInteraction').addEventListener('click', async () => {
+  if (!model) return;
+  const interacting = stage.dataset.panMode === 'interact';
+  try { await loadModel(model.id); if (interacting && hasInteraction) stagePan.setMode('interact'); }
+  catch (error) { fail(error); }
+});
 $('#toggleRegions').addEventListener('click', () => { const show = !$('#regions').checked; $('#regions').checked = show; $('#toggleRegions').textContent = show ? '隐藏热点' : '显示热点'; $('#toggleRegions').setAttribute('aria-pressed', String(show)); });
 $('#railThumb').addEventListener('click', () => $('#fit').click());
 $('#railStar').addEventListener('click', () => { if (model) { K.favs.toggle(favoriteEntry(model)); fillModels(); } });
@@ -548,6 +562,7 @@ $('#btnAnimTab').addEventListener('click', () => { const open = !$('#floatPanel'
 $('#gridClose').addEventListener('click', () => setPanelOpen('library', false));
 $('#panel-close').addEventListener('click', () => setPanelOpen('interaction', false));
 document.querySelectorAll('[data-panel-tab]').forEach(tab => tab.addEventListener('click', () => {
+  if (tab.hidden || tab.disabled) return;
   const pageName = tab.dataset.panelTab;
   document.querySelectorAll('[data-panel-tab]').forEach(button => {
     const active = button === tab;
@@ -555,7 +570,10 @@ document.querySelectorAll('[data-panel-tab]').forEach(tab => tab.addEventListene
     button.setAttribute('aria-selected', String(active));
   });
   document.querySelectorAll('[data-panel-page]').forEach(page => page.classList.toggle('on', page.dataset.panelPage === pageName));
-  if (pageName === 'interaction' && scene && controller) stagePan.setMode('interact');
+  if (pageName === 'interaction' && scene && controller && hasInteraction) {
+    if (stage.dataset.panMode !== 'interact') stagePan.setMode('interact');
+    setPanelOpen('interaction', true);
+  }
 }));
 document.querySelectorAll('[data-group]').forEach(button => button.addEventListener('click', () => {
   modelGroupFilter = button.dataset.group; gridPage = 1;
