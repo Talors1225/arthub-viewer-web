@@ -35,8 +35,8 @@ function stageFrame(){
 const loadingPreview=K.createLoadingPreview(stage);
 const arromanchesPortrait = 'aluomangshi_2';
 const portraitsWithSkinOne = new Set([arromanchesPortrait, 'feiteliedadi_5', 'yuekechengii_4']);
-const synchronizedVideoPortraits = new Map([
- ['yanusi_7', 60], ['aogusite_4', 72], ['adaerbote_3', 20], ['bailong_3', 10], ['jian_3', 16],
+const loopedEffectVideoPortraits = new Set([
+ 'yanusi_7', 'aogusite_4', 'adaerbote_3', 'bailong_3', 'jian_3',
 ]);
 // Reviewed default motions whose independent effects do not close with the character's cycle.
 const blendedVideoPortraits = new Set([
@@ -434,12 +434,6 @@ function controls(){
  $('interaction-note').textContent='提示优先指向本次尚未体验的位置，切换姿态后还会出现新点位。「下一处」查看当前姿态的其他位置；待机、登场等片段可在动画列表直接预览。';
  $('interaction-voice').hidden=!selected.voice.activeClips.length;
 }
-function commonLoopDuration(motionFrames, effectFrames, fps) {
- let a = motionFrames, b = effectFrames;
- while (b) [a, b] = [b, a % b];
- return motionFrames / a * effectFrames / fps;
-}
-
 function loopPhase(time, duration) {
  const phase = time % duration;
  const normalized = phase < 0 ? phase + duration : phase;
@@ -632,16 +626,12 @@ async function live2dPortrait(model,generation){
   const effectDuration = effectTimeline?.fixed ? 0 : effectTimeline?.duration ?? legacyEffect?._motion?.getLoopDuration?.() ?? 0;
   const plan = { item, legacyEffect, motionDuration, duration: motionDuration, effectDuration: 0, transition: 0 };
   if (!Number.isFinite(effectDuration) || effectDuration <= 0) return plan;
-  const syncLimit = synchronizedVideoPortraits.get(model.id);
-  if (syncLimit) {
-   const sourceFPS = item._motion._sourceFrameRate;
-   const fps = Number.isFinite(sourceFPS) && sourceFPS > 0 ? sourceFPS : 60;
-   const motionFrames = Math.round(motionDuration * fps), effectFrames = Math.round(effectDuration * fps);
-   if (motionFrames > 0 && effectFrames > 0 && Math.abs(motionDuration * fps - motionFrames) < .001 &&
-       Math.abs(effectDuration * fps - effectFrames) < .001) {
-    const duration = commonLoopDuration(motionFrames, effectFrames, fps);
-    if (duration <= syncLimit) return { ...plan, duration, motionDuration: motionFrames / fps, effectDuration };
-   }
+  if (loopedEffectVideoPortraits.has(model.id)) {
+   // The selected action defines the file duration. A longer background cycle
+   // must not repeat the action just to reach a common loop boundary.
+   const cycles = Math.round(motionDuration / effectDuration);
+   const closes = cycles > 0 && Math.abs(motionDuration - cycles * effectDuration) < .0001;
+   return { ...plan, effectDuration, transition: closes ? 0 : Math.min(2, motionDuration / 3) };
   }
   if (blendedVideoPortraits.has(model.id) &&
       (playback.name === model.defaultAnimation || model.id === 'wuerlixi_3' && playback.name === 'idle1')) {
@@ -651,7 +641,7 @@ async function live2dPortrait(model,generation){
   }
   return plan;
  }
- api.videoDuration = playback => videoLoopPlan(playback)?.duration ?? playback.duration;
+ api.videoDuration = playback => playback.duration;
  api.capture=(playback={},format,quality)=>{
   const motionFrame = authoredLive2DExportFrame(model.id, playback.name || activeMotion);
   const authoredFrame = live2DFrameAtPose(motionFrame, internal);

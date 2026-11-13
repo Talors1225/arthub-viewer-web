@@ -1428,7 +1428,8 @@
     // Some game scenes contain an oversized, opaque black curtain. Alpha alone
     // counts the curtain as artwork and spends most video pixels on that border.
     // Trim only a flat dark surround on all four sides of a substantial inset
-    // illustration; gradients, edge-to-edge art and fully dark art stay intact.
+    // illustration. The picture can be off-center inside its source canvas;
+    // gradients, edge-to-edge art and fully dark art stay intact.
     const outer = regions[0], ow = outer.maxX - outer.minX, oh = outer.maxY - outer.minY;
     const ix = Math.max(1, Math.floor(ow * .025)), iy = Math.max(1, Math.floor(oh * .025));
     if (ow > 32 && oh > 32) {
@@ -1448,8 +1449,8 @@
         if (tail >= outer.pixels * .55) {
           const trimmed = components(mask), core = trimmed[0];
           if (core && core.pixels >= outer.pixels * .025 && core.pixels <= outer.pixels * .6
-            && core.minX - outer.minX >= ow * .12 && outer.maxX - core.maxX >= ow * .12
-            && core.minY - outer.minY >= oh * .12 && outer.maxY - core.maxY >= oh * .12) regions = trimmed;
+            && core.minX - outer.minX >= ow * .08 && outer.maxX - core.maxX >= ow * .08
+            && core.minY - outer.minY >= oh * .08 && outer.maxY - core.maxY >= oh * .08) regions = trimmed;
         }
       }
     }
