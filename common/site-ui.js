@@ -36,6 +36,7 @@
     const pageKey = node => node.dataset.panelPage || node.dataset.page;
     const labels = {anim:'动画',parts:'部件',pose:'姿势',view:'视图',voice:'声音',interaction:'互动'};
     const toolbar = document.getElementById('toolStrip');
+    const stageActions = toolbar ? [...toolbar.querySelectorAll('button[data-stage-primary]')] : [];
     const trigger = document.getElementById('btnAnimTab') || document.getElementById('btnAnimPanel');
     const close = panel.querySelector('[data-panel-close],#panel-close');
     const library = document.getElementById('gridView');
@@ -178,7 +179,7 @@
       if (more && !more.dataset.sitePlaybackBound) {
         more.dataset.sitePlaybackBound = '1'; more.addEventListener('click',collapsePlayback);
       }
-      const nodes = [document.getElementById('railGrid'),document.getElementById('btnPrev'),quickPlay,document.getElementById('btnNext'),...primary.map(item=>item.button),document.querySelector('.kit-more-tool')].filter(Boolean);
+      const nodes = [document.getElementById('railGrid'),document.getElementById('btnPrev'),quickPlay,document.getElementById('btnNext'),...primary.map(item=>item.button),...stageActions,document.querySelector('.kit-more-tool')].filter(Boolean);
       dock.hidden = !mobile;
       if (mobile) {
         let cursor = dock.firstElementChild;

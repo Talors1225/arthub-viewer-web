@@ -1,11 +1,21 @@
 // Reviewed scene anchors. The original models and render order are unchanged.
-// These two scenes contain oversized opaque surrounds outside their artwork.
+// These layers sit outside the illustrated scene and can dominate its bounds.
 const rules = {
  yunlong_3: { anchors:['yc2_bj'], surrounds:['kkkkk','kkkkk2','kkkkk3','kkkkk4'] },
  guanghui_9: { anchors:['ArtMesh292'], surrounds:['ArtMesh545','ArtMesh546','ArtMesh416','ArtMesh518','ArtMesh519','ArtMesh977','ArtMesh978','ArtMesh979','ArtMesh980'] },
+ baifeng: { surrounds:['bj_fw1'] },
+ kubo_2: { surrounds:['ArtMesh277','ArtMesh278','ArtMesh279','ArtMesh280'] },
+ nengdai_2: { surrounds:['ArtMesh91','ArtMesh97','ArtMesh98','ArtMesh99'] },
 };
 export const portraitSurroundNames=id=>new Set(rules[id]?.surrounds||[]);
 const frame = (minX, minY, maxX, maxY) => Object.freeze({ minX, minY, maxX, maxY });
+const trackDrawable = (crop, drawable, options = {}) =>
+ Object.freeze({ ...crop, anchor: Object.freeze({ drawable, ...options }) });
+const anchoragePool = frame(-240, -180, 9340, 8280);
+const cowpensRoom = frame(38, 33, 11651, 6586);
+// The sky has support vertices inside its four outer corners. Follow those corners as the camera tilts.
+const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654', { corners: [1, 0, 2, 3], align: true });
+const mogadorSkyWithCard = trackDrawable(mogadorSky, mogadorSky.anchor.drawable, { ...mogadorSky.anchor, headroom: .32 });
 // Match the scene inside the outer matte. Live2D uses a top-left origin.
 const live2dFrames = new Map([
  ['anninvwang_2', frame(-100, 220, 8160, 5060)],
@@ -13,16 +23,19 @@ const live2dFrames = new Map([
  ['wuqi_3', frame(370, 185, 9240, 5300)],
 ]);
 const live2dIdleFrames = new Map([
+ ['ankeleiqi_2', anchoragePool],
  ['aogusite_4', frame(39, 34, 9972, 5719)],
  ['baerdimo_6', frame(-818, -595, 8801, 8571)],
  ['dafeng_6', frame(-1900, 925, 9280, 7070)], // Inside the beach scene's picture frame.
  ['dafeng_7', frame(-600, -2710, 15600, 12710)], // Matches the library cover's framing.
  ['gaoxiong_7', frame(931, 143, 9157, 5868)],
  ['gezi_2', frame(430, 866, 10721, 6385)],
- ['kebensi_2', frame(38, 33, 11651, 6586)],
+ ['kebensi_2', cowpensRoom],
  ['liekexingdunii_2', frame(203, 69, 13872, 7970)],
  ['lisailiu_2', frame(-505, 159, 9283, 9081)],
+ ['luyijiushi_2', frame(-1050, 500, 7040, 9860)], // The throne and the rocks in its immediate foreground.
  ['mingji_2', frame(36, 95, 8963, 5313)],
+ ['mojiaduoer_4', mogadorSky],
  ['ougen_8', frame(-13, 6, 8676, 5391)],
  ['pulimaosi_3', frame(27, 31, 7965, 4736)],
  ['qiershazhi_2', frame(-3798, -907, 11880, 9978)],
@@ -30,19 +43,20 @@ const live2dIdleFrames = new Map([
  ['shi_2', frame(-264, 266, 12467, 6675)],
  ['shi_3', frame(1, 25, 10514, 8659)],
  ['u2501_2', frame(602, 336, 9571, 5366)],
+ ['wuerlixi_3', frame(-615, 345, 8995, 7940)], // Center the car and clip the distant end of the smoke trail.
  ['wuzang_4', frame(46, 19, 9943, 5662)],
+ ['xianghe_2', frame(-1650, 950, 9600, 9600)], // Keep the cranes and the mist around the character.
  ['xingdengbao_3', frame(-1, 10, 8002, 4544)],
  ['yuanchou_3', frame(445, 416, 7964, 5064)],
  ['z13_2', frame(-211, 121, 10268, 6584)],
 ]);
 const live2dIdleExportFrames = new Map([
+ ['ankeleiqi_2', Object.freeze({ ...anchoragePool, hiddenDrawables: ['ArtMesh532', 'ArtMesh533', 'ArtMesh534', 'ArtMesh536', 'ArtMesh542'] })],
  ['jinshi_2', frame(66, 72, 7925, 5480)], // The scene inside the surrounding fog.
 ]);
 // Bounds are in the rotated Live2D canvas for scenes with a tilted picture frame.
 const rotatedFrame = (minX, minY, maxX, maxY, degrees) =>
  Object.freeze({ ...frame(minX, minY, maxX, maxY), rotation: degrees * Math.PI / 180 });
-const trackDrawable = (crop, drawable, options = {}) =>
- Object.freeze({ ...crop, anchor: Object.freeze({ drawable, ...options }) });
 const groupedIdleFrames = groups => new Map(groups.flatMap(([crop, numbers]) =>
  numbers.map(number => [`idle${number}`, crop])));
 const poolTableFront = frame(2770, 405, 12810, 8080);
@@ -74,6 +88,11 @@ const live2dIdleVariants = new Map([
   ['idle17', poolTableFront],
   ['idle18', frame(690, -1170, 15190, 8980)],
  ])],
+ ['mojiaduoer_4', groupedIdleFrames([
+  [mogadorSky, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 21, 22, 23, 24, 29, 30, 32, 36, 37, 38, 39, 40, 41, 42, 50]],
+  [mogadorSkyWithCard, [34]],
+ ])],
+ ['wuerlixi_3', groupedIdleFrames([[live2dIdleFrames.get('wuerlixi_3'), [1]]])],
  ['wuqi_3', groupedIdleFrames([
   [frame(-6940, -1200, 16040, 11835), [1]],
   [frame(-1635, -120, 10880, 6985), [2, 6]],
@@ -211,9 +230,11 @@ const reviewedIdleExportFrames = [
   [frame(-2336, -1214, 15880, 8926), [20, 26, 27, 28, 29, 38]],
  ]],
  ['kebensi_2', [
-  [frame(-760, -855, 12620, 7480), [8]],
-  [rotatedFrame(-805, -1100, 12565, 7255, -2.39), [11]],
-  [frame(-853, -622, 13098, 7530), [7]],
+  [cowpensRoom, [1, 4, 5, 7, 8, 9, 10, 13]],
+  [frame(38, 690, 11651, 6586), [2]],
+  [frame(38, 1400, 11651, 6586), [3]],
+  [frame(38, 48, 11300, 6520), [6, 12]],
+  [rotatedFrame(95, -320, 11720, 6390, -2.39), [11]],
  ]],
  ['liekexingdunii_2', [
   [rotatedFrame(-4173, -5179, 19800, 8642, -7.87), [14]],
@@ -345,7 +366,9 @@ const spineFrames = new Map([
  ['antu_3', frame(-2983, -2536, 3157, 1320)],
  ['haichou_2', frame(-937, 11, 941, 1106)],
  ['hu_2', frame(-1195, -643, 1055, 725)],
+ ['kashan_2', frame(-2930, -215, 2555, 2861)], // Keep the window light inside the kitchen backdrop.
  ['maoxianhao_2', frame(-3026, -42, 3048, 3489)],
+ ['sikula_4', frame(-3120, -452, 2882, 3284)], // Keep the smoke within the full scene.
  ['suweiaitongmeng_4', frame(-2560, -55, 2570, 2920)],
  ['weikesibao_3', frame(-1104, -889, 1427, 542)],
  ['yunlong_3', frame(-2126, -356, 2133, 2312)],
@@ -355,12 +378,14 @@ for (const id of ['aimudeng_5', 'haichou_2', 'hu_2']) spineFrames.set(id + '_asm
 export const authoredLive2DFrame = (id, motion) =>
  live2dIdleVariants.get(id)?.get(motion) || live2dFrames.get(id) || (motion === 'idle' ? live2dIdleFrames.get(id) : null) || null;
 export const authoredLive2DExportFrame = (id, motion) =>
- (motion === 'idle' ? live2dIdleExportFrames.get(id) : live2dIdleExportVariants.get(id)?.get(motion)) || authoredLive2DFrame(id, motion);
+ (motion === 'idle' ? live2dIdleExportFrames.get(id) : live2dIdleExportVariants.get(id)?.get(motion))
+ || authoredLive2DFrame(id, motion)
+ || (id === 'kebensi_2' ? cowpensRoom : null);
 export const authoredSpineFrame = id => spineFrames.get(id) || null;
 export function portraitFrameBounds(id, rectangles) {
  const rule=rules[id];if(!rule)return null;
  const valid=rectangles.filter(r=>r.visible!==false&&r.bounds?.length===4&&r.bounds.every(Number.isFinite)&&r.bounds[2]>r.bounds[0]&&r.bounds[3]>r.bounds[1]);
- const anchors=valid.filter(r=>rule.anchors.includes(r.name));
+ const anchors=valid.filter(r=>rule.anchors?.includes(r.name));
  const selected=anchors.length?anchors:valid.filter(r=>!rule.surrounds.includes(r.name));
  if(!selected.length)return null;
  return {minX:Math.min(...selected.map(r=>r.bounds[0])),minY:Math.min(...selected.map(r=>r.bounds[1])),maxX:Math.max(...selected.map(r=>r.bounds[2])),maxY:Math.max(...selected.map(r=>r.bounds[3]))};

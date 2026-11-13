@@ -1,6 +1,6 @@
 import { FatedGestures } from './gestures.mjs?v=20261111-fated-animations';
 import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
-import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261109-fated-video';
+import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261112-export-repair';
 
 const K = window.SpineKit;
 const $ = id => document.getElementById(id);
@@ -340,8 +340,7 @@ function renderFrame(t) {
   gestures.applyOverrides(updateWorld);
   gestures.updateDragDestination(t);
   if (!gestures.gesture?.dragging) delete canvas.dataset.gesture;
-  drawPortrait(scene, !videoRecording?.capturing);
-  captureVideoFrame(t);
+  if (!captureVideoFrame(t)) drawPortrait(scene, !videoRecording?.capturing);
   updateTools();
   const gauge = gestures.gauge;
   scoreMeter.hidden = !gauge;
@@ -479,9 +478,9 @@ async function completeVideoRecording(session) {
 
 function captureVideoFrame(now) {
   const session = videoRecording;
-  if (!session?.capturing || !session.capture) return;
+  if (!session?.capturing || !session.capture) return false;
   try {
-    session.capture.frame(now);
+    session.capture.frame(now, () => drawPortrait(session.picture));
     const seconds = Math.min(VIDEO_LIMIT, Math.max(0, Math.floor((now - session.started) / 1000)));
     const text = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
     if (recordingTime.value !== text) recordingTime.value = text;
@@ -489,6 +488,7 @@ function captureVideoFrame(now) {
     session.frameError = error;
     stopVideoRecording(false);
   }
+  return true;
 }
 
 async function recordPortrait(quality, withAudio) {

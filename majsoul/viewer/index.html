@@ -396,7 +396,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261104-unified-final"></script>
+<script src="../../common/kit.js?v=20261112-export-repair"></script>
 <script src="../../common/asset-loader.js?v=20261108-majsoul-retry"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -1714,10 +1714,13 @@
   // ---------- 动画导出：使用独立画布，保留可见图层、皮肤和隐藏部件 ----------
   let animationExportRunning = false;
   function animationExportSelection() {
-    const selected = layers.filter(L => L.visible).map(L => ({ entry: L.entry, hiddenSlots: new Set(L.hiddenSlots),
-      skinName: L.skeleton.skin?.name, ox: L.ox, oy: L.oy, rot: L.rot, opacity: L.opacity,
-      animation: L.data.animations.some(a => a.name === curAnimName) ? curAnimName : L.state.getCurrent(0)?.animation?.name || L.idleAnim,
-      animations: L.data.animations }));
+    const selected = layers.filter(L => L.visible).map(L => {
+      const track = L.state.getCurrent(0);
+      const animation = L.data.animations.some(a => a.name === curAnimName) ? curAnimName : track?.animation?.name || L.idleAnim;
+      return { entry: L.entry, hiddenSlots: new Set(L.hiddenSlots), skinName: L.skeleton.skin?.name,
+        ox: L.ox, oy: L.oy, rot: L.rot, opacity: L.opacity, animation,
+        loop: !!track?.loop && track.animation?.name === animation, animations: L.data.animations };
+    });
     if (!selected.length) throw new Error('请先加载可见资源');
     return { selected, duration: Math.max(0, ...selected.map(L => L.animations.find(a => a.name === L.animation)?.duration || 0)) };
   }
@@ -1742,7 +1745,7 @@
         Object.assign(model, source);
         if (model.skinName) model.skeleton.setSkinByName(model.skinName);
         model.skeleton.setToSetupPose(); model.state.clearTracks();
-        if (model.animation) model.state.setAnimation(0, model.animation, false);
+        if (model.animation) model.state.setAnimation(0, model.animation, model.loop);
       }
       const pose = (time, scale = 1, cx = 0, cy = 0) => {
         for (const L of models) {
@@ -1780,7 +1783,7 @@
       cv.width = W; cv.height = H; K.syncRendererSize(cv, context, outputRenderer);
       for (const L of models) {
         L.state.clearTracks(); L.skeleton.setToSetupPose();
-        if (L.animation) L.state.setAnimation(0, L.animation, false);
+        if (L.animation) L.state.setAnimation(0, L.animation, L.loop);
       }
       const outputCanvas = document.createElement('canvas'); outputCanvas.width = W; outputCanvas.height = H;
       const ctx = outputCanvas.getContext('2d', { willReadFrequently: !video });

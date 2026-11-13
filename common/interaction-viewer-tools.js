@@ -388,15 +388,16 @@
       setMode(''); if (poseTools) { poseLocked = false; $('poseLock').setAttribute('aria-pressed', 'false'); $('poseLock').classList.remove('on'); } identity = key; editor = cfg.editor(); selectedPart = null; refresh();
     }
     function dimensions(quality) { const session = cfg.capture(driver.playback()); try { return session.pngSize(quality); } finally { session.dispose(); } }
+    const exportDuration = (state, format) => format === 'video' ? cfg.videoDuration?.(state) ?? state.duration : state.duration;
     async function exportFile(quality, transparent, format = 'png', copy = false) {
       requireEditor(); if (exporting) return; closePopup();
       const state = driver.playback(), name = (cfg.name() + (format === 'png' ? '' : '_' + state.name)).replace(/[\\/:*?"<>|]+/g, '_');
-      const exportBackground = background;
+      const exportBackground = background, duration = exportDuration(state, format);
       const job = K.exportProgress(format === 'png' ? 'png' : 'animation'); let session;
       exporting = true; document.body.dataset.viewerExporting = 'true'; cfg.setExporting(true); cfg.stopAudio?.();
       try {
-        session = await cfg.capture(state);
-        let size = format === 'png' ? K.illustrationExportSize(session, quality) : await K.animationExportSize({ session, duration: state.duration, quality, kind: format,
+        session = await cfg.capture(state, format, quality);
+        let size = format === 'png' ? K.illustrationExportSize(session, quality) : await K.animationExportSize({ session, duration, quality, kind: format,
           signal: job.signal, onProgress: value => job.update(.2 * value, '正在识别立绘范围…') });
         const gl = driver.canvas().getContext('webgl2') || driver.canvas().getContext('webgl');
         const limit = gl ? Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_TEXTURE_SIZE)) : 8192;
@@ -414,7 +415,7 @@
           session.dispose(); session = null; cfg.setExporting(false);
           if (copy) await K.copyPNGBlob(blob, size);
         } else if (format === 'video') {
-          const result = await K.encodeCanvasVideo({ canvas: output, duration: state.duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(.2 + .8 * value, `导出视频 ${time.toFixed(1)} / ${state.duration.toFixed(1)} 秒 · ${size.width}×${size.height}`) }); ({ blob, extension } = result);
+          const result = await K.encodeCanvasVideo({ canvas: output, duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(.2 + .8 * value, `导出视频 ${time.toFixed(1)} / ${duration.toFixed(1)} 秒 · ${size.width}×${size.height}`) }); ({ blob, extension } = result);
         } else {
           const codec = await import('./vendor/gifenc.esm.js'), gif = codec.GIFEncoder(), plan = K.exportTimeline(state.duration, quality, 'gif');
           for (let i = 0; i < plan.frames; i++) {
@@ -463,7 +464,7 @@
         getDetail: (quality, format) => {
           requireEditor(); const state = driver.playback();
           if (animation && !state.duration) throw new Error('请先选择一个有时长的动画');
-          if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · 长边 ${format === 'video' ? preset.videoEdge : preset.gifEdge} 像素 · ${state.duration.toFixed(2)} 秒 · 背景跟随舞台 · 无声`; }
+          if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · 长边 ${format === 'video' ? preset.videoEdge : preset.gifEdge} 像素 · ${exportDuration(state, format).toFixed(2)} 秒 · 背景跟随舞台 · 无声`; }
           requireEditor();
           const preset = K.exportPreset(quality);
           return `按立绘范围裁剪 · ${preset.pngEdge ? '长边 ' + preset.pngEdge + ' 像素' : '原始像素比例'} · 背景跟随舞台 · PNG 无损编码`;

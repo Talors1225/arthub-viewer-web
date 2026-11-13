@@ -125,6 +125,25 @@ export class Live2DController extends Controller {
  target(s,value,immediate=false){if(!Number.isFinite(value))return;s.from=s.value;s.target=clampValue(value,s.config);s.smoothAt=this.time;if(immediate)s.value=s.target;s.releaseAt=null;}
  dragValue(name){return this.states.find(s=>s.config.parameter===name)?.value??0;}
  parameter(name){return this.adapter.parameter?.(name)??this.dragValue(name);}
+ hintGesture(area){
+  for(const s of this.states){
+   const c=s.config,t=object(c.action_trigger);
+   if(c.draw_able_name!==area||!condition(c,this.state.idleIndex)||s.flag||s.cooldown>this.time)continue;
+   const step=array(t.action_list)[s.step-1]||t,active=array(c.action_trigger_active?.active_list)[s.step-1]||object(c.action_trigger_active);
+   const actions=array(step.action??t.action);
+   const choices=actions.length?actions:[step.action??t.action];
+   if(choices.every(name=>name&&(!this.resolve(name)||!this.allowedAction(name))))continue;
+   if(t.type===3)return 'hold';
+   if(c.offset_x||c.offset_y||c.offset_circle||t.type===8)return 'drag';
+   if(typeof active.idle==='number'&&active.idle===this.state.idleIndex&&!active.repeat_flag&&!active.repeatFlag)continue;
+   if(t.type===9&&Math.abs(this.parameter(t.parameter)-(step.num??t.num))>.05)continue;
+   if(t.type===11&&!sameRange(this.parameter(t.parameter),t.num))continue;
+   if([2,6,9,11,15].includes(t.type))return 'tap';
+  }
+  const action=basicActions[area];
+  if(action&&this.allowedAction(action)&&(this.resolve(action)||this.state.favor>=1000&&this.resolve(action+'_ex')))return 'tap';
+  return null;
+ }
  noticeFor(s,type){this.notify(type,{draw_able_name:s.config.draw_able_name,parameter_name:s.config.parameter,values:s.value});}
  notify(type,data){
   if(this.noticeDepth++>16){this.noticeDepth--;this.log('listener-cycle');return;}
@@ -192,7 +211,8 @@ export class Live2DController extends Controller {
   this.pendingCue=options.voice===false||options.idle?null:motionCue(name);this.pendingVoicePlayed=false;
   this.actionOptions=options;if(!options.idle)this.notify(1,{action:name});this.lastActivity=this.time;
   const calibrate=object(this.model.skinConfig?.l2d_voice_calibrate),dialog=({touch_1:'touch',touch_2:'touch2',touch_head:'headtouch',task:'mission'})[this.pendingCue]||this.pendingCue;
-  this.voiceAt=calibrate.use_event?null:(Number(calibrate[dialog])||0);
+  const hasVoiceEvent=this.events.some(e=>e.functionName==='OnAnimEvent'&&e.time<=this.finishTime);
+  this.voiceAt=calibrate.use_event&&hasVoiceEvent?null:(Number(calibrate[dialog])||0);
   const started=()=>{if(generation!==this.generation||this.disposed)return;this.state.motionPending=false;this.state.actionTime=0;if(this.pendingCue&&this.voiceAt===0)this.voiceCue();this.runEvents(0);};
   try{const result=this.adapter.play?.(motion,!!options.idle,{generation,fade:.25,state:name});if(result&&typeof result.then==='function'){this.state.motionPending=true;Promise.resolve(result).then(started,error=>{if(generation!==this.generation||this.disposed)return;this.state.errors.push(error.message||String(error));this.state.motionPending=false;this.state.busy=false;this.log('play-error',{motion,error:String(error)});});}else started();}catch(error){this.state.motionPending=false;this.state.busy=false;this.state.errors.push(String(error));}
   this.log('action',{name,motion,idle:!!options.idle});return true;
@@ -276,6 +296,13 @@ export class SpineController extends Controller {
   // MainSpinePainting passes true for a drag exceeding 200 px, false on release.
   // Lua only evaluates the restriction for a truthy click field.
   if(c.click===true&&drag===true)return false;return true;
+ }
+ hintGesture(area,event){
+  if(!this.dragPass)return null;
+  const drag=this.rules.drag_data,configs=array(drag?.config_client);
+  if((drag?.type===3&&configs.length)||configs.some(c=>this.matches(c,area,false)))return 'tap';
+  if(basicActions[event]||this.model.animations.some(name=>/^main_\d+$/.test(name)))return 'tap';
+  return null;
  }
  touch(hit,{drag:isDrag=false}={}){
   if(this.state.busy||!this.dragPass)return false;this.lastActivity=this.time;const drag=this.rules.drag_data;

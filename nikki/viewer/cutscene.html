@@ -430,7 +430,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261109-nikke-bursts"></script>
+<script src="../../common/kit.js?v=20261112-export-repair"></script>
 <script src="../../common/asset-loader.js?v=20261109-nikke-bursts"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -621,6 +621,17 @@
     renderer.batcher.setBlendMode(0, false);
     renderer.drawTexture(texture, x + minX * scaleX, y + minY * scaleY, (maxX - minX) * scaleX, (maxY - minY) * scaleY);
   }
+  function drawSkillLayer(renderer, skeleton, pma, backdrop) {
+    const slot = backdrop?.replacedSlot && skeleton.findSlot(backdrop.replacedSlot);
+    if (!slot) {
+      renderer.drawSkeleton(skeleton, pma);
+      return;
+    }
+    const alpha = slot.color.a;
+    slot.color.a = 0;
+    try { renderer.drawSkeleton(skeleton, pma); }
+    finally { slot.color.a = alpha; }
+  }
   function renderSkillBackdrop() {
     if (burstSession || burstPending?.intro || !cut) return;
     if (cut.sourceVariant.skillBackdrop !== false && burstBackdrop && !skillBackdrop && burstBackdrop.backdrop?.time !== null) {
@@ -636,6 +647,7 @@
         const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
         const SP = K.getSpine(cur && cur.spineVersion);
         skillBackdrop = { image, texture: new SP.GLTexture(mgl, image),
+          replacedSlot: cut.sourceVariant.skel === 'c225_01_skillcut.skel' ? '3_bg' : null,
           bounds: { minX: cx - halfW, minY: cy - halfH, maxX: cx + halfW, maxY: cy + halfH } };
       }
     }
@@ -1845,7 +1857,7 @@
       try {
         renderer.begin();
         if (backdrop && cut) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
-        if (cut) for (const layer of cut.drawLayers) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        if (cut) for (const layer of cut.drawLayers) if (layer.active !== false) drawSkillLayer(renderer, layer.skeleton, layer.pma, backdrop);
         if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
         if (cut && K.debugActive(debugFlags)) {
           K.applyDebugFlags(renderer, debugFlags);
@@ -2745,7 +2757,7 @@
         raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT);
         r2.begin();
         if (backdrop) drawSkillBackdrop(r2, exportLayers[0].skeleton, backdrop, backdropTexture);
-        for (const L of exportDrawLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+        for (const L of exportDrawLayers) if (L.active) drawSkillLayer(r2, L.skeleton, !!L.atlas.pages[0]?.pma, backdrop);
         r2.end();
         K.paintExportBackground(ctx2d, W, H, exportBackground === 'checker' && !video ? null : exportBackground);
         ctx2d.drawImage(cv2, 0, 0);
@@ -2876,7 +2888,7 @@
         raw.clear(raw.COLOR_BUFFER_BIT);
         renderer.begin();
         if (backdrop) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
-        for (const layer of cut.drawLayers) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        for (const layer of cut.drawLayers) if (layer.active !== false) drawSkillLayer(renderer, layer.skeleton, layer.pma, backdrop);
         renderer.end();
       },
       restore() {

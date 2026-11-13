@@ -8,15 +8,15 @@
 <link rel="stylesheet" href="../../common/library-ui.css?v=dd26cfcbf3ab">
 <link rel="stylesheet" href="../../common/visual.css?v=dd26cfcbf3ab">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=dd26cfcbf3ab">
-<link rel="stylesheet" href="azurlane.css">
-<link rel="stylesheet" href="../../common/site-ui.css?v=dd26cfcbf3ab"><script defer src="../../common/site-ui.js?v=dd26cfcbf3ab"></script>
+<link rel="stylesheet" href="azurlane.css?v=20261113-az-interaction-hint">
+<link rel="stylesheet" href="../../common/site-ui.css?v=dd26cfcbf3ab"><script defer src="../../common/site-ui.js?v=20261113-az-interaction"></script>
   <script src="../../arthub-cos-config.js?v=8e1c1709f267"></script>
   <script src="../../arthub-cos.js?v=dd26cfcbf3ab"></script>
 </head>
 <body class="game-interaction-viewer azurlane-viewer">
   <main class="stage" id="stage" aria-label="碧蓝航线动态立绘舞台">
     <canvas id="canvas"></canvas>
-    <svg id="hit-overlay" aria-hidden="true"></svg>
+    <div id="interaction-hint" aria-hidden="true" hidden><span></span></div>
     <div class="status" id="status" role="status">正在读取资源…</div>
     <div class="hint" id="touch-hint">点击或拖动立绘互动 · 按住空格拖动画面 · Esc 关闭面板</div>
   </main>
@@ -44,7 +44,7 @@
       <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
     </div>
     <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
-    <button id="btnStagePan" type="button" title="开启立绘互动" aria-label="开启立绘互动" aria-pressed="false" disabled></button>
+    <button id="btnStagePan" type="button" data-stage-primary title="开启立绘互动" aria-label="开启立绘互动" aria-pressed="false" disabled></button>
     <button id="fit" type="button" title="适应窗口">适应</button>
   </div>
 
@@ -107,9 +107,10 @@
     </div>
     <div class="rp-page" data-panel-page="interaction">
       <div id="interaction-panel" class="interaction-content">
-        <p id="interaction-note" class="interaction-help">加载立绘后，可直接点击、拖动或长按热点。</p>
+        <p id="interaction-note" class="interaction-help">点按角色试试。部分皮肤还支持拖动或长按。</p>
         <div hidden><select id="pointer-mode" aria-label="互动输入模式"><option value="pan">拖动画面</option><option value="interact">模型互动</option></select></div>
-        <div class="interaction-actions"><button id="reset-state" type="button" disabled>重置互动</button><button id="show-hits" type="button" aria-pressed="false" disabled>显示热点</button></div>
+        <div class="interaction-actions"><button id="reset-state" type="button" disabled>重置互动</button><button id="show-hint" type="button" aria-pressed="true" disabled>互动提示</button></div>
+        <button id="interaction-voice" type="button" hidden>试听台词</button>
         <details class="section" id="interaction-more">
           <summary>更多设置</summary>
           <label for="hit-area" class="field-label">互动区域</label>
@@ -133,17 +134,17 @@
   </aside>
 
   <script src="../../common/asset-display-overrides.js?v=dd26cfcbf3ab"></script>
-  <script src="../../common/kit.js?v=20261109-portrait-frame1"></script>
+  <script src="../../common/kit.js?v=20261113-az-interaction"></script>
   <script src="../../common/asset-loader.js?v=499c19e6892b"></script>
   <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
   <script src="../../common/library-ui.js?v=dd26cfcbf3ab"></script>
-  <script src="../../common/interaction-viewer-tools.js?v=20261104-parts2"></script>
+  <script src="../../common/interaction-viewer-tools.js?v=20261112-az-export-audit"></script>
   <script src="../../common/interaction-viewer-ui.js?v=aaa6852ff15b"></script>
   <script src="vendor/spine-player.js"></script>
   <script src="vendor/live2d/live2dcubismcore.min.js"></script>
   <script src="vendor/live2d/pixi-6.5.10.min.js"></script>
   <script src="vendor/live2d/cubism4-0.4.0.min.js"></script>
-  <script type="module" src="viewer.mjs?v=20261111-az-idle-frames"></script>
+  <script type="module" src="viewer.mjs?v=20261113-az-interaction-hint"></script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

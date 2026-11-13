@@ -25,14 +25,26 @@ export function paginationItems(page,total){
 }
 export function modelPreviewPath(model,models){return(model.auxiliary?models.find(item=>item.skinKey===model.skinKey&&!item.auxiliary)?.thumbnail:null)||model.thumbnail;}
 
+// The chess-piece layer has no visible attachments without the game logic.
+const chessLayerId='spine_1000905__haixia-tunvlang2',chessPortraitId='spine_1000905__haixia-tunvlang';
+
 export async function createCatalog({selectModel,status}){
  const catalog=await window.SpineKit.fetchJSON('../characters.json',{timeout:20000});
  if(catalog.game!=='riichicity'||!Array.isArray(catalog.characters)||!catalog.characters.length)throw Error('麻雀一番街资源目录为空。');
- const $=id=>document.getElementById(id),K=window.SpineKit,characters=catalog.characters,models=characters.flatMap(c=>c.variants);
+ const $=id=>document.getElementById(id),K=window.SpineKit,characters=catalog.characters;
+ const models=characters.flatMap(c=>c.variants).filter(model=>model.id!==chessLayerId);
+ const chessPortrait=models.find(model=>model.id===chessPortraitId);
+ const chessLayerFavorite=K.favs.list().find(item=>item.k==='riichicity:'+chessLayerId);
+ if(chessPortrait&&chessLayerFavorite){
+  K.favs.toggle(chessLayerFavorite);
+  const entry=favorite(chessPortrait);
+  if(!K.favs.has(entry.k))K.favs.toggle(entry);
+ }
  const voicePanel=createVoicePanel(catalog.assetBase);
  let entryRequested=false,navigationModel=null;
  const choose=model=>{entryRequested=true;navigationModel=model;selectModel(model);};
  const query=new URL(location.href).searchParams;
+ const initialId=query.get('id');
  let role=characters.some(c=>c.id===query.get('character'))?query.get('character'):'',mode='skins',selected=null,page=1,descending=false;
  const railStar=document.createElement('button');railStar.id='railStar';railStar.type='button';railStar.disabled=true;
  $('rail').insertBefore(railStar,$('homeAction'));
@@ -100,5 +112,5 @@ export async function createCatalog({selectModel,status}){
   loaded(model,engine){selected=navigationModel=model;render();voicePanel.setModel(model,engine,entryRequested);entryRequested=false;const url=new URL(location.href);if(role)url.searchParams.set('character',role);else url.searchParams.delete('character');url.searchParams.set('id',model.id);history.replaceState(null,'',url);},
   cancelNavigation(){navigationModel=selected;entryRequested=false;},
   step(delta){const choices=matchingRows().filter(m=>!m.auxiliary);const at=choices.findIndex(m=>m.id===(navigationModel||selected)?.id);if(choices.length)choose(choices[at<0?(delta<0?choices.length-1:0):(at+delta+choices.length)%choices.length]);},
-  initial:models.find(m=>m.id===new URL(location.href).searchParams.get('id'))||null};
+  initial:(initialId===chessLayerId?chessPortrait:models.find(m=>m.id===initialId))||null};
 }

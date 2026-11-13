@@ -1668,7 +1668,9 @@
     try {
       check();
       const source = new CanvasSource(canvas, { codec: encoding.codec, quality: new Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality' });
-      output.addVideoTrack(source, { frameRate: plan.fps }); await output.start();
+      // Keep the sample timestamps. Snapping a fractional cycle to the nominal
+      // frame rate can put two frames at the same timestamp.
+      output.addVideoTrack(source); await output.start();
       const step = plan.duration / plan.frames;
       // Every planned frame is encoded; timestamps come from the animation,
       // independent of device speed and the viewer's playback speed.
@@ -2164,16 +2166,15 @@
       root.dataset.gavChrome = 'ready';
       return;
     }
-    toolStrip.dataset.kitClean = '1';
-
     const primary = new Set(['btnParts', 'btnAnimTab', 'btnLayerPanel', 'btnAnimPanel', 'siteAnim', 'siteParts']);
     const secondary = [...toolStrip.querySelectorAll('button')]
       .filter(button => button.parentElement === toolStrip)
-      .filter(button => !primary.has(button.id));
+      .filter(button => !primary.has(button.id) && !button.hasAttribute('data-stage-primary'));
     if (!secondary.length) {
       root.dataset.gavChrome = 'ready';
       return;
     }
+    toolStrip.dataset.kitClean = '1';
 
     const labelOf = (button) => {
       const raw = button.getAttribute('title') || button.getAttribute('aria-label') || button.textContent || '操作';

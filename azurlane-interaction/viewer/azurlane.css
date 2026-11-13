@@ -1,9 +1,33 @@
 /* Azur Lane controls inside the shared ArtHub viewer shell. */
-.azurlane-viewer #hit-overlay {
+.azurlane-viewer #interaction-hint {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  z-index: 4;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  border: 2px solid #ffe1a0;
+  border-radius: 50%;
+  background: #e7bd6c40;
+  box-shadow: 0 0 0 3px #17120ac0, 0 0 13px #ffe1a0aa;
+  pointer-events: none;
+}
+.azurlane-viewer #interaction-hint span {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border: 1px solid #e7bd6c99;
+  border-radius: 8px;
+  color: #ffe1a0;
+  background: #16130ff0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.azurlane-viewer #interaction-panel #show-hint[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .azurlane-viewer #gridView #filterChips {
@@ -118,7 +142,8 @@
 }
 
 .azurlane-viewer #interaction-panel #reset-state,
-.azurlane-viewer #interaction-panel #show-hits,
+.azurlane-viewer #interaction-panel #show-hint,
+.azurlane-viewer #interaction-panel #interaction-voice,
 .azurlane-viewer #interaction-panel #hit-trigger {
   width: 100%;
   margin: 0 0 7px;
@@ -208,5 +233,27 @@
 
   .azurlane-viewer .playbar-controls #sound {
     min-width: 60px;
+  }
+}
+html[data-site-ui="1"][data-gav-ui="clean"][data-stage-ui-ready="1"] body.azurlane-viewer #floatPanel[aria-label][data-tab="interaction"].open {
+  height: auto !important;
+  bottom: auto !important;
+}
+
+@media (max-width: 720px) {
+  body.azurlane-viewer .toast-wrap:has([data-channel="azur-interaction"], [data-channel="azur-audio"]) {
+    right: 12px;
+    left: 12px;
+    bottom: calc(max(8px, env(safe-area-inset-bottom)) + 56px);
+    align-items: center;
+  }
+  html[data-site-ui="1"] body.azurlane-viewer #siteMobileDock #btnStagePan {
+    flex-direction: column;
+    gap: 1px;
+    padding-inline: 3px !important;
+  }
+  html[data-site-ui="1"] body.azurlane-viewer #siteMobileDock #btnStagePan::after {
+    display: block !important;
+    font-size: 10px;
   }
 }

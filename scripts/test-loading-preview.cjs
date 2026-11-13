@@ -143,7 +143,8 @@ for (const file of viewers) {
   const start = html.lastIndexOf(isMahjong ? '    const raw = gl.gl || gl;' : '    if (mgl && renderer) {', ready);
   const end = html.indexOf(isMahjong ? '    if (capturePending && curEntry)' : '    if (cut && playing) syncTimeline();', ready);
   assert.ok(start >= 0 && ready > start && end > ready, file + ': test the actual first-draw boundary');
-  const draw = new vm.Script(html.slice(start, end), {filename: file});
+  const skillLayer = html.match(/function drawSkillLayer\([^)]*\) \{[\s\S]*?\n  \}/)?.[0] || '';
+  const draw = new vm.Script(skillLayer + '\n' + html.slice(start, end), {filename: file});
   const layer = {visible: true, skeleton: {}};
   const raw = {isContextLost: () => false, clearColor() {}, clear() {}, disable() {}};
   const renderer = {begin() {}, drawSkeleton() {}, end() {}};

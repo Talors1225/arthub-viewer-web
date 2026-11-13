@@ -67,17 +67,18 @@ async function encodeLiveFrames(K, codec, canvas, paint, quality, audioTrack, si
       target: new codec.BufferTarget(),
     });
     try {
-      const video = new codec.CanvasSource(canvas, { codec: format.codec, quality: bitrate, latencyMode: 'realtime' });
+      const video = new codec.VideoSampleSource({ codec: format.codec, quality: bitrate, latencyMode: 'realtime' });
       const audio = audioTrack ? new codec.MediaStreamAudioTrackSource(audioTrack, { codec: audioCodec, bitrate: 128000 }) : null;
-      output.addVideoTrack(video, { frameRate: VIDEO_FPS });
+      output.addVideoTrack(video);
       if (audio) output.addAudioTrack(audio);
       const audioError = audio?.errorPromise;
       const wait = task => K.awaitExportTask(audioError ? Promise.race([task, audioError]) : task, signal);
       await wait(output.start());
       paint();
-      const started = performance.now();
-      await wait(video.add(0, 1 / VIDEO_FPS, { keyFrame: true }));
-      return liveEncoderSession(output, video, audioError, audio, format, canvas, paint, started);
+      const first = new codec.VideoSample(canvas, { timestamp: 0, duration: 1 / VIDEO_FPS });
+      try { await wait(video.add(first, { keyFrame: true })); }
+      finally { first.close(); }
+      return liveEncoderSession(output, video, audioError, audio, format, canvas, paint, performance.now(), codec.VideoSample);
     } catch (error) {
       await output.cancel().catch(() => {});
       signal.throwIfAborted();
@@ -87,13 +88,20 @@ async function encodeLiveFrames(K, codec, canvas, paint, quality, audioTrack, si
   return null;
 }
 
-function liveEncoderSession(output, video, audioError, audio, format, canvas, paint, started) {
-  let stopping = false, pending, frameError, previous = 0;
+function liveEncoderSession(output, video, audioError, audio, format, canvas, paint, started, VideoSample) {
+  let stopping = false, pending, frameError, previous = 0, lastKeyFrame = 0;
+  const interval = 1 / VIDEO_FPS, sampleSlack = .002;
+  let nextSample = interval;
+  // Retain only a few pending snapshots so a slow encoder cannot exhaust memory.
+  const maxQueued = Math.max(1, Math.min(4, Math.floor(32 * 1024 * 1024 / (canvas.width * canvas.height * 4))));
+  const queue = [];
   let resolve, reject;
   const result = new Promise((accept, fail) => { resolve = accept; reject = fail; });
+  const clearQueue = () => { for (const sample of queue.splice(0)) sample.close(); };
   const stop = (save, error) => {
     if (stopping) return;
     stopping = true;
+    if (!save) clearQueue();
     void (async () => {
       try {
         audio?.close();
@@ -112,23 +120,40 @@ function liveEncoderSession(output, video, audioError, audio, format, canvas, pa
         await output.cancel().catch(() => {});
         reject(failure);
       } finally {
+        clearQueue();
         canvas.width = canvas.height = 1;
       }
     })();
   };
+  const drain = async () => {
+    while (queue.length) {
+      const sample = queue.shift();
+      const keyFrame = Math.floor(sample.timestamp / 2);
+      try {
+        await video.add(sample, { keyFrame: keyFrame > lastKeyFrame });
+        lastKeyFrame = keyFrame;
+      } finally { sample.close(); }
+    }
+  };
+  const failFrame = error => {
+    frameError = error;
+    stop(false, error);
+  };
   audioError?.catch(error => stop(false, error));
   return {
     result,
-    frame(now) {
+    frame(now, draw) {
       const time = (now - started) / 1000;
-      if (stopping || pending || time - previous < 1 / VIDEO_FPS - .001) return;
-      paint();
-      const keyFrame = Math.floor(time / 2) > Math.floor(previous / 2);
+      if (stopping || time < nextSample - sampleSlack || time - previous < interval / 2) return;
+      nextSample = (Math.floor((time + sampleSlack) / interval) + 1) * interval;
       previous = time;
-      pending = video.add(time, 1 / VIDEO_FPS, { keyFrame }).catch(error => {
-        frameError = error;
-        stop(false, error);
-      }).finally(() => { pending = null; });
+      try {
+        draw();
+        paint();
+        if (queue.length >= maxQueued) queue.shift().close();
+        queue.push(new VideoSample(canvas, { timestamp: time, duration: interval }));
+        if (!pending) pending = drain().catch(failFrame).finally(() => { pending = null; });
+      } catch (error) { failFrame(error); }
     },
     stop,
   };
@@ -204,9 +229,10 @@ function recordCanvasStream(K, output, paint, quality, audioTrack) {
   let nextFrame = 0;
   return {
     result,
-    frame(now) {
+    frame(now, draw) {
       if (stopping || settled || now < nextFrame - 1) return;
       nextFrame = now + 1000 / VIDEO_FPS;
+      draw();
       paintFrame();
     },
     stop(save) {

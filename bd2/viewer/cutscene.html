@@ -415,7 +415,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261104-unified-final"></script>
+<script src="../../common/kit.js?v=20261112-export-repair"></script>
 <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -2247,6 +2247,16 @@
     }
   }
 
+  // The loop includes a separate shadow far from the portrait.
+  const seirLoopFrame = { minX: -1460, minY: -2020, maxX: 1080, maxY: 940 };
+  function artworkExportFrame(animation) {
+    if (cut?.sourceVariant.skel === 'cutscene_char101101.skel.bytes' && animation === 'loop') return seirLoopFrame;
+  }
+  function pngPose(quality) {
+    const skeletons = cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
+    return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), artworkExportFrame(animSel.value));
+  }
+
   // ---------- 动画导出：GIF 和视频均为两档 ----------
   async function exportAnimation(quality, format = 'gif') {
     if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
@@ -2259,6 +2269,8 @@
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
+    const frame = artworkExportFrame(animName);
+    const kind = video ? 'video' : 'gif';
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
     const SP = K.getSpine(cur && cur.spineVersion);
@@ -2310,32 +2322,34 @@
           K.updateWorldTransform(L.skeleton); K.applyHiddenSlots(L.skeleton, hiddenSlots);
         }
       };
-      // 第一遍: 推进并求动画全程包围盒
-      let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
-      for (let k = 0; k < frames; k++) {
-        job.check();
-        applyExportFrame(timeline.timeAt(k));
-        for (const L of exportLayers) {
-          if (!L.active) continue;
-          const b = K.measureBounds(L.skeleton, SP);
-          if (b) {
-            bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
-            bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+      let size = frame && K.exportDimensions(frame, quality, kind, 0);
+      if (!size) {
+        // 第一遍: 推进并求动画全程包围盒
+        let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+        for (let k = 0; k < frames; k++) {
+          job.check();
+          applyExportFrame(timeline.timeAt(k));
+          for (const L of exportLayers) {
+            if (!L.active) continue;
+            const b = K.measureBounds(L.skeleton, SP);
+            if (b) {
+              bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
+              bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+            }
           }
+          if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
         }
-        if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
-      }
-      if (!isFinite(bMinX)) throw new Error('空包围盒');
-      const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
-      cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
-      let size;
-      for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
-        applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
-        raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
-        for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
-        r2.end();
-        try { size = K.refineIllustrationSize(reference, cv2, quality, video ? 'video' : 'gif'); break; }
-        catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
+        if (!isFinite(bMinX)) throw new Error('空包围盒');
+        const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
+        cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
+        for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
+          applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
+          raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
+          for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+          r2.end();
+          try { size = K.refineIllustrationSize(reference, cv2, quality, kind); break; }
+          catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
+        }
       }
       if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;
@@ -2454,7 +2468,7 @@
   function exportFrame(transparent, mode, done, quality = exportQuality) {
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     let pose;
-    try { pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)); }
+    try { pose = pngPose(quality); }
     catch (error) { K.toast('导出失败: ' + error.message, 'err'); return; }
     K.exportPNG({
       canvas: cv, size: pose.size, pose, tiled: true, transparent, background: getBg(), copy: mode === 'copy',
@@ -2516,12 +2530,8 @@
     K.mountExportOptions(pop, {
       kind: 'png', quality: exportQuality, transparent: getBg() === 'checker',
       onChange: quality => { exportQuality = quality; store.set('pngExportQuality', quality); },
-      getSize: quality => K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion)).size,
-      getDetail: quality => {
-        if (!cut) throw new Error('请先加载一个资源');
-        const pose = K.pngExportPose(cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton), quality, K.getSpine(cur && cur.spineVersion));
-        return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码';
-      },
+      getSize: quality => pngPose(quality).size,
+      getDetail: quality => 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码',
       onExport: (quality, transparent) => exportFrame(transparent, 'download', () => closePopups(), quality),
       onCopy: (quality, transparent) => exportFrame(transparent, 'copy', () => closePopups(), quality),
     });

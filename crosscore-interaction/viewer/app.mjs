@@ -5,6 +5,7 @@ const $ = selector => document.querySelector(selector), SP = window.spine, K = w
 const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint = overlay.getContext('2d');
 // The interaction prefab scales and offsets the same seashore artwork.
 const seashoreIdleFrame = { minX: -1334, minY: -679, maxX: 1346, maxY: 773 };
+const arpeggioIdleFrame = { minX: -1056, minY: -582, maxX: 1112, maxY: 644 };
 const loadingPreview = K.createLoadingPreview(stage);
 let previewSequence = 0, previewScene = null, previewPending = false;
 window.__crosscorePreviewFailure = reason => loadingPreview.fail(previewSequence, reason);
@@ -442,7 +443,8 @@ const viewerUI = window.createInteractionViewerUI({
     capture: animation => {
       const captureScene = Object.create(scene);
       return window.createInteractionSpineCapture({ layers: scene.layers, ns: SP, canvas, renderer, gl, editor, animation,
-        fixedFrame: scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame : undefined,
+        fixedFrame: scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame
+          : scene.definition.name === '20110_skin_Arpeggio07_spine' && animation.name === 'idle1' ? arpeggioIdleFrame : undefined,
         visible: layer => scene.visible(layer),
         extraBounds: () => {
           const result = [], drag = scene.objectDrag;

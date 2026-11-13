@@ -411,7 +411,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261109-portrait-frame1"></script>
+<script src="../../common/kit.js?v=20261112-export-repair"></script>
 <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -492,6 +492,11 @@
     ['CG_seashore.json', { minX: -1905, minY: -82, maxX: 1922, maxY: 1990 }],
     ['60110_skin_Burtgang03.json', { minX: -591, minY: -148, maxX: 593, maxY: 1982 }],
   ]);
+  const tizonaCloseFrame = { minX: -1350, minY: -1050, maxX: 1130, maxY: 850 };
+  function crosscoreFrame(skeletonFile, animation) {
+    if (skeletonFile === '60310_skin_Tizona04b.json' && ['click6', 'idle2', 'idle3'].includes(animation)) return tizonaCloseFrame;
+    return (animation === 'idle' && crosscoreIdleFrames.get(skeletonFile)) || crosscoreFrames.get(skeletonFile);
+  }
   if (routeSource === 'nikki' || routeSource === 'crosscore') stage.dataset.clickMode = 'audio';
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
@@ -1694,8 +1699,7 @@
 
   function playAnimation(name, options = {}) {
     if (!cut) return;
-    const idleFrame = crosscoreIdleFrames.get(cut.sourceVariant.skel);
-    if (idleFrame) cut.fixedFrame = name === 'idle' ? idleFrame : undefined;
+    if (routeSource === 'crosscore') cut.fixedFrame = crosscoreFrame(cut.sourceVariant.skel, name);
     portraitAudio?.animationChanged(name, options);
     let bounds = null;
     for (const layer of cutLayers()) {
@@ -1731,7 +1735,7 @@
       cmp.state.apply(cmp.skeleton);
       K.updateWorldTransform(cmp.skeleton);
     }
-    if (bounds) cut.bounds = bounds;
+    if (cut.fixedFrame || bounds) cut.bounds = cut.fixedFrame || bounds;
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
       if (cmpBounds) cmp.bounds = cmpBounds;
@@ -2203,7 +2207,7 @@
       K.updateWorldTransform(skeleton);
       const stageNS = K.getSpine(cur && cur.spineVersion);
       const crosscore = routeSource === 'crosscore';
-      const fixedFrame = crosscore ? crosscoreFrames.get(v.skel) : undefined;
+      const fixedFrame = crosscore ? crosscoreFrame(v.skel, def) : undefined;
       let bounds = fixedFrame || K.measureBounds(skeleton, stageNS, !crosscore);
       if (!bounds && data.skins && data.skins.length) {
         // 部分 4.0 模型附件挂在皮肤上, 不设皮肤量不出包围盒
