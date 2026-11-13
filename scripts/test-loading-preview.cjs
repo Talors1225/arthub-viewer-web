@@ -153,7 +153,7 @@ for (const file of viewers) {
     mgl: raw, gl: raw, renderer, cutLoadSeq: 11, loadSeq: 11, playerDrawnSeq: -1, viewerUiReady: true,
     loadingPreview: preview, getBg: () => 'checker', debugFlags: {}, highlightSlot: null, cmpOn: false, boneEditMode: false,
     K: {parseColor: (_color, fallback) => fallback, debugActive: () => false}, selIdx: -1, drawBoneMarker() {},
-    activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false};
+    activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false, stageFrameForLoop: () => null};
   const render = overrides => draw.runInNewContext({...base, ...overrides});
   preview.begin(11, {path: '/draw.webp'});
   const lost = {...raw, isContextLost: () => true};

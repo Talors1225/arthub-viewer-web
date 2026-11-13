@@ -1550,6 +1550,14 @@
         raw.clearColor(c[0], c[1], c[2], 1);
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
+      const clip = cut && stageFrameForLoop();
+      if (clip) {
+        const sk = cut.skeleton;
+        const x = Math.floor(cv.width / 2 + sk.x + clip.minX * sk.scaleX);
+        const y = Math.floor(cv.height / 2 + sk.y + clip.minY * sk.scaleY);
+        raw.enable(raw.SCISSOR_TEST);
+        raw.scissor(x, y, Math.ceil((clip.maxX - clip.minX) * sk.scaleX), Math.ceil((clip.maxY - clip.minY) * sk.scaleY));
+      }
       renderer.begin();
       if (cut) for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
       if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
@@ -1561,6 +1569,7 @@
       if (boneEditMode) drawEditSkeleton(renderer);
       drawBoneMarker(renderer);
       renderer.end();
+      if (clip) raw.disable(raw.SCISSOR_TEST);
       if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
         playerDrawnSeq = cutLoadSeq;
         loadingPreview.ready(cutLoadSeq);
@@ -1585,10 +1594,20 @@
     }
   }
 
+  // Detached alternate-pose pieces must not shrink the default loop view.
+  // Other animation shots and exports keep their existing bounds.
+  const loopStageFrames = new Map([
+    ['021291', { minX: -910, minY: -2110, maxX: 560, maxY: 710 }],
+    ['067491', { minX: -1430, minY: -1730, maxX: 1400, maxY: 750 }],
+  ]);
+  function stageFrameForLoop() {
+    return !cmpOn && animSel.value === 'loop' && loopStageFrames.get(cur?.id);
+  }
+
   // ---------- 视图 ----------
   function computeView() {
     if (!cut) return;
-    const b = cut.bounds;
+    const b = stageFrameForLoop() || cut.bounds;
     cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
     cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
     const area = K.stageViewArea(cv);

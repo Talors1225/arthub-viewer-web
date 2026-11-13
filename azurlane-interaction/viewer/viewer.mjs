@@ -1,14 +1,27 @@
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261113-az-hint-cycle';
 import {EffectTimeline} from './effect-timeline.mjs?v=499c19e6892b';
 import {hasEffectControls} from './effect-controls.mjs?v=499c19e6892b';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261113-interaction-usability';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261113-default-stage';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
+import {installMotionCompatibility} from './portrait-motion.mjs?v=20261113-motion-targets';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage'),interactionHint=$('interaction-hint'),hintButton=$('show-hint');
 const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),nextHintButton=$('next-hint');
 let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false;
 let hintsEnabled=true,hintArea=null,hintInteractionCount=0,hintAdvance=false,hasInteraction=false;
+const hintVisits=new Map();
+let hintManualAdvance=false,hintInputPose='',lastHintVisit='';
+function hintPoseKey(){return selected?.type==='live2d'?String(controller?.state.idleIndex??0):`${controller?.state.idle||''}:${controller?.state.skin||''}`;}
+function resetHintVisits(){hintVisits.clear();hintInputPose='';lastHintVisit='';hintManualAdvance=false;}
+function recordHintVisit(type,data){
+ const basic=type==='action'&&!data.idle&&Object.keys(basicActions).find(id=>basicActions[id]===data.name?.replace(/_ex$/,''));
+ const area=type==='trigger'?data.area:type==='spine-trigger'?data.hit:basic;
+ if(!area)return;
+ const key=`${hintInputPose||hintPoseKey()}|${area}`,event=`${key}|${controller?.time}`;
+ if(event===lastHintVisit)return;
+ lastHintVisit=event;hintVisits.set(key,(hintVisits.get(key)||0)+1);
+}
 const interactButton=$('btnStagePan');
 const fixedView=$('fixed-view');
 const isStagePointer = target => target === canvas || (target === stage && canvas.style.clipPath !== '');
@@ -197,7 +210,7 @@ $('interaction-voice').onclick=()=>{
  auditionVoice(voiceClip(selected,'touch_head',favor)||voiceClip(selected,'touch_1',favor)||clips[0]);
 };
 $('voice-stop').onclick=()=>stopChannel('voice');
-$('reset-state').onclick=()=>{cancelInteraction();stopAudio();adapter?.setInteractionViewFixed?.(false);controller?.reset();$('fit').click();hintArea=null;hintAdvance=false;clearHint();};
+$('reset-state').onclick=()=>{cancelInteraction();stopAudio();adapter?.setInteractionViewFixed?.(false);controller?.reset();$('fit').click();hintArea=null;hintAdvance=false;resetHintVisits();clearHint();};
 $('refit-interaction').onclick=()=>{$('fit').click();setPanelOpen('interaction',false);};
 fixedView.onchange=()=>{
  libraryPrefs.set('fixedInteractionView',fixedView.checked);
@@ -214,6 +227,7 @@ function clearHint(){
  interactionHint.hidden=hintNav.hidden=true;
 }
 nextHintButton.onclick=()=>{
+ hintManualAdvance=true;
  hintAdvance=true;
  updateInteractionHint();
 };
@@ -280,7 +294,15 @@ function updateInteractionHint(){
  let next=hintAdvance?-1:candidates.findIndex(point=>point.id===hintArea);
  if(next<0)next=candidates.findIndex(point=>point.index>current);
  if(next<0)next=0;
- const point=candidates[next],label=hintLabels[point.gesture],count=`${next+1} / ${candidates.length}`;
+ if(!hintManualAdvance&&(hintAdvance||!candidates.some(point=>point.id===hintArea))){
+  // Rotating the global area list can repeatedly choose the exit of a new
+  // pose. Balance actual interactions within each pose so every branch gets
+  // a turn; explicit "next" still walks the visible points in their order.
+  const visits=candidates.map(point=>hintVisits.get(`${hintPoseKey()}|${point.id}`)||0),least=Math.min(...visits);
+  for(let offset=0;offset<candidates.length;offset++){const index=(next+offset)%candidates.length;if(visits[index]===least){next=index;break;}}
+ }
+ hintManualAdvance=false;
+ const point=candidates[next],label=hintLabels[point.gesture],count=`当前姿态 ${next+1} / ${candidates.length}`;
  hintArea=point.id;
  hintAdvance=false;
  interactionHint.style.left=point.x+'px';
@@ -290,7 +312,8 @@ function updateInteractionHint(){
  if(interactionHint.firstElementChild.textContent!==label)interactionHint.firstElementChild.textContent=label;
  if(hintCount.textContent!==count)hintCount.textContent=count;
  interactionHint.hidden=false;
- hintNav.hidden=candidates.length<2;
+ nextHintButton.hidden=candidates.length<2;
+ hintNav.hidden=false;
 }
 function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
 function cancelInteraction(){
@@ -319,6 +342,7 @@ const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('point
   if(!view.playing)$('play').click();
   unlockAudio().catch(()=>{});
   const p=localPoint(event),hits=adapter.hits(p.x,p.y);
+  hintInputPose=hintPoseKey();
   evidence.interaction.hits=hits;
   if(selected.type==='live2d'){
    if(fixedView.checked)adapter.setInteractionViewFixed(true);
@@ -332,7 +356,7 @@ const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('point
 });
 stage.addEventListener('pointerdown',e=>{
  if(pointer||!isStagePointer(e.target)||e.button!==0||!view.ready||exporting)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={id:e.pointerId,x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
- clearHint();
+ hintInputPose=hintPoseKey();clearHint();
  if(!pan&&selected.type==='live2d')controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));
 });
 stage.addEventListener('pointermove',e=>{
@@ -348,6 +372,7 @@ stage.addEventListener('pointermove',e=>{
 function release(id,p,cancel=false){if(pointer?.id!==id)return;const down=pointer;pointer=null;look.targetX=look.targetY=0;if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);if(down.pan)return;
  if(selected.type==='live2d'){
   if(!cancel&&down.hits.includes(hintArea)&&controller.hintGesture(hintArea)==='drag'&&Math.hypot(p.x-down.startX,p.y-down.startY)>=12){
+   recordHintVisit('trigger',{area:hintArea});
    hintAdvance=true;
   }
   controller.end(p.x,p.y,cancel);
@@ -406,7 +431,7 @@ function controls(){
  $('fixed-view-setting').hidden=!hasInteraction||selected.type!=='live2d';
  evidence.interaction.available=hasInteraction;
  $('voice').replaceChildren(...selected.voice.activeClips.map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=(labels[c.cue]||c.cue)+(c.variant==='skin'?' · 皮肤':'')+(c.threshold?' · '+(c.threshold>=1000?'誓约':'好感')+' '+(c.threshold>=1000?c.threshold-1000:c.threshold):'');return o;}));
- $('interaction-note').textContent='按画面上的提示操作，也可以点「下一处」查看其他位置。';
+ $('interaction-note').textContent='提示优先指向本次尚未体验的位置，切换姿态后还会出现新点位。「下一处」查看当前姿态的其他位置；待机、登场等片段可在动画列表直接预览。';
  $('interaction-voice').hidden=!selected.voice.activeClips.length;
 }
 function commonLoopDuration(motionFrames, effectFrames, fps) {
@@ -472,6 +497,7 @@ function live2DFrameAtPose(frame, internal) {
   maxX: centerX + halfWidth, maxY: centerY + halfHeight, rotation };
 }
 async function live2dPortrait(model,generation){
+ installMotionCompatibility(PIXI.live2d);
  const app=new PIXI.Application({view:canvas,resizeTo:stage,autoStart:false,antialias:true,backgroundAlpha:0,resolution:Math.max(2,devicePixelRatio||1),autoDensity:true,preserveDrawingBuffer:true});
  let live, preparedSettings;
  const dispose=()=>{const gl=app.renderer?.gl,core=live?.internalModel?.coreModel,native=core?.getModel(),moc=native&&mocOwners.get(native);try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}finally{preparedSettings?.release();}if(moc&&!core?.getModel()&&!releasedMocs.has(moc)){moc._release();releasedMocs.add(moc);releasedMocCount++;}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
@@ -500,7 +526,8 @@ async function live2dPortrait(model,generation){
   if (generation !== loadGeneration) { dispose(); return null; }
  } catch (error) { dispose(); throw error; }
  app.stage.addChild(live);live.anchor.set(.5,.5);const natural={width:live.internalModel.width,height:live.internalModel.height},internal=live.internalModel,core=internal.coreModel.getModel(),indexes=new Map(core.parameters.ids.map((id,i)=>[id,i]));
- const baseFrame = authoredLive2DFrame(model.id), portraitSurrounds = portraitSurroundNames(model.id);
+ const defaultStageFrame = defaultPortraitStageFrame(model.id);
+ const baseFrame = authoredLive2DFrame(model.id) || defaultStageFrame, portraitSurrounds = portraitSurroundNames(model.id);
  const pivotX = natural.width / 2, pivotY = natural.height / 2;
  evidence.model=live;evidence.app=app;editor=window.createInteractionLive2DEditor({live,core,hitAreas:model.interaction.hitAreas});const mouthIds=internal.settings.json.Groups?.find(g=>g.Name==='LipSync')?.Ids||[];
  let effectManager,effectMotion,effectTimeline,effectTime=0,sampleExportEffect=null;const renderedParameters=core.parameters.values.slice();
@@ -547,7 +574,7 @@ async function live2dPortrait(model,generation){
   evidence.audio.mouthValues=Object.fromEntries(mouthIds.map(id=>[id,parameters.values[indexes.get(id)]]));editor?.applyParameters?.();renderedParameters.set(parameters.values);
  });
  let playSerial=0, activeMotion=model.defaultAnimation;
- let stageCrop = authoredLive2DFrame(model.id, activeMotion);
+ let stageCrop = authoredLive2DFrame(model.id, activeMotion) || defaultStageFrame;
  let displayedStageCrop, renderedStageMotion, stageCropFixed = false;
  let stageClip = null;
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
@@ -578,7 +605,7 @@ async function live2dPortrait(model,generation){
    await live.motion(name,0,3);
    if(generation!==loadGeneration||serial!==playSerial)return;
    activeMotion=evidence.animation=name;
-   stageCrop = authoredLive2DFrame(model.id, name);
+   stageCrop = authoredLive2DFrame(model.id, name) || defaultStageFrame;
    $('animation').value=name;
   },
   world:(x,y)=>{const p=live.toModelPosition(new PIXI.Point(x,y));return {x:p.x,y:p.y};},
@@ -872,9 +899,10 @@ async function spinePortrait(model,generation){
  };
  for(const l of layers){const a=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(a)l.state.setAnimation(0,a.name,true);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}
  const authoredFrame = authoredSpineFrame(model.id);
+ const stageFrameCrop = authoredFrame || defaultPortraitStageFrame(model.id);
  const rectangles=[];
  if (!authoredFrame) for(const l of layers)for(const slot of l.skeleton.drawOrder){const a=slot.attachment;let vertices;if(a instanceof spine.RegionAttachment){vertices=new Float32Array(8);a.computeWorldVertices(slot.bone,vertices,0,2);}else if(a instanceof spine.MeshAttachment){vertices=new Float32Array(a.worldVerticesLength);a.computeWorldVertices(slot,0,a.worldVerticesLength,vertices,0,2);}if(!vertices?.length)continue;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(let i=0;i<vertices.length;i+=2){minX=Math.min(minX,vertices[i]);maxX=Math.max(maxX,vertices[i]);minY=Math.min(minY,vertices[i+1]);maxY=Math.max(maxY,vertices[i+1]);}rectangles.push({name:slot.data.name,bounds:[minX,minY,maxX,maxY]});}
- const framing = authoredFrame ? { bounds: stageBoundsForFrame(authoredFrame), excluded: [] } : fitSceneBounds(rectangles);
+ const framing = stageFrameCrop ? { bounds: stageBoundsForFrame(stageFrameCrop), excluded: [] } : fitSceneBounds(rectangles);
  const bounds=framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
@@ -916,12 +944,12 @@ async function spinePortrait(model,generation){
    }
   }
   viewerUI.tools.after();
-  if (authoredFrame) {
+  if (stageFrameCrop) {
    const scale = density / units;
-   const left = Math.floor(bw / 2 + (authoredFrame.minX - camera.position.x) * scale);
-   const right = Math.ceil(bw / 2 + (authoredFrame.maxX - camera.position.x) * scale);
-   const bottom = Math.floor(bh / 2 + (authoredFrame.minY - camera.position.y) * scale);
-   const top = Math.ceil(bh / 2 + (authoredFrame.maxY - camera.position.y) * scale);
+   const left = Math.floor(bw / 2 + (stageFrameCrop.minX - camera.position.x) * scale);
+   const right = Math.ceil(bw / 2 + (stageFrameCrop.maxX - camera.position.x) * scale);
+   const bottom = Math.floor(bh / 2 + (stageFrameCrop.minY - camera.position.y) * scale);
+   const top = Math.ceil(bh / 2 + (stageFrameCrop.maxY - camera.position.y) * scale);
    gl.enable(gl.SCISSOR_TEST);
    gl.scissor(left, bottom, right - left, top - bottom);
   }
@@ -930,7 +958,7 @@ async function spinePortrait(model,generation){
    for (const layer of layers) scene.drawSkeleton(layer.skeleton, true);
    scene.end();
   } finally {
-   if (authoredFrame) gl.disable(gl.SCISSOR_TEST);
+   if (stageFrameCrop) gl.disable(gl.SCISSOR_TEST);
   }
  };
  disposeRenderer=dispose;return api;
@@ -938,6 +966,7 @@ async function spinePortrait(model,generation){
 async function getJson(url,required=true,signal){try{return JSON.parse(new TextDecoder().decode(await readPortraitAsset(url,{signal})));}catch(error){if(!required&&error.status===404)return null;throw error;}}
 async function loadModel(id,{history=true}={}){
  if(exporting)return false;
+ resetHintVisits();
  loadAbort?.abort();loadAbort=new AbortController();retryId=id;
  stagePan.cancel();stagePan.setMode('pan');cancelInteraction();hasInteraction=false;interactButton.hidden=true;
  const interactionTab=document.querySelector('[data-panel-tab="interaction"]');interactionTab.hidden=interactionTab.disabled=true;
@@ -952,6 +981,7 @@ async function loadModel(id,{history=true}={}){
  if(!data)return false;const [model,audio,animator]=data;
  if(generation!==loadGeneration)return false;selected=model;if(audio)Object.assign(model,audio);if(animator)model.animator=animator;evidence.selected=model;$('active-name').textContent=stageName(model);populate();
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
+ const previousTrace=adapter.trace;adapter.trace=(type,data)=>{previousTrace?.call(adapter,type,data);recordHintVisit(type,data);};
  controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:highestFavor(model)}):new SpineController(model,adapter,{storage:localStorage,favor:highestFavor(model)});evidence.controller=controller;evidence.adapter=adapter;controls();controller.playIdle();
   view.ready=evidence.ready=true;interactButton.disabled=!hasInteraction;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
  if(history){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);K.history.push(entry(model));}return true;

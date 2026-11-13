@@ -70,7 +70,10 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
     const animations=data.animations.map(a=>({name:a.name,duration:a.duration}));
     const first=animations.find(a=>a.name===model.initialAnimation)||animations.find(a=>/^(idle|normal|loop|default)$/i.test(a.name))||animations[0];if(first)state.setAnimation(0,first.name,true);
     state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.update);
-    let bounds=modelBounds(skeleton,ns,model.visibleBounds);
+    // This portrait has inactive outfit geometry far to the left of the artwork.
+    // Keep the browsing view on the visible illustration, independent of exports.
+    const stageBounds=model.remote&&model.id==='spine_1001505'?{minX:-1380,minY:-1660,maxX:950,maxY:1340}:null;
+    let bounds=stageBounds||modelBounds(skeleton,ns,model.visibleBounds);
     const validBounds=value=>value&&[value.minX,value.minY,value.maxX,value.maxY].every(Number.isFinite)&&value.maxX-value.minX>=1&&value.maxY-value.minY>=1;
     if(model.remote&&!validBounds(bounds)){
       const box=model.json?.skeleton;
@@ -102,7 +105,7 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       play(name,loop=true){if(!data.findAnimation(name))throw Error('动画不存在');state.setAnimation(0,name,loop);},
       loop(value){const track=state.getCurrent(0);if(track)track.loop=value;},
       seek(time){const track=state.getCurrent(0);if(track){track.trackTime=Math.max(0,Math.min(track.animation.duration,time));track.animationLast=track.nextAnimationLast=track.trackTime;state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);}},
-      skin(name){skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);const next=modelBounds(skeleton,ns,model.visibleBounds);if(next&&next.maxX>next.minX&&next.maxY>next.minY&&[next.minX,next.minY,next.maxX,next.maxY].every(Number.isFinite))bounds=next;},
+      skin(name){skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);const next=stageBounds||modelBounds(skeleton,ns,model.visibleBounds);if(next&&next.maxX>next.minX&&next.maxY>next.minY&&[next.minX,next.minY,next.maxX,next.maxY].every(Number.isFinite))bounds=next;},
       playback(){const t=state.getCurrent(0),d=t?.animation.duration||0;return {name:t?.animation.name||'',duration:d,time:d?(t.loop?t.trackTime%d:Math.min(d,t.trackTime)):0,loop:t?.loop??true};},
       render(dt,view){if(disposed)return;lastView=view;const {w,h,density}=resize(canvas);lastFrame=stageFrame(canvas);gl.viewport(0,0,canvas.width,canvas.height);tools?.before();if(view.playing){state.update(dt*view.speed);skeleton.update?.(dt*view.speed);}state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.update);tools?.after();
         const a=world(w/2,h/2),b=world(w/2+1,h/2);renderer.camera.setViewport(canvas.width,canvas.height);renderer.camera.zoom=(b.x-a.x)/density;renderer.camera.position.set(a.x,a.y,0);renderer.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);renderer.begin();renderer.drawSkeleton(skeleton,!!atlas.pages[0]?.pma);renderer.end();},

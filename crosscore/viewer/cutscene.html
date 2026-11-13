@@ -489,11 +489,15 @@
     ['78050_skin_Osiris03b_ASMR.json', { minX: -2940, minY: -1860, maxX: 2935, maxY: 2040 }],
   ]);
   const crosscoreIdleFrames = new Map([
+    ['40310_skin_Noctilucent04.json', { minX: -1989, minY: -2052, maxX: 1956, maxY: 2163 }],
+    ['60090_skin_Curtana03.json', { minX: -1321, minY: -346, maxX: 1315, maxY: 2433 }],
+    ['70050_skin_Hades03.json', { minX: -1661, minY: -1453, maxX: 2095, maxY: 1656 }],
     ['CG_seashore.json', { minX: -1905, minY: -82, maxX: 1922, maxY: 1990 }],
     ['60110_skin_Burtgang03.json', { minX: -591, minY: -148, maxX: 593, maxY: 1982 }],
   ]);
   const tizonaCloseFrame = { minX: -1350, minY: -1050, maxX: 1130, maxY: 850 };
   function crosscoreFrame(skeletonFile, animation) {
+    if (skeletonFile === '70030_skin_Poseidon05.json' && animation === 'idle1') return {"minX": -3155, "minY": -2112, "maxX": 3167, "maxY": 2013};
     if (skeletonFile === '60310_skin_Tizona04b.json' && ['click6', 'idle2', 'idle3'].includes(animation)) return tizonaCloseFrame;
     return (animation === 'idle' && crosscoreIdleFrames.get(skeletonFile)) || crosscoreFrames.get(skeletonFile);
   }
@@ -794,6 +798,7 @@
       }
       return data.animations && (
         data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name)) ||
+        data.animations.find(a => /^idle[_ -]?\d+$/i.test(a.name)) ||
         data.animations.find(a => /^loop/i.test(a.name)) || data.animations[0]
       );
     }
@@ -2197,6 +2202,7 @@
       const saved = restoreAnim && data.animations.some(a => a.name === restoreAnim) ? restoreAnim : null;
       const previewAnim = (v.previewAnimation && data.animations.find(a => a.name === v.previewAnimation))
         || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
+        || data.animations.find(a => /^idle[_ -]?\d+$/i.test(a.name))
         || data.animations.find(a => /^loop/i.test(a.name))
         || data.animations[0];
       let def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)

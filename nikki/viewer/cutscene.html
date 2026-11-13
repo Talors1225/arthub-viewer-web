@@ -496,6 +496,10 @@
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
   // Keep the scene inside its artwork panel when idle effects extend past it.
   const idleSceneFrames = new Map([
+    ['EventScene_Chap_19_02.skel', { minX: -742, minY: -5, maxX: 771, maxY: 1507 }],
+    ['EventScene_NoCallerID_01.skel', { minX: -1007, minY: -463, maxX: 1011, maxY: 1263 }],
+    ['EventScene_icedragonsaga_03.skel', { minX: -1500, minY: 0, maxX: 1500, maxY: 3000 }],
+    ['EventScene_redash_11.skel', { minX: -1500, minY: 0, maxX: 1500, maxY: 3000 }],
     ['EventScene_HightechToy_01.skel', { minX: -2006, minY: -478, maxX: 1974, maxY: 3496 }],
     ['EventScene_LifeAgain_01.skel', { minX: -996, minY: -242, maxX: 991, maxY: 1748 }],
     ['EventScene_memoriesteller_02.skel', { minX: -995, minY: -246, maxX: 995, maxY: 1744 }],
@@ -2542,7 +2546,9 @@
       // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
       animSel.innerHTML = data.animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
       const urlAnim = new URLSearchParams(location.search).get('anim');
-      const preferred = v.previewAnimation && data.findAnimation(v.previewAnimation);
+      // This standalone light layer has an empty character-idle placeholder.
+      const preferredName = v.previewAnimation || (v.skel === 'c103_00_bg.skel' ? 'bg_idle' : null);
+      const preferred = preferredName && data.findAnimation(preferredName);
       const restore = name => preferred && name === v.legacyPreviewAnimation ? preferred.name : name;
       const saved = restore(restoreAnim);
       const previewAnim = preferred
