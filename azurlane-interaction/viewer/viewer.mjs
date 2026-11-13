@@ -1,4 +1,4 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261113-az-interaction-hint';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261113-az-hint-cycle';
 import {EffectTimeline} from './effect-timeline.mjs?v=499c19e6892b';
 import {hasEffectControls} from './effect-controls.mjs?v=499c19e6892b';
 import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame} from './portrait-frame.mjs?v=20261113-az-interaction-hint';
@@ -6,8 +6,9 @@ import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from '.
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage'),interactionHint=$('interaction-hint'),hintButton=$('show-hint');
+const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),nextHintButton=$('next-hint');
 let canvas=$('canvas'),selected,allModels=[],controller,render,disposeRenderer,adapter,loadGeneration=0,portraitTime=0,space=false;
-let hintsEnabled=true,hintArea=null,previousHintArea=null,hintInteractionCount=0;
+let hintsEnabled=true,hintArea=null,hintInteractionCount=0,hintAdvance=false;
 const interactButton=$('btnStagePan');
 const isStagePointer = target => target === canvas || (target === stage && canvas.style.clipPath !== '');
 let stageFrameCache=null;
@@ -194,53 +195,89 @@ $('interaction-voice').onclick=()=>{
  auditionVoice(voiceClip(selected,'touch_head',favor)||voiceClip(selected,'touch_1',favor)||clips[0]);
 };
 $('voice-stop').onclick=()=>stopChannel('voice');
-$('reset-state').onclick=()=>{stopAudio();controller?.reset();hintArea=previousHintArea=null;interactionHint.hidden=true;};
+$('reset-state').onclick=()=>{stopAudio();controller?.reset();hintArea=null;hintAdvance=false;clearHint();};
 hintButton.onclick=()=>{
  hintsEnabled=!hintsEnabled;
  hintButton.setAttribute('aria-pressed',String(hintsEnabled));
  updateInteractionHint();
 };
 const hintLabels={tap:'点这里',hold:'长按这里',drag:'从这里拖动'};
+const hintSamples=[.5,.25,.75,.125,.875,.375,.625,.04,.96];
+function clearHint(){
+ interactionHint.hidden=hintNav.hidden=true;
+}
+nextHintButton.onclick=()=>{
+ hintAdvance=true;
+ updateInteractionHint();
+};
+function findHintPoint(area,rect,gestures,live){
+ if(!area.vertices.length)return null;
+ const xs=area.vertices.map(point=>point[0]),ys=area.vertices.map(point=>point[1]);
+ const left=Math.max(7,Math.min(...xs)),right=Math.min(rect.width-7,Math.max(...xs));
+ const top=Math.max(7,Math.min(...ys)),bottom=Math.min(rect.height-7,Math.max(...ys));
+ if(right<left||bottom<top)return null;
+ const gesture=gestures.get(area.id);
+ function candidate(x,y){
+  if(x<left||x>right||y<top||y>bottom||document.elementFromPoint(rect.left+x,rect.top+y)!==canvas)return null;
+  const hits=adapter.hits(x,y);
+  if(live){
+   // Live2D starts every hit region. An overlapping region that cannot
+   // respond to this gesture cannot hide the underlying control.
+   if(hits.find(id=>gestures.get(id)===gesture)!==area.id)return null;
+  }else if(hits[0]!==area.id)return null;
+  return {id:area.id,x,y,gesture};
+ }
+ for(const u of hintSamples)for(const v of hintSamples){
+  const point=candidate(left+(right-left)*u,top+(bottom-top)*v);
+  if(point)return point;
+ }
+ // Slender polygons may pass between all the grid samples.
+ const vertices=area.vertices;
+ const stride=Math.max(1,Math.ceil(vertices.length/24));
+ for(let i=0;i<vertices.length;i+=stride){
+  const a=vertices[i],b=vertices[(i+1)%vertices.length];
+  const point=candidate((a[0]+b[0])/2,(a[1]+b[1])/2);
+  if(point)return point;
+ }
+ return null;
+}
 function updateInteractionHint(){
  if(!hintsEnabled||!view.ready||exporting||stage.dataset.panMode!=='interact'||stage.dataset.clickMode==='part-editing'||
     stage.dataset.clickMode==='pose'||stage.dataset.pinching||controller.state.busy||pointer||$('gridView').classList.contains('open')){
-  interactionHint.hidden=true;
+  clearHint();
   return;
  }
  if(controller.state.interactions!==hintInteractionCount){
   hintInteractionCount=controller.state.interactions;
-  previousHintArea=hintArea;
-  hintArea=null;
+  hintAdvance=true;
  }
- const regions=adapter.polygons()||[],rect=canvas.getBoundingClientRect();
- const ordered=[
-  ...regions.filter(area=>area.id===hintArea),
-  ...regions.filter(area=>area.id!==hintArea&&area.id!==previousHintArea),
-  ...regions.filter(area=>area.id!==hintArea&&area.id===previousHintArea),
- ];
- for(const area of ordered){
-  if(!area.vertices.length)continue;
-  const event=selected.interaction.hitAreas.find(item=>item.id===area.id)?.event;
-  const gesture=controller.hintGesture(area.id,event);
-  if(!gesture)continue;
-  const xs=area.vertices.map(point=>point[0]),ys=area.vertices.map(point=>point[1]);
-  const left=Math.max(44,Math.min(...xs)),right=Math.min(rect.width-44,Math.max(...xs));
-  const top=Math.max(48,Math.min(...ys)),bottom=Math.min(rect.height-16,Math.max(...ys));
-  if(right<left||bottom<top)continue;
-  for(const u of [.5,.25,.75])for(const v of [.5,.25,.75]){
-   const x=left+(right-left)*u,y=top+(bottom-top)*v;
-   if(document.elementFromPoint(rect.left+x,rect.top+y)!==canvas)continue;
-   if(adapter.hits(x,y)[0]!==area.id)continue;
-   hintArea=area.id;
-   interactionHint.style.left=x+'px';
-   interactionHint.style.top=y+'px';
-   const label=hintLabels[gesture];
-   if(interactionHint.firstElementChild.textContent!==label)interactionHint.firstElementChild.textContent=label;
-   interactionHint.hidden=false;
-   return;
-  }
+ const source=selected.interaction.hitAreas;
+ const regions=new Map(adapter.polygons().map(area=>[area.id,area]));
+ const gestures=new Map(source.map(area=>[area.id,controller.hintGesture(area.id,area.event)]));
+ const rect=canvas.getBoundingClientRect(),live=selected.type==='live2d';
+ const candidates=[];
+ for(let i=0;i<source.length;i++){
+  const id=source[i].id,area=regions.get(id);
+  if(!area||!gestures.get(id))continue;
+  const point=findHintPoint(area,rect,gestures,live);
+  if(point)candidates.push({...point,index:i});
  }
- interactionHint.hidden=true;
+ if(!candidates.length){clearHint();return;}
+ const current=source.findIndex(area=>area.id===hintArea);
+ let next=hintAdvance?-1:candidates.findIndex(point=>point.id===hintArea);
+ if(next<0)next=candidates.findIndex(point=>point.index>current);
+ if(next<0)next=0;
+ const point=candidates[next],label=hintLabels[point.gesture],count=`${next+1} / ${candidates.length}`;
+ hintArea=point.id;
+ hintAdvance=false;
+ interactionHint.style.left=point.x+'px';
+ interactionHint.style.top=point.y+'px';
+ interactionHint.style.setProperty('--hint-label-offset',Math.max(48,Math.min(rect.width-48,point.x))-point.x+'px');
+ interactionHint.toggleAttribute('data-label-below',point.y<60);
+ if(interactionHint.firstElementChild.textContent!==label)interactionHint.firstElementChild.textContent=label;
+ if(hintCount.textContent!==count)hintCount.textContent=count;
+ interactionHint.hidden=false;
+ hintNav.hidden=candidates.length<2;
 }
 function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
 function cancelInteraction(){
@@ -250,7 +287,7 @@ function cancelInteraction(){
 const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('pointer-mode'),interactiveButton:true,accepts:isStagePointer,ready:()=>view.ready&&!exporting,
  onModeChange:mode=>{
   cancelInteraction();
-  interactionHint.hidden=true;
+  clearHint();
   K.clearToasts('azur-interaction');
   if(mode==='interact'){
    viewerUI.tools.exitEditing();
@@ -268,7 +305,7 @@ const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('point
 });
 stage.addEventListener('pointerdown',e=>{
  if(pointer||!isStagePointer(e.target)||e.button!==0||!view.ready||exporting)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);if(!view.playing)$('play').click();unlockAudio().catch(()=>{});const p=localPoint(e),pan=space||$('pointer-mode').value==='pan',hits=pan?[]:adapter.hits(p.x,p.y);pointer={id:e.pointerId,x:p.x,y:p.y,startX:p.x,startY:p.y,pan,hits,down:portraitTime};evidence.interaction.hits=hits;
- interactionHint.hidden=true;
+ clearHint();
  if(!pan&&selected.type==='live2d')controller.start(hits,p.x,p.y,adapter.world(p.x,p.y));
 });
 stage.addEventListener('pointermove',e=>{
@@ -284,7 +321,7 @@ stage.addEventListener('pointermove',e=>{
 function release(id,p,cancel=false){if(pointer?.id!==id)return;const down=pointer;pointer=null;look.targetX=look.targetY=0;if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);if(down.pan)return;
  if(selected.type==='live2d'){
   if(!cancel&&down.hits.includes(hintArea)&&controller.hintGesture(hintArea)==='drag'&&Math.hypot(p.x-down.startX,p.y-down.startY)>=12){
-   previousHintArea=hintArea;hintArea=null;
+   hintAdvance=true;
   }
   controller.end(p.x,p.y,cancel);
  }
@@ -319,7 +356,7 @@ const viewerUI=window.createInteractionViewerUI({
  tools:{
   identity:()=>selected?.id+':'+loadGeneration,editor:()=>editor,name:()=>selected?.name||selected?.id||'azurlane',
   reload:()=>{const id=retryId||selected?.id;if(id)return loadModel(id).catch(fail);},openPanel:open=>setPanelOpen('interaction',open),stopAudio,
-  setExporting:value=>{if(value){stagePan.cancel();cancelInteraction();}exporting=value;interactButton.disabled=value||!view.ready;viewerUI.update(true);},capture:(state,format,quality)=>adapter.capture(state,format,quality),
+  setExporting:value=>{if(value){stagePan.cancel();cancelInteraction();clearHint();}exporting=value;interactButton.disabled=value||!view.ready;viewerUI.update(true);},capture:(state,format,quality)=>adapter.capture(state,format,quality),
   videoDuration:state=>adapter?.videoDuration?.(state)??state.duration,setBackground:()=>{},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume,voiceTab:'voice',
@@ -333,7 +370,7 @@ function controls(){
  const areas=[...new Set(array(selected.interaction.hitAreas).map(h=>h.id))];$('hit-area').replaceChildren(...areas.map(name=>{const o=document.createElement('option');o.value=o.textContent=name;return o;}));$('hit-trigger').disabled=!areas.length;
  $('hit-trigger').onclick=()=>{const area=$('hit-area').value;unlockAudio().catch(()=>{});if(controller instanceof Live2DController){controller.start([area],0,0);controller.end(0,0);}else if(!controller.touch(area,{drag:false}))spineBasic(area);};
  $('voice').replaceChildren(...selected.voice.activeClips.map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=(labels[c.cue]||c.cue)+(c.variant==='skin'?' · 皮肤':'')+(c.threshold?' · '+(c.threshold>=1000?'誓约':'好感')+' '+(c.threshold>=1000?c.threshold-1000:c.threshold):'');return o;}));
- $('interaction-note').textContent='按画面上的提示点按、拖动或长按。关闭面板后也能继续互动。';
+ $('interaction-note').textContent='按画面上的提示操作，也可以点「下一处」查看其他位置。';
  $('interaction-voice').hidden=!selected.voice.activeClips.length;
 }
 function commonLoopDuration(motionFrames, effectFrames, fps) {
@@ -853,7 +890,7 @@ async function loadModel(id,{history=true}={}){
  if(exporting)return false;
  loadAbort?.abort();loadAbort=new AbortController();retryId=id;
  stagePan.cancel();cancelInteraction();
- interactButton.disabled=true;for(const key of ['reset-state','show-hint'])$(key).disabled=true;$('interaction-voice').hidden=true;interactionHint.hidden=true;hintArea=previousHintArea=null;hintInteractionCount=0;K.clearToasts('azur-interaction');K.clearToasts('azur-audio');$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
+ interactButton.disabled=true;for(const key of ['reset-state','show-hint'])$(key).disabled=true;$('interaction-voice').hidden=true;clearHint();hintArea=null;hintAdvance=false;hintInteractionCount=0;K.clearToasts('azur-interaction');K.clearToasts('azur-audio');$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  viewerUI.tools.prepareLoad();
  const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:previewPath(id),label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];

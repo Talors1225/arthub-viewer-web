@@ -138,6 +138,7 @@ export class Live2DController extends Controller {
    if(typeof active.idle==='number'&&active.idle===this.state.idleIndex&&!active.repeat_flag&&!active.repeatFlag)continue;
    if(t.type===9&&Math.abs(this.parameter(t.parameter)-(step.num??t.num))>.05)continue;
    if(t.type===11&&!sameRange(this.parameter(t.parameter),t.num))continue;
+   if(t.type===15&&!this.canPlayBoardCell(s))continue;
    if([2,6,9,11,15].includes(t.type))return 'tap';
   }
   const action=basicActions[area];
@@ -263,9 +264,14 @@ export class Live2DController extends Controller {
   }
   const due=this.boardJobs.filter(j=>j.at<=this.time);this.boardJobs=this.boardJobs.filter(j=>j.at>this.time);for(const job of due)job.fn();
  }
+ canPlayBoardCell(s,cells=this.states.filter(v=>v.config.action_trigger?.type===15)){
+  if(cells.length!==9||Math.abs(s.value)>.1||this.boardResult!==null)return false;
+  const mine=cells.filter(c=>c.target>0).length,enemy=cells.filter(c=>c.target<0).length;
+  return mine<=enemy;
+ }
  boardClick(s){
-  const cells=this.states.filter(v=>v.config.action_trigger?.type===15);if(cells.length!==9||Math.abs(s.value)>.1)return;
-  const mine=cells.filter(c=>c.target>0).length,enemy=cells.filter(c=>c.target<0).length;if(mine>enemy||this.boardResult!==null)return;
+  const cells=this.states.filter(v=>v.config.action_trigger?.type===15);
+  if(!this.canPlayBoardCell(s,cells))return;
   this.target(s,1,true);this.state.interactions++;this.log('board-move',{id:s.config.id,value:1});
   const result=()=>{const winlines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];for(const side of [1,-1])if(winlines.some(line=>line.every(i=>cells[i].target===side)))return side===1;if(cells.every(c=>c.target!==0))return true;return null;};
   let ended=result();if(ended!==null){this.boardJobs.push({at:this.time+.5,fn:()=>{this.boardResult=ended;}});return;}

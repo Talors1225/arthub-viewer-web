@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="../../common/library-ui.css?v=dd26cfcbf3ab">
 <link rel="stylesheet" href="../../common/visual.css?v=dd26cfcbf3ab">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=dd26cfcbf3ab">
-<link rel="stylesheet" href="azurlane.css?v=20261113-az-interaction-hint">
+<link rel="stylesheet" href="azurlane.css?v=20261113-az-hint-cycle">
 <link rel="stylesheet" href="../../common/site-ui.css?v=dd26cfcbf3ab"><script defer src="../../common/site-ui.js?v=20261113-az-interaction"></script>
   <script src="../../arthub-cos-config.js?v=8e1c1709f267"></script>
   <script src="../../arthub-cos.js?v=dd26cfcbf3ab"></script>
@@ -20,6 +20,10 @@
     <div class="status" id="status" role="status">正在读取资源…</div>
     <div class="hint" id="touch-hint">点击或拖动立绘互动 · 按住空格拖动画面 · Esc 关闭面板</div>
   </main>
+  <div id="interaction-hint-nav" hidden>
+    <span id="interaction-hint-count"></span>
+    <button id="next-hint" type="button">下一处</button>
+  </div>
 
   <nav class="rail" id="rail" aria-label="ArtHub 查看器导航">
     <button id="railGrid" type="button" title="资源库 (G)" aria-label="资源库 (G)"></button>
@@ -144,7 +148,7 @@
   <script src="vendor/live2d/live2dcubismcore.min.js"></script>
   <script src="vendor/live2d/pixi-6.5.10.min.js"></script>
   <script src="vendor/live2d/cubism4-0.4.0.min.js"></script>
-  <script type="module" src="viewer.mjs?v=20261113-az-interaction-hint"></script>
+  <script type="module" src="viewer.mjs?v=20261113-az-hint-cycle"></script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->
