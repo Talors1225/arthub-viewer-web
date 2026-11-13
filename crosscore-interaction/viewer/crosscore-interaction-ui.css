@@ -222,3 +222,19 @@
 .crosscore-interaction-viewer #gridView .thumb-card .tstar:hover { color:var(--text); }
 .crosscore-interaction-viewer #gridView .thumb-card .tstar.on { color:var(--star); }
 .crosscore-interaction-viewer #gridView .thumb-card .ts:empty { display:none !important; }
+
+@media (max-width: 720px) {
+  html[data-site-ui="1"] body.crosscore-interaction-viewer #siteMobileDock #btnStagePan {
+    flex-direction: column;
+    gap: 1px;
+    padding-inline: 3px !important;
+  }
+  html[data-site-ui="1"] body.crosscore-interaction-viewer #siteMobileDock #btnStagePan::after {
+    display: block !important;
+    font-size: 10px;
+  }
+  html[data-site-ui="1"] body.crosscore-interaction-viewer #siteMobileDock #btnStagePan[aria-pressed="true"] {
+    color: var(--accent);
+    background: var(--accent-dim-bg);
+  }
+}

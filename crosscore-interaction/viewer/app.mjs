@@ -493,7 +493,7 @@ function render() {
   requestAnimationFrame(render);
 }
 const stagePan = K.createStagePan({ stage, button: $('#btnStagePan'), interactiveButton: true, accepts: target => target === canvas || target === overlay,
-  onModeChange: mode => { if (pointer) releasePointer({ pointerId:pointer.id }, true); if (mode === 'interact') { viewerUI.tools.exitEditing(); $('#interaction-more').open = false; endAnimationPreview(); playback.playing = true; setPanelOpen('library', false); setPanelOpen('interaction', false); K.toast('互动已开启 · 可直接操作立绘，设置在「更多」中。','info',3600,'crosscore-interaction'); } else if ($('#floatPanel').dataset.tab === 'interaction') setPanelOpen('interaction', false); },
+  onModeChange: mode => { if (pointer) releasePointer({ pointerId:pointer.id }, true); if (mode === 'interact') { viewerUI.tools.exitEditing(); $('#interaction-more').open = false; endAnimationPreview(); playback.playing = true; setPanelOpen('library', false); setPanelOpen('interaction', false); if (!$('#playbar').classList.contains('collapsed')) $('#playbarToggle').click(); } else if ($('#floatPanel').dataset.tab === 'interaction') setPanelOpen('interaction', false); },
   ready: () => !!scene && !!controller && !previewPending && !exporting,
   move: (dx, dy) => { pendingFit = null; viewPan.x += dx; viewPan.y += dy; fit(); },
   tap: event => { const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (action && (!action.gesture || controller.restoreObjects.has(action.index))) { endAnimationPreview(); playback.playing = true; controller.trigger(action.index, now()); } }
