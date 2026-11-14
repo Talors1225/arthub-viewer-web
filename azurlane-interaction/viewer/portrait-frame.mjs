@@ -28,7 +28,7 @@ const live2dIdleFrames = new Map([
  ['aogusite_4', frame(39, 34, 9972, 5719)],
  ['baerdimo_6', frame(-818, -595, 8801, 8571)],
  ['dafeng_6', frame(-1900, 925, 9280, 7070)], // Inside the beach scene's picture frame.
- ['dafeng_7', frame(-600, -2710, 15600, 12710)], // Matches the library cover's framing.
+ ['dafeng_7', frame(-11200, -3500, 16000, 14500)], // Keep the complete pool table in the two overhead opening shots.
  ['gaoxiong_7', frame(931, 143, 9157, 5868)],
  ['gezi_2', frame(430, 866, 10721, 6385)],
  ['kebensi_2', cowpensRoom],
@@ -39,6 +39,7 @@ const live2dIdleFrames = new Map([
  ['mojiaduoer_4', mogadorSky],
  ['ougen_8', frame(-13, 6, 8676, 5391)],
  ['pulimaosi_3', frame(27, 31, 7965, 4736)],
+ ['xinnong_6', frame(0, 0, 10060, 6778)], // Trim curtain geometry outside the illustrated room.
  ['qiershazhi_2', frame(-3798, -907, 11880, 9978)],
  ['sebao_2', frame(208, 56, 13932, 7841)],
  ['shi_2', frame(-264, 266, 12467, 6675)],

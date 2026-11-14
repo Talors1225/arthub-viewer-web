@@ -178,17 +178,17 @@ export class SpineScene {
     if (this.objectDrag) { this.objectDrag.dx = result.x; this.objectDrag.dy = result.y; }
   }
   restoreObject(content) { for (const name of content.drag?.slots || []) this.hiddenSlots.delete(name); }
-  endObjectDrag() {
+  endObjectDrag(cancelled = false) {
     const moving = this.objectDrag;
     if (!moving) return null;
     let animation = null;
-    for (const value of moving.drag.targetPosObjNames || []) {
+    for (const value of cancelled ? [] : moving.drag.targetPosObjNames || []) {
       const split = value.indexOf('_'), nodeName = value.slice(0, split), name = value.slice(split + 1);
       const node = this.definition.nodes.find(n => n.path === `pos/${nodeName}`);
       if (node && Math.hypot(node.x - moving.node.x - moving.dx, node.y - moving.node.y - moving.dy) < 10) animation = name;
     }
     this.nodeVisibility.set(moving.path, false);
-    if (animation) for (const name of moving.drag.slots || []) this.hiddenSlots.delete(name);
+    if (animation || cancelled) for (const name of moving.drag.slots || []) this.hiddenSlots.delete(name);
     this.objectDrag = null;
     return animation;
   }

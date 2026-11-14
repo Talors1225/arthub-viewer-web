@@ -1,5 +1,5 @@
-import { InteractionController, trackFor } from './controller.mjs?v=20261015-2';
-import { SpineScene } from './scene.mjs?v=20261015-2';
+import { InteractionController, trackFor } from './controller.mjs?v=20261114-interaction-export-loading';
+import { SpineScene } from './scene.mjs?v=20261114-interaction-export-loading';
 
 const $ = selector => document.querySelector(selector), SP = window.spine, K = window.SpineKit;
 const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint = overlay.getContext('2d');
@@ -378,7 +378,7 @@ function handleInteraction(result) {
   if (result.kind === 'drag-start') { scene.beginObjectDrag(result, controller.action(result.index)); playAudio(result.audioIds, result.hideTxt); $('#feedback').textContent = '正在拖动'; }
   if (result.kind === 'drag-move') { if (result.content.drag) scene.moveObjectDrag(result); else scene.gesture(result, now()); }
   if (result.kind === 'drag-end') {
-    if (result.content.drag) { const name = scene.endObjectDrag(); if (name) { scene.play({ ...result, kind: 'action', name, fadeIn: true, fadeOut: true }, now()); playAudio(controller.audioIds(controller.action(result.index))); } else if (result.content.drag.slots?.length) controller.restoreObjects.add(result.index); }
+    if (result.content.drag) { const name = scene.endObjectDrag(result.cancelled); if (name) { scene.play({ ...result, kind: 'action', name, fadeIn: true, fadeOut: true }, now()); playAudio(controller.audioIds(controller.action(result.index))); } else if (!result.cancelled && result.content.drag.slots?.length) controller.restoreObjects.add(result.index); }
     else scene.recover(result, now()); $('#feedback').textContent = '拖动结束，可继续互动';
   }
   if (result.name) $('#detail').textContent = `模型：${model.id}\n人物状态：${controller.role}\n动画：${result.name}\n待机：${controller.idle}\n语音：${cueName || '无'}`;
@@ -477,7 +477,7 @@ function render() {
   try {
     viewerUI.tools.before();
     if (!animationPreview && playback.playing) controller?.tick(current);
-    if (pointer && pointer.action.gesture === 6 && !pointer.started && current - pointer.at >= 0.3) pointer.started = controller.beginDrag(pointer.action.index, current);
+    if (pointer && pointer.action.gesture === 6 && !pointer.started && performance.now() - pointer.wallAt >= 300) pointer.started = controller.beginDrag(pointer.action.index, current);
     if (animationPreview && scene) for (const layer of scene.layers) { const entry = layer.state.getCurrent(PREVIEW_TRACK); if (entry) entry.trackTime += step; }
     scene?.update(animationPreview ? 0 : step, current); viewerUI.tools.after(); if (!animationPreview && playback.playing) for (const callback of callbacks.splice(0)) callback(); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     const viewport = (x, y) => ({ x: (x - renderer.camera.position.x) / renderer.camera.viewportWidth * width + width / 2, y: (y - renderer.camera.position.y) / renderer.camera.viewportHeight * height + height / 2 });
@@ -500,12 +500,13 @@ const stagePan = K.createStagePan({ stage, button: $('#btnStagePan'), interactiv
 });
 stage.addEventListener('pointerdown', event => {
   if (!scene || !controller || exporting || previewPending || pointer || event.button !== 0 || (event.target !== canvas && event.target !== overlay)) return;
-  endAnimationPreview(); playback.playing = true;
   const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (!action) return;
-  stage.setPointerCapture(event.pointerId); pointer = { id: event.pointerId, action, previous: point, start: point, at: now(), started: false };
+  endAnimationPreview(); playback.playing = true;
+  stage.setPointerCapture(event.pointerId); pointer = { id: event.pointerId, action, previous: point, start: point, screen: { x:event.clientX, y:event.clientY }, moved:false, wallAt:performance.now(), started: false };
 });
 stage.addEventListener('pointermove', event => {
   if (!pointer || pointer.id !== event.pointerId || !controller) return;
+  pointer.moved ||= Math.hypot(event.clientX-pointer.screen.x,event.clientY-pointer.screen.y)>=12;
   const point = worldPoint(event.clientX, event.clientY), dx = point.x - pointer.previous.x, dy = point.y - pointer.previous.y;
   if (pointer.action.gesture && !controller.restoreObjects.has(pointer.action.index)) {
     if (!pointer.started && pointer.action.gesture !== 6 && Math.hypot(point.x - pointer.start.x, point.y - pointer.start.y) > 3) pointer.started = controller.beginDrag(pointer.action.index, now());
@@ -517,7 +518,11 @@ function releasePointer(event, cancelled = false) {
   if (!pointer || pointer.id !== event.pointerId) return;
   const down = pointer; pointer = null;
   if (stage.hasPointerCapture(down.id)) stage.releasePointerCapture(down.id);
-  if (down.started) controller?.endDrag(); else if (!cancelled && (!down.action.gesture || controller?.restoreObjects.has(down.action.index))) controller?.trigger(down.action.index, now());
+  if (down.started) controller?.endDrag(cancelled);
+  else if (!cancelled && !down.moved && performance.now()-down.wallAt<500 && Math.hypot(event.clientX-down.screen.x,event.clientY-down.screen.y)<12 && (!down.action.gesture || controller?.restoreObjects.has(down.action.index))) {
+    const point=worldPoint(event.clientX,event.clientY);
+    if(controller?.hit(point.x,point.y)?.index===down.action.index)controller.trigger(down.action.index,now());
+  }
 }
 stage.addEventListener('pointerup', event => releasePointer(event)); stage.addEventListener('pointercancel', event => releasePointer(event, true));
 stage.addEventListener('lostpointercapture', event => releasePointer(event, true));

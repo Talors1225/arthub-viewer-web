@@ -1,4 +1,4 @@
-import { FatedGestures } from './gestures.mjs?v=20261111-fated-animations';
+import { FatedGestures } from './gestures.mjs?v=20261114-interaction-export-loading';
 import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
 import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261112-export-repair';
 

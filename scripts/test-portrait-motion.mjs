@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { orderedMotionData, installMotionCompatibility } from '../azurlane-interaction/viewer/portrait-motion.mjs';
+import { orderedMotionData, installMotionCompatibility, configurePortraitMotions } from '../azurlane-interaction/viewer/portrait-motion.mjs?v=20261114-interaction-export-loading';
 
 // A converter puts a model curve between character and hit-region parameters.
 // The SDK scans Model -> Parameter -> PartOpacity without revisiting a group.
@@ -36,4 +36,25 @@ const manager = new Manager(), motion = manager.createMotion(source, 'idle');
 assert.equal(motion.owner, manager);
 assert.equal(motion.group, 'idle');
 assert.deepEqual(sdkRead(motion.data), sdkRead(ordered));
+const loopManager = { createMotion() { return {
+ getLoopDuration: () => 6, isLoop: () => true,
+ doUpdateParameters(model, time, weight, entry) { entry.setStartTime(time); },
+}; } };
+configurePortraitMotions(loopManager, {}, { ids: [], defaultValues: [] });
+const loopMotion = loopManager.createMotion({}, 'idle');
+let start = 0;
+const entry = { getStartTime: () => start, setStartTime: value => { start = value; } };
+loopMotion.doUpdateParameters({}, 6.04, 1, entry);
+assert.equal(start, 6, 'retain the 40ms overshoot instead of restarting the clock late');
+loopMotion.doUpdateParameters({}, 18.03, 1, entry);
+assert.equal(start, 18, 'preserve phase even after a long delayed update');
+let loads = 0, resolveLoad;
+const loader = { createMotion: () => ({}), loadMotion() { loads++; return new Promise(resolve => { resolveLoad = resolve; }); } };
+configurePortraitMotions(loader, {}, { ids: [], defaultValues: [] });
+const firstLoad = loader.loadMotion('idle', 0), duplicateLoad = loader.loadMotion('idle', 0);
+assert.equal(firstLoad, duplicateLoad, 'automatic idle and explicit idle share an in-flight request');
+await Promise.resolve(); assert.equal(loads, 1); resolveLoad('loaded'); await firstLoad;
+const retry = loader.loadMotion('idle', 0); await Promise.resolve();
+assert.equal(loads, 2, 'only in-flight requests are held; the runtime owns its loaded cache');
+resolveLoad('cached'); await retry;
 console.log('Portrait motion compatibility checks passed');

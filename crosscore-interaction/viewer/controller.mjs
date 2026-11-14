@@ -235,10 +235,10 @@ export class InteractionController {
     const action = this.action(this.dragging.index);
     this.emit({ kind: 'drag-move', index: action.index, name: action.sName, track: trackFor(action), gesture: action.gesture, dx, dy, x: this.dragging.x, y: this.dragging.y, content: action.content || {} });
   }
-  endDrag() {
+  endDrag(cancelled = false) {
     if (!this.dragging) return;
     const action = this.action(this.dragging.index), content = action.content || {};
-    this.emit({ kind: 'drag-end', index: action.index, name: action.sName, track: trackFor(action), content });
+    this.emit({ kind: 'drag-end', index: action.index, name: action.sName, track: trackFor(action), content, cancelled });
     this.dragging = null;
   }
   snapshot() {

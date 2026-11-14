@@ -144,12 +144,12 @@ export async function loadLive2D(bundle,model,canvas,signal,onProgress){
     const animations=[],mapping=new Map();
     for(const [group,motions]of Object.entries(data.FileReferences.Motions||{}))for(let i=0;i<motions.length;i++){
       const name=group+(motions.length>1?' / '+(i+1):'');let duration=0;
-      try{const motion=await bundle.json(motions[i]._localPath);duration=motion.Meta?.Duration||0;}catch{}
-      animations.push({name,duration});mapping.set(name,{group,index:i});
+      // Duration is learned when that motion is first requested, not by reading every clip at startup.
+      animations.push({name,duration,lazy:true});mapping.set(name,{group,index:i});
     }
     let playSerial=0;
     const api={type:'live2d',canvas,editor,animations,skins:[],warnings,setTools(value){tools=value;},dispose,
-      async play(name,repeat=true){const item=mapping.get(name);if(!item)throw Error('动作不存在');const serial=++playSerial,motion=await manager.loadMotion(item.group,item.index);check(signal);if(serial!==playSerial)return;motion.setIsLoop(repeat);await live.motion(item.group,item.index,3);current=name;loop=repeat;},
+      async play(name,repeat=true){const item=mapping.get(name);if(!item)throw Error('动作不存在');const serial=++playSerial,motion=await manager.loadMotion(item.group,item.index);check(signal);if(serial!==playSerial)return;motion.setIsLoop(repeat);const listed=animations.find(a=>a.name===name);if(listed){listed.duration=motion.getLoopDuration?.()||0;listed.lazy=false;}await live.motion(item.group,item.index,3);if(serial!==playSerial)return;current=name;loop=repeat;},
       loop(value){loop=value;for(const item of queue?._motions||[])item._motion?.setIsLoop(value);},
       playback(){const item=[...(queue?._motions||[])].reverse().find(i=>!i.isFinished()&&i._motion),duration=animations.find(a=>a.name===current)?.duration||item?._motion?.getLoopDuration?.()||0,elapsed=item?.isStarted()?Math.max(0,item.getStateTime()-item.getStartTime()):0;return {name:current,duration,time:duration?(loop?elapsed%duration:Math.min(duration,elapsed)):0,loop};},
       seek(seconds,delta=0){const item=[...(queue?._motions||[])].reverse().find(i=>!i.isFinished()&&i._motion);if(!item)return;const time=Math.max(0,Math.min(api.playback().duration-.0001,seconds)),clock=live.elapsedTime/1000;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time);item.setEndTime(loop?-1:clock-time+api.playback().duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;app.render();},

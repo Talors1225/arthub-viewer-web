@@ -5,7 +5,7 @@ export class EffectTimeline {
   if(!Number.isFinite(this.duration)||this.duration<=0)throw Error('特效时长不可用');
   this.fps=Number.isFinite(motion._sourceFrameRate)&&motion._sourceFrameRate>0?motion._sourceFrameRate:30;
   this.parameterIds=Object.freeze([...new Set((motion._motionData?.curves||[]).filter(curve=>curve.type===1).map(curve=>curve.id))]);
-  motion.setIsLoop(true);this.entry=manager.startMotion(motion,false,0);
+  motion.setIsLoop(true);motion.setIsLoopFadeIn?.(false);this.entry=manager.startMotion(motion,false,0);
   this.fade=Math.max(0,motion.getFadeInTime(),...(motion._motionData?.curves||[]).map(c=>c.fadeInTime||0))+1;
   this.time=0;this.fixed=false;this.settled=false;
  }

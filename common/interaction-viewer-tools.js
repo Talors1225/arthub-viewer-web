@@ -396,6 +396,7 @@
       const job = K.exportProgress(format === 'png' ? 'png' : 'animation'); let session;
       exporting = true; document.body.dataset.viewerExporting = 'true'; cfg.setExporting(true); cfg.stopAudio?.();
       try {
+        await cfg.beforeExport?.(job.signal); job.check();
         session = await cfg.capture(state, format, quality);
         let size = format === 'png' ? K.illustrationExportSize(session, quality) : await K.animationExportSize({ session, duration, quality, kind: format,
           signal: job.signal, onProgress: value => job.update(.2 * value, '正在识别立绘范围…') });
@@ -415,7 +416,8 @@
           session.dispose(); session = null; cfg.setExporting(false);
           if (copy) await K.copyPNGBlob(blob, size);
         } else if (format === 'video') {
-          const result = await K.encodeCanvasVideo({ canvas: output, duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(.2 + .8 * value, `导出视频 ${time.toFixed(1)} / ${duration.toFixed(1)} 秒 · ${size.width}×${size.height}`) }); ({ blob, extension } = result);
+          const videoPlan = K.exportTimeline(duration, quality, 'video');
+          const result = await K.encodeCanvasVideo({ canvas: output, duration, quality, draw, signal: job.signal, onProgress: (value, time) => job.update(.2 + .8 * value, `已编码 ${Math.round(value * videoPlan.frames)} / ${videoPlan.frames} 帧 · 成片 ${duration.toFixed(1)} 秒 · ${size.width}×${size.height}`) }); ({ blob, extension } = result);
         } else {
           const codec = await import('./vendor/gifenc.esm.js'), gif = codec.GIFEncoder(), plan = K.exportTimeline(state.duration, quality, 'gif');
           for (let i = 0; i < plan.frames; i++) {
@@ -459,12 +461,13 @@
       };
       showPopup(button, animation ? '导出动画' : '导出 PNG', pop => K.mountExportOptions(pop, {
         kind: animation ? 'animation' : 'png', quality: 'high', transparent: background === 'checker',
+        cameraLevel: cfg.cameraLevel?.(), onCameraLevel: value => { cfg.setCameraLevel?.(value); nativeSize = null; },
         ...(!animation ? { getSize: previewSize } : {}),
         isPreparing: () => !!cfg.editor() && !driver.playback().ready,
         getDetail: (quality, format) => {
           requireEditor(); const state = driver.playback();
           if (animation && !state.duration) throw new Error('请先选择一个有时长的动画');
-          if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · 长边 ${format === 'video' ? preset.videoEdge : preset.gifEdge} 像素 · ${exportDuration(state, format).toFixed(2)} 秒 · 背景跟随舞台 · 无声`; }
+          if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · 长边 ${format === 'video' ? preset.videoEdge : preset.gifEdge} 像素 · ${exportDuration(state, format).toFixed(2)} 秒 · 背景跟随舞台 · 无声${format === 'video' ? ' · ' + K.videoSizeEstimate(exportDuration(state, format), preset) : ''}`; }
           requireEditor();
           const preset = K.exportPreset(quality);
           return `按立绘范围裁剪 · ${preset.pngEdge ? '长边 ' + preset.pngEdge + ' 像素' : '原始像素比例'} · 背景跟随舞台 · PNG 无损编码`;

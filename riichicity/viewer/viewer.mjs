@@ -1,5 +1,5 @@
 import {importBundle,discoverModels} from './bundle.mjs?v=20261104-unified-final';
-import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261113-default-stage';
+import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261114-interaction-export-loading';
 const K=window.SpineKit,$=id=>document.getElementById(id),stage=$('stage');
 let canvas=$('canvas'),engine=null,activeBundle=null,bundle=null,models=[],selected=null,identity='',epoch=0,pending=null,exporting=false,renderFailed=false,gridPlaying=true;
 const catalogMode=true;

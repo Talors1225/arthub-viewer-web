@@ -1532,6 +1532,11 @@
       } },
     };
   };
+  K.videoSizeEstimate = (duration, quality) => {
+    const preset = K.animationExportPreset(quality);
+    const mb = Math.max(0, Number(duration) || 0) * preset.videoBitrate / 8 / 1024 / 1024;
+    return `按目标码率估算约 ${mb.toFixed(1)} MB（实际随画面与编码器变化，兼容编码可能更大）`;
+  };
   K.mountExportOptions = (pop, options) => {
     const animation = options.kind === 'animation';
     const presets = animation ? K.videoExportPresets : K.exportPresets;
@@ -1549,6 +1554,7 @@
           + p.label + '</strong><small>' + detail + '</small></button>';
       }).join('') + '</div><div class="export-detail" role="status"></div>'
       + (animation ? '' : '<details class="png-size-settings"><summary>尺寸设置（保持比例）</summary><label>尺寸方式<select class="png-size-mode" aria-label="PNG 尺寸方式"><option value="preset">按所选质量</option><option value="auto">自动适配设备</option><option value="custom">自定义长边</option></select></label><label class="png-edge-row" hidden>长边像素<input class="png-edge" type="number" min="1" max="2147483647" step="1" inputmode="numeric" aria-label="PNG 长边像素"></label><small class="muted">自动适配允许缩小；原始尺寸保留像素，超大图分块编码。</small></details><label><input type="checkbox" class="png-alpha"' + (options.transparent ? ' checked' : '') + '> 透明背景</label>')
+      + (typeof options.cameraLevel === 'boolean' ? '<label><input class="export-level" type="checkbox"' + (options.cameraLevel ? ' checked' : '') + '> 水平校正当前镜头（仅导出）</label>' : '')
       + '<div class="export-actions"><button type="button" class="export-go"></button>'
       + (options.onCopy ? '<button type="button" class="export-copy">复制图片</button>' : '') + '</div></div>';
     const buttons = [...pop.querySelectorAll('.export-choice')], go = pop.querySelector('.export-go');
@@ -1604,6 +1610,8 @@
     });
     formats.forEach(button => { button.onclick = () => { format = button.dataset.format; options.onFormatChange?.(format); update(); }; });
     if (modeSelect) { modeSelect.onchange = () => { pngMode = modeSelect.value; pngPrefs?.set('sizeMode', pngMode); update(); }; edgeInput.oninput = () => { pngEdge = edgeInput.value; if (Number(pngEdge) > 0) pngPrefs?.set('edge', pngEdge); update(); }; }
+    const level = pop.querySelector('.export-level');
+    if (level) level.onchange = () => { options.onCameraLevel?.(level.checked); update(); };
     const transparent = () => !!pop.querySelector('.png-alpha')?.checked;
     go.onclick = () => options.onExport(animation ? quality : pngRequest(), transparent(), format);
     if (copy) copy.onclick = () => options.onCopy(animation ? quality : pngRequest(), transparent());
@@ -1714,12 +1722,61 @@
     let selected, lastError;
     for (const format of K.videoExportFormats()) {
       try {
-        await K.recordCanvasVideo({ ...options, duration: Math.max(.05, 2 / preset.videoFps), draw() {}, onProgress: undefined }, format);
+        await K.recordExactCanvasVideo({ ...options, duration: 1 / preset.videoFps, draw() {}, onProgress: undefined }, format);
         selected = format; break;
       } catch (error) { if (error.name === 'AbortError') throw error; lastError = error; }
     }
     if (!selected) throw lastError || new Error('当前浏览器没有可用的视频编码器');
-    return K.recordCanvasVideo(options, selected);
+    return K.recordExactCanvasVideo(options, selected);
+  };
+  // Recording against wall time drops animation samples on a busy device.
+  // The compatibility path records each still separately and remuxes its key
+  // packet at the planned timestamp. Encoding may be slow; motion never skips.
+  K.recordExactCanvasVideo = async (options, format) => {
+    const codec = await K.awaitExportTask(import('./vendor/mediabunny-1.61.0.esm.js'), options.signal);
+    const plan = K.exportTimeline(options.duration, options.quality, 'video'), step = plan.duration / plan.frames;
+    const stillCanvas = document.createElement('canvas');
+    stillCanvas.width = options.canvas.width; stillCanvas.height = options.canvas.height;
+    const stillContext = stillCanvas.getContext('2d');
+    const paintStill = () => { stillContext.clearRect(0, 0, stillCanvas.width, stillCanvas.height); stillContext.drawImage(options.canvas, 0, 0); };
+    let output, source, decoder, finished = false;
+    try {
+      for (let k = 0; k < plan.frames; k++) {
+        if (options.signal?.aborted) throw new DOMException('已取消导出', 'AbortError');
+        options.draw(plan.timeAt(k));
+        let input, track, packet, captureError;
+        // Some hardware MP4 encoders need more than 100ms to emit a keyframe.
+        // Retry the same still, never advance or silently omit its timestamp.
+        for (const window of [Math.max(.1, step * 2), .3, .75]) {
+          try {
+            const still = await K.recordCanvasVideo({ ...options, canvas: stillCanvas, duration: window, draw: paintStill, onProgress: undefined }, format);
+            input = new codec.Input({ source: new codec.BlobSource(still.blob), formats: codec.ALL_FORMATS });
+            track = await input.getPrimaryVideoTrack();
+            packet = track && await new codec.EncodedPacketSink(track).getFirstKeyPacket();
+            if (packet) break;
+            throw new Error('未能捕获完整视频帧，请重试');
+          } catch (error) {
+            input?.dispose(); input = null; captureError = error;
+            if (error.name === 'AbortError' || options.signal?.aborted) throw error;
+          }
+        }
+        if (!packet) throw captureError;
+        try {
+          if (!output) {
+            decoder = await track.getDecoderConfig();
+            output = new codec.Output({ format: format.extension === 'mp4' ? new codec.Mp4OutputFormat({ fastStart: 'in-memory' }) : new codec.WebMOutputFormat(), target: new codec.BufferTarget() });
+            source = new codec.EncodedVideoPacketSource(await track.getCodec());
+            output.addVideoTrack(source); await output.start();
+          }
+          await source.add(new codec.EncodedPacket(packet.data, 'key', plan.timeAt(k), step), { decoderConfig: decoder });
+        } finally { input.dispose(); }
+        await options.onProgress?.((k + 1) / plan.frames, (k + 1) * step);
+      }
+      if (options.signal?.aborted) throw new DOMException('已取消导出', 'AbortError');
+      await output.finalize(); finished = true;
+      if (options.signal?.aborted) throw new DOMException('已取消导出', 'AbortError');
+      return { blob: new Blob([output.target.buffer], { type: format.extension === 'mp4' ? 'video/mp4' : 'video/webm' }), extension: format.extension, label: format.label };
+    } finally { try { if (output && !finished) await output.cancel().catch(() => {}); } finally { stillCanvas.width = stillCanvas.height = 1; } }
   };
   K.videoExportFormats = (Recorder = window.MediaRecorder) => {
     if (!Recorder?.isTypeSupported) throw new Error('当前浏览器不支持视频导出，请使用 GIF');

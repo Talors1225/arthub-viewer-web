@@ -1,6 +1,7 @@
 // Curated from the current public catalog and real-frame comparisons.
 // Do not enable an arbitrary portrait just because it has an "effect" motion.
 export const effectControlPortraits = Object.freeze({
+ dafeng_7:'light',pulimaosi_3:'curtains',xinnong_5:'particles',xinnong_6:'curtains',xingdengbao_3:'smoke',
  aisaikesi_4:'delayed',baerdimo_5:'delayed',baifeng_3:'delayed',banerwei_3:'delayed',
  chaijun_6:'delayed',chuyue_2:'delayed',dulianglai_2:'delayed',feiteliekaer_3:'delayed',
  fengyun_4:'delayed',jian_3:'delayed',jianye_2:'delayed',jinjiang_2:'delayed',

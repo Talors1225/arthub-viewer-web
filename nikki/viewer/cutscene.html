@@ -430,7 +430,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261113-export-frame"></script>
+<script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
 <script src="../../common/asset-loader.js?v=20261109-nikke-bursts"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -2771,7 +2771,7 @@
       let blob, extension = 'gif', label = 'GIF';
       if (video) {
         const output = await K.encodeCanvasVideo({ canvas: cvRgb, duration: timeline.duration, quality, draw: drawFrame, signal: job.signal,
-          onProgress: (progress, time) => job.update(.25 + .75 * progress, `导出视频 ${time.toFixed(1)} / ${timeline.duration.toFixed(1)} 秒 · ${W}×${H}`) });
+          onProgress: (progress, time) => job.update(.25 + .75 * progress, `已编码 ${Math.round(progress * timeline.frames)} / ${timeline.frames} 帧 · 成片 ${timeline.duration.toFixed(1)} 秒 · ${W}×${H}`) });
         ({ blob, extension, label } = output);
       } else {
         const gif = codec.GIFEncoder();
@@ -2811,7 +2811,7 @@
       const plan = K.exportTimeline(anim.duration, preset, format);
       if (format === 'video') {
         if (!HTMLCanvasElement.prototype.captureStream) throw new Error('当前浏览器不支持画面录制，请使用 GIF');
-        return '视频 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 背景跟随舞台 · 无声。导出时请保持页面在前台。';
+        return '视频 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒 · 背景跟随舞台 · 无声。' + K.videoSizeEstimate(plan.duration, preset);
       }
       return plan.frames + ' 帧 · ' + plan.fps + ' 帧/秒 · ' + plan.duration.toFixed(2) + ' 秒';
     },

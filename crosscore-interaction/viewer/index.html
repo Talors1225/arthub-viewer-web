@@ -152,19 +152,27 @@
       loading.hidden = false;
       loading.textContent = `启动失败：${error?.message || String(error || '浏览器未提供错误详情')}`;
     };
-    window.addEventListener('error', event => window.__crosscoreBootError(event.error || event.message || `资源加载失败：${event.target?.src || event.target?.href || '未知地址'}`), true);
+    window.addEventListener('error', event => {
+      const target = event.target;
+      // An unavailable thumbnail/audio/analytics request must not turn an
+      // already running viewer into a failed startup and disable its tools.
+      if (target && target !== window) {
+        if (target.tagName !== 'SCRIPT' || !target.src || new URL(target.src, location.href).origin !== location.origin) return;
+      } else if (event.filename && new URL(event.filename, location.href).origin !== location.origin) return;
+      window.__crosscoreBootError(event.error || event.message || `资源加载失败：${target?.src || '未知地址'}`);
+    }, true);
     window.addEventListener('unhandledrejection', event => window.__crosscoreBootError(event.reason));
   })();
   </script>
   <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-  <script src="../../common/kit.js?v=20261113-export-frame"></script>
+  <script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
   <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
   <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
   <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
-  <script src="../../common/interaction-viewer-tools.js?v=20261111-export-frame"></script>
-  <script src="../../common/interaction-viewer-ui.js?v=aaa6852ff15b"></script>
+  <script src="../../common/interaction-viewer-tools.js?v=20261114-interaction-export-loading"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261114-interaction-export-loading"></script>
   <script src="../vendor/spine-webgl-4.2.js?v=20261104-unified-final"></script>
-  <script>import('./app.mjs?v=20261113-interaction-usability2').catch(window.__crosscoreBootError);</script>
+  <script>import('./app.mjs?v=20261114-interaction-export-loading').catch(window.__crosscoreBootError);</script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

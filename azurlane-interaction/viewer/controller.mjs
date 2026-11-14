@@ -156,29 +156,39 @@ export class Live2DController extends Controller {
  }
  limit(s){return s.config.limit_time>0?s.config.limit_time:4;}
  start(hits,x,y,world={x:0,y:0}) {
-  if(this.disposed)return;this.lastActivity=this.time;this.pointer={x,y,startX:x,startY:y,down:this.time,hits:array(hits),world,used:false};
+  if(this.disposed||!array(hits).length)return false;this.lastActivity=this.time;this.pointer={x,y,startX:x,startY:y,down:this.time,hits:array(hits),world,used:false,moved:false};
   for(const s of this.states){const c=s.config;if(!has(hits,c.draw_able_name)||!condition(c,this.state.idleIndex)||c.ignore_action===1&&this.state.busy)continue;s.active=true;s.down=this.time;s.dwell=0;s.triggeredHold=false;s.released=false;s.firstRelease=false;s.originX=s.axisX;s.originY=s.axisY;s.circleStart=s.target;s.animationFlag=false;if(c.action_trigger?.type===3)s.step=1;}
-  for(const s of this.states){const t=object(s.config.action_trigger);if(s.active&&t.down&&[2,6,9,11].includes(t.type)){if(t.type===9&&Math.abs(this.parameter(t.parameter)-t.num)>.05)continue;if(t.type===11&&!sameRange(this.parameter(t.parameter),t.num))continue;if(this.fire(s))this.noticeFor(s,2);}}
+  for(const s of this.states){const t=object(s.config.action_trigger);if(s.active&&t.down&&[2,6,9,11].includes(t.type)){if(t.type===9&&Math.abs(this.parameter(t.parameter)-t.num)>.05)continue;if(t.type===11&&!sameRange(this.parameter(t.parameter),t.num))continue;if(this.fire(s)){this.pointer.used=true;this.noticeFor(s,2);}}}
   this.notify(5,{draw_able_name:hits[0],down:true});
  }
  move(x,y,world={x:0,y:0}){
-  if(!this.pointer)return;this.pointer.x=x;this.pointer.y=y;this.pointer.world=world;
+  if(!this.pointer)return;this.pointer.x=x;this.pointer.y=y;this.pointer.world=world;this.pointer.moved ||= Math.hypot(x-this.pointer.startX,y-this.pointer.startY)>=12;
   for(const s of this.states){if(!s.active)continue;const c=s.config,dx=x-this.pointer.startX,dy=-(y-this.pointer.startY);s.offsetX=(s.originX||0)+(c.offset_x?dx/c.offset_x:0);s.offsetY=(s.originY||0)+(c.offset_y?dy/c.offset_y:0);
    if(c.offset_circle&&typeof c.offset_circle==='object'){const pos=array(c.offset_circle.pos),angle=((Math.atan2(world.x-(pos[0]||0),world.y-(pos[1]||0))*180/Math.PI+(c.offset_circle.start||0))%360+360)%360;this.target(s,angle/360*(array(c.range)[1]||1));}
    else if(c.offset_y)this.target(s,s.offsetY);else if(c.offset_x)this.target(s,s.offsetX);
   }
  }
- end(x,y,cancel=false){
-  if(!this.pointer)return;const p=this.pointer;const click=!cancel&&Math.abs(x-p.startX)<30&&Math.abs(y-p.startY)<30&&this.time-p.down<.5;let consumed=false;
+ end(x,y,cancel=false,endHits=this.pointer?.hits,heldSeconds){
+  if(!this.pointer)return;const p=this.pointer;
+  // Tap timing follows the finger/mouse, independently of animation speed.
+  const elapsed=heldSeconds??this.time-p.down;
+  const click=!cancel&&!p.moved&&Math.hypot(x-p.startX,y-p.startY)<12&&elapsed<.5;let consumed=p.used;const clicks=[];
   for(const s of this.states){if(!s.active)continue;s.active=false;s.released=true;s.firstRelease=!cancel;s.axisX=s.offsetX??s.target;s.axisY=s.offsetY??s.target;
-   const c=s.config,t=object(c.action_trigger);if(!cancel&&click&&[2,6,9,11,15].includes(t.type)){if(!t.down)s.clickAt=this.time+.1;consumed=true;}
+   const c=s.config,t=object(c.action_trigger);
+   if(click&&!t.down&&has(endHits,c.draw_able_name)&&[2,6,9,11,15].includes(t.type))clicks.push(s);
    if(!cancel&&t.type===3&&t.last&&s.step!==1){s.step=array(t.action_list).length;this.fire(s);consumed=true;}
    if(!cancel&&t.type===14&&t.active===0&&sameRange(this.parameter(t.parameter||c.parameter),t.range,true)){this.fire(s);consumed=true;}
    const part=object(c.parts_data),values=array(part.parts||part.list||part.parts_value);
    if(values.length){const candidates=part.type===2?values.filter(v=>v<=s.target):part.type===3?values.filter(v=>v>=s.target):values;const v=(candidates.length?candidates:values).reduce((a,b)=>Math.abs(a-s.target)<Math.abs(b-s.target)?a:b);this.target(s,v);}
    if(c.revert>=0)s.releaseAt=this.time+c.revert/1000;
   }
-  if(click&&!consumed){const area=p.hits.find(h=>basicActions[h]);if(area)consumed=this.action(basicActions[area],{interactive:true});else if(!p.hits.length)this.mainTouch();}
+  // A click applies after release cleanup. Otherwise snapping/revert can undo
+  // its new parameter target (or a target set by another region's listener).
+  for(const s of clicks){const t=object(s.config.action_trigger),entry=array(t.action_list)[s.step-1]||t,num=entry.num??t.num;
+   if(t.type===15){if(!s.flag&&s.cooldown<=this.time&&(!this.state.busy||t.focus===1||entry.focus===1)&&condition(s.config,this.state.idleIndex)&&this.canPlayBoardCell(s)){this.boardClick(s);consumed=true;}}
+   else if((t.type!==9||Math.abs(this.parameter(t.parameter)-num)<=.05)&&(t.type!==11||sameRange(this.parameter(t.parameter),t.num))&&this.fire(s)){this.noticeFor(s,2);consumed=true;}
+  }
+  if(click&&!consumed){const area=p.hits.find(h=>basicActions[h]&&has(endHits,h));if(area)consumed=this.action(basicActions[area],{interactive:true});}
   this.pointer=null;this.notify(5,{down:false});this.saveState();return consumed;
  }
  mainTouch(){if(this.state.busy)return;const choices=this.model.animations.filter(n=>/^main_\d+$/.test(n)&&this.allowedAction(n));if(choices.length)this.action(choose(choices,this.random),{interactive:true});}
@@ -251,7 +261,6 @@ export class Live2DController extends Controller {
    if(t.type===5&&!this.state.busy){const fit=array(t.const_fit).find(f=>f.idle===this.state.idleIndex);if(fit&&fit.target!==s.target)this.target(s,fit.target);}
    const entry=array(t.action_list)[s.step-1]||t,num=entry.num??t.num,time=entry.time??t.time??0;
    const can=!s.flag&&s.cooldown<=this.time&&(!this.state.busy||t.focus===1||entry.focus===1);
-   if(s.clickAt!==undefined&&this.time>=s.clickAt){delete s.clickAt;if(can){if(t.type===15)this.boardClick(s);else if(t.type===9?Math.abs(this.parameter(t.parameter)-num)<=.05:t.type===11?sameRange(this.parameter(t.parameter),t.num):true){if(this.fire(s))this.noticeFor(s,2);}}}
    if(t.type===1&&can){if(Math.abs(s.value-num)<=Math.abs(num)*.25)s.dwell+=dt;if(s.dwell>time)this.fire(s);}
    else if(t.type===3&&s.active&&can&&this.time-s.down>time){if(this.fire(s)){s.down=this.time;this.noticeFor(s,5);}}
    else if(t.type===4&&s.active&&can){if(Math.abs((s.offsetX||0)-num?.[0])<=Math.abs(num?.[0]||0)*.25&&Math.abs((s.offsetY||0)-num?.[1])<=Math.abs(num?.[1]||0)*.25)s.dwell+=dt;if(s.dwell>time){if(this.fire(s))this.noticeFor(s,6);}}
@@ -311,7 +320,7 @@ export class SpineController extends Controller {
   return null;
  }
  touch(hit,{drag:isDrag=false}={}){
-  if(this.state.busy||!this.dragPass)return false;this.lastActivity=this.time;const drag=this.rules.drag_data;
+  if(!hit||this.state.busy||!this.dragPass)return false;this.lastActivity=this.time;const drag=this.rules.drag_data;
   if(!drag)return false;
   if(drag.type===3){this.queue=array(drag.config_client).slice();return this.next();}
   const config=array(drag.config_client).find(c=>this.matches(c,hit,isDrag));if(!config)return false;

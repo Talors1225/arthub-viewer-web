@@ -601,7 +601,7 @@ export class FatedGestures {
       if (this.gesture === gesture) this.finishDrag(gesture, now, 'release');
     } else {
       this.cancel(id);
-      if (gesture.tap && !gesture.moved && !gesture.finished) this.react(gesture.tap, now - gesture.started, now);
+      if (gesture.tap && !gesture.moved && !gesture.finished && hitZone(gesture.tap.hit, this.bones.get(gesture.tap.hit.bone), position)) this.react(gesture.tap, now - gesture.started, now);
     }
   }
 
@@ -667,7 +667,7 @@ export class FatedGestures {
       return;
     }
     this.setGuideSpeed();
-    if (this.reaction?.track === 0) this.state.setAnimation(0, this.group.idle, true);
+    if (this.reaction?.track === 0 && track !== 0) this.state.setAnimation(0, this.group.idle, true);
     if (track === 0 && this.state.getCurrent(1)) this.state.setEmptyAnimation(1, 0.12);
     const entry = this.state.setAnimation(track, name, false);
     const continuation = this.reveals.get(point)?.byAnimation.get(name);

@@ -36,9 +36,15 @@
         const button = document.createElement('button'), name = document.createElement('span'), duration = document.createElement('span');
         button.type = 'button'; button.className = 'anim-row'; button.dataset.animation = animation.name;
         name.className = 'an'; name.textContent = animation.name;
-        duration.className = 'ad'; duration.textContent = animation.duration > 0 ? animation.duration.toFixed(2) + 's' : '—';
+        duration.className = 'ad'; duration.textContent = animation.duration > 0 ? animation.duration.toFixed(2) + 's' : animation.lazy ? '点选加载' : '—';
         button.title = animation.name; button.append(name, duration);
-        button.addEventListener('click', () => invoke(() => driver.selectAnimation(animation.name)));
+        let selection = 0;
+        button.addEventListener('click', () => invoke(async () => {
+          const request = ++selection;
+          button.setAttribute('aria-busy', 'true'); duration.textContent = '加载中…';
+          try { await driver.selectAnimation(animation.name); }
+          finally { if (request === selection) { button.removeAttribute('aria-busy'); duration.textContent = animation.duration > 0 ? animation.duration.toFixed(2) + 's' : animation.lazy ? '点选加载' : '—'; } }
+        }));
         rows.set(animation.name, button); fragment.append(button);
       }
       if (!fragment.childNodes.length) {
