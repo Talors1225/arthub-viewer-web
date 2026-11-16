@@ -1,4 +1,4 @@
-import { FatedGestures } from './gestures.mjs?v=20261114-interaction-export-loading';
+import { FatedGestures } from './gestures.mjs?v=20261117-resources';
 import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
 import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261112-export-repair';
 
@@ -92,6 +92,7 @@ function dispose() {
   setImmersive(false);
   cancelInput();
   scene?.sound?.dispose();
+  for (const extra of scene?.extraAtlases || []) if (extra !== scene.atlas) K.disposeAtlas(extra);
   K.disposeAtlas(scene?.atlas);
   scene = null;
   tool.hidden = true;
@@ -269,6 +270,41 @@ async function showModel(model) {
       animationPicker: { group: '', query: '', scroll: 0 },
     };
     atlas = null;
+    if (model.groupAssets) {
+      const activeScene = scene;
+      activeScene.loadingVariants = true;
+      const variants = new Map([[0, { skeleton, state, gestures, atlas: activeScene.atlas, pma: activeScene.pma }]]);
+      activeScene.extraAtlases = [activeScene.atlas];
+      for (let index = 1; index < profile.groups.length; index++) {
+        const spec = model.groupAssets[profile.groups[index].id];
+        if (!spec || spec.skel === model.skel) continue;
+        const groupFiles = await K.loadSpineFiles(SP, gl.mgl, {
+          atlasURL: asset(dir + spec.atlas), skeletonURL: asset(dir + spec.skel), signal,
+        });
+        activeScene.extraAtlases.push(groupFiles.atlas);
+        signal.throwIfAborted();
+        const groupData = new SP.SkeletonBinary(new SP.AtlasAttachmentLoader(groupFiles.atlas)).readSkeletonData(groupFiles.bytes);
+        const groupSkeleton = new SP.Skeleton(groupData);
+        const groupStateData = new SP.AnimationStateData(groupData);
+        groupStateData.defaultMix = 0.12;
+        const groupState = new SP.AnimationState(groupStateData);
+        const groupGestures = new FatedGestures(profile, groupSkeleton, groupState, groupData,
+          SP.TranslateTimeline, spec.frame || model.frame, authoredRules[model.id], sound, index);
+        variants.set(index, { skeleton: groupSkeleton, state: groupState, gestures: groupGestures,
+          atlas: groupFiles.atlas, pma: Boolean(groupFiles.atlas.pages[0].pma) });
+      }
+      for (const [index, variant] of variants) {
+        variant.gestures.onGroupChange = (next, transition) => {
+          if (next === index || !variants.has(next)) return false;
+          const target = variants.get(next);
+          for (const key of ['x','y','scaleX','scaleY']) target.skeleton[key] = activeScene.skeleton[key];
+          target.gestures.enterGroup(next, transition);
+          Object.assign(activeScene, target);
+          return true;
+        };
+      }
+    }
+    scene.loadingVariants = false;
     soundControl.hidden = !sound;
     soundControl.value = soundMode;
     resize();
@@ -302,7 +338,7 @@ function drawPortrait(picture, cropPreview = false) {
   const raw = mgl.gl;
   raw.clearColor(0, 0, 0, 0);
   raw.clear(raw.COLOR_BUFFER_BIT);
-  if (!picture) return;
+  if (!picture || picture.loadingVariants) return;
   const { skeleton, model } = picture;
   const frame = cropPreview && model.frame;
   if (frame) {

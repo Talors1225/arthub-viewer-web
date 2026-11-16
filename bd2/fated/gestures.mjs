@@ -147,7 +147,7 @@ function positionKeys(timeline, bone, limit, duration) {
 }
 
 export class FatedGestures {
-  constructor(profile, skeleton, state, data, TranslateTimeline, frame, rules = {}, audio = null) {
+  constructor(profile, skeleton, state, data, TranslateTimeline, frame, rules = {}, audio = null, startIndex = 0) {
     this.profile = profile;
     this.skeleton = skeleton;
     this.state = state;
@@ -181,7 +181,8 @@ export class FatedGestures {
     this.switching = null;
     this.last = null;
     this.serial = 0;
-    this.restart();
+    if (startIndex) this.enterGroup(startIndex, false);
+    else this.restart();
   }
 
   hasAnimation(names) {
@@ -352,6 +353,7 @@ export class FatedGestures {
   }
 
   enterGroup(index, transition) {
+    if (this.onGroupChange?.(index, transition)) return;
     const priorTool = this.tool;
     this.groupIndex = index;
     this.gesture = this.reaction = this.switching = null;

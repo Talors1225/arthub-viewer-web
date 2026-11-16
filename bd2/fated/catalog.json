@@ -423,6 +423,49 @@
         "maxX": 2000.0,
         "maxY": 1750.0
       }
+    },
+    {
+      "id": "dating22",
+      "name": "有缘之客 22",
+      "prefab": "Assets/AddressableResources/BundleCommon/Char/Datingillust/Illust_dating22.prefab",
+      "dir": "Illust_dating22/",
+      "skel": "illust_dating22_1.skel",
+      "atlas": "illust_dating22_1.atlas",
+      "spineVersion": "4.1.11",
+      "previewAnimation": "idle1",
+      "groups": 2,
+      "points": 50,
+      "pages": 4,
+      "frame": {
+        "minX": -1700.0,
+        "minY": -1700.0,
+        "maxX": 1700.0,
+        "maxY": 1700.0
+      },
+      "groupAssets": {
+        "1": {
+          "skel": "illust_dating22_1.skel",
+          "atlas": "illust_dating22_1.atlas",
+          "spineVersion": "4.1.11",
+          "frame": {
+            "minX": -1700.0,
+            "minY": -1700.0,
+            "maxX": 1700.0,
+            "maxY": 1700.0
+          }
+        },
+        "2": {
+          "skel": "illust_dating22_2.skel",
+          "atlas": "illust_dating22_2.atlas",
+          "spineVersion": "4.1.11",
+          "frame": {
+            "minX": -1700.0,
+            "minY": -1700.0,
+            "maxX": 1700.0,
+            "maxY": 1700.0
+          }
+        }
+      }
     }
   ]
 }

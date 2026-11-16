@@ -1,5 +1,5 @@
 import {LocalBundle} from './bundle.mjs?v=20261104-unified-final';
-import {createVoicePanel} from './voices.mjs?v=20261104-unified-final';
+import {createVoicePanel} from './voices.mjs?v=20261117-resources';
 
 export async function fetchModelBundle(model,signal,assetBase='/riichicity/assets/'){
  const paths=[...new Set([model.path,model.atlas,...model.pages])];
@@ -32,7 +32,7 @@ export async function createCatalog({selectModel,status}){
  const catalog=await window.SpineKit.fetchJSON('../characters.json',{timeout:20000});
  if(catalog.game!=='riichicity'||!Array.isArray(catalog.characters)||!catalog.characters.length)throw Error('麻雀一番街资源目录为空。');
  const $=id=>document.getElementById(id),K=window.SpineKit,characters=catalog.characters;
- const models=characters.flatMap(c=>c.variants).filter(model=>model.id!==chessLayerId);
+ const models=characters.flatMap(c=>c.variants).filter(model=>model.id!==chessLayerId&&model.id!=='spine_1003606__lengquanhuiyaziSP-shanyao2');
  const chessPortrait=models.find(model=>model.id===chessPortraitId);
  const chessLayerFavorite=K.favs.list().find(item=>item.k==='riichicity:'+chessLayerId);
  if(chessPortrait&&chessLayerFavorite){

@@ -50538,6 +50538,430 @@
       "sourceClipName": "c901_action_2",
       "fileId": 8681,
       "pathId": "1088372502504131460"
+    },
+    "c471_01_Lobby_Touch_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Touch_2.wav",
+      "duration": 3.61375,
+      "bytes": 346964,
+      "sha256": "4d977d183f0e576ab3ffc2f0c34e80c10c99faf7da21bf5e7b237ad1772d87c5",
+      "sourceKey": "ab/09c5cda5ada6e699019908c6a5309a9df66860d7b49dac81d7fb827911b9ce83.nab"
+    },
+    "c471_01_Lobby_Touch_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Touch_1.wav",
+      "duration": 2.749729,
+      "bytes": 264018,
+      "sha256": "543f8ce9baaf7b8a2509d74f121376a013fbe7d895f92869c5a95e0a80078105",
+      "sourceKey": "ab/09c5cda5ada6e699019908c6a5309a9df66860d7b49dac81d7fb827911b9ce83.nab"
+    },
+    "c471_01_Lobby_Touch_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Touch_3.wav",
+      "duration": 4.124084,
+      "bytes": 395956,
+      "sha256": "88693961c0db1cb8bf7081b3c47f9cb174e7e455927417ceb3ecf7992919acd0",
+      "sourceKey": "ab/09c5cda5ada6e699019908c6a5309a9df66860d7b49dac81d7fb827911b9ce83.nab"
+    },
+    "c471_01_Lobby_Stay_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Stay_1.wav",
+      "duration": 4.189604,
+      "bytes": 402246,
+      "sha256": "857d01c481ef47fc8bbed4b429ed2f4daddc26ce2e3d2c79aaf4b16c6e3525aa",
+      "sourceKey": "ab/09c5cda5ada6e699019908c6a5309a9df66860d7b49dac81d7fb827911b9ce83.nab"
+    },
+    "c223_02_Lobby_Touch_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Touch_2.wav",
+      "duration": 8.18975,
+      "bytes": 786260,
+      "sha256": "6650caed7b42ac59d5bf9ac64bc1487898be7410af370626d32dcfaca7b834de",
+      "sourceKey": "ab/3721bcda5bc0e01ea345889edf3a90a297d1dd50b76da643699b0cd0496b29c0.nab"
+    },
+    "c223_02_Lobby_Touch_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Touch_1.wav",
+      "duration": 6.537209,
+      "bytes": 627616,
+      "sha256": "50f7d907de12e0ab2743342ccb704ec28974395aa5822c66420c9a58145682c7",
+      "sourceKey": "ab/3721bcda5bc0e01ea345889edf3a90a297d1dd50b76da643699b0cd0496b29c0.nab"
+    },
+    "c223_02_Lobby_Touch_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Touch_3.wav",
+      "duration": 6.321688,
+      "bytes": 606926,
+      "sha256": "ce1b7f08c43fe3965a916c00f6c60ce0829a41e0386b9ff342d9a2c65cc21786",
+      "sourceKey": "ab/3721bcda5bc0e01ea345889edf3a90a297d1dd50b76da643699b0cd0496b29c0.nab"
+    },
+    "c223_02_Lobby_Stay_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Stay_1.wav",
+      "duration": 7.085792,
+      "bytes": 680280,
+      "sha256": "cd52293514e80953201c0a056125a968c1f8b6a6a939e16ee20b4b2586291260",
+      "sourceKey": "ab/3721bcda5bc0e01ea345889edf3a90a297d1dd50b76da643699b0cd0496b29c0.nab"
+    },
+    "c223_02_Lobby_Touch_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Touch_Love_1.wav",
+      "duration": 8.909104,
+      "bytes": 855318,
+      "sha256": "26dc63dc2f5f3325b82322c3646052cf6d68f69f9a7f5f9995f0b4219c15b7f3",
+      "sourceKey": "ab/49f5d7adbb9452b678733db3e40ac2b19f8a6988c35c0ccd59c10745c6eaf62e.nab"
+    },
+    "c223_02_Lobby_Touch_Love_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Touch_Love_3.wav",
+      "duration": 7.356958,
+      "bytes": 706312,
+      "sha256": "f2c235c3862a196a0edd33b1390993aad42265225482756195aacfc878d004e7",
+      "sourceKey": "ab/49f5d7adbb9452b678733db3e40ac2b19f8a6988c35c0ccd59c10745c6eaf62e.nab"
+    },
+    "c223_02_Lobby_Touch_Love_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Touch_Love_2.wav",
+      "duration": 7.650479,
+      "bytes": 734490,
+      "sha256": "0d26cd46a63a3d650d1fb6c60ba947856304a143a7277ee8884ee3be2e780499",
+      "sourceKey": "ab/49f5d7adbb9452b678733db3e40ac2b19f8a6988c35c0ccd59c10745c6eaf62e.nab"
+    },
+    "c223_02_Lobby_Stay_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c223_02/c223_02_Lobby_Stay_Love_1.wav",
+      "duration": 10.301791,
+      "bytes": 989016,
+      "sha256": "633a6b732682570a3c45ccea5d99722bdc253e14cac7c37897a33f89b893fe36",
+      "sourceKey": "ab/49f5d7adbb9452b678733db3e40ac2b19f8a6988c35c0ccd59c10745c6eaf62e.nab"
+    },
+    "c019_01_Lobby_Touch_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Touch_Love_1.wav",
+      "duration": 5.976146,
+      "bytes": 573754,
+      "sha256": "afb901b66744b7aa707a93bdf96bf768ec312e932899b800117bd0e6fcfa98c2",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c019_Lobby_Touch_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Touch_Love_1.wav",
+      "duration": 3.80525,
+      "bytes": 365348,
+      "sha256": "bdd9f737144b426110c72689c9ac2d8abb205b6d081d713edd68842e6294dae0",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c019_Lobby_Stay_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Stay_Love_1.wav",
+      "duration": 6.625937,
+      "bytes": 636134,
+      "sha256": "167fc8eb911fc2512c503cf636f8746fcc65b85147808b668687ca1859389e1f",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c019_01_Lobby_Touch_Love_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Touch_Love_2.wav",
+      "duration": 3.65,
+      "bytes": 350444,
+      "sha256": "41cc5c6cda0c47053a1641d100765803e8be98ff1978647c5435157d4f62eee9",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c019_Lobby_Touch_Love_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Touch_Love_3.wav",
+      "duration": 6.446354,
+      "bytes": 618894,
+      "sha256": "1d7dda17fe8c97194d8714493c9c75f55d001953ff1f3afefcbdedcab3cbcd31",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c019_Lobby_Touch_Love_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Touch_Love_2.wav",
+      "duration": 6.352417,
+      "bytes": 609876,
+      "sha256": "288236c6aabd39c6322dade988bfe0ff463c3ede54649adc299d011b3b8425c1",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c019_01_Lobby_Touch_Love_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Touch_Love_3.wav",
+      "duration": 4.710271,
+      "bytes": 452230,
+      "sha256": "2809d0fb2256b0da79d61356cad24a5ee9bf3a1b487f7ca529293a1ee0fc1e1d",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c019_01_Lobby_Stay_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Stay_Love_1.wav",
+      "duration": 7.348208,
+      "bytes": 705472,
+      "sha256": "f97a56c330d00b1243e08797c9337266d4cbdb1cdaefcc905b004030dc3370ac",
+      "sourceKey": "ab/8a593d9bac46c4f077282996505884a29ef5e999d1412485a48c5fa23b643dc5.nab"
+    },
+    "c471_01_Lobby_Touch_Love_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Touch_Love_3.wav",
+      "duration": 12.560041,
+      "bytes": 1205808,
+      "sha256": "55cc3e15bb68c7505d05e5d1e74f2aab296c252752a24a7daa547e776021c2ca",
+      "sourceKey": "ab/cf68ed7be2d01188fd1e8e603fafbf8b5ee5b342d8f4c6788d8959b8eddbecb8.nab"
+    },
+    "c471_01_Lobby_Touch_Love_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Touch_Love_2.wav",
+      "duration": 8.912479,
+      "bytes": 855642,
+      "sha256": "ca7ce2fcd28637ff1840e05fe232a02d8b0b2854061bc1be91584a0aaa226a9b",
+      "sourceKey": "ab/cf68ed7be2d01188fd1e8e603fafbf8b5ee5b342d8f4c6788d8959b8eddbecb8.nab"
+    },
+    "c471_01_Lobby_Stay_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Stay_Love_1.wav",
+      "duration": 7.384646,
+      "bytes": 708970,
+      "sha256": "e128b418165f56bd961ec32b6f51c59023284d974994fecec41bd891c2de6500",
+      "sourceKey": "ab/cf68ed7be2d01188fd1e8e603fafbf8b5ee5b342d8f4c6788d8959b8eddbecb8.nab"
+    },
+    "c471_01_Lobby_Touch_Love_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c471_01/c471_01_Lobby_Touch_Love_1.wav",
+      "duration": 11.221063,
+      "bytes": 1077266,
+      "sha256": "3ed2b83601e531867cb686d03da761f376f0906c1017bf040446b49613209f8d",
+      "sourceKey": "ab/cf68ed7be2d01188fd1e8e603fafbf8b5ee5b342d8f4c6788d8959b8eddbecb8.nab"
+    },
+    "c019_Lobby_Stay_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Stay_1.wav",
+      "duration": 4.218312,
+      "bytes": 405002,
+      "sha256": "ab4cdf2bef79a143a4244a2ef9173492811d36cecdee9f7e6b7fdcf534fea6c5",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c019_01_Lobby_Touch_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Touch_1.wav",
+      "duration": 6.978917,
+      "bytes": 670020,
+      "sha256": "fc43c8f6757cacdb2abf965cb2dda16a837a4ff1417a5db3f7401b7dd3066d7a",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c019_Lobby_Touch_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Touch_1.wav",
+      "duration": 3.242833,
+      "bytes": 311356,
+      "sha256": "463394fdce8db623a230aea57d6cd7fb23d2f83334d39d8acced43f28254e930",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c019_Lobby_Touch_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Touch_3.wav",
+      "duration": 7.163875,
+      "bytes": 687776,
+      "sha256": "5c64fbe11e868e50a4deab5b3d51444544cdd25b8f912451869a4815c4bf5520",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c019_01_Lobby_Stay_1": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Stay_1.wav",
+      "duration": 5.60275,
+      "bytes": 537908,
+      "sha256": "76adc82a41b27c0382bb3f3a00daea66590af54336947d07394f779dc5aec4c6",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c019_01_Lobby_Touch_3": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Touch_3.wav",
+      "duration": 3.9855,
+      "bytes": 382652,
+      "sha256": "5516bb8806ce1f7fc4e79a474268987ab4483fdf37fd6ea181dbc99170d2111f",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c019_01_Lobby_Touch_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019_01/c019_01_Lobby_Touch_2.wav",
+      "duration": 3.507667,
+      "bytes": 336780,
+      "sha256": "6514cc1cb596ff9d51e0732bea196b7cdb31bad516fae46acde56c4890110eb1",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c019_Lobby_Touch_2": {
+      "kind": "lobby-voice",
+      "url": "updates/20261117/audio/c019/c019_Lobby_Touch_2.wav",
+      "duration": 3.916667,
+      "bytes": 376044,
+      "sha256": "680a25ff25b8f774d619603ea8660d1cca29add51e0b3d3929f03c5dd0174d89",
+      "sourceKey": "ab/ec02e255d63245af32e0b7ba2ac184d672f4e4c111d0c8fd80ac22d5e08bb7cd.nab"
+    },
+    "c018_01_action_1": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c018_01_action_1/c018_01_action_1.wav",
+      "duration": 0.338254,
+      "bytes": 29878,
+      "sha256": "9dee7cf18ba63bcb98725ac1a4f8e084354f9497a527f5ae87956c593b5fdba8",
+      "sourceKey": "sfx_assets_requiredc018_db794c30b426b3f868e94be902a7ee7d.bundle"
+    },
+    "c018_01_action_3": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c018_01_action_3/c018_01_action_3.wav",
+      "duration": 1.785646,
+      "bytes": 157538,
+      "sha256": "18a213e112c342c0f09595e5a042fefa0ddc920a08ed6e644a8fdcdfc14cbdb8",
+      "sourceKey": "sfx_assets_requiredc018_db794c30b426b3f868e94be902a7ee7d.bundle"
+    },
+    "c018_01_action_4": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c018_01_action_4/c018_01_action_4.wav",
+      "duration": 0.479456,
+      "bytes": 42332,
+      "sha256": "a41af3aafd650b1d240938041d1cc0c192772cf369033bb3ef9069fef53146e8",
+      "sourceKey": "sfx_assets_requiredc018_db794c30b426b3f868e94be902a7ee7d.bundle"
+    },
+    "c018_01_action_2": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c018_01_action_2/c018_01_action_2.wav",
+      "duration": 1.448503,
+      "bytes": 127802,
+      "sha256": "5a97739b7f3f2d82c294df6028b2dd191695143134434bbd92d6797f67f15890",
+      "sourceKey": "sfx_assets_requiredc018_db794c30b426b3f868e94be902a7ee7d.bundle"
+    },
+    "c019_01_action_5": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_01_action_5/c019_01_action_5.wav",
+      "duration": 0.903878,
+      "bytes": 79766,
+      "sha256": "7d727b0f6dbbfc7d4fe7afdffd5e8fc0278f3ddcd32f6c7545cd0547f0bc57f4",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_00_action_4": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_00_action_4/c019_00_action_4.wav",
+      "duration": 2.078345,
+      "bytes": 366664,
+      "sha256": "71d61f1af2a597a790069c3f36a69a0c5763004bce41dd7e18a6a5aa6de86785",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_01_action_3": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_01_action_3/c019_01_action_3.wav",
+      "duration": 0.508685,
+      "bytes": 44910,
+      "sha256": "3c68b42a9d3f242ac1361a51b6deb8d3cae94d86047b113921bc68690c6b563c",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_00_action_3": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_00_action_3/c019_00_action_3.wav",
+      "duration": 1.368844,
+      "bytes": 241508,
+      "sha256": "1943e18dfc122d85139346e744edab3362aa2ace686e455882f14065cccacdd3",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_01_action_1": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_01_action_1/c019_01_action_1.wav",
+      "duration": 0.48873,
+      "bytes": 43150,
+      "sha256": "6fbd44742ddf3626346414d0a24698b89f463faeff794706940e5d9bf38ea2b1",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_00_action_1": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_00_action_1/c019_00_action_1.wav",
+      "duration": 1.18102,
+      "bytes": 208376,
+      "sha256": "5b457ab93b95b0003828d81200e62ab16948bbf14d6845f25c234b8d02a3abf2",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_01_action_2": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_01_action_2/c019_01_action_2.wav",
+      "duration": 2.413016,
+      "bytes": 212872,
+      "sha256": "5f61f9303db7a80a2b616e5f81273f1c41655efe3bd0b03696d05727b8aba39c",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_01_action_4": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_01_action_4/c019_01_action_4.wav",
+      "duration": 3.614989,
+      "bytes": 318886,
+      "sha256": "e599a29aa542b5c45c10df055c02932f06a60aca6803f439338c839ac3b995f1",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c019_00_action_2": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c019_00_action_2/c019_00_action_2.wav",
+      "duration": 2.155828,
+      "bytes": 380332,
+      "sha256": "51f7091970e42c5c5d1efe1b77368c2b3f8abaf78926bfef38985de879be7657",
+      "sourceKey": "sfx_assets_requiredc019_23e179c63d9ae54df8513ca22057ee47.bundle"
+    },
+    "c223_02_action_1": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c223_02_action_1/c223_02_action_1.wav",
+      "duration": 2.412948,
+      "bytes": 212866,
+      "sha256": "096909e4d0c5fbf164206a5110df3794b578f68fa315eb965c20b5678e1406e8",
+      "sourceKey": "sfx_assets_requiredc223_d8bd39ede5357f7138f6ae9e1b6b7e4e.bundle"
+    },
+    "c223_02_action_3": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c223_02_action_3/c223_02_action_3.wav",
+      "duration": 1.785782,
+      "bytes": 157550,
+      "sha256": "82241109b7a111edbf6d29646839160e37a5082ec9b2cee8e26ed82f35e6f916",
+      "sourceKey": "sfx_assets_requiredc223_d8bd39ede5357f7138f6ae9e1b6b7e4e.bundle"
+    },
+    "c223_02_action_2": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c223_02_action_2/c223_02_action_2.wav",
+      "duration": 2.984762,
+      "bytes": 263300,
+      "sha256": "17eac4d75fb65bf49dfb0fa816160ae2d8e8ec8b1f36978519f31d658e9da00d",
+      "sourceKey": "sfx_assets_requiredc223_d8bd39ede5357f7138f6ae9e1b6b7e4e.bundle"
+    },
+    "c471_01_action_5": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c471_01_action_5/c471_01_action_5.wav",
+      "duration": 1.71,
+      "bytes": 150866,
+      "sha256": "4f6ab2b6eae17ce9a51320ed33865e3a0c7d74ea992fb4d3179059643ce71f58",
+      "sourceKey": "sfx_assets_requiredc471_c8b476a970a8370b73d1a08616204a07.bundle"
+    },
+    "c471_01_action_4": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c471_01_action_4/c471_01_action_4.wav",
+      "duration": 0.211202,
+      "bytes": 18672,
+      "sha256": "20bed40987f2503f90f87b62eb4e78f6867db2e3fffc755505856bcbf938757e",
+      "sourceKey": "sfx_assets_requiredc471_c8b476a970a8370b73d1a08616204a07.bundle"
+    },
+    "c471_01_action_1": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c471_01_action_1/c471_01_action_1.wav",
+      "duration": 2.614898,
+      "bytes": 230678,
+      "sha256": "faaf211ebdffdc8978fec4caa0bfa4a61d271f57bfe136126c0fbf1ba7e41c54",
+      "sourceKey": "sfx_assets_requiredc471_c8b476a970a8370b73d1a08616204a07.bundle"
+    },
+    "c471_01_action_3": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c471_01_action_3/c471_01_action_3.wav",
+      "duration": 2.470227,
+      "bytes": 217918,
+      "sha256": "0456a0f771c943ba0f352a59469e6cc90e86188d0b15105154a285287ef60607",
+      "sourceKey": "sfx_assets_requiredc471_c8b476a970a8370b73d1a08616204a07.bundle"
+    },
+    "c471_01_action_2": {
+      "kind": "animation-sfx",
+      "url": "updates/20261117/audio/c471_01_action_2/c471_01_action_2.wav",
+      "duration": 4.381406,
+      "bytes": 386484,
+      "sha256": "dc2a9466dac38b78b874c887a7ca81d5926a3e3ab192ac4d08b71dc8ffb72b0e",
+      "sourceKey": "sfx_assets_requiredc471_c8b476a970a8370b73d1a08616204a07.bundle"
     }
   },
   "voiceSets": {
@@ -56714,6 +57138,94 @@
         ],
         "love": [
           "c993_Lobby_Stay_Love_1"
+        ]
+      }
+    },
+    "c019": {
+      "touch": {
+        "normal": [
+          "c019_Lobby_Touch_1",
+          "c019_Lobby_Touch_3",
+          "c019_Lobby_Touch_2"
+        ],
+        "love": [
+          "c019_Lobby_Touch_Love_1",
+          "c019_Lobby_Touch_Love_3",
+          "c019_Lobby_Touch_Love_2"
+        ]
+      },
+      "stay": {
+        "normal": [
+          "c019_Lobby_Stay_1"
+        ],
+        "love": [
+          "c019_Lobby_Stay_Love_1"
+        ]
+      }
+    },
+    "c019_01": {
+      "touch": {
+        "normal": [
+          "c019_01_Lobby_Touch_1",
+          "c019_01_Lobby_Touch_3",
+          "c019_01_Lobby_Touch_2"
+        ],
+        "love": [
+          "c019_01_Lobby_Touch_Love_1",
+          "c019_01_Lobby_Touch_Love_2",
+          "c019_01_Lobby_Touch_Love_3"
+        ]
+      },
+      "stay": {
+        "normal": [
+          "c019_01_Lobby_Stay_1"
+        ],
+        "love": [
+          "c019_01_Lobby_Stay_Love_1"
+        ]
+      }
+    },
+    "c223_02": {
+      "touch": {
+        "normal": [
+          "c223_02_Lobby_Touch_2",
+          "c223_02_Lobby_Touch_1",
+          "c223_02_Lobby_Touch_3"
+        ],
+        "love": [
+          "c223_02_Lobby_Touch_Love_1",
+          "c223_02_Lobby_Touch_Love_3",
+          "c223_02_Lobby_Touch_Love_2"
+        ]
+      },
+      "stay": {
+        "normal": [
+          "c223_02_Lobby_Stay_1"
+        ],
+        "love": [
+          "c223_02_Lobby_Stay_Love_1"
+        ]
+      }
+    },
+    "c471_01": {
+      "touch": {
+        "normal": [
+          "c471_01_Lobby_Touch_2",
+          "c471_01_Lobby_Touch_1",
+          "c471_01_Lobby_Touch_3"
+        ],
+        "love": [
+          "c471_01_Lobby_Touch_Love_3",
+          "c471_01_Lobby_Touch_Love_2",
+          "c471_01_Lobby_Touch_Love_1"
+        ]
+      },
+      "stay": {
+        "normal": [
+          "c471_01_Lobby_Stay_1"
+        ],
+        "love": [
+          "c471_01_Lobby_Stay_Love_1"
         ]
       }
     }
@@ -86798,6 +87310,321 @@
         "skeletonDataPathId": "5839054042597673590"
       },
       "modifiers": []
+    },
+    "c018_01": {
+      "animations": {
+        "action": [
+          {
+            "name": "c018_01_action_1",
+            "time": 0.2207358032464981,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c018_01_action_2",
+            "time": 1.8260869979858398,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c018_01_action_3",
+            "time": 3.9973247051239014,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c018_01_action_4",
+            "time": 5.554515361785889,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ],
+        "expression_0": [
+          {
+            "name": "c018_01_action_1",
+            "time": 0.2207358032464981,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c018_01_action_2",
+            "time": 1.8260869979858398,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c018_01_action_3",
+            "time": 3.9973247051239014,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c018_01_action_4",
+            "time": 5.554515361785889,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ]
+      }
+    },
+    "c019_00": {
+      "animations": {
+        "action": [
+          {
+            "name": "c019_00_action_1",
+            "time": 0.3122643828392029,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_00_action_2",
+            "time": 1.3235751390457153,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_00_action_3",
+            "time": 2.753603935241699,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_00_action_4",
+            "time": 3.701042652130127,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ],
+        "expression_0": [
+          {
+            "name": "c019_00_action_1",
+            "time": 0.3122643828392029,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_00_action_2",
+            "time": 1.3235751390457153,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_00_action_3",
+            "time": 2.753603935241699,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_00_action_4",
+            "time": 3.701042652130127,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ]
+      }
+    },
+    "c019_01": {
+      "animations": {
+        "action": [
+          {
+            "name": "c019_01_action_1",
+            "time": 0.11820802837610245,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_2",
+            "time": 0.9820359945297241,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_3",
+            "time": 2.891550302505493,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_4",
+            "time": 4.087270259857178,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_5",
+            "time": 6.110445976257324,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ],
+        "expression_0": [
+          {
+            "name": "c019_01_action_1",
+            "time": 0.11820802837610245,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_2",
+            "time": 0.9820359945297241,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_3",
+            "time": 2.891550302505493,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_4",
+            "time": 4.087270259857178,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c019_01_action_5",
+            "time": 6.110445976257324,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ]
+      }
+    },
+    "c023_01": {
+      "animations": {}
+    },
+    "c223_02": {
+      "animations": {
+        "action": [
+          {
+            "name": "c223_02_action_1",
+            "time": 0.39464887976646423,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c223_02_action_2",
+            "time": 0.989966630935669,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c223_02_action_3",
+            "time": 4.093646049499512,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ],
+        "expression_0": [
+          {
+            "name": "c223_02_action_1",
+            "time": 0.39464887976646423,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c223_02_action_2",
+            "time": 0.989966630935669,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c223_02_action_3",
+            "time": 4.093646049499512,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ]
+      }
+    },
+    "c235_00": {
+      "animations": {}
+    },
+    "c236_00": {
+      "animations": {}
+    },
+    "c471_01": {
+      "animations": {
+        "action": [
+          {
+            "name": "c471_01_action_1",
+            "time": 0.06915807723999023,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c471_01_action_2",
+            "time": 2.499570608139038,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c471_01_action_3",
+            "time": 4.762027740478516,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c471_01_action_4",
+            "time": 7.301116943359375,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c471_01_action_5",
+            "time": 13.564863204956055,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ],
+        "expression_0": [
+          {
+            "name": "c471_01_action_1",
+            "time": 0.10824742168188095,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c471_01_action_2",
+            "time": 2.4381444454193115,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c471_01_action_3",
+            "time": 4.80927848815918,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          },
+          {
+            "name": "c471_01_action_4",
+            "time": 7.278350353240967,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ],
+        "expression_0_alt": [
+          {
+            "name": "c471_01_action_5",
+            "time": 0.1095360815525055,
+            "particleAddress": "",
+            "targetPointAttachmentName": ""
+          }
+        ]
+      }
+    },
+    "c474_00": {
+      "animations": {}
+    },
+    "c9027_00": {
+      "animations": {}
+    },
+    "c9041_00": {
+      "animations": {}
+    },
+    "c942_01": {
+      "animations": {}
     }
   },
   "summary": {

@@ -38,7 +38,7 @@ export function inside(point,polygon){let hit=false;for(let i=0,j=polygon.length
 // These skins dispatch to separate game controllers / minigames rather than the
 // generic configuration. Their ordinary dialogue works; their special hotspots
 // remain inactive until those controllers are ported.
-export const customSkins=new Set(['1005002','1004404','1004104','1005003','1001604','1001505','1003505','1003406','1001105','1005103','1006502','1006603','1006702']);
+export const customSkins=new Set(['1003606','1005002','1004404','1004104','1005003','1001604','1001505','1003505','1003406','1001105','1005103','1006502','1006603','1006702']);
 export function createInteraction({model,engine,geometry,config,play,stop,enabled,notify,form}){
  const skin=skinId(model),rows=config.configs[skin]||config.configs[model.roleId]||[];
  // A single ArtHub item is one skeleton. Never apply a sibling binder's action.

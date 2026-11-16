@@ -61,7 +61,7 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       if(declaredSizes.has(page.name)){const logical=declaredSizes.get(page.name);texture.getImage=()=>logical;}
       textures.push(texture);pageTextures.set(page.name,texture);if(!legacy){page.texture=texture;page.setTexture(texture);}
     }
-    if(legacy){atlas=new ns.TextureAtlas(atlasText,name=>pageTextures.get(name));for(const page of atlas.pages)page.pma=true;}
+    if(legacy){atlas=new ns.TextureAtlas(atlasText,name=>pageTextures.get(name));for(const page of atlas.pages)page.pma=model.premultipliedAlpha!==false;}
     const loader=new ns.AtlasAttachmentLoader(atlas),reader=model.format==='json'?new ns.SkeletonJson(loader):new ns.SkeletonBinary(loader);
     const data=reader.readSkeletonData(model.format==='json'?model.json:new Uint8Array(await bundle.files.get(model.path).arrayBuffer()));check(signal);
     const skeleton=new ns.Skeleton(data);skeleton.setToSetupPose();
