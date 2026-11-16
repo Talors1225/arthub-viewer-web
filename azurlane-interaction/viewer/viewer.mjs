@@ -1,10 +1,10 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261114-interaction-export-loading';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261116-feedback-release';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261114-interaction-export-loading';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame, authoredSpineExportFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261116-feedback-release';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
-import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261114-interaction-export-loading';
+import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261116-forearm-pose';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage'),interactionHint=$('interaction-hint'),hintButton=$('show-hint');
 const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),nextHintButton=$('next-hint');
@@ -635,6 +635,14 @@ async function live2dPortrait(model,generation){
    activeMotion=evidence.animation=name;
    stageCrop = authoredLive2DFrame(model.id, name) || defaultStageFrame;
    $('animation').value=name;
+   if (!view.playing) {
+    // A paused clock cannot finish a crossfade. Display the selected pose
+    // immediately instead of retaining the outgoing action indefinitely.
+    const entries=queue?._motions||[];
+    for(const entry of entries.slice(0,-1))entry.setIsFinished(true);
+    internal.update(0,live.elapsedTime);
+    api.seek(0,0,true,true);
+   }
    // Start optional background work only after the first playable action is ready.
    void loadEffect().catch(()=>{});
   },
@@ -958,7 +966,8 @@ async function spinePortrait(model,generation){
   });
   const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
    editor:{...editor, hidden}, animation, restore:()=>render(0) });
-  if (authoredFrame) session.fixedFrame = authoredFrame;
+  const exportFrame = authoredSpineExportFrame(model.id, animation.name);
+  if (exportFrame) session.fixedFrame = exportFrame;
   else {
    const frame = spinePortraitFrameBounds(model.id, layers, spine, hidden);
    if (frame) session.pngSize = quality => ({ ...K.exportDimensions(frame, quality), fullFrame:true });

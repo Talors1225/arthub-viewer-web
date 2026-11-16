@@ -2305,6 +2305,7 @@
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
+    const exportLoop = loopAnim;
     const fixedFrame = cut.fixedFrame;
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
@@ -2344,7 +2345,7 @@
         const layer = { ...model, source, skeleton, state };
         layer.active = layerIsActive(layer, animName);
         const mapped = layerAnimationName(layer, animName);
-        if (mapped) state.setAnimation(0, mapped, false);
+        if (mapped) state.setAnimation(0, mapped, exportLoop);
         exportLayers.push(layer);
       }
       const applyExportFrame = (time, scale = 1, x = 0, y = 0) => {
@@ -2400,7 +2401,7 @@
       // 第二遍: 逐帧渲染
       for (const L of exportLayers) {
         L.state.clearTracks(); L.skeleton.setToSetupPose();
-        const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, false);
+        const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, exportLoop);
       }
       const cvRgb = document.createElement('canvas');
       cvRgb.width = W; cvRgb.height = H;

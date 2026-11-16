@@ -192,9 +192,14 @@
         const copy = state.setAnimation(entry.trackIndex, entry.animation.name, entry.loop); copy.mixDuration = 0; copy.trackTime = entry.trackTime;
       }
       const track = original.data.findAnimation(animation.name);
-      if (track) { state.clearTracks(); state.setAnimation(0, track.name, false).mixDuration = 0; }
+      if (track) { state.clearTracks(); state.setAnimation(0, track.name, !!animation.loop).mixDuration = 0; }
       const base = skeleton.bones.map(poseOf);
-      return { ...layer, skeleton, state, index, base, pma: layer.atlas?.pages?.[0]?.pma ?? true };
+      const baseSlots = skeleton.slots.map(slot => ({
+        attachment: slot.attachment, color: { ...slot.color }, darkColor: slot.darkColor && { ...slot.darkColor },
+        deform: slot.deform.slice(), sequenceIndex: slot.sequenceIndex,
+      }));
+      const baseOrder = skeleton.drawOrder.slice();
+      return { ...layer, skeleton, state, index, base, baseSlots, baseOrder, lastTime: null, pma: layer.atlas?.pages?.[0]?.pma ?? true };
     });
     // Measure the frozen visible pose in model units, independently of the camera.
     const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
@@ -208,6 +213,19 @@
     const pose = time => {
       for (const item of copies) {
         item.base.forEach((base, i) => Object.assign(item.skeleton.bones[i], base));
+        // Framing probes may seek forwards and then rewind. Restore slots as
+        // well as bones: late attachments, opacity and draw order must not leak
+        // into the first encoded frame or the frozen PNG pose.
+        item.baseSlots.forEach((base, i) => {
+          const slot = item.skeleton.slots[i]; slot.setAttachment(base.attachment);
+          Object.assign(slot.color, base.color);
+          if (base.darkColor && slot.darkColor) Object.assign(slot.darkColor, base.darkColor);
+          slot.deform = base.deform.slice(); slot.sequenceIndex = base.sequenceIndex;
+        });
+        item.skeleton.drawOrder = item.baseOrder.slice();
+        if (time !== null && item.lastTime !== null && time < item.lastTime)
+          for (const entry of item.state.tracks.filter(Boolean)) entry.resetRotationDirections?.();
+        item.lastTime = time;
         if (time !== null) { for (const entry of item.state.tracks.filter(Boolean)) { entry.trackTime = time; entry.animationLast = entry.nextAnimationLast = time; } item.state.apply(item.skeleton); }
         for (const bone of item.skeleton.bones) { const edited = editor?.poses.get(`${item.index}:${bone.data.name}`); if (edited) Object.assign(bone, edited); }
         for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${item.index}:${slot.data.name}`)) slot.color.a = 0;
@@ -216,7 +234,7 @@
     };
     return {
       fixedFrame,
-      pngSize: quality => ({ ...K.exportDimensions(fixedFrame || bounds, quality, 'png', fixedFrame ? 0 : undefined), fullFrame: true }),
+      pngSize(quality) { const frame = this.fixedFrame; return { ...K.exportDimensions(frame || bounds, quality, 'png', frame ? 0 : undefined), fullFrame: true }; },
       measure(time) {
         pose(time);
         const frame = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };

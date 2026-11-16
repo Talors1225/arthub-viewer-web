@@ -53,6 +53,8 @@ const live2dIdleFrames = new Map([
  ['z13_2', frame(-211, 121, 10268, 6584)],
 ]);
 const live2dIdleExportFrames = new Map([
+ ['baifeng_3', frame(0, 0, 8000, 4574)], // Inside the four oversized surround meshes.
+ ['zhangwu_2', frame(-2023, -1234, 11564, 6582)], // The room, without drifting petals outside it.
  ['ankeleiqi_2', Object.freeze({ ...anchoragePool, hiddenDrawables: ['ArtMesh532', 'ArtMesh533', 'ArtMesh534', 'ArtMesh536', 'ArtMesh542'] })],
  ['jinshi_2', frame(66, 72, 7925, 5480)], // The scene inside the surrounding fog.
 ]);
@@ -446,6 +448,11 @@ export const authoredLive2DExportFrame = (id, motion) =>
  (motion === 'idle' ? live2dIdleExportFrames.get(id) : live2dIdleExportVariants.get(id)?.get(motion))
  || authoredLive2DFrame(id, motion)
  || (id === 'kebensi_2' ? cowpensRoom : null);
+const spineExportMotionFrames = new Map([
+ ['tianjinfeng_2:normal', frame(-2200, -2000, 2300, 2300)],
+ ['bisimaiz_3:normal', frame(-2174, -8, 2120, 2463)],
+]);
+export const authoredSpineExportFrame = (id, motion) => spineExportMotionFrames.get(id + ':' + motion) || authoredSpineFrame(id);
 export const authoredSpineFrame = id => spineFrames.get(id) || null;
 export function portraitFrameBounds(id, rectangles) {
  const rule=rules[id];if(!rule)return null;

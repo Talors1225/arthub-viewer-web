@@ -1,5 +1,5 @@
 import {clamp} from './burst-math.js';
-import {createBurst} from './burst_scene.js?v=20261110-ending-lighting';
+import {createBurst} from './burst_scene.js?v=20261116-native-ending';
 import {clockAt} from './timelines.js';
 
 // Last visible composition before the closing flash on the authored timeline.
@@ -132,6 +132,25 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     else finished();
   }
   let backdrop=null, backdropImage=null;
+  function buildComposition(aspect, animation) {
+    if (!endingBackdrop) return null;
+    const frame={width:Math.round(1024*Math.min(1,aspect)),height:Math.round(1024/Math.max(1,aspect))};
+    const image=document.createElement('canvas');
+    image.width=frame.width;image.height=frame.height;
+    const ctx=image.getContext('2d');
+    const at=endingBackdrop.frame/scene.fps;
+    const update=(name,time,edge=1024)=>{
+      frame.width=Math.max(2,Math.round(edge*Math.min(1,aspect)));
+      frame.height=Math.max(2,Math.round(edge/Math.max(1,aspect)));
+      if(image.width!==frame.width || image.height!==frame.height){image.width=frame.width;image.height=frame.height;}
+      // The environment is the reviewed ending frame, not a fabricated loop.
+      // Character motion remains live and the same sampler serves exports.
+      if (!engine.renderComposition(at,name,time,frame)) return false;
+      ctx.clearRect(0,0,image.width,image.height);ctx.drawImage(canvas,0,0);
+      return true;
+    };
+    return update(animation,0) ? {image,update} : null;
+  }
   function buildBackdrop(aspect){
     if(backdrop) return backdropImage;
     const size=edge=>({width:Math.round(edge*Math.min(1,aspect)),height:Math.round(edge/Math.max(1,aspect))});
@@ -199,7 +218,7 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
       if(time>=duration){stop();changed();if(loop) void start(0);else finished();}
     },
     toggle(){if(playing||starting) pause(); else void start(time>=duration ? 0 : time);},
-    stop,pause,seek,buildBackdrop,
+    stop,pause,seek,buildBackdrop,buildComposition,
     get backdrop(){return backdrop;},
     replay(){void start(0);},
     step(direction){seek(time+direction/scene.fps,false);},

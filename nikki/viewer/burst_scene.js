@@ -233,11 +233,11 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     }
     return drawn;
   }
-  function drawSpine(entry,time,camera) {
+  function drawSpine(entry,time,camera,override) {
     const {model,pose}=entry,context=model.context;
     const skeleton=model.instance;
     const c=timeline.spineClip(model,time);
-    const name=c?.animation||model.defaultAnimation;
+    const name=override?.animation||c?.animation||model.defaultAnimation;
     const animation=name ? model.data.findAnimation(name) : null;
     if(!animation && timeline.hasSpineTrack(model.node) && !model.defaultAnimation) return false;
     const center=camera.project(pose.position);
@@ -245,8 +245,8 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     skeleton.setToSetupPose();
     skeleton.x=0;skeleton.y=0;skeleton.scaleX=1;skeleton.scaleY=1;
     if(animation){
-      animation.apply(skeleton,-1,c?clockAt(c,time):time-pose.activatedAt,
-        c?c.loop:model.loop,null,c?.alpha??1,0,0);
+      animation.apply(skeleton,-1,override ? override.time : c?clockAt(c,time):time-pose.activatedAt,
+        override ? true : c?c.loop:model.loop,null,override ? 1 : c?.alpha??1,0,0);
     }
     const modern=model.modern;
     if(!modern){
@@ -295,7 +295,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     return queue.slice(0,character).filter(item=>!item.model && !foreground.test(path(item))
       && !/\/(?:cha_root|screen_root)\//i.test(path(item)));
   }
-  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, frame, extraBranch) {
+  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, frame, extraBranch, override) {
     resize(frame);
     const t=clamp(time,0,scene.duration-1e-6);
     const poses=timeline.sampleScene(t);
@@ -335,7 +335,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     const counts={spine:0,background:0,effect:0,nodes:[]};
     for(const item of backdropOnly ? backdropItems(queue,extraBranch) : queue){
       let drawn;
-      if(item.model) drawn=drawSpine(item,t,camera);
+      if(item.model) drawn=drawSpine(item,t,camera,override);
       else if(item.source.mesh && !item.trail) drawn=drawMesh(item,camera);
       else drawn=drawQuad(item,camera);
       if(drawn) {
@@ -355,5 +355,12 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       return {skeleton:model.instance,hiddenSlots:hidden,data:{slots:model.parts}};
     });
   }
-  return {render,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
+  // A reviewed single-character ending can retain the scene's camera, foreground
+  // light, particles and post processing while its idle skeleton keeps playing.
+  // Multi-character timelines cannot safely replace every track with one idle.
+  function renderComposition(time, animation, animationTime, frame) {
+    if (models.length !== 1 || failedModels.length || !models[0].data.findAnimation(animation)) return null;
+    return render(time,true,true,false,frame,null,{animation,time:animationTime});
+  }
+  return {render,renderComposition,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
 }

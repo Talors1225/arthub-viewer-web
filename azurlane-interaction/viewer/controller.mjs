@@ -246,6 +246,7 @@ export class Live2DController extends Controller {
    const prev=this.state.action;this.state.busy=false;for(const s of this.states){s.flag=false;if(s.pendingTarget!==undefined){this.target(s,s.pendingTarget);delete s.pendingTarget;}}
    this.adapter.finish?.(prev);this.playIdle();
   } else if(!this.state.busy&&this.state.actionTime>=this.duration){this.state.actionTime%=Math.max(.001,this.duration);this.events.forEach(e=>e.fired=false);this.runEvents(this.state.actionTime);}
+  if(this.actionOptions?.manual)return;
   for(const s of this.states){
    const c=s.config,t=object(c.action_trigger);if(!condition(c,this.state.idleIndex))continue;
    for(const r of array(c.relation_parameter?.list)){if(r.type!==104)continue;const key=r.name+':'+r.idle;
@@ -286,7 +287,11 @@ export class Live2DController extends Controller {
   let ended=result();if(ended!==null){this.boardJobs.push({at:this.time+.5,fn:()=>{this.boardResult=ended;}});return;}
   this.boardJobs.push({at:this.time+.2,fn:()=>{const empty=cells.filter(c=>!c.target);const ai=choose(empty,this.random);if(ai)this.target(ai,-1,true);const out=result();if(out!==null)this.boardJobs.push({at:this.time+.5,fn:()=>{this.boardResult=out;}});}});
  }
- parameters(){const out=[];for(const s of this.states){if(!condition(s.config,this.state.idleIndex))continue;const t=object(s.config.action_trigger);if(has(t.remove_com_list,this.state.action))continue;const look=this.adapter.look?.()||{x:0,y:0};let value=s.value;if(s.config.react_pos_x)value+=look.x*s.config.react_pos_x;if(s.config.react_pos_y)value+=look.y*s.config.react_pos_y;if(s.config.parameter)out.push({id:s.config.parameter,value,mode:s.config.mode||1,configId:s.config.id});
+ parameters(){
+   // Selecting a clip is a raw animation preview. Interactive drag/default
+   // values belong to the interaction state, not to an unrelated idleN clip.
+   if(this.actionOptions?.manual)return [];
+   const out=[];for(const s of this.states){if(!condition(s.config,this.state.idleIndex))continue;const t=object(s.config.action_trigger);if(has(t.remove_com_list,this.state.action))continue;const look=this.adapter.look?.()||{x:0,y:0};let value=s.value;if(s.config.react_pos_x)value+=look.x*s.config.react_pos_x;if(s.config.react_pos_y)value+=look.y*s.config.react_pos_y;if(s.config.parameter)out.push({id:s.config.parameter,value,mode:s.config.mode||1,configId:s.config.id});
    for(const r of array(s.config.relation_parameter?.list)){let v=r.type===101?s.offsetX??s.axisX:r.type===102?s.offsetY??s.axisY:r.type===103?array(r.relation_value)[s.step-1]:undefined;if(Number.isFinite(v))out.push({id:r.name,value:clampValue(v,{...s.config,...r,range_abs:r.rangeAbs??r.range_abs??s.config.range_abs,range:r.range||s.config.range}),mode:r.mode||s.config.mode||1,configId:s.config.id});}
   }out.push(...this.relationValues.values());return out;}
 }

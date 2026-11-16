@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {correctedPortraitPose} from '../azurlane-interaction/viewer/portrait-motion.mjs';
+const curve={Target:'Parameter',Id:'Param144',Segments:[0,-5.9,1,1,-5.9,2,-5.9,3,-5.9,0,12,-5.9]};
+const source={Curves:[curve,{Target:'Parameter',Id:'Arm',Segments:[0,3,0,12,8]}]};
+const before=JSON.stringify(source),fixed=correctedPortraitPose(source,'pulimaosi_3','idle16');
+assert.deepEqual(fixed.Curves[0].Segments,[0,0,1,1,0,2,0,3,0,0,12,0]);
+assert.equal(JSON.stringify(source),before);assert.equal(fixed.Curves[1],source.Curves[1]);
+for(const motion of ['idle','idle2','idle3','idle14','touch_idle16'])assert.equal(correctedPortraitPose(source,'pulimaosi_3',motion),source);
+assert.equal(correctedPortraitPose(source,'another','idle16'),source);
+const animated={Curves:[{...curve,Segments:[0,-5.9,0,12,-5]}]};assert.equal(correctedPortraitPose(animated,'pulimaosi_3','idle16'),animated);
+console.log('Scoped forearm pose correction checks passed');

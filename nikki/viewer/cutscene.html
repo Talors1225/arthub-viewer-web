@@ -387,7 +387,7 @@
     <div class="rp-page on" data-page="anim">
       <section id="skillBurstActions" aria-label="技能合播" hidden>
         <button id="btnSkillBurstPanel" type="button">重播合播</button>
-        <button id="btnSkillBackdrop" type="button" aria-pressed="false" disabled>游戏背景</button>
+        <button id="btnSkillBackdrop" type="button" aria-pressed="false" disabled title="补充合播中截取的静态背景；动态光影与粒子请查看合播">补充静态背景</button>
         <div class="skill-burst-sound">
           <label for="skillBurstVolume">合播音量</label>
           <output id="skillBurstVolumeValue" for="skillBurstVolume">30%</output>
@@ -574,7 +574,10 @@
   const skipInitialBurst = viewerParams.get('view') === 'spine';
   let burstSession = null, burstBackdrop = null, burstPending = null, burstCanvas = null;
   let classicStage = null, burstAudio = null, burstIdle = null, burstLoop = false;
-  let showGameBackground = true, skillBackdrop = null;
+  // Only reviewed ending compositions are automatic. An arbitrary sampled
+  // background is not the native lighting/particle composition of an idle.
+  const reviewedSkillBackdrops = new Set(['core-26015', 'core-26115']);
+  let showGameBackground = false, skillBackdrop = null;
   const savedBurstVolume = store.get('burstVolume', .3);
   let burstVolume = Number.isFinite(savedBurstVolume) ? Math.max(0, Math.min(1, savedBurstVolume)) : .3;
   let burstMuted = !!store.get('burstMuted', false);
@@ -607,8 +610,10 @@
       button.disabled = !!burstPending && !intro;
       button.title = intro && burstPending ? '正在加载，可跳过合播' : label;
     }
-    burstBgButton.disabled = burstBackdrop?.backdrop?.time == null || !!burstSession;
+    burstBgButton.disabled = !burstBackdrop || burstBackdrop.backdrop?.time === null || cut?.sourceVariant.skillBackdrop === false || !!burstSession;
     burstBgButton.setAttribute('aria-pressed', String(stage.dataset.skillBurst === 'idle'));
+    burstBgButton.textContent = skillBackdrop?.composition ? '合播定格光影' : '补充静态背景';
+    burstBgButton.title = skillBackdrop?.composition ? '保留合播定格时的前后景、光影与粒子位置；角色动作继续播放' : '补充合播中截取的静态背景；动态光影与粒子请查看合播';
     burstMix.value = String(Math.round(burstVolume * 100));
     burstPercent.textContent = burstMix.value + '%';
     burstMute.setAttribute('aria-pressed', String(burstMuted));
@@ -618,14 +623,21 @@
   function activeSkillBackdrop() {
     return showGameBackground && !burstSession ? skillBackdrop : null;
   }
-  function drawSkillBackdrop(renderer, skeleton, backdrop, texture) {
+  function drawSkillBackdrop(renderer, skeleton, backdrop, texture, animationTime) {
     if (!backdrop) return;
+    if (backdrop.composition) {
+      const track = cut?.state.getCurrent(0);
+      const edge = Math.max(512, Math.ceil(Math.max(renderer.camera.viewportWidth, renderer.camera.viewportHeight)));
+      backdrop.composition.update(track?.animation?.name, animationTime ?? track?.trackTime ?? 0, edge);
+      texture.update(false);
+    }
     const { minX, minY, maxX, maxY } = backdrop.bounds;
     const { x, y, scaleX, scaleY } = skeleton;
     renderer.batcher.setBlendMode(0, false);
     renderer.drawTexture(texture, x + minX * scaleX, y + minY * scaleY, (maxX - minX) * scaleX, (maxY - minY) * scaleY);
   }
   function drawSkillLayer(renderer, skeleton, pma, backdrop) {
+    if (backdrop?.composition) return;
     const slot = backdrop?.replacedSlot && skeleton.findSlot(backdrop.replacedSlot);
     if (!slot) {
       renderer.drawSkeleton(skeleton, pma);
@@ -638,11 +650,12 @@
   }
   function renderSkillBackdrop() {
     if (burstSession || burstPending?.intro || !cut) return;
-    if (cut.sourceVariant.skillBackdrop !== false && burstBackdrop && !skillBackdrop && burstBackdrop.backdrop?.time !== null) {
+    if (showGameBackground && cut.sourceVariant.skillBackdrop !== false && burstBackdrop && !skillBackdrop && burstBackdrop.backdrop?.time !== null) {
       const { minX, minY, maxX, maxY } = cut.frame || cut.bounds;
       const width = maxX - minX, height = maxY - minY;
       const aspect = Math.max(.65, Math.min(1.6, width / height));
-      const image = burstBackdrop.buildBackdrop(aspect);
+      const composition = burstBackdrop.buildComposition?.(aspect, cut.state.getCurrent(0)?.animation?.name);
+      const image = composition?.image || burstBackdrop.buildBackdrop(aspect);
       if (image) {
         // Store one composition in model coordinates for both the stage and exports.
         const ratio = image.width / image.height;
@@ -650,7 +663,7 @@
         const halfH = halfW / ratio;
         const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
         const SP = K.getSpine(cur && cur.spineVersion);
-        skillBackdrop = { image, texture: new SP.GLTexture(mgl, image),
+        skillBackdrop = { image, composition, texture: new SP.GLTexture(mgl, image),
           replacedSlot: cut.sourceVariant.skel === 'c225_01_skillcut.skel' ? '3_bg' : null,
           bounds: { minX: cx - halfW, minY: cy - halfH, maxX: cx + halfW, maxY: cy + halfH } };
       }
@@ -708,7 +721,7 @@
     }
     burstCanvas = null;
     delete stage.dataset.skillBurst;
-    showGameBackground = true;
+    showGameBackground = false;
     restoreClassicStage();
     setPlayBtn(); setLoopBtn(); syncBurstUI();
   }
@@ -745,7 +758,7 @@
     if (intro) stage.dataset.skillBurst = 'loading';
     syncBurstUI();
     try {
-      const {openSkillBurst} = await import('./burst-inline.js?v=20261110-ending-lighting');
+      const {openSkillBurst} = await import('./burst-inline.js?v=20261116-native-ending');
       signal.throwIfAborted();
       const session = await openSkillBurst({
         canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),
@@ -787,6 +800,7 @@
     burstBgButton.onclick = () => {
       showGameBackground = !showGameBackground;
       renderSkillBackdrop(); syncBurstUI();
+      if (showGameBackground && !skillBackdrop) K.toast('当前合播没有可用的独立背景，保留原生画面', 'info');
     };
     burstMix.oninput = () => {
       burstVolume = Number(burstMix.value) / 100;
@@ -2234,7 +2248,7 @@
   // ---------- 资源选择 ----------
   function selectChar(c, restore) {
     leaveSkillBurst();
-    showGameBackground = true;
+    showGameBackground = reviewedSkillBackdrops.has(c.burst?.key);
     if (burstEnabled && c.burst && navigator.userActivation?.isActive) unlockBurstAudio();
     cur = c;
     cutLoadSeq++;
@@ -2762,7 +2776,7 @@
         applyExportFrame(time, scale, cx * scale, cy * scale);
         raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT);
         r2.begin();
-        if (backdrop) drawSkillBackdrop(r2, exportLayers[0].skeleton, backdrop, backdropTexture);
+        if (backdrop) drawSkillBackdrop(r2, exportLayers[0].skeleton, backdrop, backdropTexture, time);
         for (const L of exportDrawLayers) if (L.active) drawSkillLayer(r2, L.skeleton, !!L.atlas.pages[0]?.pma, backdrop);
         r2.end();
         K.paintExportBackground(ctx2d, W, H, exportBackground === 'checker' && !video ? null : exportBackground);
