@@ -19,6 +19,9 @@ const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654',
 const mogadorSkyWithCard = trackDrawable(mogadorSky, mogadorSky.anchor.drawable, { ...mogadorSky.anchor, headroom: .32 });
 // Match the scene inside the outer matte. Live2D uses a top-left origin.
 const live2dFrames = new Map([
+ ['feiteliekaer_4', frame(0, 0, 9449, 5570)], // Authored camera canvas; off-canvas scene cards are not presentation bounds.
+ ['jinjiang_2', frame(0, 0, 8000, 4712)],
+ ['suweiaitongmeng_3', frame(0, 0, 19310, 13260)],
  ['anninvwang_2', frame(-100, 220, 8160, 5060)],
  ['guanghui_9', frame(-5050, -3100, 15070, 10385)],
  ['wuqi_3', frame(370, 185, 9240, 5300)],
@@ -382,6 +385,9 @@ for (const id of ['aimudeng_5', 'haichou_2', 'hu_2']) spineFrames.set(id + '_asm
 // Default browsing crops measured from the opaque illustration, excluding distant effects.
 // Export framing and per-motion authored anchors remain independent.
 const defaultStageFrames = new Map([
+ ['feiteliekaer_4', frame(0, 0, 9449, 5570)],
+ ['jinjiang_2', frame(0, 0, 8000, 4712)],
+ ['suweiaitongmeng_3', frame(0, 0, 19310, 13260)],
  ['baifeng_3', frame(8, 8, 7992, 4566)], // Clip the huge colored outer matte, also when zoomed out.
  ['adaerbote_3', frame(377, 435, 8238, 6761)],
  ['adaerbote_4', frame(-2374, -23, 2384, 2760)],
