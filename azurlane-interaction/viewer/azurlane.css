@@ -285,3 +285,14 @@ html[data-site-ui="1"][data-gav-ui="clean"][data-stage-ui-ready="1"] body.azurla
     font-size: 10px;
   }
 }
+/* Keep the form switch readable alongside the compact stage controls. */
+html[data-gav-ui="clean"] body #btnSwitchForm {
+ width:auto!important;min-width:84px!important;flex:0 0 auto!important;padding-inline:12px;
+ white-space:nowrap;color:var(--accent,#e8c47c);
+}
+@media (max-width:600px), (max-height:520px) {
+ html[data-gav-ui="clean"] body #btnSwitchForm {
+  min-width:44px!important;width:44px!important;padding-inline:3px;
+  white-space:normal;font-size:12px;line-height:1.3;
+ }
+}

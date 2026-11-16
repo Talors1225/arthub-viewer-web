@@ -244,7 +244,9 @@ export class Live2DController extends Controller {
   if(this.uiSound&&this.time>=this.uiSound.at){this.sound('se-ui','ui-'+this.uiSound.cue,{voice:false});this.uiSound=null;}
   if(this.state.busy&&this.state.actionTime>=Math.max(.01,this.finishTime??this.duration??1)){
    const prev=this.state.action;this.state.busy=false;for(const s of this.states){s.flag=false;if(s.pendingTarget!==undefined){this.target(s,s.pendingTarget);delete s.pendingTarget;}}
-   this.adapter.finish?.(prev);this.playIdle();
+   this.adapter.finish?.(prev);
+   if(this.actionOptions?.onComplete){const complete=this.actionOptions.onComplete;delete this.actionOptions.onComplete;complete();}
+   else this.playIdle();
   } else if(!this.state.busy&&this.state.actionTime>=this.duration){this.state.actionTime%=Math.max(.001,this.duration);this.events.forEach(e=>e.fired=false);this.runEvents(this.state.actionTime);}
   if(this.actionOptions?.manual)return;
   for(const s of this.states){
@@ -364,6 +366,7 @@ export class SpineController extends Controller {
  }
  finish(){
   if(!this.state.busy)return;this.state.busy=false;
+  if(this.actionOptions?.onComplete){const complete=this.actionOptions.onComplete;delete this.actionOptions.onComplete;complete();return;}
   const c=this.current;if(c){if(c.idle)this.state.idle=c.idle;if(c.skin){this.state.skin=this.state.skin===c.skin?this.defaultSkin:c.skin;this.adapter.skin?.(this.state.skin);}if(c.config.fold){this.state.fold=false;this.adapter.fold?.(false);}if(c.config.effect_hide)this.adapter.effects?.(true);if(c.finishCv)this.sound(this.model.voiceBank,c.finishCv+'_'+this.model.voiceVariant,{voice:true,exact:true});this.current=null;this.saveState();}
   if(this.actionOptions?.sequence){this.next();return;}this.playIdle();
  }

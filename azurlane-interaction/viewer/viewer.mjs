@@ -1,4 +1,5 @@
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261116-feedback-release';
+import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261116-dual-form';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
 import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame, authoredSpineExportFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261116-feedback-release';
@@ -62,6 +63,78 @@ let editor=null,exporting=false,volume=1;
 const savedVolume=Number(localStorage.getItem('arthub:azurlane:volume')??1);
 if(Number.isFinite(savedVolume))volume=Math.min(1,Math.max(0,savedVolume));
 const evidence=window.__azurlane=window.__dynamicViewer={view,ready:false,errors:[],interaction:{},audio:{state:'idle',plays:0,maxRms:0,missing:[]}};
+const formButton=$('btnSwitchForm');
+let formSwitch=null,formButtonKey='';
+const compactFormQuery=window.matchMedia('(max-width:600px), (max-height:520px)');
+function updateFormButton(){
+ const key=[selected?.id,allModels.length,view.ready,exporting,formSwitch?.phase,compactFormQuery.matches].join(':');
+ if(key===formButtonKey)return;formButtonKey=key;
+ const link=linkedForm(selected?.id,allModels);
+ formButton.hidden=!link&&!formSwitch;
+ formButton.disabled=!formSwitch&&(!view.ready||exporting);
+ const compact=compactFormQuery.matches;
+ const fullLabel=formSwitch?'取消切换':link?.index?'返回原形态':'切换形态';
+ const label=compact?(formSwitch?'取消':link?.index?'返回':'形态'):fullLabel;
+ if(formButton.textContent!==label)formButton.textContent=label;
+ if(formButton.getAttribute('aria-label')!==fullLabel)formButton.setAttribute('aria-label',fullLabel);
+ formButton.title=formSwitch?'取消切换并返回原形态':link?'切换至 '+(allModels.find(m=>m.id===link.target)?.name||link.target):'';
+ evidence.form={target:link?.target||null,switching:!!formSwitch,phase:formSwitch?.phase||null};
+}
+function cancelFormSwitch(restore=true){
+ const token=formSwitch;if(!token)return;
+ formSwitch=null;token.abort.abort();token.complete=null;
+ updateFormButton();
+ if(restore)loadModel(token.origin).catch(fail);
+}
+// A transition owns the animation clock. Prevent panel/gesture actions from
+// replacing it mid-flight; the same visible button always permits cancellation.
+for(const type of ['click','pointerdown','wheel','keydown'])document.addEventListener(type,event=>{
+ if(!formSwitch||event.target.closest?.('#btnSwitchForm'))return;
+ if(type==='keydown'&&event.key==='Escape')cancelFormSwitch();
+ event.preventDefault();event.stopImmediatePropagation();
+},{capture:true,passive:false});
+function waitFormMotion(token,name,start=true){
+ return new Promise((resolve,reject)=>{
+  const active=controller,errors=active.state.errors.length;
+  let timer,timeout;
+  const finish=error=>{clearInterval(timer);clearTimeout(timeout);token.abort.signal.removeEventListener('abort',aborted);token.complete=null;error?reject(error):resolve();};
+  const aborted=()=>finish(new DOMException('切换已取消','AbortError'));
+  token.complete=()=>finish();token.abort.signal.addEventListener('abort',aborted,{once:true});
+  timer=setInterval(()=>{
+   if(active!==controller||active.disposed)return aborted();
+   if(active.state.errors.length>errors)finish(new Error(active.state.errors.at(-1)));
+  },100);
+  timeout=setTimeout(()=>finish(new Error('切换动作加载超时，请重试')),90000);
+  if(start&&!active.action(name,{force:true,manual:true,voice:false,onComplete:()=>token.complete?.()}))finish(new Error('切换动作不可用：'+name));
+ });
+}
+async function switchForm(){
+ if(formSwitch){cancelFormSwitch();return;}
+ const link=linkedForm(selected?.id,allModels);if(!link||!view.ready||exporting)return;
+ const token={origin:selected.id,abort:new AbortController(),phase:'out',complete:null};formSwitch=token;
+ const playing=view.playing,speed=view.speed;
+ try{
+  cancelInteraction();stopAudio();clearHint();stagePan.setMode('pan');
+  setPanelOpen('interaction',false);view.playing=true;view.speed=1;adapter?.setInteractionViewFixed?.(false);
+  updateFormButton();
+  if(selected.animations.includes('change_out'))await waitFormMotion(token,'change_out');
+  if(formSwitch!==token)return;
+  token.phase='loading';
+  const loaded=await loadModel(link.target,{formToken:token,initialAction:'change_in'});
+  if(formSwitch!==token||!loaded)return;
+  token.phase='in';
+  if(selected.animations.includes('change_in'))await waitFormMotion(token,'change_in',false);
+  if(formSwitch!==token)return;
+  view.playing=playing;view.speed=speed;formSwitch=null;updateFormButton();
+ }catch(error){
+  if(formSwitch!==token)return;
+  formSwitch=null;token.abort.abort();
+  const restored=await loadModel(token.origin).catch(error=>{fail(error);return false;});
+  K.toast(restored?'形态切换失败，已返回原形态，可再次重试。':'形态切换失败，请重新加载立绘后重试。','err');
+  evidence.formError=String(error);updateFormButton();
+ }
+}
+formButton.addEventListener('click',()=>void switchForm());
 // pixi-live2d-display 0.4 releases the Model but leaves its native Moc allocated.
 // Keep that owner until the Model has been destroyed, then release it as well.
 const mocOwners=new WeakMap(),releasedMocs=new WeakSet();let createdMocs=0,releasedMocCount=0;
@@ -1018,7 +1091,8 @@ async function spinePortrait(model,generation){
  disposeRenderer=dispose;return api;
 }
 async function getJson(url,required=true,signal){try{return JSON.parse(new TextDecoder().decode(await readPortraitAsset(url,{signal})));}catch(error){if(!required&&error.status===404)return null;throw error;}}
-async function loadModel(id,{history=true}={}){
+async function loadModel(id,{history=true,formToken=null,initialAction=null}={}){
+ if(formSwitch && formToken!==formSwitch)cancelFormSwitch(false);
  if(exporting)return false;
  resetHintVisits();
  hintsEnabled=false;hintButton.setAttribute('aria-pressed','false');
@@ -1043,8 +1117,9 @@ async function loadModel(id,{history=true}={}){
  }).catch(error=>{if(generation===loadGeneration&&error.name!=='AbortError')evidence.audio.metadataError=String(error);});
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
  const previousTrace=adapter.trace;adapter.trace=(type,data)=>{previousTrace?.call(adapter,type,data);recordHintVisit(type,data);};
- controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:highestFavor(model)}):new SpineController(model,adapter,{storage:localStorage,favor:highestFavor(model)});evidence.controller=controller;evidence.adapter=adapter;controls();controller.playIdle();
+ controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:highestFavor(model)}):new SpineController(model,adapter,{storage:localStorage,favor:highestFavor(model)});evidence.controller=controller;evidence.adapter=adapter;controls();if(initialAction && model.animations.includes(initialAction))controller.action(initialAction,{force:true,manual:true,voice:false,onComplete:()=>{controller?.playIdle();formToken?.complete?.();}});else controller.playIdle();
   view.ready=evidence.ready=true;interactButton.disabled=!hasInteraction;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
+ updateFormButton();
  if(history){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);K.history.push(entry(model));}return true;
 }
 function record(){
@@ -1058,6 +1133,6 @@ window.__loadAzurLane=loadModel;window.addEventListener('popstate',()=>{const id
 let previous=performance.now(),nextEvidence=0;
 function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;try{if(!exporting&&view.ready&&controller){updateAudio(dt);if(view.playing){portraitTime+=dt*view.speed;const d=1-Math.exp(-dt/(selected.interaction.settings?.DampingTime||.3));look.x+=(look.targetX-look.x)*d;look.y+=(look.targetY-look.y)*d;controller.tick(dt*view.speed);}render?.(dt);view.frames++;
  if(previewPending&&view.frames>2&&!controller.state.motionPending&&now>=nextPreviewCheck){nextPreviewCheck=now+100;const gl=evidence.app?.renderer?.gl||canvas.getContext('webgl2')||canvas.getContext('webgl');if(gl&&!gl.isContextLost()&&canvas.width>1&&canvas.height>1){previewContext.clearRect(0,0,64,64);previewContext.drawImage(canvas,0,0,64,64);const pixels=previewContext.getImageData(0,0,64,64).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>8){loadingPreview.ready(loadGeneration);previewPending=false;break;}}}
- viewerUI.update();if(now>=nextEvidence){record();nextEvidence=now+250;}}}catch(e){view.ready=evidence.ready=false;fail(e);}requestAnimationFrame(frame);}
+ updateFormButton();viewerUI.update();if(now>=nextEvidence){record();nextEvidence=now+250;}}}catch(e){view.ready=evidence.ready=false;fail(e);}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json'),getJson(THUMB_PREFIX+'index.json',false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}
