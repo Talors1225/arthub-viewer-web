@@ -2,7 +2,7 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261116-dual-form';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame, authoredSpineExportFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261116-feedback-release';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame, authoredSpineExportFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261116-clean-framing';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261116-forearm-pose';
@@ -492,7 +492,7 @@ const viewerUI=window.createInteractionViewerUI({
    setExporting:value=>{if(value){stagePan.cancel();cancelInteraction();clearHint();}exporting=value;interactButton.disabled=value||!view.ready||!hasInteraction;viewerUI.update(true);},capture:(state,format,quality)=>adapter.capture(state,format,quality),
   beforeExport:signal=>K.awaitExportTask(Promise.resolve(adapter?.prepareExport?.()),signal),
   videoDuration:state=>adapter?.videoDuration?.(state)??state.duration,setBackground:()=>{},
-  cameraLevel:()=>selected?.id==='xinnong_5'&&adapter?.timeline().name==='idle18'?!!adapter.levelExport:null,
+  cameraLevel:()=>((selected?.id==='xinnong_5'&&adapter?.timeline().name==='idle18') || (['tianjinfeng_2','tianjinfeng_3'].includes(selected?.id)&&adapter?.timeline().name==='normal'))?!!adapter.levelExport:null,
   setCameraLevel:value=>{if(adapter)adapter.levelExport=value;},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume,voiceTab:'voice',
@@ -1040,7 +1040,22 @@ async function spinePortrait(model,generation){
   const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
    editor:{...editor, hidden}, animation, restore:()=>render(0) });
   const exportFrame = authoredSpineExportFrame(model.id, animation.name);
-  if (exportFrame) session.fixedFrame = exportFrame;
+  let levelFrame;
+  if (api.levelExport && ['tianjinfeng_2','tianjinfeng_3'].includes(model.id) && animation.name === 'normal') {
+   const name = model.id === 'tianjinfeng_2' ? 'bj_a' : 'bj_b';
+   const slot = layers.flatMap(layer => layer.skeleton.slots).find(slot => slot.data.name === name && slot.attachment instanceof spine.RegionAttachment);
+   if (slot) {
+    const vertices = new Float32Array(8); slot.attachment.computeWorldVertices(slot.bone,vertices,0,2);
+    let rotation = Math.atan2(vertices[7]-vertices[1],vertices[6]-vertices[0]);
+    // Mirrored attachments reverse the edge, not the intended camera orientation.
+    if (rotation > Math.PI/2) rotation -= Math.PI;
+    if (rotation < -Math.PI/2) rotation += Math.PI;
+    const cos = Math.cos(rotation), sin = Math.sin(rotation), xs=[],ys=[];
+    for (let i=0;i<8;i+=2) { xs.push(vertices[i]*cos+vertices[i+1]*sin);ys.push(-vertices[i]*sin+vertices[i+1]*cos); }
+    levelFrame = { minX:Math.min(...xs),minY:Math.min(...ys),maxX:Math.max(...xs),maxY:Math.max(...ys),rotation };
+   }
+  }
+  if (levelFrame || exportFrame) session.fixedFrame = levelFrame || exportFrame;
   else {
    const frame = spinePortraitFrameBounds(model.id, layers, spine, hidden);
    if (frame) session.pngSize = quality => ({ ...K.exportDimensions(frame, quality), fullFrame:true });

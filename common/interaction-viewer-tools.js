@@ -177,7 +177,7 @@
   // objects. Export cannot trigger the portrait controller's events or phases.
   window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, fixedFrame, visible = () => true, extraBounds = () => [] }) => {
     const width = canvas.width, height = canvas.height, camera = renderer.camera;
-    const saved = { width: camera.viewportWidth, height: camera.viewportHeight, zoom: camera.zoom, x: camera.position.x, y: camera.position.y, z: camera.position.z };
+    const saved = { up: camera.up && { ...camera.up }, width: camera.viewportWidth, height: camera.viewportHeight, zoom: camera.zoom, x: camera.position.x, y: camera.position.y, z: camera.position.z };
     const copies = layers.map((layer, index) => {
       const original = layer.skeleton, skeleton = new ns.Skeleton(original.data);
       if (original.skin) skeleton.setSkin(original.skin);
@@ -252,7 +252,11 @@
         }, background));
         canvas.width = size.width; canvas.height = size.height; gl.viewport(0, 0, size.width, size.height);
         camera.setViewport(size.width, size.height); camera.zoom = size.fullFrame ? 1 / size.scale : saved.width * saved.zoom / size.width;
-        camera.position.set(size.fullFrame ? size.centerX : saved.x, size.fullFrame ? size.centerY : saved.y, saved.z); camera.update();
+        const rotation = size.fullFrame ? this.fixedFrame?.rotation || 0 : 0;
+        const cos = Math.cos(rotation), sin = Math.sin(rotation);
+        if (camera.up && saved.up) camera.up.set(-sin, cos, saved.up.z);
+        camera.position.set(size.fullFrame ? size.centerX * cos - size.centerY * sin : saved.x,
+          size.fullFrame ? size.centerX * sin + size.centerY * cos : saved.y, saved.z); camera.update();
         const solidBackground = background && background !== 'checker';
         const color = K.parseColor(solidBackground ? background : '#000000', [0, 0, 0]);
         gl.clearColor(...color, solidBackground ? 1 : 0); gl.clear(gl.COLOR_BUFFER_BIT);
@@ -263,6 +267,7 @@
       },
       dispose() {
         canvas.width = width; canvas.height = height; gl.viewport(0, 0, width, height);
+        if (camera.up && saved.up) camera.up.set(saved.up.x, saved.up.y, saved.up.z);
         camera.setViewport(saved.width, saved.height); camera.zoom = saved.zoom; camera.position.set(saved.x, saved.y, saved.z); camera.update(); restore();
       },
     };

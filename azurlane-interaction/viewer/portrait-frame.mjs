@@ -39,7 +39,7 @@ const live2dIdleFrames = new Map([
  ['mojiaduoer_4', mogadorSky],
  ['ougen_8', frame(-13, 6, 8676, 5391)],
  ['pulimaosi_3', frame(27, 31, 7965, 4736)],
- ['xinnong_6', frame(0, 0, 10060, 6778)], // Trim curtain geometry outside the illustrated room.
+ ['xinnong_6', frame(8, 8, 10052, 6770)], // Trim curtain geometry outside the illustrated room.
  ['qiershazhi_2', frame(-3798, -907, 11880, 9978)],
  ['sebao_2', frame(208, 56, 13932, 7841)],
  ['shi_2', frame(-264, 266, 12467, 6675)],
@@ -53,8 +53,8 @@ const live2dIdleFrames = new Map([
  ['z13_2', frame(-211, 121, 10268, 6584)],
 ]);
 const live2dIdleExportFrames = new Map([
- ['baifeng_3', frame(0, 0, 8000, 4574)], // Inside the four oversized surround meshes.
- ['zhangwu_2', frame(-2023, -1234, 11564, 6582)], // The room, without drifting petals outside it.
+ ['baifeng_3', frame(8, 8, 7992, 4566)], // Inside the four oversized surround meshes.
+ ['zhangwu_2', frame(-1930, -1220, 11550, 6568)], // The room, without drifting petals outside it.
  ['ankeleiqi_2', Object.freeze({ ...anchoragePool, hiddenDrawables: ['ArtMesh532', 'ArtMesh533', 'ArtMesh534', 'ArtMesh536', 'ArtMesh542'] })],
  ['jinshi_2', frame(66, 72, 7925, 5480)], // The scene inside the surrounding fog.
 ]);
@@ -382,6 +382,7 @@ for (const id of ['aimudeng_5', 'haichou_2', 'hu_2']) spineFrames.set(id + '_asm
 // Default browsing crops measured from the opaque illustration, excluding distant effects.
 // Export framing and per-motion authored anchors remain independent.
 const defaultStageFrames = new Map([
+ ['baifeng_3', frame(8, 8, 7992, 4566)], // Clip the huge colored outer matte, also when zoomed out.
  ['adaerbote_3', frame(377, 435, 8238, 6761)],
  ['adaerbote_4', frame(-2374, -23, 2384, 2760)],
  ['alabama_3', frame(-1417, -8, 1465, 1643)],
@@ -442,12 +443,19 @@ const defaultStageFrames = new Map([
 ]);
 export const defaultPortraitStageFrame = id => defaultStageFrames.get(id) || null;
 
+// These scenes have a defined picture window in every pose. Falling back to
+// all drawable bounds for idle2/etc includes giant matte or curtain geometry.
+const cleanSceneFrame = id => id === 'xinnong_6' ? live2dIdleFrames.get(id)
+ : ['zhangwu_2','baifeng_3'].includes(id) ? live2dIdleExportFrames.get(id) : null;
 export const authoredLive2DFrame = (id, motion) =>
- live2dIdleVariants.get(id)?.get(motion) || live2dFrames.get(id) || (motion === 'idle' ? live2dIdleFrames.get(id) : null) || null;
+ (cleanSceneFrame(id) && live2dIdleExportVariants.get(id)?.get(motion))
+ || live2dIdleVariants.get(id)?.get(motion) || live2dFrames.get(id)
+ || (motion === 'idle' ? live2dIdleFrames.get(id) : null) || cleanSceneFrame(id) || null;
 export const authoredLive2DExportFrame = (id, motion) =>
  (motion === 'idle' ? live2dIdleExportFrames.get(id) : live2dIdleExportVariants.get(id)?.get(motion))
  || authoredLive2DFrame(id, motion)
- || (id === 'kebensi_2' ? cowpensRoom : null);
+ || (id === 'kebensi_2' ? cowpensRoom : null)
+ || (id === 'baifeng_3' ? live2dIdleExportFrames.get(id) : null);
 const spineExportMotionFrames = new Map([
  ['tianjinfeng_2:normal', frame(-2200, -2000, 2300, 2300)],
  ['bisimaiz_3:normal', frame(-2174, -8, 2120, 2463)],
