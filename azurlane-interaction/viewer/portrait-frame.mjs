@@ -465,6 +465,8 @@ export const authoredLive2DExportFrame = (id, motion) =>
  || (id === 'kebensi_2' ? cowpensRoom : null)
  || (id === 'baifeng_3' ? live2dIdleExportFrames.get(id) : null);
 const spineExportMotionFrames = new Map([
+ // Inset past the background texture's transparent antialias edge.
+ ['yuekegongjue_5:normal', frame(-1948, -1739, 1947, 1248)],
  ['tianjinfeng_3:normal', frame(-2398, 8, 2398, 2724)], // Inside the classroom background; exclude atlas-edge pixels.
  ['qisheng_3:normal', frame(-1817, 0, 1997, 3272)],
  ['jumeihuali_2:normal', frame(-2945, 5, 2945, 3390)],
