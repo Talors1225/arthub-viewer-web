@@ -275,6 +275,7 @@ async function showModel(model) {
       activeScene.loadingVariants = true;
       const variants = new Map([[0, { skeleton, state, gestures, atlas: activeScene.atlas, pma: activeScene.pma }]]);
       activeScene.extraAtlases = [activeScene.atlas];
+      activeScene.variants = variants;
       for (let index = 1; index < profile.groups.length; index++) {
         const spec = model.groupAssets[profile.groups[index].id];
         if (!spec || spec.skel === model.skel) continue;
@@ -628,7 +629,22 @@ function openAnimationBrowser() {
   const groupFilter = panel.querySelector('select');
   const query = panel.querySelector('input');
   const results = panel.querySelector('.animation-results');
-  const groups = gestures.animationGroups;
+  const variants = picture.variants || new Map([[gestures.groupIndex, picture]]);
+  const grouped = new Map();
+  for (const [owner, variant] of variants) {
+    for (const group of variant.gestures.animationGroups) {
+      const target = grouped.get(group.key) || { ...group, clips: [] };
+      grouped.set(group.key, target);
+      for (const clip of group.clips) {
+        // Identical names can be authored in both skeletons; prefer the matching stage.
+        const existing = target.clips.findIndex(item => item.name === clip.name);
+        const candidate = { ...clip, owner };
+        if (existing < 0) target.clips.push(candidate);
+        else if (owner === clip.groupIndex) target.clips[existing] = candidate;
+      }
+    }
+  }
+  const groups = [...grouped.values()].sort((a, b) => Number(a.key === 'other') - Number(b.key === 'other') || a.key.localeCompare(b.key, 'en', { numeric: true }));
   groupFilter.append(new Option('全部', ''),
     ...groups.map(group => new Option(group.key === 'other' ? '其他' : group.label, group.key)));
   groupFilter.value = animationPicker.group;
@@ -651,7 +667,7 @@ function openAnimationBrowser() {
         button.type = 'button';
         button.className = 'animation-option';
         button.dataset.animation = clip.name;
-        button.setAttribute('aria-pressed', String(gestures.last?.kind === 'preview' && gestures.last.animation === clip.name));
+        button.setAttribute('aria-pressed', String(picture.gestures.last?.kind === 'preview' && picture.gestures.last.animation === clip.name));
         const name = document.createElement('span');
         name.className = 'animation-name';
         name.textContent = clip.name;
@@ -663,7 +679,8 @@ function openAnimationBrowser() {
           if (scene !== picture || K.pngExporting) return;
           cancelInput();
           picture.sound?.unlock();
-          gestures.previewAnimation(clip);
+          if (picture.variants) picture.gestures.enterGroup(clip.owner, false);
+          picture.gestures.previewAnimation(clip);
           results.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed', 'false');
           button.setAttribute('aria-pressed', 'true');
           if (matchMedia('(max-width: 600px), (pointer: coarse)').matches) close(true);

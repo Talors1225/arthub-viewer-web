@@ -50,7 +50,8 @@ const blendedVideoPortraits = new Set([
  'xianghe_2', 'xingdengbao_2', 'xinnong_4', 'xuefeng_3', 'xukufu_3', 'yuekechengii_3',
  'zhala_2', 'zhenzhuhao_2',
 ]);
-const thumbRevision = id => portraitsWithSkinOne.has(id) ? '?v=20261110-az-spine-skins' : '';
+const refreshedPortraitCovers = new Set(["shengluyisi_2", "yuekegongjue_5", "qisheng_3", "anninvwang_3", "shuixinghao_2", "tiejiaohao_2", "sailimiye_2", "lilisha_2", "jumeihuali_2"]);
+const thumbRevision = id => refreshedPortraitCovers.has(id) ? "?v=20261117-framed" : portraitsWithSkinOne.has(id) ? '?v=20261110-az-spine-skins' : '';
 const previewPath = id => K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp'+thumbRevision(id);
 let previewPending=false,nextPreviewCheck=0;
 const previewSample=document.createElement('canvas');previewSample.width=previewSample.height=64;
