@@ -508,7 +508,7 @@ const viewerUI=window.createInteractionViewerUI({
    setExporting:value=>{if(value){stagePan.cancel();cancelInteraction();clearHint();}exporting=value;interactButton.disabled=value||!view.ready||!hasInteraction;viewerUI.update(true);},capture:(state,format,quality)=>adapter.capture(state,format,quality),
   beforeExport:signal=>K.awaitExportTask(Promise.resolve(adapter?.prepareExport?.()),signal),
   videoDuration:state=>adapter?.videoDuration?.(state)??state.duration,setBackground:()=>{},
-  cameraLevel:()=>((selected?.id==='xinnong_5'&&adapter?.timeline().name==='idle18') || (['tianjinfeng_2','tianjinfeng_3'].includes(selected?.id)&&adapter?.timeline().name==='normal'))?!!adapter.levelExport:null,
+  cameraLevel:()=>((selected?.id==='xinnong_5'&&adapter?.timeline().name==='idle18') || (selected?.id==='qisheng_3'&&adapter?.timeline().name==='ex') || (['tianjinfeng_2','tianjinfeng_3'].includes(selected?.id)&&adapter?.timeline().name==='normal'))?!!adapter.levelExport:null,
   setCameraLevel:value=>{if(adapter)adapter.levelExport=value;},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume,voiceTab:'voice',
@@ -1057,9 +1057,21 @@ async function spinePortrait(model,generation){
    editor:{...editor, hidden}, animation, restore:()=>render(0) });
   const exportFrame = authoredSpineExportFrame(model.id, animation.name);
   let levelFrame;
-  if (api.levelExport && ['tianjinfeng_2','tianjinfeng_3'].includes(model.id) && animation.name === 'normal') {
-   const name = model.id === 'tianjinfeng_2' ? 'bj_a' : 'bj_b';
-   const slot = layers.flatMap(layer => layer.skeleton.slots).find(slot => slot.data.name === name && slot.attachment instanceof spine.RegionAttachment);
+  if (api.levelExport && ((['tianjinfeng_2','tianjinfeng_3'].includes(model.id) && animation.name === 'normal') || (model.id === 'qisheng_3' && animation.name === 'ex'))) {
+   const name = model.id === 'qisheng_3' ? 'bj' : model.id === 'tianjinfeng_2' ? 'bj_a' : 'bj_b';
+   // Measure the authored ex pose independently of an unfinished preview crossfade.
+   const levelLayers = model.id === 'qisheng_3' ? layers.map(layer => {
+    const skeleton = new spine.Skeleton(layer.data);
+    if (layer.skeleton.skin) skeleton.setSkin(layer.skeleton.skin);
+    skeleton.setToSetupPose();
+    Object.assign(skeleton, {x:layer.skeleton.x,y:layer.skeleton.y,scaleX:layer.skeleton.scaleX,scaleY:layer.skeleton.scaleY});
+    if (layer.spec.rotation) skeleton.bones[0].rotation += layer.spec.rotation;
+    const state = new spine.AnimationState(new spine.AnimationStateData(layer.data));
+    if (layer.data.findAnimation(animation.name)) state.setAnimation(0,animation.name,true).mixDuration=0;
+    state.apply(skeleton);skeleton.updateWorldTransform();
+    return {skeleton};
+   }) : layers;
+   const slot = levelLayers.flatMap(layer => layer.skeleton.slots).find(slot => slot.data.name === name && slot.attachment instanceof spine.RegionAttachment);
    if (slot) {
     const vertices = new Float32Array(8); slot.attachment.computeWorldVertices(slot.bone,vertices,0,2);
     let rotation = Math.atan2(vertices[7]-vertices[1],vertices[6]-vertices[0]);
@@ -1068,7 +1080,8 @@ async function spinePortrait(model,generation){
     if (rotation < -Math.PI/2) rotation += Math.PI;
     const cos = Math.cos(rotation), sin = Math.sin(rotation), xs=[],ys=[];
     for (let i=0;i<8;i+=2) { xs.push(vertices[i]*cos+vertices[i+1]*sin);ys.push(-vertices[i]*sin+vertices[i+1]*cos); }
-    levelFrame = { minX:Math.min(...xs),minY:Math.min(...ys),maxX:Math.max(...xs),maxY:Math.max(...ys),rotation };
+    const inset = model.id === 'qisheng_3' ? 8 : 0;
+    levelFrame = { minX:Math.min(...xs)+inset,minY:Math.min(...ys)+inset,maxX:Math.max(...xs)-inset,maxY:Math.max(...ys)-inset,rotation };
    }
   }
   if (levelFrame || exportFrame) session.fixedFrame = levelFrame || exportFrame;
