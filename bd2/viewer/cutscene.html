@@ -2488,7 +2488,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON('../../thumbs/index.json').then(td => {
+    const thumbnails = K.fetchJSON('../../thumbs/index.json?v=20261117-bd2-scene-covers').then(td => {
       webThumbs = td.items || {};
       if (routeSource === 'crosscore' && cur) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
