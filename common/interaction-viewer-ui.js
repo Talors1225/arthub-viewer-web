@@ -7,6 +7,30 @@
     let animations = [], renderedName = null, thumbnailKey = null, lastUpdate = -Infinity, scrubbing = false;
     const rows = new Map();
     const invoke = action => { try { Promise.resolve(action()).catch(driver.onError || console.error); } catch (error) { (driver.onError || console.error)(error); } };
+    const nextAnimation = byId('btnNextAnimation');
+    let nextSelection = null, selectingNext = false;
+    if (nextAnimation) {
+      nextAnimation.innerHTML = K.uiIcon('chevR', 18) + '<span>' + (nextAnimation.closest('[data-panel-page="interaction"]') ? '下一步' : '下一动作') + '</span>';
+      nextAnimation.addEventListener('click', () => invoke(async () => {
+        const state = driver.playback();
+        if (!state.ready || state.selecting || selectingNext || animations.length < 2) return;
+        const current = nextSelection?.key === state.key ? nextSelection.name : state.name;
+        const index = animations.findIndex(item => item.name === current);
+        const target = animations[(index + 1) % animations.length];
+        const previous = nextSelection;
+        nextSelection = { key: state.key, name: target.name };
+        selectingNext = true; update(true);
+        try { await driver.selectAnimation(target.name); }
+        catch (error) { nextSelection = previous; throw error; }
+        finally {
+          if (nextAnimation.closest('[data-panel-page="interaction"]')) {
+            showTab('interaction'); byId('floatPanel').classList.add('open');
+            document.body.classList.add('interaction-open');
+          }
+          selectingNext = false; update(true);
+        }
+      }));
+    }
     let effectControls = null, effectScrubbing = false, effectKey = null;
     if (driver.effectPlayback && controls.animFilter?.closest('[data-panel-page]')) {
       const section = document.createElement('details'); section.className = 'viewer-effect-timeline'; section.hidden = true;
@@ -42,7 +66,7 @@
         button.addEventListener('click', () => invoke(async () => {
           const request = ++selection;
           button.setAttribute('aria-busy', 'true'); duration.textContent = '加载中…';
-          try { await driver.selectAnimation(animation.name); }
+          try { await driver.selectAnimation(animation.name); nextSelection = { key: driver.playback().key, name: animation.name }; }
           finally { if (request === selection) { button.removeAttribute('aria-busy'); duration.textContent = animation.duration > 0 ? animation.duration.toFixed(2) + 's' : animation.lazy ? '点选加载' : '—'; } }
         }));
         rows.set(animation.name, button); fragment.append(button);
@@ -74,6 +98,7 @@
     function update(force = false) {
       const now = performance.now(); if (!force && now - lastUpdate < 80) return; lastUpdate = now;
       const state = driver.playback(), duration = Math.max(0, Number(state.duration) || 0), time = Math.max(0, Number(state.time) || 0);
+      if (nextAnimation) { nextAnimation.disabled = !state.ready || !!state.selecting || selectingNext || animations.length < 2; nextAnimation.setAttribute('aria-busy', String(selectingNext || !!state.selecting)); }
       icon(controls.pbPlay, state.playing ? 'pause' : 'play'); controls.pbPlay.classList.toggle('active', !!state.playing);
       controls.pbPlay.setAttribute('aria-label', state.playing ? '暂停' : '播放'); controls.pbPlay.title = state.playing ? '暂停' : '播放';
       icon(controls.pbLoop, 'loop'); controls.pbLoop.classList.toggle('active', !!state.loop); controls.pbLoop.setAttribute('aria-pressed', String(!!state.loop));

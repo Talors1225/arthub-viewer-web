@@ -1,3 +1,23 @@
+function animationGroupsFor(picture) {
+  const gestures = picture.gestures;
+  const variants = picture.variants || new Map([[gestures.groupIndex, picture]]);
+  const grouped = new Map();
+  for (const [owner, variant] of variants) {
+    for (const group of variant.gestures.animationGroups) {
+      const target = grouped.get(group.key) || { ...group, clips: [] };
+      grouped.set(group.key, target);
+      for (const clip of group.clips) {
+        // Identical names can be authored in both skeletons; prefer the matching stage.
+        const existing = target.clips.findIndex(item => item.name === clip.name);
+        const candidate = { ...clip, owner };
+        if (existing < 0) target.clips.push(candidate);
+        else if (owner === clip.groupIndex) target.clips[existing] = candidate;
+      }
+    }
+  }
+  const groups = [...grouped.values()].sort((a, b) => Number(a.key === 'other') - Number(b.key === 'other') || a.key.localeCompare(b.key, 'en', { numeric: true }));
+  return groups;
+}
 import { FatedGestures } from './gestures.mjs?v=20261117-resources';
 import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
 import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261112-export-repair';
@@ -11,7 +31,7 @@ const hints = $('hints'), hintLayer = $('gesture-hints'), hintStatus = $('hint-s
 const scoreMeter = $('score-meter'), scoreBar = scoreMeter.querySelector('progress'), scoreText = scoreMeter.querySelector('span');
 const controls = stage.querySelector('.controls');
 const more = $('more'), exitImmersive = $('exit-immersive');
-const animationBrowser = $('animation-browser');
+const animationBrowser = $('animation-browser'), nextAnimation = $('next-animation');
 const recordingBar = $('recording-bar'), recordingTime = $('recording-time');
 const store = K.Store('bd2-fated');
 const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: color => store.set('bg', color) });
@@ -101,6 +121,7 @@ function dispose() {
   hints.disabled = true;
   more.disabled = true;
   animationBrowser.hidden = true;
+  nextAnimation.hidden = true;
   clearGuide();
   delete canvas.dataset.ready;
 }
@@ -173,7 +194,7 @@ function updateGuide(t) {
   if (!guideOn || t - lastGuideFrame < 34) return;
   lastGuideFrame = t;
   const rect = canvas.getBoundingClientRect();
-  const occlusions = [controls, $('back'), animationBrowser, scoreMeter, recordingBar]
+  const occlusions = [controls, $('back'), animationBrowser, nextAnimation, scoreMeter, recordingBar]
     .filter(element => !element.hidden).map(element => element.getBoundingClientRect());
   const usable = ({ x, y }) => x >= rect.left + 14 && x <= rect.right - 14 &&
     y >= rect.top + 14 && y <= rect.bottom - 14 &&
@@ -393,6 +414,8 @@ function renderFrame(t) {
     canvas.dataset.ready = 'true';
     hints.disabled = false;
     animationBrowser.hidden = !gestures.animationGroups.length;
+    nextAnimation.hidden = animationBrowser.hidden;
+    nextAnimation.disabled = K.pngExporting || animationGroupsFor(scene).flatMap(group => group.clips).length < 2;
     more.disabled = Boolean(videoRecording);
     setMessage('');
   }
@@ -629,22 +652,7 @@ function openAnimationBrowser() {
   const groupFilter = panel.querySelector('select');
   const query = panel.querySelector('input');
   const results = panel.querySelector('.animation-results');
-  const variants = picture.variants || new Map([[gestures.groupIndex, picture]]);
-  const grouped = new Map();
-  for (const [owner, variant] of variants) {
-    for (const group of variant.gestures.animationGroups) {
-      const target = grouped.get(group.key) || { ...group, clips: [] };
-      grouped.set(group.key, target);
-      for (const clip of group.clips) {
-        // Identical names can be authored in both skeletons; prefer the matching stage.
-        const existing = target.clips.findIndex(item => item.name === clip.name);
-        const candidate = { ...clip, owner };
-        if (existing < 0) target.clips.push(candidate);
-        else if (owner === clip.groupIndex) target.clips[existing] = candidate;
-      }
-    }
-  }
-  const groups = [...grouped.values()].sort((a, b) => Number(a.key === 'other') - Number(b.key === 'other') || a.key.localeCompare(b.key, 'en', { numeric: true }));
+  const groups = animationGroupsFor(picture);
   groupFilter.append(new Option('全部', ''),
     ...groups.map(group => new Option(group.key === 'other' ? '其他' : group.label, group.key)));
   groupFilter.value = animationPicker.group;
@@ -681,6 +689,7 @@ function openAnimationBrowser() {
           picture.sound?.unlock();
           if (picture.variants) picture.gestures.enterGroup(clip.owner, false);
           picture.gestures.previewAnimation(clip);
+          animationPicker.nextName = clip.name;
           results.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed', 'false');
           button.setAttribute('aria-pressed', 'true');
           if (matchMedia('(max-width: 600px), (pointer: coarse)').matches) close(true);
@@ -733,6 +742,18 @@ function setImmersive(enabled) {
 K.setUiIcon(more, 'more', '更多');
 K.setUiIcon(animationBrowser, 'anim', '动画');
 animationBrowser.onclick = openAnimationBrowser;
+K.setUiIcon(nextAnimation, 'chevR', '下一动作');
+nextAnimation.onclick = () => {
+  if (!scene || !canvas.dataset.ready || K.pngExporting) return;
+  const clips = animationGroupsFor(scene).flatMap(group => group.clips);
+  if (clips.length < 2) return;
+  const current = scene.animationPicker.nextName || scene.gestures.last?.animation || scene.state.tracks[0]?.animation.name;
+  const clip = clips[(clips.findIndex(item => item.name === current) + 1) % clips.length];
+  cancelInput(); scene.sound?.unlock();
+  if (scene.variants) scene.gestures.enterGroup(clip.owner, false);
+  scene.gestures.previewAnimation(clip);
+  scene.animationPicker.nextName = clip.name;
+};
 $('video-save').onclick = () => stopVideoRecording();
 $('video-cancel').onclick = () => stopVideoRecording(false);
 more.onclick = () => {

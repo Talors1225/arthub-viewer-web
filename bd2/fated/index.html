@@ -6,13 +6,13 @@
   <title>棕色尘埃 2 · 有缘之客 | ArtHub</title>
   <link rel="stylesheet" href="../../common/kit.css">
   <link rel="stylesheet" href="../../common/stage-ui.css?v=93a59d25328a">
-  <link rel="stylesheet" href="./fated.css?v=20261111-fated-animations">
+  <link rel="stylesheet" href="./fated.css?v=20261117-interaction-menu">
   <script defer src="../../arthub-cos-config.js?v=20261117-resources"></script>
   <script defer src="../../arthub-cos.js?v=20261117-resources"></script>
   <script defer src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
   <script defer src="../../common/asset-loader.js"></script>
   <script defer src="../../common/stage-ui.js?v=93a59d25328a"></script>
-  <script type="module" src="./viewer.mjs?v=20261117-all-stages"></script>
+  <script type="module" src="./viewer.mjs?v=20261117-interaction-menu"></script>
 </head>
 <body>
   <main id="library">
@@ -49,6 +49,7 @@
       <button class="action" id="restart" type="button" aria-label="重新开始互动">重来</button>
       <button class="action" id="more" type="button" aria-haspopup="menu" aria-expanded="false" disabled>更多</button>
     </div>
+    <button class="action" id="next-animation" type="button" aria-label="下一动作" hidden>下一动作</button>
     <button class="action" id="animation-browser" type="button" aria-haspopup="dialog" aria-expanded="false" hidden>动画</button>
     <div class="recording-bar" id="recording-bar" aria-label="视频录制" hidden>
       <span class="recording-indicator" id="recording-state" role="status">录制中</span>

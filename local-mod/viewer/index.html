@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261104-unified-final">
 <link rel="stylesheet" href="local.css?v=20261104-unified-final">
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261117-interaction-menu"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
 </head>
 <body class="game-interaction-viewer crosscore-interaction-viewer local-mod-viewer">
   <main class="stage" id="stage" aria-label="本地资源舞台">
@@ -37,6 +37,7 @@
       <button id="zPct" class="zoom-pct" type="button" title="适应窗口" aria-label="适应窗口" disabled>100%</button>
       <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
     </div>
+    <button id="btnNextAnimation" class="next-animation" type="button" data-stage-primary title="下一动作" aria-label="下一动作" disabled>下一动作</button>
     <button id="btnAnimTab" type="button" title="动画、互动与声音" aria-label="动画、互动与声音" aria-expanded="false"></button>
     <button id="btnStagePan" type="button" title="拖动画面" aria-label="拖动画面" aria-pressed="true"></button>
     <button id="fit" type="button" title="适应窗口">适应</button>
@@ -93,7 +94,7 @@
   <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
   <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261116-feedback-release"></script>
-  <script src="../../common/interaction-viewer-ui.js?v=20261114-interaction-export-loading"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261117-interaction-menu"></script>
   <script type="module" src="viewer.mjs?v=20261114-interaction-export-loading"></script>
 </body>
 </html>

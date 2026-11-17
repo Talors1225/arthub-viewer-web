@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../../common/visual.css?v=dd26cfcbf3ab">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=dd26cfcbf3ab">
 <link rel="stylesheet" href="azurlane.css?v=20261116-dual-form">
-<link rel="stylesheet" href="../../common/site-ui.css?v=dd26cfcbf3ab"><script defer src="../../common/site-ui.js?v=20261113-interaction-usability"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261117-interaction-menu"><script defer src="../../common/site-ui.js?v=20261113-interaction-usability"></script>
   <script src="../../arthub-cos-config.js?v=20261117-resources"></script>
   <script src="../../arthub-cos.js?v=20261117-resources"></script>
 </head>
@@ -114,13 +114,16 @@
       <div id="interaction-panel" class="interaction-content">
         <p id="interaction-note" class="interaction-help">点按角色试试。部分皮肤还支持拖动或长按。</p>
         <div hidden><select id="pointer-mode" aria-label="互动输入模式"><option value="pan">拖动画面</option><option value="interact">模型互动</option></select></div>
-        <div class="interaction-actions"><button id="reset-state" type="button" disabled>重置互动</button><button id="show-hint" type="button" aria-pressed="false" disabled>互动提示</button></div>
-        <button id="interaction-voice" type="button" hidden>试听台词</button>
+        <div class="interaction-actions"><button id="show-hint" type="button" aria-pressed="false" disabled>互动提示</button><button id="btnNextAnimation" class="next-animation" type="button" title="浏览下一动作" aria-label="下一步" disabled>下一步</button></div>
         <details class="section" id="interaction-more">
-          <summary>更多设置</summary>
-          <label class="interaction-hotspots" id="fixed-view-setting" hidden><input id="fixed-view" type="checkbox" checked>固定互动视图</label>
-          <button id="refit-interaction" type="button">适应当前画面</button>
-          <p>切换场景后看不全时，可重新适应画面。</p>
+          <summary aria-label="更多互动设置" title="更多互动设置">更多设置</summary>
+          <div class="interaction-options-grid">
+            <button id="reset-state" type="button" disabled>重置互动</button>
+            <button id="refit-interaction" type="button" title="切换场景后看不全时，重新适应画面">适应画面</button>
+            <button id="interaction-voice" type="button" hidden>试听台词</button>
+            <button id="exit-interaction" type="button">退出互动</button>
+            <label class="interaction-hotspots" id="fixed-view-setting" hidden><input id="fixed-view" type="checkbox" checked>固定互动视图</label>
+          </div>
         </details>
       </div>
     </div>
@@ -143,12 +146,12 @@
   <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
   <script src="../../common/library-ui.js?v=dd26cfcbf3ab"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261116-clean-framing"></script>
-  <script src="../../common/interaction-viewer-ui.js?v=20261114-interaction-export-loading"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261117-interaction-menu"></script>
   <script src="vendor/spine-player.js"></script>
   <script src="vendor/live2d/live2dcubismcore.min.js"></script>
   <script src="vendor/live2d/pixi-6.5.10.min.js"></script>
   <script src="vendor/live2d/cubism4-0.4.0.min.js"></script>
-  <script type="module" src="viewer.mjs?v=20261117-mercury-canvas"></script>
+  <script type="module" src="viewer.mjs?v=20261117-interaction-menu"></script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

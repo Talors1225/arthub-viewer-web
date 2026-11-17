@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261104-unified-final">
 <link rel="stylesheet" href="crosscore-interaction-ui.css?v=20261113-interaction-usability2">
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261113-interaction-usability"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261117-interaction-menu"><script defer src="../../common/site-ui.js?v=20261113-interaction-usability"></script>
   <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
   <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
 </head>
@@ -106,10 +106,10 @@
       <div id="interaction-panel" class="interaction-content">
         <p class="interaction-help" id="hint">直接点击、拖动或长按立绘热点，触发对应反应。</p>
         <input id="regions" type="checkbox" hidden>
-        <div class="interaction-actions"><button id="resetInteraction" type="button">重置互动</button><button id="toggleRegions" type="button" aria-pressed="false">显示热点</button></div>
+        <div class="interaction-actions"><button id="toggleRegions" type="button" aria-pressed="false">互动提示</button><button id="btnNextAnimation" class="next-animation" type="button" title="浏览下一动作" aria-label="下一步" disabled>下一步</button></div>
         <p id="feedback" role="status">等待加载</p>
         <p id="subtitle" aria-live="polite"></p>
-        <details class="section" id="interaction-more">
+        <button id="resetInteraction" type="button">重置互动</button><details class="section" id="interaction-more">
           <summary>更多设置</summary>
           <button id="entrance" type="button" title="播放入场动作">入场动作</button>
           <div id="special"><h2>特别互动</h2><div id="specialActions" class="special-actions"></div></div>
@@ -170,9 +170,9 @@
   <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
   <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
   <script src="../../common/interaction-viewer-tools.js?v=20261116-feedback-release"></script>
-  <script src="../../common/interaction-viewer-ui.js?v=20261114-interaction-export-loading"></script>
+  <script src="../../common/interaction-viewer-ui.js?v=20261117-interaction-menu"></script>
   <script src="../vendor/spine-webgl-4.2.js?v=20261104-unified-final"></script>
-  <script>import('./app.mjs?v=20261114-interaction-export-loading').catch(window.__crosscoreBootError);</script>
+  <script>import('./app.mjs?v=20261117-interaction-menu').catch(window.__crosscoreBootError);</script>
 <!-- Cloudflare Web Analytics -->
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
 <!-- End Cloudflare Web Analytics -->

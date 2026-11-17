@@ -286,6 +286,13 @@ $('interaction-voice').onclick=()=>{
 };
 $('voice-stop').onclick=()=>stopChannel('voice');
 $('reset-state').onclick=()=>{cancelInteraction();stopAudio();adapter?.setInteractionViewFixed?.(false);controller?.reset();$('fit').click();hintArea=null;hintAdvance=false;resetHintVisits();clearHint();};
+$('exit-interaction').onclick=()=>{
+ cancelInteraction();
+ hintsEnabled=false;hintButton.setAttribute('aria-pressed','false');clearHint();
+ stagePan.setMode('pan');
+ $('interaction-more').open=false;
+ setPanelOpen('interaction',false);
+};
 $('refit-interaction').onclick=()=>{$('fit').click();setPanelOpen('interaction',false);};
 fixedView.onchange=()=>{
  libraryPrefs.set('fixedInteractionView',fixedView.checked);
@@ -473,10 +480,18 @@ K.bindPinch(stage,{
  zoom:(factor,x,y)=>zoomTo(view.zoom*factor,x,y),
 });
 window.addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!e.target.closest?.('button,[role="button"]')){space=true;e.preventDefault();}if(e.key==='Escape'){fold(false);setPanelOpen('library',false);setPanelOpen('interaction',false);}});window.addEventListener('keyup',e=>{if(e.code==='Space')space=false;});window.addEventListener('blur',()=>{space=false;cancelInteraction();});
+// Opening the interaction menu must not toggle interaction off or reset a preview.
+interactButton.addEventListener('click', event => {
+ event.preventDefault(); event.stopImmediatePropagation();
+ const panel=document.getElementById('floatPanel');
+ const open=!(panel.classList.contains('open')&&panel.dataset.tab==='interaction');
+ if(open){ if(stage.dataset.panMode!=='interact')stagePan.setMode('interact'); viewerUI.showTab('interaction'); }
+ setPanelOpen('interaction',open);
+},true);
 function spineBasic(hit){const area=selected.interaction.hitAreas.find(h=>h.id===hit);if(!area||controller.state.busy)return;let event=area.event;if(selected.id.endsWith('_hx')&&event==='TouchSpecial')event='TouchBody';const action=basicActions[event];if(action){if(!controller.action(action,{interactive:true}))sound(selected.voiceBank,motionCue(action),{voice:true});return;}const candidates=selected.animations.filter(n=>/^main_\d+$/.test(n));if(candidates.length)controller.action(candidates[Math.floor(Math.random()*candidates.length)],{interactive:true});else{const clips=selected.voice.activeClips.filter(c=>/^main_\d+$/.test(c.cue));const c=clips[Math.floor(Math.random()*clips.length)];if(c)sound(selected.voiceBank,c.cue,{voice:true});}}
 const viewerUI=window.createInteractionViewerUI({
  animations:()=>array(selected?.animations).filter(name=>name!=='effect'||!adapter?.effectTimeline).map(name=>({name,duration:selected.motionDurations?.[name]||adapter?.duration?.(name)||0})),
- playback:()=>{const timeline=adapter?.timeline?.()||{};return {ready:view.ready&&view.frames>2&&!exporting,key:selected?.id+':'+loadGeneration,name:timeline.name||controller?.state.motion,time:timeline.time??controller?.state.actionTime??0,duration:timeline.duration||selected?.motionDurations?.[controller?.state.motion]||0,loop:timeline.loop??$('loop').checked,playing:view.playing,speed:view.speed,canSeek:!!adapter?.seek};},
+ playback:()=>{const timeline=adapter?.timeline?.()||{};return {selecting:!!controller?.state.motionPending,ready:view.ready&&view.frames>2&&!exporting,key:selected?.id+':'+loadGeneration,name:timeline.name||controller?.state.motion,time:timeline.time??controller?.state.actionTime??0,duration:timeline.duration||selected?.motionDurations?.[controller?.state.motion]||0,loop:timeline.loop??$('loop').checked,playing:view.playing,speed:view.speed,canSeek:!!adapter?.seek};},
  setPlaying:playing=>{if(!exporting&&view.playing!==playing)$('play').click();},
  setSpeed:speed=>{if(!exporting)view.speed=speed;},
  setLoop:loop=>{if(exporting)return;$('loop').checked=loop;$('loop').onchange();},
@@ -522,7 +537,7 @@ function controls(){
  $('fixed-view-setting').hidden=!hasInteraction||selected.type!=='live2d';
  evidence.interaction.available=hasInteraction;
  refreshVoiceControls();
- $('interaction-note').textContent='可直接点按、长按或拖动立绘互动。不知道如何触发时，点击「互动提示」查看操作指引；想直接浏览动作，可打开「动画」。';
+ $('interaction-note').textContent='点按、长按或拖动立绘互动；也可点击下一步浏览动作。';
  $('interaction-voice').hidden=!selected.voice.activeClips.length;
 }
 function loopPhase(time, duration) {

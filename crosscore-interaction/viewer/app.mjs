@@ -498,6 +498,14 @@ const stagePan = K.createStagePan({ stage, button: $('#btnStagePan'), interactiv
   move: (dx, dy) => { pendingFit = null; viewPan.x += dx; viewPan.y += dy; fit(); },
   tap: event => { const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (action && (!action.gesture || controller.restoreObjects.has(action.index))) { endAnimationPreview(); playback.playing = true; controller.trigger(action.index, now()); } }
 });
+// Opening the interaction menu must not toggle interaction off or reset a preview.
+$('#btnStagePan').addEventListener('click', event => {
+ event.preventDefault(); event.stopImmediatePropagation();
+ const panel=document.getElementById('floatPanel');
+ const open=!(panel.classList.contains('open')&&panel.dataset.tab==='interaction');
+ if(open){ if(stage.dataset.panMode!=='interact')stagePan.setMode('interact'); viewerUI.showTab('interaction'); }
+ setPanelOpen('interaction',open);
+},true);
 stage.addEventListener('pointerdown', event => {
   if (!scene || !controller || exporting || previewPending || pointer || event.button !== 0 || (event.target !== canvas && event.target !== overlay)) return;
   const point = worldPoint(event.clientX, event.clientY), action = controller.hit(point.x, point.y); if (!action) return;
@@ -545,7 +553,7 @@ $('#resetInteraction').addEventListener('click', async () => {
   try { await loadModel(model.id); if (interacting && hasInteraction) stagePan.setMode('interact'); }
   catch (error) { fail(error); }
 });
-$('#toggleRegions').addEventListener('click', () => { const show = !$('#regions').checked; $('#regions').checked = show; $('#toggleRegions').textContent = show ? '隐藏热点' : '显示热点'; $('#toggleRegions').setAttribute('aria-pressed', String(show)); });
+$('#toggleRegions').addEventListener('click', () => { const show = !$('#regions').checked; $('#regions').checked = show; $('#toggleRegions').textContent = show ? '关闭提示' : '互动提示'; $('#toggleRegions').setAttribute('aria-pressed', String(show)); });
 $('#railThumb').addEventListener('click', () => $('#fit').click());
 $('#railStar').addEventListener('click', () => { if (model) { K.favs.toggle(favoriteEntry(model)); fillModels(); } });
 

@@ -234,3 +234,81 @@ html[data-site-ui="1"] body #siteTitleFavorite.on { color:var(--accent); }
 html[data-site-ui="1"] body #siteTitleFavorite:hover { background:var(--accent-dim-bg); }
 html[data-site-ui="1"] body:has(#gridView.open) #siteTitleFavorite,
 html[data-site-ui="1"] body:is(.immersive,.viewer-immersive) #siteTitleFavorite { display:none!important; }
+
+/* Always-visible action browsing, separate from previous/next resource. */
+#btnNextAnimation { display:inline-flex; align-items:center; gap:5px; }
+@media(max-width:720px) {
+ html[data-site-ui="1"] body #siteMobileDock #btnNextAnimation { flex:0 0 48px; width:48px!important; flex-direction:column; gap:1px; padding:1px!important; }
+ #siteMobileDock #btnNextAnimation span { font-size:10px; line-height:12px; }
+}
+
+/* Compact, equal interaction actions in the quick menu. */
+body.game-interaction-viewer #floatPanel #interaction-panel .interaction-actions {
+ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:8px 0;
+}
+body.game-interaction-viewer #floatPanel #interaction-panel button {
+ text-align:center; justify-content:center; align-items:center;
+}
+body.game-interaction-viewer #floatPanel #interaction-panel .interaction-actions button {
+ display:flex; width:100%; min-width:0; height:36px; min-height:36px;
+ padding:4px 6px; margin:0; border-radius:8px; white-space:nowrap; font-size:12px;
+}
+body.game-interaction-viewer #interaction-panel #btnNextAnimation svg { display:none; }
+@media(pointer:coarse) {
+ body.game-interaction-viewer #floatPanel #interaction-panel .interaction-actions button {height:44px;min-height:44px;}
+}
+
+/* Mobile Azur interaction menu sits above the bottom toolbar. */
+@media (max-width:720px) {
+ html[data-site-ui="1"][data-gav-ui="clean"][data-stage-ui-ready="1"] body.azurlane-viewer #floatPanel[aria-label][data-tab="interaction"].open {
+  top:auto!important; bottom:calc(max(8px,env(safe-area-inset-bottom)) + 56px)!important;
+  left:12px!important; right:12px!important; width:auto!important;
+  height:auto!important; max-height: min(44dvh,320px)!important; transform:none!important;
+  overflow:auto;
+ }
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-note {display:none;}
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-more {margin-top:6px;padding-top:6px;}
+}
+
+/* Single-row mobile interaction controls; secondary settings stay collapsed. */
+@media(max-width:720px) {
+ html[data-site-ui="1"][data-gav-ui="clean"][data-stage-ui-ready="1"] body.azurlane-viewer #floatPanel[aria-label][data-tab="interaction"].open {
+  left:auto!important;right:12px!important;width:min(292px,calc(100vw - 24px))!important;
+ }
+ html[data-site-ui="1"] body.azurlane-viewer #floatPanel[data-tab="interaction"] .rp-panel-head {
+  position:absolute;right:4px;top:4px;width:36px;min-height:36px;padding:0!important;border:0!important;z-index:2;
+ }
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] .site-panel-title {display:none;}
+ html[data-site-ui="1"] body.azurlane-viewer #floatPanel[data-tab="interaction"] .rp-page {padding:6px!important;}
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-panel .interaction-actions {margin:0 78px 0 0;gap:5px;}
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-more {margin:0;padding:0;border:0;}
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-more > summary {
+  position:absolute;right:42px;top:6px;width:34px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;font-size:0;list-style:none;cursor:pointer;
+ }
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-more > summary::-webkit-details-marker {display:none;}
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-more > summary::after {content:'•••';font-size:14px;}
+ body.azurlane-viewer #floatPanel[data-tab="interaction"] #interaction-more[open] {padding-top:8px;}
+}
+
+@media(max-width:720px) {
+ body.azurlane-viewer:has(#floatPanel[data-tab="interaction"].open) #interaction-hint-nav {bottom:calc(max(8px,env(safe-area-inset-bottom)) + 116px);}
+ body.azurlane-viewer:has(#floatPanel[data-tab="interaction"].open #interaction-more[open]) #interaction-hint-nav {display:none;}
+}
+
+/* Secondary interaction actions share one compact grid. */
+body.azurlane-viewer #floatPanel #interaction-panel .interaction-options-grid {
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
+ padding-top:8px;border-top:1px solid var(--border);
+}
+body.azurlane-viewer #floatPanel #interaction-panel .interaction-options-grid > button {
+ display:flex;width:100%;min-width:0;height:36px;min-height:36px;margin:0;padding:4px 8px;
+ border-radius:8px;font-size:12px;line-height:1.3;white-space:nowrap;
+}
+body.azurlane-viewer #floatPanel #interaction-panel .interaction-options-grid > label {
+ grid-column:1/-1;display:flex;align-items:center;justify-content:center;
+ min-height:32px;margin:0;gap:7px;font-size:12px;
+}
+@media(pointer:coarse) {
+ body.azurlane-viewer #floatPanel #interaction-panel .interaction-options-grid > button {height:44px;min-height:44px;}
+ body.azurlane-viewer #floatPanel #interaction-panel .interaction-options-grid > label {min-height:40px;}
+}

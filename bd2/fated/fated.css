@@ -74,7 +74,7 @@
   background: #000;
   touch-action: none;
 }
-#stage[data-immersive] > :is(#back, .controls, #animation-browser, #gesture-hints, #hint-status, #score-meter) { display: none; }
+#stage[data-immersive] > :is(#back, .controls, #animation-browser, #next-animation, #gesture-hints, #hint-status, #score-meter) { display: none; }
 #portrait {
   display: block;
   width: 100%;
@@ -307,3 +307,18 @@
 @media (max-width: 360px) {
   .animation-filters { grid-template-columns: minmax(0, 1fr); }
 }
+
+#next-animation { position:absolute; left:calc(max(12px, env(safe-area-inset-left)) + 86px); bottom:var(--animation-bottom); min-height:44px; gap:5px; background:var(--panel); color:var(--accent); }
+
+/* Keep mobile controls aligned while retaining room for the artwork. */
+@media (max-width:600px) and (orientation:portrait) {
+ .controls > .action, .controls > select { box-sizing:border-box; width:96px; height:44px; min-height:44px; justify-content:center; }
+ #animation-browser, #next-animation { box-sizing:border-box; width:84px; height:44px; justify-content:center; }
+ #next-animation { left:calc(max(12px, env(safe-area-inset-left)) + 90px); }
+}
+
+#stage .controls > .action, #animation-browser, #next-animation {
+ text-align:center; text-align-last:center; justify-content:center;
+ padding:5px 8px; border-radius:8px; font-size:13px;
+}
+@media (max-width:600px) and (orientation:portrait) { #stage .controls {gap:5px;} }
