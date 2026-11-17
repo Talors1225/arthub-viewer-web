@@ -1,0 +1,2350 @@
+{
+  "assetPrefix": "nikki/favorite-wallpapers/20261117",
+  "items": [
+    {
+      "id": "c030_00",
+      "name": "波莉",
+      "thumbKey": "nikki:favoriteitemscene_c030_00:0",
+      "layers": [
+        {
+          "id": "-2386908180866344112",
+          "name": "Spine GameObject (FavoriteItemScene_c030_00)_bg_back",
+          "skel": "spine/FavoriteItemScene_c030_00/FavoriteItemScene_c030_00.skel",
+          "atlas": "spine/FavoriteItemScene_c030_00/FavoriteItemScene_c030_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.14000000059604645,
+            -9.75,
+            16.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "-5338240579917167953",
+          "name": "Spine GameObject (FavoriteItemScene_c030_00)",
+          "skel": "spine/FavoriteItemScene_c030_00/FavoriteItemScene_c030_00.skel",
+          "atlas": "spine/FavoriteItemScene_c030_00/FavoriteItemScene_c030_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.14000000059604645,
+            -9.75,
+            16.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "5065394544450844036",
+          "name": "Spine GameObject (FavoriteItemScene_c030_00)_bg_front",
+          "skel": "spine/FavoriteItemScene_c030_00/FavoriteItemScene_c030_00.skel",
+          "atlas": "spine/FavoriteItemScene_c030_00/FavoriteItemScene_c030_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.14000000059604645,
+            -9.75,
+            16.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 4,
+          "animation": "bg_idle_2",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c030_00_idle",
+          "duration": 6.75,
+          "tracks": [
+            {
+              "target": "-5338240579917167953",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 6.75,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 6.6666669845581055,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c030_00_touch",
+          "duration": 4.333333333333333,
+          "tracks": [
+            {
+              "target": "-5338240579917167953",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.333333492279053,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c032_00",
+      "name": "米兰达",
+      "thumbKey": "nikki:favoriteitemscene_c032_00:0",
+      "layers": [
+        {
+          "id": "145043514330450441",
+          "name": "Spine GameObject (FavoriteItemScene_c032_00)_bg",
+          "skel": "spine/FavoriteItemScene_c032_00/FavoriteItemScene_c032_00.skel",
+          "atlas": "spine/FavoriteItemScene_c032_00/FavoriteItemScene_c032_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            1.0,
+            -20.0,
+            24.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "-6349838121451068395",
+          "name": "Spine GameObject (FavoriteItemScene_c032_00)",
+          "skel": "spine/FavoriteItemScene_c032_00/FavoriteItemScene_c032_00.skel",
+          "atlas": "spine/FavoriteItemScene_c032_00/FavoriteItemScene_c032_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            1.0,
+            -20.0,
+            24.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          -10.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c032_00_idle",
+          "duration": 3.4166666666666665,
+          "tracks": [
+            {
+              "target": "-6349838121451068395",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 3.4166666666666665,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 3.3333334922790527,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c032_00_touch",
+          "duration": 4.1,
+          "tracks": [
+            {
+              "target": "-6349838121451068395",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.100000381469727,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c072_00",
+      "name": "迪塞尔",
+      "thumbKey": "nikki:favoriteitemscene_c072_00:0",
+      "layers": [
+        {
+          "id": "-3516322947361305974",
+          "name": "Spine GameObject (FavoriteItemScene_c072_00)_bg",
+          "skel": "spine/FavoriteItemScene_c072_00/FavoriteItemScene_c072_00.skel",
+          "atlas": "spine/FavoriteItemScene_c072_00/FavoriteItemScene_c072_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -18.899999618530273,
+            34.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "598792467791669916",
+          "name": "Spine GameObject (FavoriteItemScene_c072_00)",
+          "skel": "spine/FavoriteItemScene_c072_00/FavoriteItemScene_c072_00.skel",
+          "atlas": "spine/FavoriteItemScene_c072_00/FavoriteItemScene_c072_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -18.899999618530273,
+            34.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c072_00_idle",
+          "duration": 5.416666666666667,
+          "tracks": [
+            {
+              "target": "598792467791669916",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-3516322947361305974",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279053,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c072_00_touch",
+          "duration": 4.0,
+          "tracks": [
+            {
+              "target": "598792467791669916",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.0,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-3516322947361305974",
+              "animation": "bg_expression_0",
+              "start": 0.0,
+              "duration": 4.0,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c080_00",
+      "name": "桑迪",
+      "thumbKey": "nikki:favoriteitemscene_c080_00:0",
+      "layers": [
+        {
+          "id": "-3313740850208666189",
+          "name": "Spine GameObject (FavoriteItemScene_c080_00)_bg",
+          "skel": "spine/FavoriteItemScene_c080_00/FavoriteItemScene_c080_00.skel",
+          "atlas": "spine/FavoriteItemScene_c080_00/FavoriteItemScene_c080_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            -0.800000011920929,
+            -14.449999809265137,
+            22.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "5015830094293639584",
+          "name": "Spine GameObject (FavoriteItemScene_c080_00)",
+          "skel": "spine/FavoriteItemScene_c080_00/FavoriteItemScene_c080_00.skel",
+          "atlas": "spine/FavoriteItemScene_c080_00/FavoriteItemScene_c080_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            -1.2000000476837158,
+            -14.449999809265137,
+            21.399999618530273
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c080_00_idle",
+          "duration": 5.433333333333334,
+          "tracks": [
+            {
+              "target": "5015830094293639584",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.433333333333334,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-3313740850208666189",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 5.433333333333334,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333333333333,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c080_00_touch",
+          "duration": 3.75,
+          "tracks": [
+            {
+              "target": "5015830094293639584",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 3.766666889190674,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-3313740850208666189",
+              "animation": "bg_expression",
+              "start": 0.0,
+              "duration": 3.766666889190674,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c100_00",
+      "name": "Laplace",
+      "thumbKey": "nikki:favoriteitemscene_c100_00:0",
+      "layers": [
+        {
+          "id": "-2523963915972948745",
+          "name": "Spine GameObject (FavoriteItemScene_c100_00)_bg",
+          "skel": "spine/FavoriteItemScene_c100_00/FavoriteItemScene_c100_00.skel",
+          "atlas": "spine/FavoriteItemScene_c100_00/FavoriteItemScene_c100_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -7.401000022888184,
+            17.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "3727917822748911046",
+          "name": "Spine GameObject (FavoriteItemScene_c100_00)",
+          "skel": "spine/FavoriteItemScene_c100_00/FavoriteItemScene_c100_00.skel",
+          "atlas": "spine/FavoriteItemScene_c100_00/FavoriteItemScene_c100_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -7.5,
+            17.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c100_00_idle",
+          "duration": 4.083333333333333,
+          "tracks": [
+            {
+              "target": "3727917822748911046",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 4.083333333333333,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-2523963915972948745",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 4.083333333333333,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 4.0,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c100_00_touch",
+          "duration": 4.166666666666667,
+          "tracks": [
+            {
+              "target": "3727917822748911046",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.1666669845581055,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-2523963915972948745",
+              "animation": "bg_expression_0",
+              "start": 0.0,
+              "duration": 4.1666669845581055,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c101_00",
+      "name": "Drake",
+      "thumbKey": "nikki:favoriteitemscene_c101_00:0",
+      "layers": [
+        {
+          "id": "1748812598308966985",
+          "name": "Spine GameObject (FavoriteItemScene_c101_00)_bg",
+          "skel": "spine/FavoriteItemScene_c101_00/FavoriteItemScene_c101_00.skel",
+          "atlas": "spine/FavoriteItemScene_c101_00/FavoriteItemScene_c101_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.30000001192092896,
+            -10.699999809265137,
+            18.25
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "-3699656694610531694",
+          "name": "Spine GameObject (FavoriteItemScene_c101_00)",
+          "skel": "spine/FavoriteItemScene_c101_00/FavoriteItemScene_c101_00.skel",
+          "atlas": "spine/FavoriteItemScene_c101_00/FavoriteItemScene_c101_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.30000001192092896,
+            -10.699999809265137,
+            18.25
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c101_00_idle",
+          "duration": 6.216666666667,
+          "tracks": [
+            {
+              "target": "-3699656694610531694",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 6.216666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 6.133333683013916,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c101_00_touch",
+          "duration": 2.8333333333333335,
+          "tracks": [
+            {
+              "target": "-3699656694610531694",
+              "animation": "expressin_0",
+              "start": 0.0,
+              "duration": 2.8333334922790527,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c112_00",
+      "name": "蛇蝎",
+      "thumbKey": "nikki:favoriteitemscene_c112_00:0",
+      "layers": [
+        {
+          "id": "-5896133871115120445",
+          "name": "Spine GameObject (FavoriteItemScene_c112_00)_bg",
+          "skel": "spine/FavoriteItemScene_c112_00/FavoriteItemScene_c112_00.skel",
+          "atlas": "spine/FavoriteItemScene_c112_00/FavoriteItemScene_c112_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -19.5,
+            33.400001525878906
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "-2146525229446516527",
+          "name": "Spine GameObject (FavoriteItemScene_c112_00)",
+          "skel": "spine/FavoriteItemScene_c112_00/FavoriteItemScene_c112_00.skel",
+          "atlas": "spine/FavoriteItemScene_c112_00/FavoriteItemScene_c112_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -19.5,
+            33.400001525878906
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c112_00_idle",
+          "duration": 6.083333333333333,
+          "tracks": [
+            {
+              "target": "-2146525229446516527",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 6.083333333333333,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-5896133871115120445",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 6.083333333333333,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 6.0,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c112_00_touch",
+          "duration": 6.466666666666667,
+          "tracks": [
+            {
+              "target": "-2146525229446516527",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 6.466667175292969,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-5896133871115120445",
+              "animation": "bg_expression",
+              "start": 0.0,
+              "duration": 6.466667175292969,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c140_00",
+      "name": "砂糖",
+      "thumbKey": "nikki:favoriteitemscene_c140_00:0",
+      "layers": [
+        {
+          "id": "-2310911688885379802",
+          "name": "Spine GameObject (FavoriteItemScene_c140_00)_bg",
+          "skel": "spine/FavoriteItemScene_c140_00/FavoriteItemScene_c140_00.skel",
+          "atlas": "spine/FavoriteItemScene_c140_00/FavoriteItemScene_c140_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.10000000149011612,
+            -7.400000095367432,
+            11.350000381469727
+          ],
+          "stretch": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "6833704580826590633",
+          "name": "Spine GameObject (FavoriteItemScene_c140_00)",
+          "skel": "spine/FavoriteItemScene_c140_00/FavoriteItemScene_c140_00.skel",
+          "atlas": "spine/FavoriteItemScene_c140_00/FavoriteItemScene_c140_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.10000000149011612,
+            -7.400000095367432,
+            11.350000381469727
+          ],
+          "stretch": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c140_00_idle",
+          "duration": 7.416666666666667,
+          "tracks": [
+            {
+              "target": "6833704580826590633",
+              "animation": "idle_2",
+              "start": 0.0,
+              "duration": 7.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-2310911688885379802",
+              "animation": "idle_1",
+              "start": 0.0,
+              "duration": 7.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 7.333333333333333,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c140_00_touch",
+          "duration": 4.333333333333333,
+          "tracks": [
+            {
+              "target": "6833704580826590633",
+              "animation": "expression_2",
+              "start": 0.0,
+              "duration": 4.333333492279053,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-2310911688885379802",
+              "animation": "expression_1",
+              "start": 0.0,
+              "duration": 4.333333492279053,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c141_00",
+      "name": "Milk",
+      "thumbKey": "nikki:favoriteitemscene_c141_00:0",
+      "layers": [
+        {
+          "id": "-921771298050199698",
+          "name": "Spine GameObject (FavoriteItemScene_c141_00)_bg_02",
+          "skel": "spine/FavoriteItemScene_c141_00/FavoriteItemScene_c141_00.skel",
+          "atlas": "spine/FavoriteItemScene_c141_00/FavoriteItemScene_c141_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.15000000596046448,
+            -14.25,
+            24.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle2",
+          "skin": ""
+        },
+        {
+          "id": "2369521276796282375",
+          "name": "Spine GameObject (FavoriteItemScene_c141_00)",
+          "skel": "spine/FavoriteItemScene_c141_00/FavoriteItemScene_c141_00.skel",
+          "atlas": "spine/FavoriteItemScene_c141_00/FavoriteItemScene_c141_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.15000000596046448,
+            -14.25,
+            24.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "386768263006408846",
+          "name": "Spine GameObject (FavoriteItemScene_c141_00)_bg_01",
+          "skel": "spine/FavoriteItemScene_c141_00/FavoriteItemScene_c141_00.skel",
+          "atlas": "spine/FavoriteItemScene_c141_00/FavoriteItemScene_c141_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.15000000596046448,
+            -14.25,
+            24.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 4,
+          "animation": "bg_idle1",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c141_00_idle",
+          "duration": 5.416666666667,
+          "tracks": [
+            {
+              "target": "2369521276796282375",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279053,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c141_00_touch",
+          "duration": 4.566667079926,
+          "tracks": [
+            {
+              "target": "2369521276796282375",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.566667079925537,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c142_00",
+      "name": "Frima",
+      "thumbKey": "nikki:favoriteitemscene_c142_00:0",
+      "layers": [
+        {
+          "id": "6914123135952721765",
+          "name": "Spine GameObject (FavoriteItemScene_c142_00)_bg_01",
+          "skel": "spine/FavoriteItemScene_c142_00/FavoriteItemScene_c142_00.skel",
+          "atlas": "spine/FavoriteItemScene_c142_00/FavoriteItemScene_c142_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -9.449999809265137,
+            17.100000381469727
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "-5504680247381421202",
+          "name": "Spine GameObject (FavoriteItemScene_c142_00)_bg_02",
+          "skel": "spine/FavoriteItemScene_c142_00/FavoriteItemScene_c142_00.skel",
+          "atlas": "spine/FavoriteItemScene_c142_00/FavoriteItemScene_c142_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -9.449999809265137,
+            17.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 1,
+          "animation": "bg_idle_1",
+          "skin": ""
+        },
+        {
+          "id": "-1802523360387102709",
+          "name": "Spine GameObject (FavoriteItemScene_c142_00)",
+          "skel": "spine/FavoriteItemScene_c142_00/FavoriteItemScene_c142_00.skel",
+          "atlas": "spine/FavoriteItemScene_c142_00/FavoriteItemScene_c142_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -9.0,
+            16.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c142_00_idle",
+          "duration": 4.166666666666667,
+          "tracks": [
+            {
+              "target": "-1802523360387102709",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 4.166666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 4.0,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c142_00_touch",
+          "duration": 4.0,
+          "tracks": [
+            {
+              "target": "-1802523360387102709",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.0,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c150_00",
+      "name": "Julia",
+      "thumbKey": "nikki:favoriteitemscene_c150_00:0",
+      "layers": [
+        {
+          "id": "-2097636967339966293",
+          "name": "Spine GameObject (FavoriteItemScene_c150_00)_bg",
+          "skel": "spine/FavoriteItemScene_c150_00/FavoriteItemScene_c150_00.skel",
+          "atlas": "spine/FavoriteItemScene_c150_00/FavoriteItemScene_c150_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -10.899999618530273,
+            27.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "-6719056150283889499",
+          "name": "Spine GameObject (FavoriteItemScene_c150_00)",
+          "skel": "spine/FavoriteItemScene_c150_00/FavoriteItemScene_c150_00.skel",
+          "atlas": "spine/FavoriteItemScene_c150_00/FavoriteItemScene_c150_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -10.899999618530273,
+            27.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c150_00_idle",
+          "duration": 5.5,
+          "tracks": [
+            {
+              "target": "-6719056150283889499",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.5,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c150_00_touch",
+          "duration": 3.9666669368739997,
+          "tracks": [
+            {
+              "target": "-6719056150283889499",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 3.9666669368743896,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c170_00",
+      "name": "普丽瓦蒂",
+      "thumbKey": "nikki:favoriteitemscene_c170_00:0",
+      "layers": [
+        {
+          "id": "1357600788221264867",
+          "name": "Spine GameObject (FavoriteItemScene_c170_00)_bg",
+          "skel": "spine/FavoriteItemScene_c170_00/FavoriteItemScene_c170_00.skel",
+          "atlas": "spine/FavoriteItemScene_c170_00/FavoriteItemScene_c170_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -7.630000114440918,
+            16.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "7048154541655572907",
+          "name": "Spine GameObject (FavoriteItemScene_c170_00)",
+          "skel": "spine/FavoriteItemScene_c170_00/FavoriteItemScene_c170_00.skel",
+          "atlas": "spine/FavoriteItemScene_c170_00/FavoriteItemScene_c170_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.8999999761581421,
+            -7.630000114440918,
+            14.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c170_00_idle",
+          "duration": 9.8,
+          "tracks": [
+            {
+              "target": "1357600788221264867",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 9.8,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "7048154541655572907",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 9.8,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 9.600000381469727,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c170_00_touch",
+          "duration": 3.1,
+          "tracks": [
+            {
+              "target": "7048154541655572907",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 3.1000001430511475,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "1357600788221264867",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 3.1,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c192_00",
+      "name": "托芙",
+      "thumbKey": "nikki:favoriteitemscene_c192_00:0",
+      "layers": [
+        {
+          "id": "-3435250930058738442",
+          "name": "Spine GameObject (FavoriteItemScene_c192_00)_bg",
+          "skel": "spine/FavoriteItemScene_c192_00/FavoriteItemScene_c192_00.skel",
+          "atlas": "spine/FavoriteItemScene_c192_00/FavoriteItemScene_c192_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -8.25,
+            22.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "-6168474929628963554",
+          "name": "Spine GameObject (FavoriteItemScene_c192_00)",
+          "skel": "spine/FavoriteItemScene_c192_00/FavoriteItemScene_c192_00.skel",
+          "atlas": "spine/FavoriteItemScene_c192_00/FavoriteItemScene_c192_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -8.25,
+            22.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c192_00_idle",
+          "duration": 5.5,
+          "tracks": [
+            {
+              "target": "-6168474929628963554",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 2.75,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-3435250930058738442",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 2.75,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 2.6666667461395264,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c192_00_touch",
+          "duration": 3.3666667938229997,
+          "tracks": [
+            {
+              "target": "-6168474929628963554",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 3.366666793823242,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-3435250930058738442",
+              "animation": "bg_expression_0",
+              "start": 0.0,
+              "duration": 3.366666793823242,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c210_00",
+      "name": "Exia",
+      "thumbKey": "nikki:favoriteitemscene_c210_00:0",
+      "layers": [
+        {
+          "id": "-272192108036097372",
+          "name": "Spine GameObject (FavoriteItemScene_c210_00)_bg",
+          "skel": "spine/FavoriteItemScene_c210_00/FavoriteItemScene_c210_00.skel",
+          "atlas": "spine/FavoriteItemScene_c210_00/FavoriteItemScene_c210_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -7.5,
+            17.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "5064872318287096861",
+          "name": "Spine GameObject (FavoriteItemScene_c210_00)",
+          "skel": "spine/FavoriteItemScene_c210_00/FavoriteItemScene_c210_00.skel",
+          "atlas": "spine/FavoriteItemScene_c210_00/FavoriteItemScene_c210_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -7.5,
+            17.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c210_00_idle",
+          "duration": 3.5,
+          "tracks": [
+            {
+              "target": "5064872318287096861",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 3.5,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 3.3333334922790527,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c210_00_touch",
+          "duration": 5.666666984558,
+          "tracks": [
+            {
+              "target": "5064872318287096861",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 5.6666669845581055,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c280_00",
+      "name": "罗桑娜",
+      "thumbKey": "nikki:favoriteitemscene_c280_00:0",
+      "layers": [
+        {
+          "id": "5345446947904921535",
+          "name": "Spine GameObject (FavoriteItemScene_c280_00)_bg",
+          "skel": "spine/FavoriteItemScene_c280_00/FavoriteItemScene_c280_00.skel",
+          "atlas": "spine/FavoriteItemScene_c280_00/FavoriteItemScene_c280_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.6999999731779099,
+            -9.489999771118164,
+            15.5
+          ],
+          "stretch": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "6042617359874655368",
+          "name": "Spine GameObject (FavoriteItemScene_c280_00)",
+          "skel": "spine/FavoriteItemScene_c280_00/FavoriteItemScene_c280_00.skel",
+          "atlas": "spine/FavoriteItemScene_c280_00/FavoriteItemScene_c280_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.8999999761581421,
+            -9.489999771118164,
+            15.5
+          ],
+          "stretch": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c280_00_idle",
+          "duration": 6.75,
+          "tracks": [
+            {
+              "target": "6042617359874655368",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 6.75,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 6.666666666666667,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c280_00_touch",
+          "duration": 4.0,
+          "tracks": [
+            {
+              "target": "6042617359874655368",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.0,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c281_00",
+      "name": "Moran",
+      "thumbKey": "nikki:favoriteitemscene_c281_00:0",
+      "layers": [
+        {
+          "id": "3071707999226395859",
+          "name": "Spine GameObject (FavoriteItemScene_c281_00)_bg",
+          "skel": "spine/FavoriteItemScene_c281_00/FavoriteItemScene_c281_00.skel",
+          "atlas": "spine/FavoriteItemScene_c281_00/FavoriteItemScene_c281_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            -0.4000000059604645,
+            -13.190000355243683,
+            25.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "-7748329797960404016",
+          "name": "Spine GameObject (FavoriteItemScene_c281_00)",
+          "skel": "spine/FavoriteItemScene_c281_00/FavoriteItemScene_c281_00.skel",
+          "atlas": "spine/FavoriteItemScene_c281_00/FavoriteItemScene_c281_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            -0.4000000059604645,
+            -13.190000355243683,
+            25.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 3,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c281_00_idle",
+          "duration": 5.5,
+          "tracks": [
+            {
+              "target": "-7748329797960404016",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "3071707999226395859",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279053,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c281_00_touch",
+          "duration": 5.2,
+          "tracks": [
+            {
+              "target": "-7748329797960404016",
+              "animation": "expression_00",
+              "start": 0.0,
+              "duration": 5.200000286102295,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "3071707999226395859",
+              "animation": "bg_expression_0",
+              "start": 0.0,
+              "duration": 5.2,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c352_00",
+      "name": "海伦",
+      "thumbKey": "nikki:favoriteitemscene_c352_00:0",
+      "layers": [
+        {
+          "id": "-5680840319686095296",
+          "name": "Spine GameObject (FavoriteItemScene_c352_00)_bg",
+          "skel": "spine/FavoriteItemScene_c352_00/FavoriteItemScene_c352_00.skel",
+          "atlas": "spine/FavoriteItemScene_c352_00/FavoriteItemScene_c352_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -7.650000095367432,
+            17.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "8933442195430149580",
+          "name": "Spine GameObject (FavoriteItemScene_c352_00)",
+          "skel": "spine/FavoriteItemScene_c352_00/FavoriteItemScene_c352_00.skel",
+          "atlas": "spine/FavoriteItemScene_c352_00/FavoriteItemScene_c352_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -7.650000095367432,
+            17.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c352_00_idle",
+          "duration": 5.5,
+          "tracks": [
+            {
+              "target": "8933442195430149580",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.5,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c352_00_touch",
+          "duration": 4.066666666666666,
+          "tracks": [
+            {
+              "target": "8933442195430149580",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.066667079925537,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c390_00",
+      "name": "c390_00",
+      "thumbKey": "nikki:favoriteitemscene_c390_00:0",
+      "layers": [
+        {
+          "id": "3028630200616960810",
+          "name": "Spine GameObject (FavoriteItemScene_c390_00)",
+          "skel": "spine/FavoriteItemScene_c390_00/FavoriteItemScene_c390_00.skel",
+          "atlas": "spine/FavoriteItemScene_c390_00/FavoriteItemScene_c390_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -14.899999618530273,
+            23.700000762939453
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c390_00_idle",
+          "duration": 5.5,
+          "tracks": [
+            {
+              "target": "3028630200616960810",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.5,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c390_00_touch",
+          "duration": 5.6,
+          "tracks": [
+            {
+              "target": "3028630200616960810",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 5.600000381469727,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c411_00",
+      "name": "c411_00",
+      "thumbKey": "nikki:favoriteitemscene_c411_00:0",
+      "layers": [
+        {
+          "id": "-1324142610563318473",
+          "name": "Spine GameObject (FavoriteItemScene_c411_00)_bg",
+          "skel": "spine/FavoriteItemScene_c411_00/FavoriteItemScene_c411_00.skel",
+          "atlas": "spine/FavoriteItemScene_c411_00/FavoriteItemScene_c411_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.8700000196695328,
+            -9.579999923706055,
+            14.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "5628506769036479040",
+          "name": "Spine GameObject (FavoriteItemScene_c411_00)",
+          "skel": "spine/FavoriteItemScene_c411_00/FavoriteItemScene_c411_00.skel",
+          "atlas": "spine/FavoriteItemScene_c411_00/FavoriteItemScene_c411_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.8700000196695328,
+            -9.579999923706055,
+            14.0
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c411_00_idle",
+          "duration": 5.416666666666667,
+          "tracks": [
+            {
+              "target": "5628506769036479040",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-1324142610563318473",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279053,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c411_00_touch",
+          "duration": 6.4,
+          "tracks": [
+            {
+              "target": "5628506769036479040",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 6.40000057220459,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "-1324142610563318473",
+              "animation": "bg_expression_0",
+              "start": 0.0,
+              "duration": 6.40000057220459,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c550_00",
+      "name": "贝伊",
+      "thumbKey": "nikki:favoriteitemscene_c550_00:0",
+      "layers": [
+        {
+          "id": "6324983902083799889",
+          "name": "Spine GameObject (FavoriteItemScene_c550_00)_bg",
+          "skel": "spine/FavoriteItemScene_c550_00/FavoriteItemScene_c550_00.skel",
+          "atlas": "spine/FavoriteItemScene_c550_00/FavoriteItemScene_c550_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -9.899999618530273,
+            15.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "",
+          "skin": ""
+        },
+        {
+          "id": "-2190931537972574824",
+          "name": "Spine GameObject (FavoriteItemScene_c550_00)",
+          "skel": "spine/FavoriteItemScene_c550_00/FavoriteItemScene_c550_00.skel",
+          "atlas": "spine/FavoriteItemScene_c550_00/FavoriteItemScene_c550_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -9.899999618530273,
+            15.5
+          ],
+          "stretch": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 2,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c550_00_idle",
+          "duration": 2.75,
+          "tracks": [
+            {
+              "target": "-2190931537972574824",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 2.75,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "6324983902083799889",
+              "animation": "bg_idle",
+              "start": 0.0,
+              "duration": 2.75,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 2.6666667461395264,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c550_00_touch",
+          "duration": 4.333333492279,
+          "tracks": [
+            {
+              "target": "-2190931537972574824",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 4.333333492279053,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            },
+            {
+              "target": "6324983902083799889",
+              "animation": "bg_expression_0",
+              "start": 0.0,
+              "duration": 4.333333492279053,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    },
+    {
+      "id": "c580_00",
+      "name": "Phantom",
+      "thumbKey": "nikki:favoriteitemscene_c580_00:0",
+      "layers": [
+        {
+          "id": "3180422017201426798",
+          "name": "Spine GameObject (FavoriteItemScene_c580_00)_bg",
+          "skel": "spine/FavoriteItemScene_c580_00/FavoriteItemScene_c580_00.skel",
+          "atlas": "spine/FavoriteItemScene_c580_00/FavoriteItemScene_c580_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -8.25,
+            15.5
+          ],
+          "stretch": [
+            0.6000000238418579,
+            0.6000000238418579,
+            0.6000000238418579
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 0,
+          "animation": "bg_idle",
+          "skin": ""
+        },
+        {
+          "id": "6001660756586042062",
+          "name": "Spine GameObject (FavoriteItemScene_c580_00)",
+          "skel": "spine/FavoriteItemScene_c580_00/FavoriteItemScene_c580_00.skel",
+          "atlas": "spine/FavoriteItemScene_c580_00/FavoriteItemScene_c580_00.atlas",
+          "scale": 0.009999999776482582,
+          "position": [
+            0.0,
+            -9.100000381469727,
+            15.5
+          ],
+          "stretch": [
+            0.6200000047683716,
+            0.6200000047683716,
+            0.6200000047683716
+          ],
+          "angle": 0.0,
+          "planar": true,
+          "order": 3,
+          "animation": "",
+          "skin": ""
+        }
+      ],
+      "camera": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "planar": true,
+        "orthographic": false,
+        "size": 5.0,
+        "fov": 60.0
+      },
+      "timelines": {
+        "idle": {
+          "name": "FavoriteItemScene_c580_00_idle",
+          "duration": 5.416666666666667,
+          "tracks": [
+            {
+              "target": "6001660756586042062",
+              "animation": "idle",
+              "start": 0.0,
+              "duration": 5.416666666666667,
+              "loop": true,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": [
+            {
+              "from": 5.333333492279053,
+              "to": 0.0
+            }
+          ]
+        },
+        "touch": {
+          "name": "FavoriteItemScene_c580_00_touch",
+          "duration": 3.4666669368739997,
+          "tracks": [
+            {
+              "target": "6001660756586042062",
+              "animation": "expression_0",
+              "start": 0.0,
+              "duration": 3.4666669368743896,
+              "loop": false,
+              "clipIn": 0.0,
+              "speed": 1.0
+            }
+          ],
+          "jumps": []
+        }
+      }
+    }
+  ]
+}

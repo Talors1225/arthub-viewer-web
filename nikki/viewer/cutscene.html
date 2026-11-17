@@ -913,6 +913,13 @@
       ['star', '★', starred.size]];
     if (!chips.some(c => c[0] === filterType)) filterType = 'all';
     row.innerHTML = '';
+    if (routeSource === 'nikki' && !embedded) {
+      const link = document.createElement('a');
+      link.className = 'filter-chip';
+      link.href = '../favorite-wallpapers/';
+      link.textContent = '珍藏品壁纸';
+      row.appendChild(link);
+    }
     if (routeSource === 'crosscore') {
       for (const [mode, label] of [['interaction', '互动立绘'], ['spine', 'Spine']]) {
         const link = document.createElement('a');

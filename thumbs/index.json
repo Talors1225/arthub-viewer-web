@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": "20261117-nikke-favorite-wallpapers",
   "items": {
     "bd2:000101:0": "bd2/scenes-20261117/000101.webp",
     "bd2:000103:0": "bd2/scenes-20261117/000103.webp",
@@ -3920,6 +3920,27 @@
     "azurlane:tiejiaohao_2": "azurlane/tiejiaohao_2.webp",
     "azurlane:sailimiye_2": "azurlane/sailimiye_2.webp",
     "azurlane:lilisha_2": "azurlane/lilisha_2.webp",
-    "azurlane:jumeihuali_2": "azurlane/jumeihuali_2.webp"
+    "azurlane:jumeihuali_2": "azurlane/jumeihuali_2.webp",
+    "nikki:favoriteitemscene_c030_00:0": "nikki/0680a61489edc237e27f.webp",
+    "nikki:favoriteitemscene_c032_00:0": "nikki/3938ae895d7bbdfa3add.webp",
+    "nikki:favoriteitemscene_c072_00:0": "nikki/26e618f31fddb7a1c97e.webp",
+    "nikki:favoriteitemscene_c080_00:0": "nikki/fce792ce7eb0a89854d5.webp",
+    "nikki:favoriteitemscene_c100_00:0": "nikki/6d72b4eecedef58c72a2.webp",
+    "nikki:favoriteitemscene_c101_00:0": "nikki/dbf0714c62126cb4e0e9.webp",
+    "nikki:favoriteitemscene_c112_00:0": "nikki/7b2945f129c5f0a2c86f.webp",
+    "nikki:favoriteitemscene_c140_00:0": "nikki/ed041f13c4d338df4e0e.webp",
+    "nikki:favoriteitemscene_c141_00:0": "nikki/9b0f14094335cd0edb33.webp",
+    "nikki:favoriteitemscene_c142_00:0": "nikki/9147ba2c93f205497585.webp",
+    "nikki:favoriteitemscene_c150_00:0": "nikki/4421df6aadd4f78edb77.webp",
+    "nikki:favoriteitemscene_c170_00:0": "nikki/dbc8489a9b8d548b7bd2.webp",
+    "nikki:favoriteitemscene_c192_00:0": "nikki/401fb856dd17e50700ce.webp",
+    "nikki:favoriteitemscene_c210_00:0": "nikki/4091e59e898000818fce.webp",
+    "nikki:favoriteitemscene_c280_00:0": "nikki/bc840919af0d1018b068.webp",
+    "nikki:favoriteitemscene_c281_00:0": "nikki/c131ebcefb8d40385239.webp",
+    "nikki:favoriteitemscene_c352_00:0": "nikki/966e33c6d64700ed36ad.webp",
+    "nikki:favoriteitemscene_c390_00:0": "nikki/c9965ec7f23b2bff0b3a.webp",
+    "nikki:favoriteitemscene_c411_00:0": "nikki/edf0dbae360276b18b2c.webp",
+    "nikki:favoriteitemscene_c550_00:0": "nikki/888174d4fde693e246ff.webp",
+    "nikki:favoriteitemscene_c580_00:0": "nikki/7da861551ea9ac788fb3.webp"
   }
 }
