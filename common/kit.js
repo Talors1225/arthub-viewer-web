@@ -1494,13 +1494,13 @@
       await onProgress?.(1); check(); return size;
     } finally { session.rewind(); }
   };
-  K.pngExportPose = (skeletons, quality, ns, fixedFrame) => {
+  K.pngExportPose = (skeletons, quality, ns, fixedFrame, frameView) => {
     const transform = skeleton => K.updateWorldTransform(skeleton, (ns || window.spine)?.Physics?.pose);
     const saved = skeletons.map(skeleton => ({ skeleton, scaleX: skeleton.scaleX, scaleY: skeleton.scaleY, x: skeleton.x, y: skeleton.y }));
-    const reference = Math.abs(saved[0]?.scaleX) || 1;
+    const reference = Math.abs(frameView?.scaleX ?? saved[0]?.scaleX) || 1;
     let native;
     if (fixedFrame && saved.length) {
-      const { x, y } = saved[0];
+      const { x, y } = frameView || saved[0];
       native = {
         minX: fixedFrame.minX + x / reference, maxX: fixedFrame.maxX + x / reference,
         minY: fixedFrame.minY + y / reference, maxY: fixedFrame.maxY + y / reference,

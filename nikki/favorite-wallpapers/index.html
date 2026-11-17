@@ -1,44 +1,18 @@
 <!doctype html>
-<html lang="zh-CN" data-accent="gold">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0c0e14">
 <title>NIKKE · 珍藏品壁纸 | ArtHub</title>
-<link rel="stylesheet" href="../../common/kit.css?v=20261104-unified-final">
-<link rel="stylesheet" href="wallpaper.css?v=20261117">
-<script defer src="../../arthub-cos-config.js"></script>
-<script defer src="wallpaper.js?v=20261117"></script>
+<script>
+  const legacy = new URLSearchParams(location.search);
+  const viewer = new URL('../viewer/cutscene.html', location.href);
+  viewer.searchParams.set('filter', 'wallpaper');
+  if (legacy.get('q')) viewer.searchParams.set('q', legacy.get('q'));
+  const id = legacy.get('id');
+  if (/^c\d+_\d+$/.test(id || '')) viewer.searchParams.set('id', 'favoriteitemscene_' + id);
+  location.replace(viewer.href);
+</script>
 </head>
-<body class="wallpaper-page">
-<main class="wallpaper-shell">
-  <section id="wallpaperLibrary" aria-labelledby="libraryTitle" hidden>
-    <header class="wallpaper-header">
-      <a class="wallpaper-button" href="../viewer/cutscene.html">‹ NIKKE 资源库</a>
-      <h1 id="libraryTitle">珍藏品壁纸</h1>
-      <label class="wallpaper-search"><span class="sr-only">搜索壁纸</span><input id="wallpaperSearch" type="search" placeholder="搜索角色或编号" autocomplete="off"></label>
-    </header>
-    <p id="wallpaperCount" class="wallpaper-count" role="status"></p>
-    <div id="wallpaperCards" class="wallpaper-cards"></div>
-  </section>
-  <section id="wallpaperPlayer" aria-labelledby="wallpaperTitle" hidden>
-    <header class="wallpaper-header wallpaper-player-header">
-      <nav class="wallpaper-nav" aria-label="壁纸导航">
-        <a class="wallpaper-button" id="wallpaperBack" href="./">‹ 珍藏品壁纸</a>
-        <a class="wallpaper-button" id="wallpaperPrevious" hidden>上一个</a>
-        <a class="wallpaper-button" id="wallpaperNext" hidden>下一个</a>
-      </nav>
-      <div class="wallpaper-controls" aria-label="播放控制">
-        <button class="wallpaper-button" id="wallpaperTouch" type="button" disabled>触碰</button>
-        <button class="wallpaper-button" id="wallpaperPause" type="button" disabled>暂停</button>
-      </div>
-    </header>
-    <h1 id="wallpaperTitle">珍藏品壁纸</h1>
-    <div class="wallpaper-stage">
-      <canvas id="wallpaperCanvas" aria-label="动态壁纸画面"></canvas>
-    </div>
-    <p id="wallpaperStatus" class="wallpaper-count" role="status">正在载入壁纸…</p>
-  </section>
-</main>
-</body>
+<body><a href="../viewer/cutscene.html?filter=wallpaper">打开 NIKKE 珍藏品壁纸资源库</a></body>
 </html>

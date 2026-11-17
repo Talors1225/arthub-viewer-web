@@ -430,16 +430,18 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
+<script src="../../common/kit.js?v=20261118-wallpaper-export"></script>
 <script src="../../common/asset-loader.js?v=20261109-nikke-bursts"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
+<script src="favorite-wallpaper.js?v=20261118"></script>
 <script>
 
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
   const K = window.SpineKit;
+  const wallpaper = window.NikkeWallpaper;
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
 
@@ -555,7 +557,9 @@
   let editWasPlaying = false;
   let hoverBoneName = null;
   const editOrig = {};   // 编辑过的骨骼在动画暂停帧的原始姿态, 右键恢复用
-  let filterType = viewerParams.get('filter') === 'skill' && routeSource === 'nikki' ? 'skill' : store.get('filterType', 'all');
+  const requestedFilter = viewerParams.get('filter');
+  let filterType = routeSource === 'nikki' && ['skill', 'wallpaper'].includes(requestedFilter)
+    ? requestedFilter : store.get('filterType', 'all');
   let sortMode = store.get('sortMode', 'default');
   let sortDirection = store.get('sortDirection', 'asc');
   let gridQuery = routeSource === 'nikki' ? viewerParams.get('q') || '' : '';
@@ -893,13 +897,13 @@
 
   const aliasMap = store.get('aliasMap', {});
   const aliasOf = id => aliasMap[id] || '';
-  const TYPE_LABEL = { cutscene: '过场', skill: '技能动画', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
-  const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, other: 9, store: 10, catalog: 10, unknown: 9 };
+  const TYPE_LABEL = { cutscene: '过场', skill: '技能动画', lobby: '立绘', wallpaper: '珍藏品壁纸', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
+  const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, wallpaper: 4, idle: 5, other: 9, store: 10, catalog: 10, unknown: 9 };
   function displayType(c) {
     if (routeSource === 'nikki' && c?.burst) return 'skill';
     const type = String(c && (c.resourceType || c.type) || 'unknown').toLowerCase();
     if (routeSource !== 'nikki') return type;
-    return ['skill', 'battle', 'lobby'].includes(type) ? type : 'other';
+    return ['skill', 'battle', 'lobby', 'wallpaper'].includes(type) ? type : 'other';
   }
 
   function buildFilterChips() {
@@ -913,13 +917,6 @@
       ['star', '★', starred.size]];
     if (!chips.some(c => c[0] === filterType)) filterType = 'all';
     row.innerHTML = '';
-    if (routeSource === 'nikki' && !embedded) {
-      const link = document.createElement('a');
-      link.className = 'filter-chip';
-      link.href = '../favorite-wallpapers/';
-      link.textContent = '珍藏品壁纸';
-      row.appendChild(link);
-    }
     if (routeSource === 'crosscore') {
       for (const [mode, label] of [['interaction', '互动立绘'], ['spine', 'Spine']]) {
         const link = document.createElement('a');
@@ -1223,7 +1220,7 @@
       + (['other','unknown'].includes(displayType(c)) ? '' : '<span class="tt">' + (c.burst ? '技能合播' : TYPE_LABEL[displayType(c)] || '') + '</span>')
       + (c.burst ? '<span class="burst-card-badge">合播</span>' : '')
       + '<button class="tstar' + (starred.has(c.id) ? ' on' : '') + '" title="收藏/取消收藏">' + K.uiIcon('star', 18, starred.has(c.id)) + '</button>';
-    if (c.burst) {
+    if (c.burst || c.resourceType === 'wallpaper') {
       card.tabIndex = 0;
       card.setAttribute('role', 'link');
       card.addEventListener('keydown', e => {
@@ -1387,7 +1384,7 @@
     partEditMode = !!enabled;
     if (partEditMode && burstPending?.intro) parkSkillBurst();
     if (partEditMode && burstSession?.playing) burstSession.pause();
-    stage.dataset.clickMode = partEditMode ? 'part-editing' : 'audio';
+    updateStageClickMode();
     btnPartEdit.classList.toggle('on', partEditMode);
     btnPartEdit.title = '部件编辑（' + (partEditMode ? '开启' : '关闭') + '）';
     btnPartEdit.setAttribute('aria-label', btnPartEdit.title);
@@ -1485,11 +1482,11 @@
       const curTrack = cut.state.getCurrent(0);
       const curName = curTrack ? curTrack.animation.name : '';
       let shown = 0;
-      for (const a of cut.data.animations) {
-        if (q && !a.name.toLowerCase().includes(q)) continue;
+      for (const a of sceneAnimations()) {
+        if (q && !a.name.toLowerCase().includes(q) && !a.label?.includes(q)) continue;
         const b = document.createElement('button');
         b.className = 'anim-row' + (!burstSession && a.name === curName ? ' on' : '');
-        b.innerHTML = '<span class="an">' + K.esc(a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
+        b.innerHTML = '<span class="an">' + K.esc(a.label || a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
         b.onclick = () => {
           animSel.value = a.name;
           playAnimation(a.name);
@@ -1543,7 +1540,7 @@
       K.toast('姿势编辑已关闭', 'ok', 1800, 'mode');
     }
     btnBoneEdit.setAttribute('aria-pressed', String(boneEditMode));
-    stage.dataset.clickMode = boneEditMode ? 'pose' : partEditMode ? 'part-editing' : 'audio';
+    updateStageClickMode();
     $('#poseReset').disabled = !cut || !editBaseline;
     panelUI?.refresh(); K.refreshStageUI?.();
   });
@@ -1559,7 +1556,7 @@
     if (!cut) return null;
     const [wx, wy] = wpt(clientX, clientY);
     const scale = cut.skeleton.scaleX || 1;
-    const thresh = 26 / scale;
+    const thresh = cut.wallpaperActions ? 16 * (devicePixelRatio || 1) : 26 / scale;
     let best = null;
     for (const bone of cut.skeleton.bones) {
       let d = Math.hypot(bone.worldX - wx, bone.worldY - wy);
@@ -1765,6 +1762,11 @@
 
   // ---------- 播放条 ----------
   const getTrack = () => { const t = cut && cut.state.getCurrent(0); return t && t.animation ? t : null; };
+  const sceneAnimations = () => cut?.wallpaperActions || cut?.data.animations || [];
+
+  function updateStageClickMode() {
+    stage.dataset.clickMode = boneEditMode ? 'pose' : partEditMode ? 'part-editing' : cut?.wallpaperActions ? 'interaction' : 'audio';
+  }
   function seekTo(ratio) {
     if (burstSession) { burstSession.seek(ratio * burstSession.duration); return; }
     const track = getTrack();
@@ -1784,8 +1786,8 @@
     if (!track) return;
     const dur = track.animation.duration || 0.0001;
     let t = track.trackTime + dir * (1 / 30);
-    if (t < 0) t = loopAnim ? dur + t : 0;
-    if (t > dur) t = loopAnim ? t - dur : dur;
+    if (t < 0) t = track.loop ? dur + t : 0;
+    if (t > dur) t = track.loop ? t - dur : dur;
     for (const layer of cutLayers()) {
       const layerTrack = layer.state && layer.state.getCurrent(0);
       if (layerTrack) layerTrack.trackTime = t;
@@ -1819,7 +1821,8 @@
       setLoopBtn();
       return;
     }
-    loopAnim = !loopAnim;
+    const actionLoop = cut?.wallpaperActions ? getTrack()?.loop : undefined;
+    loopAnim = !(actionLoop ?? loopAnim);
     setLoopBtn();
     store.set('loop', loopAnim);
     if (cut && animSel.value) playAnimation(animSel.value);
@@ -1827,6 +1830,10 @@
   pbPlay.addEventListener('click', () => {
     if (burstSession) { burstSession.toggle(); return; }
     if (burstPending?.intro) parkSkillBurst();
+    if (!playing && cut?.wallpaperActions) {
+      const track = getTrack();
+      if (track && !track.loop && track.trackTime >= track.animation.duration) seekTo(0);
+    }
     playing = !playing; setPlayBtn();
   });
   pbSpeed.addEventListener('input', () => {
@@ -1853,7 +1860,23 @@
     }
     if (portraitAudio) dt = portraitAudio.animationDelta(dt);
     try {
-    if (cut) {
+    if (cut?.wallpaperActions) {
+      if (playing) {
+        cut.state.update(dt);
+        const track = getTrack();
+        if (track && !track.loop && track.trackTime >= track.animation.duration) {
+          if (cut.returnToIdle) {
+            playAnimation('idle', { loop: true, keepView: true });
+          } else {
+            track.trackTime = track.animation.duration;
+            playing = false;
+            setPlayBtn();
+            syncTimeline();
+          }
+        }
+      }
+      applyCutLayerStates();
+    } else if (cut) {
       for (const layer of cutLayers()) {
         if (layer.active === false) continue;
         if (playing && layer.state) layer.state.update(dt);
@@ -1878,7 +1901,7 @@
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
       const backdrop = activeSkillBackdrop();
-      const clipped = clipArtworkFrame(raw, cv, cut?.skeleton, cut?.frame);
+      const clipped = clipArtworkFrame(raw, cv, cut?.frameView || cut?.skeleton, cut?.frame);
       try {
         renderer.begin();
         if (backdrop && cut) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
@@ -1947,6 +1970,7 @@
     const x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
     const y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
     for (const layer of cutLayers()) setLayerView(layer, scale, x, y);
+    if (cut.wallpaperActions) cut.frameView = { x, y, scaleX: scale, scaleY: scale };
     if (cmpOn && cmp) {
       cmp.skeleton.scaleX = scale;
       cmp.skeleton.scaleY = scale;
@@ -2031,6 +2055,22 @@
   function playAnimation(name, options = {}) {
     parkSkillBurst();
     if (!cut) return;
+    if (cut.wallpaperActions) {
+      const action = cut.wallpaperActions.find(item => item.name === name);
+      if (!action) return;
+      const loop = options.loop ?? loopAnim;
+      cut.state.clearTracks();
+      cut.state.timeScale = Number(pbSpeed.value);
+      cut.state.setAnimationWith(0, action.clock, loop);
+      cut.returnToIdle = !!options.returnToIdle;
+      animSel.value = name;
+      applyCutLayerStates();
+      animCtl?.refresh();
+      pbLoop.classList.toggle('active', loop);
+      syncTimeline();
+      syncUrl(name);
+      return;
+    }
     portraitAudio?.animationChanged(name, options);
     let bounds = null;
     for (const layer of cutLayers()) {
@@ -2107,7 +2147,7 @@
       indexURL: new URL('../audio-logic.json', location.href).href,
       snapshot: () => {
         const track = getTrack();
-        if (!cut || !cur || !track) return null;
+        if (!cut || cut.wallpaperActions || !cur || !track) return null;
         return { id: cur.id, animation: track.animation.name, time: track.trackTime,
           duration: track.animation.duration, loop: track.loop, speed: Number(pbSpeed.value) || 1,
           playing, active: (embedded || stageMode) && !boneEditMode && !partEditMode && !burstSession,
@@ -2140,7 +2180,7 @@
     }, location.origin);
   }
   function playerCapabilities() {
-    const animations = cut?.data?.animations || [];
+    const animations = sceneAnimations();
     const parts = (cut?.data?.slots || []).map(slot => ({
       name: String(slot.name), visible: !cut.hiddenSlots.has(String(slot.name)),
     }));
@@ -2154,11 +2194,12 @@
     const track = getTrack();
     const duration = Number(track?.animation?.duration) || 0;
     const elapsed = Math.max(0, Number(track?.trackTime) || 0);
-    const time = duration > 0 ? (loopAnim ? elapsed % duration : Math.min(elapsed, duration)) : 0;
-    if (!loopAnim && duration > 0 && elapsed >= duration && playing) { playing = false; setPlayBtn(); }
+    const loop = track?.loop ?? loopAnim;
+    const time = duration > 0 ? (loop ? elapsed % duration : Math.min(elapsed, duration)) : 0;
+    if (!loop && duration > 0 && elapsed >= duration && playing) { playing = false; setPlayBtn(); }
     playerPost('playback', {
       playing, speed: Number(pbSpeed.value) || 1, animation: animSel.value || '',
-      loop: loopAnim, time, duration,
+      loop, time, duration,
     }, requestId);
   }
   function playerReady(seq) {
@@ -2219,7 +2260,7 @@
           loopAnim = p.loop !== false; setLoopBtn(); if (cut && animSel.value) playAnimation(animSel.value); playerPlayback(msg.requestId);
         } else if (msg.command === 'setAnimation') {
           const name = String(p.name || '');
-          if (!cut || !cut.data.animations.some(a => a.name === name)) throw new Error('动画不存在: ' + name);
+          if (!sceneAnimations().some(a => a.name === name)) throw new Error('动画不存在: ' + name);
           animSel.value = name; playAnimation(name); playerPlayback(msg.requestId);
         } else if (msg.command === 'setParts') {
           const changes = Array.isArray(p.parts) ? p.parts : [];
@@ -2363,9 +2404,17 @@
     }
   }
   function applyCutLayerStates(target = cut) {
+    const wallpaperTrack = target?.wallpaperActions && target.state.getCurrent(0);
+    const scene = target?.sourceVariant.wallpaperScene;
+    const SP = wallpaperTrack ? K.getSpine(cur?.spineVersion) : null;
     for (const layer of cutLayers(target)) {
       if (!layer || layer.active === false) continue;
-      if (layer.state) layer.state.apply(layer.skeleton);
+      if (wallpaperTrack) {
+        if (!boneEditMode) {
+          wallpaper.sampleLayer(layer, scene, wallpaperTrack.animation.name, wallpaperTrack.trackTime, wallpaperTrack.loop, SP);
+          if (poseLocked && layer.skeleton === target.skeleton) applyPoseToSkeleton(layer.skeleton, poseLocked);
+        }
+      } else if (layer.state) layer.state.apply(layer.skeleton);
       K.updateWorldTransform(layer.skeleton);
       if (layer.hiddenSlots) K.applyHiddenSlots(layer.skeleton, layer.hiddenSlots);
     }
@@ -2474,6 +2523,7 @@
   $('#railCompare').addEventListener('click', () => toggleCompare());
   let cutRequest = null;
   function variantFiles(source) {
+    if (source.wallpaperFiles) return source.wallpaperFiles;
     const original = source.nativeBurst;
     if (original) return {
       atlasURL: burstObjectURL(original.atlas),
@@ -2502,7 +2552,7 @@
         ? new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
         : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes));
       const skeleton = new SP.Skeleton(data);
-      applyVariantSkin(skeleton, reuse ? baseLayer.source : entry);
+      applyVariantSkin(skeleton, entry.previewSkin != null || !reuse ? entry : baseLayer.source);
       skeleton.setToSetupPose();
       const stateData = new SP.AnimationStateData(data);
       stateData.defaultMix = 0.15;
@@ -2516,7 +2566,7 @@
   function stagePreviewPath(v) {
     const cover = cur.burst?.cover;
     if (cover || v.nativeBurst) return cover || null;
-    if (routeSource === 'crosscore') {
+    if (routeSource === 'crosscore' || v.wallpaperId) {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
       return thumbnail ? THUMB_PREFIX + thumbnail : null;
     }
@@ -2534,12 +2584,14 @@
     resetViewForLoad();
     hidePartPopup();
     highlightSlot = null;
-    const v = cur.cutscenes[idx] || cur.cutscenes[0];
+    let v = cur.cutscenes[idx] || cur.cutscenes[0];
     if (!v) { loadingPreview.cancel(); status((cur.name || cur.id) + ' · 无过场'); return; }
     loadingPreview.begin(seq, { path: stagePreviewPath(v), label: aliasOf(cur.id) || cur.name || cur.id, trimImage: routeSource === 'crosscore' });
     status('加载: ' + (cur.name || cur.id) + ' …');
     playerPost('state', { state: 'loading', message: '正在读取骨骼、Atlas 与贴图' });
     try {
+      if (v.wallpaperId) v = await wallpaper.loadVariant(v);
+      if (seq !== cutLoadSeq) return;
       const SP = await K.ensureSpine(cur && cur.spineVersion);
       if (seq !== cutLoadSeq) return;
       if (!ensureGL()) throw new Error('WebGL 不可用');
@@ -2565,26 +2617,33 @@
       stateData.defaultMix = 0.15;
       const state = new SP.AnimationState(stateData);
       // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
-      animSel.innerHTML = data.animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
+      const wallpaperActions = v.wallpaperScene ? wallpaper.actions(v.wallpaperScene, SP) : null;
+      const animations = wallpaperActions || data.animations;
+      const findAnimation = name => animations.find(item => item.name === name);
+      animSel.innerHTML = animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.label || a.name) + '</option>').join('');
       const urlAnim = new URLSearchParams(location.search).get('anim');
       // This standalone light layer has an empty character-idle placeholder.
       const preferredName = v.previewAnimation || (v.skel === 'c103_00_bg.skel' ? 'bg_idle' : null);
-      const preferred = preferredName && data.findAnimation(preferredName);
+      const preferred = preferredName && findAnimation(preferredName);
       const restore = name => preferred && name === v.legacyPreviewAnimation ? preferred.name : name;
       const saved = restore(restoreAnim);
       const previewAnim = preferred
-        || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
-        || data.animations.find(a => /^loop/i.test(a.name))
-        || data.animations[0];
-      const savedAnim = saved && data.findAnimation(saved);
-      const linkedAnim = urlAnim && data.findAnimation(restore(urlAnim));
+        || animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
+        || animations.find(a => /^loop/i.test(a.name))
+        || animations[0];
+      const savedAnim = saved && findAnimation(saved);
+      const linkedAnim = urlAnim && findAnimation(restore(urlAnim));
       const def = (savedAnim || linkedAnim || previewAnim)?.name;
-      state.setAnimation(0, def, loopAnim);
-      state.update(0);
-      state.apply(skeleton);
+      if (wallpaperActions) {
+        wallpaper.sampleLayer({ source: v, data, skeleton }, v.wallpaperScene, def, 0, false, SP);
+      } else {
+        state.setAnimation(0, def, loopAnim);
+        state.update(0);
+        state.apply(skeleton);
+      }
       K.updateWorldTransform(skeleton);
       const stageNS = K.getSpine(cur && cur.spineVersion);
-      let bounds = K.measureBounds(skeleton, stageNS);
+      let bounds = wallpaperActions ? wallpaper.frame : K.measureBounds(skeleton, stageNS);
       if (!bounds && data.skins && data.skins.length) {
         // 部分 4.0 模型附件挂在皮肤上, 不设皮肤量不出包围盒
         const skin = data.skins.find(s => s.name === 'default') || data.skins[0];
@@ -2618,7 +2677,12 @@
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
       target.layers.push(...loadedLayers);
       target.drawLayers = orderedLayers(target.layers);
+      if (wallpaperActions) {
+        target.wallpaperActions = wallpaperActions;
+        target.frame = wallpaper.frame;
+      }
       cut = target;
+      updateStageClickMode();
       for (const layer of cut.layers) layer.hiddenSlots = cut.hiddenSlots;
 
       restoreHidden();
@@ -2637,7 +2701,7 @@
       playAnimation(def);
       refreshPoseList();
       if (fitMode) refit(); else set100();
-      status((cur.name || cur.id) + ' · ' + data.animations.length + ' 动画 · ' + data.bones.length + ' 骨骼 · ' + cut.layers.length + ' 层');
+      status((cur.name || cur.id) + ' · ' + animations.length + ' 动画 · ' + data.bones.length + ' 骨骼 · ' + cut.layers.length + ' 层');
       syncUrl(def);
       K.history.push({
         k: routeSource + ':' + cur.id, src: routeSource,
@@ -2669,7 +2733,7 @@
     if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     const animName = animSel.value;
-    const anim = cut.data.animations.find(a => a.name === animName);
+    const anim = sceneAnimations().find(a => a.name === animName);
     if (!anim) { K.toast('动画不存在', 'err'); return; }
     const video = format === 'video';
     const exportBackground = getBg();
@@ -2719,8 +2783,8 @@
         const stateData = new SP.AnimationStateData(model.data); stateData.defaultMix = 0;
         const state = new SP.AnimationState(stateData);
         const layer = { ...model, source, skeleton, state };
-        layer.active = layerIsActive(layer, animName);
-        const mapped = layerAnimationName(layer, animName);
+        layer.active = !!sourceVariant.wallpaperScene || layerIsActive(layer, animName);
+        const mapped = sourceVariant.wallpaperScene ? null : layerAnimationName(layer, animName);
         if (mapped) state.setAnimation(0, mapped, false);
         exportLayers.push(layer);
       }
@@ -2728,8 +2792,12 @@
       const applyExportFrame = (time, scale = 1, x = 0, y = 0) => {
         for (const L of exportLayers) {
           if (!L.active) continue;
-          const track = L.state.getCurrent(0); if (track) track.trackTime = time;
-          L.state.apply(L.skeleton);
+          if (sourceVariant.wallpaperScene) {
+            wallpaper.sampleLayer(L, sourceVariant.wallpaperScene, animName, time, false, SP);
+          } else {
+            const track = L.state.getCurrent(0); if (track) track.trackTime = time;
+            L.state.apply(L.skeleton);
+          }
           setLayerView(L, scale, x, y);
           K.updateWorldTransform(L.skeleton); K.applyHiddenSlots(L.skeleton, hiddenSlots);
         }
@@ -2773,7 +2841,7 @@
       // 第二遍: 逐帧渲染
       for (const L of exportLayers) {
         L.state.clearTracks(); L.skeleton.setToSetupPose();
-        const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, false);
+        const mapped = sourceVariant.wallpaperScene ? null : layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, false);
       }
       const cvRgb = document.createElement('canvas');
       cvRgb.width = W; cvRgb.height = H;
@@ -2827,7 +2895,7 @@
     onFormatChange: format => { animationExportFormat = format; store.set('animationExportFormat', format); },
     getDetail: (preset, format) => {
       if (!cut) throw new Error('请先加载一个资源');
-      const anim = cut.data.animations.find(a => a.name === animSel.value);
+      const anim = sceneAnimations().find(a => a.name === animSel.value);
       if (!anim) throw new Error('没有可导出的动画');
       const plan = K.exportTimeline(anim.duration, preset, format);
       if (format === 'video') {
@@ -2841,15 +2909,16 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON('../../thumbs/index.json').then(td => {
+    const thumbnailRev = routeSource === 'nikki' ? '?v=20261118-wallpaper-viewer' : '';
+    const thumbnails = K.fetchJSON('../../thumbs/index.json' + thumbnailRev).then(td => {
       webThumbs = td.items || {};
-      if (routeSource === 'crosscore' && cur) {
+      if (cur && (routeSource === 'crosscore' || cur.resourceType === 'wallpaper')) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
         if (variant) loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261109-skill-background' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261118-wallpaper-viewer' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));
@@ -2886,7 +2955,7 @@
   function pngPose(quality, backdrop = activeSkillBackdrop()) {
     const frame = cut.frame || (backdrop ? mergeBounds(cut.bounds, backdrop.bounds) : undefined);
     const skeletons = cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
-    return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), frame);
+    return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), frame, cut.frameView);
   }
   function exportFrame(transparent, mode, done, quality = exportQuality) {
     parkSkillBurst();
@@ -3079,8 +3148,9 @@
         bone.rotation = boneDrag.startRot + (a - boneDrag.startAngle) * 180 / Math.PI;
       } else {
         const dx = wx - boneDrag.lastWX, dy = wy - boneDrag.lastWY;
-        const pa = bone.parent ? bone.parent.a : 1, pb = bone.parent ? bone.parent.b : 0;
-        const pc = bone.parent ? bone.parent.c : 0, pd = bone.parent ? bone.parent.d : 1;
+        const pa = bone.parent ? bone.parent.a : (cut.wallpaperActions ? cut.skeleton.scaleX : 1);
+        const pd = bone.parent ? bone.parent.d : (cut.wallpaperActions ? cut.skeleton.scaleY : 1);
+        const pb = bone.parent ? bone.parent.b : 0, pc = bone.parent ? bone.parent.c : 0;
         const det = pa * pd - pb * pc;
         if (det) { bone.x += (dx * pd - dy * pb) / det; bone.y += (dy * pa - dx * pc) / det; }
         boneDrag.lastWX = wx;
@@ -3156,11 +3226,20 @@
       const wx = (tapX - rect.left) * dpr - cv.width / 2;
       const wy = cv.height / 2 - (tapY - rect.top) * dpr;
       const SP = K.getSpine(cur && cur.spineVersion);
+      const frame = cut.frame, anchor = cut.frameView || cut.skeleton;
+      const x = (wx - anchor.x) / anchor.scaleX, y = (wy - anchor.y) / anchor.scaleY;
+      const inFrame = !frame || (x >= frame.minX && x <= frame.maxX && y >= frame.minY && y <= frame.maxY);
+      if (cut.wallpaperActions && !partEditMode) {
+        if (inFrame && !cut.returnToIdle) {
+          playing = true;
+          playAnimation('touch', { loop: false, returnToIdle: true, keepView: true });
+          setPlayBtn();
+        }
+        return;
+      }
       let name = null;
       if (partEditMode) {
-        const frame = cut.frame, anchor = cut.skeleton;
-        const x = (wx - anchor.x) / anchor.scaleX, y = (wy - anchor.y) / anchor.scaleY;
-        if (!frame || (x >= frame.minX && x <= frame.maxX && y >= frame.minY && y <= frame.maxY)) {
+        if (inFrame) {
           // Hit test in reverse paint order so an overlay can be picked independently.
           for (let i = cut.drawLayers.length - 1; i >= 0 && !name; i--) {
             const layer = cut.drawLayers[i];
