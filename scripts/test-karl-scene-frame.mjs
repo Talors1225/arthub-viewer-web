@@ -9,4 +9,4 @@ assert.deepEqual(defaultPortraitStageFrame('feiteliekaer_4'),expected);
 assert.equal(authoredLive2DFrame('unknown','idle'),null);
 console.log('Karl authored canvas: browsing, animation and export agree');
 
-for (const [id,w,h] of [['jinjiang_2',8000,4712],['suweiaitongmeng_3',19310,13260]]) { const f={minX:0,minY:0,maxX:w,maxY:h};assert.deepEqual(defaultPortraitStageFrame(id),f);for(const name of ['idle','idle2','login','touch_body'])assert.deepEqual(authoredLive2DExportFrame(id,name),f); }
+for (const [id,w,h] of [['shuixinghao_2',8000,5500],['jinjiang_2',8000,4712],['suweiaitongmeng_3',19310,13260]]) { const f={minX:0,minY:0,maxX:w,maxY:h};assert.deepEqual(defaultPortraitStageFrame(id),f);for(const name of ['idle','idle2','login','touch_body'])assert.deepEqual(authoredLive2DExportFrame(id,name),f); }

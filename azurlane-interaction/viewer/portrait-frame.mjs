@@ -19,6 +19,7 @@ const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654',
 const mogadorSkyWithCard = trackDrawable(mogadorSky, mogadorSky.anchor.drawable, { ...mogadorSky.anchor, headroom: .32 });
 // Match the scene inside the outer matte. Live2D uses a top-left origin.
 const live2dFrames = new Map([
+ ['shuixinghao_2', frame(0, 0, 8000, 5500)], // Authored canvas excludes the oversized MB_blackbgjuxing matte.
  ['feiteliekaer_4', frame(0, 0, 9449, 5570)], // Authored camera canvas; off-canvas scene cards are not presentation bounds.
  ['jinjiang_2', frame(0, 0, 8000, 4712)],
  ['suweiaitongmeng_3', frame(0, 0, 19310, 13260)],
@@ -385,6 +386,7 @@ for (const id of ['aimudeng_5', 'haichou_2', 'hu_2']) spineFrames.set(id + '_asm
 // Default browsing crops measured from the opaque illustration, excluding distant effects.
 // Export framing and per-motion authored anchors remain independent.
 const defaultStageFrames = new Map([
+ ['shuixinghao_2', frame(0, 0, 8000, 5500)], // Authored canvas excludes the oversized MB_blackbgjuxing matte.
  ['feiteliekaer_4', frame(0, 0, 9449, 5570)],
  ['jinjiang_2', frame(0, 0, 8000, 4712)],
  ['suweiaitongmeng_3', frame(0, 0, 19310, 13260)],
