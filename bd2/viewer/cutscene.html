@@ -278,7 +278,7 @@
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
   <script src="../../arthub-cos-config.js?v=20261117-resources"></script>
-  <script src="../../arthub-cos.js?v=20261117-resources"></script>
+  <script src="../../arthub-cos.js?v=20261117-bd2-scenes"></script>
 <style>
   .bd2-voice-controls { position: fixed; z-index: 12; left: 16px; bottom: calc(66px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 5px; padding: 5px; border-radius: 12px; background: var(--panel); }
   .bd2-voice-controls[hidden], .bd2-voice-controls > [hidden] { display: none !important; }
@@ -326,6 +326,7 @@
 
     <div class="tool-strip" id="toolStrip">
       <button id="btnRetry" title="重新加载当前资源">↻</button>
+      <button id="btnOriginalBackground" type="button" hidden title="显示或隐藏原始场景背景">隐藏原背景</button>
       <button id="btnRestoreParts" title="恢复默认部件显示">恢复部件</button>
       <button id="btnGlobalSearch" title="全局搜索 (Ctrl+K)">⌕</button>
       <div class="zoom-bar tool-zoom" aria-label="视图缩放">
@@ -1559,7 +1560,7 @@
         raw.scissor(x, y, Math.ceil((clip.maxX - clip.minX) * sk.scaleX), Math.ceil((clip.maxY - clip.minY) * sk.scaleY));
       }
       renderer.begin();
-      if (cut) for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+      if (cut) for (const layer of drawCutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
       if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
       if (cut && K.debugActive(debugFlags)) {
         K.applyDebugFlags(renderer, debugFlags);
@@ -1601,7 +1602,7 @@
     ['067491', { minX: -1430, minY: -1730, maxX: 1400, maxY: 750 }],
   ]);
   function stageFrameForLoop() {
-    return !cmpOn && animSel.value === 'loop' && loopStageFrames.get(cur?.id);
+    return !cmpOn && (cut?.sourceVariant.backgroundFrames?.[animSel.value] || (animSel.value === 'loop' && loopStageFrames.get(cur?.id)));
   }
 
   // ---------- 视图 ----------
@@ -1614,15 +1615,21 @@
     cut.fitScale = Math.min((area.pixelWidth * 0.96) / Math.max(1, b.maxX - b.minX), (area.pixelHeight * 0.96) / Math.max(1, b.maxY - b.minY));
     cut.fitOffsetX = area.offsetX; cut.fitOffsetY = area.offsetY;
   }
+  function placeSceneLayer(layer, scale, x, y) {
+    const placement = layer.source?.scenePlacement;
+    const skeleton = layer.skeleton;
+    skeleton.scaleX = scale * (placement?.scaleX ?? 1);
+    skeleton.scaleY = scale * (placement?.scaleY ?? 1);
+    skeleton.x = x + scale * (placement?.x ?? 0);
+    skeleton.y = y + scale * (placement?.y ?? 0);
+    if (placement?.color) skeleton.color.setFromString(placement.color);
+  }
   function applyView() {
     if (!cut) return;
     const scale = fitMode ? ((cmpOn && cmp) ? cmp.fitScale : cut.fitScale) : userScale;
-    for (const layer of cutLayers()) {
-      layer.skeleton.scaleX = scale;
-      layer.skeleton.scaleY = scale;
-      layer.skeleton.x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
-      layer.skeleton.y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
-    }
+    const x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
+    const y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
+    for (const layer of cutLayers()) placeSceneLayer(layer, scale, x, y);
     if (cmpOn && cmp) {
       cmp.skeleton.scaleX = scale;
       cmp.skeleton.scaleY = scale;
@@ -1677,6 +1684,7 @@
     let bounds = null;
     try {
       const sample = new SP.Skeleton(target.data);
+      placeSceneLayer({ source: target.source, skeleton: sample }, 1, 0, 0);
       for (const time of times) {
         sample.setToSetupPose();
         const stateData = new SP.AnimationStateData(target.data);
@@ -1704,7 +1712,7 @@
       if (layer.state) {
         layer.state.clearTracks();
         layer.skeleton.setToSetupPose();
-        if (layerName) layer.state.setAnimation(0, layerName, options.loop ?? loopAnim);
+        if (layerName) layer.state.setAnimation(0, layerName, layer.source?.sceneRepeat ?? options.loop ?? loopAnim);
         layer.state.timeScale = Number(pbSpeed.value);
         layer.state.update(0);
         layer.state.apply(layer.skeleton);
@@ -1981,6 +1989,9 @@
     if (!target) return [];
     return Array.isArray(target.layers) && target.layers.length ? target.layers : [target];
   }
+  function drawCutLayers() {
+    return [...cutLayers()].sort((a,b)=>(a.source.renderOrder || 0)-(b.source.renderOrder || 0));
+  }
   function layerAnimationName(layer, name) {
     if (!layer || !layer.data || !name) return null;
     const source = layer.source || {};
@@ -2006,6 +2017,8 @@
   function applyCutLayerStates(target = cut) {
     for (const layer of cutLayers(target)) {
       if (!layer || layer.active === false) continue;
+      // Scene layers with only geometry and color curves do not restore hidden attachments.
+      if (layer.source?.originalBackground || layer.source?.static) layer.skeleton.setSlotsToSetupPose();
       if (layer.state) layer.state.apply(layer.skeleton);
       K.updateWorldTransform(layer.skeleton);
       if (layer.hiddenSlots) K.applyHiddenSlots(layer.skeleton, layer.hiddenSlots);
@@ -2115,6 +2128,14 @@
   }
   $('#railCompare').addEventListener('click', () => toggleCompare());
   let cutRequest = null;
+  let originalScenesRequest = null;
+  function loadOriginalSceneIndex() {
+    if (!originalScenesRequest) {
+      originalScenesRequest = K.fetchJSON('../background-scenes.json?v=20261117-bd2-scenes', { timeout: 12000 })
+        .catch(() => { originalScenesRequest = null; return null; });
+    }
+    return originalScenesRequest;
+  }
   async function loadCompositeLayer(entry, SP, seq, signal, baseLayer) {
     const reuse = baseLayer && ['dir', 'atlas', 'skel'].every(key => entry[key] === baseLayer.source[key]);
     let atlas = null;
@@ -2122,6 +2143,7 @@
       const files = reuse ? { atlas: baseLayer.atlas } : await K.loadSpineFiles(SP, mgl, {
         atlasURL: '../' + entry.dir + entry.atlas,
         skeletonURL: '../' + entry.dir + encodeURIComponent(entry.skel), signal,
+        timeout: entry.originalBackground ? 15000 : undefined,
       });
       atlas = files.atlas;
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
@@ -2159,6 +2181,9 @@
     hidePartPopup();
     highlightSlot = null;
     const v = cur.cutscenes[idx] || cur.cutscenes[0];
+    const sceneId = cur.id;
+    const sceneIndex = routeSource === 'bd2' && cur.resourceType === 'cutscene' && v === cur.cutscenes[0]
+      ? loadOriginalSceneIndex() : null;
     if (!v) { loadingPreview.cancel(); status((cur.name || cur.id) + ' · 无过场'); return; }
     loadingPreview.begin(seq, { path: stagePreviewPath(v), label: aliasOf(cur.id) || cur.name || cur.id, trimImage: routeSource === 'crosscore' });
     status('加载: ' + (cur.name || cur.id) + ' …');
@@ -2218,14 +2243,33 @@
       };
       const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds,
               centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(), layers: [baseLayer], pma: baseLayer.pma };
-      const results = await Promise.allSettled((v.compositeLayers || []).map(layerEntry =>
+      const scene = sceneIndex ? (await sceneIndex)?.[sceneId] : null;
+      if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
+      const requiredLayers = v.compositeLayers || [];
+      const sceneryLayers = scene?.compositeLayers || [];
+      const results = await Promise.allSettled([...requiredLayers, ...sceneryLayers].map(layerEntry =>
         loadCompositeLayer(layerEntry, SP, seq, request.signal, baseLayer)));
       loadedLayers = results.filter(result => result.status === 'fulfilled').map(result => result.value);
-      const failed = results.find(result => result.status === 'rejected');
-      if (failed) throw failed.reason;
+      const requiredResults = results.slice(0, requiredLayers.length);
+      const requiredFailure = requiredResults.find(result => result.status === 'rejected');
+      if (requiredFailure) throw requiredFailure.reason;
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
+
+      const sceneryResults = results.slice(requiredLayers.length);
+      if (sceneryResults.some(result => result.status === 'rejected')) {
+        // Omit the complete scene if a background request fails, so a stray foreground cannot cover the base pose.
+        const keep = requiredResults.map(result => result.value);
+        const keptAtlases = new Set([baseLayer.atlas, ...keep.map(layer => layer.atlas)]);
+        const unused = new Set(loadedLayers.map(layer => layer.atlas).filter(atlas => !keptAtlases.has(atlas)));
+        for (const atlas of unused) K.disposeAtlas(atlas);
+        loadedLayers = keep;
+      } else if (sceneryLayers.length) {
+        target.sourceVariant = { ...v, compositeLayers: [...requiredLayers, ...sceneryLayers], backgroundFrames: scene.frames };
+      }
       target.layers.push(...loadedLayers);
       cut = target;
+      $('#btnOriginalBackground').hidden = !cut.layers.some(l=>l.source.originalBackground);
+      $('#btnOriginalBackground').textContent = '隐藏原背景';
       bd2Voice?.select(cur.id, v.variant ?? idx);
       for (const layer of cut.layers) layer.hiddenSlots = cut.hiddenSlots;
 
@@ -2269,6 +2313,7 @@
   // The loop includes a separate shadow far from the portrait.
   const seirLoopFrame = { minX: -1460, minY: -2020, maxX: 1080, maxY: 940 };
   function artworkExportFrame(animation) {
+    if (cut?.sourceVariant.backgroundFrames?.[animation]) return cut.sourceVariant.backgroundFrames[animation];
     if (cut?.sourceVariant.skel === 'cutscene_char101101.skel.bytes' && animation === 'loop') return seirLoopFrame;
   }
   function pngPose(quality) {
@@ -2310,7 +2355,7 @@
       // WebGL textures belong to their context. Reparse with an atlas loaded
       // into the export context instead of reusing the stage's attachments.
       const exportLayers = [], models = new Map();
-      for (const source of [sourceVariant, ...(sourceVariant.compositeLayers || [])]) {
+      for (const source of [sourceVariant, ...(sourceVariant.compositeLayers || [])].sort((a,b)=>(a.renderOrder || 0)-(b.renderOrder || 0))) {
         const base = '../' + source.dir, key = base + source.atlas + '|' + source.skel;
         let model = models.get(key);
         if (!model) {
@@ -2328,7 +2373,7 @@
         const layer = { ...model, source, skeleton, state };
         layer.active = layerIsActive(layer, animName);
         const mapped = layerAnimationName(layer, animName);
-        if (mapped) state.setAnimation(0, mapped, false);
+        if (mapped) state.setAnimation(0, mapped, !!source.sceneRepeat);
         exportLayers.push(layer);
       }
       const applyExportFrame = (time, scale = 1, x = 0, y = 0) => {
@@ -2336,8 +2381,7 @@
           if (!L.active) continue;
           const track = L.state.getCurrent(0); if (track) track.trackTime = time;
           L.state.apply(L.skeleton);
-          L.skeleton.scaleX = L.skeleton.scaleY = scale;
-          L.skeleton.x = x; L.skeleton.y = y;
+          placeSceneLayer(L, scale, x, y);
           K.updateWorldTransform(L.skeleton); K.applyHiddenSlots(L.skeleton, hiddenSlots);
         }
       };
@@ -2378,7 +2422,7 @@
       // 第二遍: 逐帧渲染
       for (const L of exportLayers) {
         L.state.clearTracks(); L.skeleton.setToSetupPose();
-        const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, false);
+        const mapped = layerAnimationName(L, animName); if (mapped) L.state.setAnimation(0, mapped, !!L.source.sceneRepeat);
       }
       const cvRgb = document.createElement('canvas');
       cvRgb.width = W; cvRgb.height = H;
@@ -2470,6 +2514,15 @@
     }
   }
 
+  $('#btnOriginalBackground').onclick = () => {
+    if (!cut) return;
+    const names = cutLayers().filter(l=>l.source.originalBackground).flatMap(l=>l.data.slots.map(s=>s.name));
+    const hide = names.some(name=>!cut.hiddenSlots.has(name));
+    for (const name of names) { if (hide) cut.hiddenSlots.add(name); else cut.hiddenSlots.delete(name); }
+    applyCutLayerStates();
+    $('#btnOriginalBackground').textContent = hide ? '显示原背景' : '隐藏原背景';
+    partsCtl?.refresh();
+  };
   $('#btnRetry').onclick = () => { if (cur) loadCutscene(Number(variantSel.value), animSel.value); else loadChars().catch(e => status(e.message)); };
   $('#btnGlobalSearch').onclick = () => K.openSearchPalette?.();
   $('#btnRestoreParts').onclick = () => {
@@ -2508,7 +2561,7 @@
         }
         raw.clear(raw.COLOR_BUFFER_BIT);
         renderer.begin();
-        for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        for (const layer of drawCutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
         renderer.end();
       },
       restore() {

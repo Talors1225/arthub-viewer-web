@@ -79,7 +79,7 @@
       const coverAt = url.pathname.indexOf('/thumbs/bd2/portraits/');
       const bd2Path = coverAt >= 0
         ? '/bd2/portraits' + url.pathname.slice(coverAt)
-        : url.pathname.match(/\/bd2\/(?:spine|portraits)\/.*/)?.[0];
+        : url.pathname.match(/\/bd2\/(?:spine|portraits|backgrounds)\/.*/)?.[0];
       if (bd2Path) return bd2Root + bd2Path + url.search + url.hash;
     }
     const remotePath = markerPath(url.pathname);
