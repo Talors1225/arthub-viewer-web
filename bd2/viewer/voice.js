@@ -63,6 +63,7 @@
       const job = this.job;
       this.job = null;
       job.controller.abort();
+      this.adapter.releaseMotion?.();
       for (const node of job.nodes) {
         try { node.stop(); } catch {}
         node.disconnect();
@@ -110,13 +111,16 @@
         if (job !== this.job) return;
         const scene = this.portrait ? null : this.scenes[Number(this.choose.value || 0)];
         const cues = scene?.cues || [{event:this.portrait, start:0, clipIn:0, timeScale:1}];
-        const prepared = await Promise.all(cues.map(async cue => ({
-          cue, buffer: await this.buffer(this.pick(cue.event), job.controller.signal),
-        })));
+        const motion = scene?.motion || [];
+        const signal = job.controller.signal;
+        const [prepared] = await Promise.all([
+          Promise.all(cues.map(async cue => ({ cue, buffer: await this.buffer(this.pick(cue.event), signal) }))),
+          this.adapter.prepareMotion?.(motion, signal),
+        ]);
         if (job !== this.job || !this.adapter.active()) return;
         job.start = this.context.currentTime + 0.06;
         job.duration = scene?.duration || prepared[0].buffer.duration;
-        job.motion = scene?.motion || [];
+        job.motion = motion;
         if (job.motion.length) this.adapter.resume();
         for (const {cue,buffer} of prepared) {
           const node = this.context.createBufferSource();

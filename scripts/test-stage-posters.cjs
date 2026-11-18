@@ -8,6 +8,8 @@ if (coverOption >= 0) assert.ok(args[coverOption + 1], '--bd2-cover-root needs a
 const bd2CoverRoot = coverOption >= 0 ? path.resolve(args[coverOption + 1]) : null;
 const posterRoot = path.join(root,fs.existsSync(path.join(root,'posters'))?'posters':'web-posters');
 const index = JSON.parse(fs.readFileSync(path.join(posterRoot,'index.json'),'utf8'));
+const thumbIndex = path.join(root, 'thumbs', 'index.json');
+const webThumbs = fs.existsSync(thumbIndex) ? JSON.parse(fs.readFileSync(thumbIndex,'utf8')).items : {};
 let checks=0;const check=(value,label)=>{assert.ok(value,label);checks++;};
 
 const K = {};
@@ -35,7 +37,7 @@ for (const {game, catalog, source, viewer, sourceViewer} of routes) {
   const html = fs.readFileSync(path.join(root, fs.existsSync(path.join(root, viewer)) ? viewer : sourceViewer), 'utf8').replace(/\r\n/g, '\n');
   const helper = html.match(/function stagePreviewPath\([^)]*\) \{[\s\S]*?\n  \}/);
   check(helper, game + ': test the real preview selector');
-  const context = vm.createContext({K, routeSource: game, THUMB_PREFIX: '../../thumbs/', webThumbs: {}});
+  const context = vm.createContext({K, routeSource: game, THUMB_PREFIX: '../../thumbs/', webThumbs});
   vm.runInContext(helper[0], context);
   const sitePath = '/arthub-viewer-web/';
   location.pathname = sitePath + viewer;
@@ -68,6 +70,10 @@ for (const {game, catalog, source, viewer, sourceViewer} of routes) {
         check(character.thumbnail === 'bd2/portraits/' + character.id + '.webp' && relative === 'thumbs/' + character.thumbnail,
           key + ': matching catalog portrait cover');
         if (bd2CoverRoot) checkWebp(path.join(bd2CoverRoot, character.thumbnail), key);
+        previewCounts.catalog++;
+      } else if (game === 'bd2' && character.resourceType === 'lobby' || game === 'nikki' && (variant.wallpaperId || variant.variant === 'HD')) {
+        check(webThumbs[key] && relative === 'thumbs/' + webThumbs[key], key + ': reuse matching catalog cover');
+        checkWebp(path.join(root, relative), key);
         previewCounts.catalog++;
       } else {
         check(index.items[key] && relative === 'posters/' + index.items[key].path, key + ': matching dedicated poster');

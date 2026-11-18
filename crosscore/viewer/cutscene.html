@@ -1201,14 +1201,7 @@
         const b = document.createElement('button');
         b.className = 'anim-row' + (a.name === curName ? ' on' : '');
         b.innerHTML = '<span class="an">' + K.esc(a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
-        b.onclick = () => {
-          animSel.value = a.name;
-          playAnimation(a.name);
-          const lc = store.get('lastChar', {});
-          lc.anim = a.name;
-          store.set('lastChar', lc);
-          refresh();
-        };
+        b.onclick = () => selectAnimation(a.name);
         listEl.appendChild(b);
         shown++;
       }
@@ -1700,6 +1693,17 @@
       }
     } catch {}
     return bounds || target.bounds || null;
+  }
+
+  function selectAnimation(name) {
+    if (!cut) return;
+    animSel.value = name;
+    if (!boneEditMode && !partEditMode) playing = true;
+    playAnimation(name);
+    setPlayBtn();
+    const last = store.get('lastChar', {});
+    last.anim = name;
+    store.set('lastChar', last);
   }
 
   function playAnimation(name, options = {}) {
@@ -2260,14 +2264,7 @@
       if (partsCtl) partsCtl.refresh();
       updatePartsBadge();
       animSel.value = def;
-      animSel.onchange = () => {
-        if (cut) {
-          playAnimation(animSel.value);
-          const lc = store.get('lastChar', {});
-          lc.anim = animSel.value;
-          store.set('lastChar', lc);
-        }
-      };
+      animSel.onchange = () => selectAnimation(animSel.value);
       if (animCtl) animCtl.refresh();
       playAnimation(def);
       refreshPoseList();

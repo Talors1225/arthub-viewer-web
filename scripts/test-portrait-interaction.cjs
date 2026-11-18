@@ -107,7 +107,7 @@ assert.ok(mode, 'test the real explicit mode switch');
 const changes = [];
 const panelClasses = new Set();
 const buttonAttrs = {};
-const modeState = {routeSource:'nikki',boneEditMode:false,partEditMode:false,highlightSlot:'body',
+const modeState = {routeSource:'nikki',boneEditMode:false,partEditMode:false,highlightSlot:'body',cut:null,
   burstPending:null,burstSession:null,panelUI:null,parkSkillBurst:()=>changes.push('park-burst'),
   stage:{dataset:{}},btnPartEdit:{classList:{toggle(){}},setAttribute:(k,v)=>{buttonAttrs[k]=v;}},
   floatPanel:{dataset:{},classList:{contains:k=>panelClasses.has(k),remove:k=>panelClasses.delete(k)}},
@@ -116,6 +116,8 @@ const modeState = {routeSource:'nikki',boneEditMode:false,partEditMode:false,hig
   setFloatPanel:tab=>{modeState.floatPanel.dataset.tab=tab;panelClasses.add('open');},
   K:{toast:()=>changes.push('toast')},btnBoneEdit:{click:()=>{modeState.boneEditMode=false;}}};
 vm.createContext(modeState);
+const updateClickMode = html.match(/function updateStageClickMode\(\) \{[\s\S]*?\n  \}/);
+if (updateClickMode) vm.runInContext(updateClickMode[0], modeState);
 vm.runInContext('setMode = (enabled) => {' + mode[1] + '\n};',modeState);
 modeState.setMode(true);
 assert.equal(modeState.stage.dataset.clickMode,'part-editing'); checks++;

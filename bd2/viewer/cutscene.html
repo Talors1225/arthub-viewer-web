@@ -421,7 +421,7 @@
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
-<script src="./voice.js"></script>
+<script src="./voice.js?v=20261118-skill-scenes"></script>
 <script>
 
 (() => {
@@ -1116,7 +1116,7 @@
     invEl: $('#partInv'),
     getTargets: () => (cut ? cutLayers(cut) : null),
     onHover: (name) => { highlightSlot = name; },
-    onChange: () => { persistHidden(); updatePartsBadge(); },
+    onChange: () => { persistHidden(); updatePartsBadge(); syncBackgroundButton(); },
   });
   function persistHidden() {
     if (!cur || !cut) return;
@@ -1185,14 +1185,7 @@
         const b = document.createElement('button');
         b.className = 'anim-row' + (a.name === curName ? ' on' : '');
         b.innerHTML = '<span class="an">' + K.esc(a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
-        b.onclick = () => {
-          animSel.value = a.name;
-          playAnimation(a.name);
-          const lc = store.get('lastChar', {});
-          lc.anim = a.name;
-          store.set('lastChar', lc);
-          refresh();
-        };
+        b.onclick = () => selectAnimation(a.name);
         listEl.appendChild(b);
         shown++;
       }
@@ -1507,7 +1500,18 @@
     store.set('loop', loopAnim);
     if (cut && animSel.value) playAnimation(animSel.value);
   });
-  pbPlay.addEventListener('click', () => { playing = !playing; if (!playing) bd2Voice?.stop(); setPlayBtn(); });
+  function resumePlayback() {
+    const track = getTrack();
+    if (track && !track.loop && track.trackTime >= track.animation.duration) seekTo(0);
+    playing = true;
+    setPlayBtn();
+  }
+  pbPlay.addEventListener('click', () => {
+    if (!playing) { resumePlayback(); return; }
+    playing = false;
+    bd2Voice?.stop();
+    setPlayBtn();
+  });
   pbSpeed.addEventListener('input', () => {
     bd2Voice?.stop();
     pbSpeedVal.textContent = fmtSpeed(pbSpeed.value);
@@ -1533,6 +1537,7 @@
         if (playing && layer.state && !voiceDrivesMotion) layer.state.update(dt);
         if (layer.state && !boneEditMode) layer.state.apply(layer.skeleton);
         if (poseLocked && !boneEditMode && layer === cutLayers()[0]) applyPoseToSkeleton(layer.skeleton, poseLocked);
+        placeScenePrimary(cut, layer);
         K.updateWorldTransform(layer.skeleton);
         K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
       }
@@ -1551,13 +1556,15 @@
         raw.clearColor(c[0], c[1], c[2], 1);
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
-      const clip = cut && stageFrameForLoop();
+      const clip = cut && stageFrame();
       if (clip) {
-        const sk = cut.skeleton;
-        const x = Math.floor(cv.width / 2 + sk.x + clip.minX * sk.scaleX);
-        const y = Math.floor(cv.height / 2 + sk.y + clip.minY * sk.scaleY);
+        const { scale, x, y } = cut.view;
+        const left = Math.floor(cv.width / 2 + x + clip.minX * scale);
+        const bottom = Math.floor(cv.height / 2 + y + clip.minY * scale);
+        const right = Math.ceil(cv.width / 2 + x + clip.maxX * scale);
+        const top = Math.ceil(cv.height / 2 + y + clip.maxY * scale);
         raw.enable(raw.SCISSOR_TEST);
-        raw.scissor(x, y, Math.ceil((clip.maxX - clip.minX) * sk.scaleX), Math.ceil((clip.maxY - clip.minY) * sk.scaleY));
+        raw.scissor(left, bottom, right - left, top - bottom);
       }
       renderer.begin();
       if (cut) for (const layer of drawCutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
@@ -1601,22 +1608,34 @@
     ['021291', { minX: -910, minY: -2110, maxX: 560, maxY: 710 }],
     ['067491', { minX: -1430, minY: -1730, maxX: 1400, maxY: 750 }],
   ]);
-  function stageFrameForLoop() {
-    return !cmpOn && (cut?.sourceVariant.backgroundFrames?.[animSel.value] || (animSel.value === 'loop' && loopStageFrames.get(cur?.id)));
+  function stageFrame() {
+    return !cmpOn && (artworkExportFrame(animSel.value) || (animSel.value === 'loop' && loopStageFrames.get(cur?.id)));
   }
 
   // ---------- 视图 ----------
   function computeView() {
     if (!cut) return;
-    const b = stageFrameForLoop() || cut.bounds;
+    const b = stageFrame() || cut.bounds;
     cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
     cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
     const area = K.stageViewArea(cv);
     cut.fitScale = Math.min((area.pixelWidth * 0.96) / Math.max(1, b.maxX - b.minX), (area.pixelHeight * 0.96) / Math.max(1, b.maxY - b.minY));
     cut.fitOffsetX = area.offsetX; cut.fitOffsetY = area.offsetY;
   }
-  function placeSceneLayer(layer, scale, x, y) {
-    const placement = layer.source?.scenePlacement;
+  function placementAt(poses, time) {
+    if (!poses?.length) return;
+    let start = 0, end = poses.length - 1;
+    while (end - start > 1) {
+      const mid = (start + end) >>> 1;
+      if (poses[mid][0] <= time) start = mid;
+      else end = mid;
+    }
+    const a = poses[start], b = poses[end];
+    const mix = a === b ? 0 : Math.max(0, Math.min(1, (time - a[0]) / (b[0] - a[0])));
+    const value = index => a[index] + (b[index] - a[index]) * mix;
+    return { scaleX: value(1), scaleY: value(2), x: value(3), y: value(4) };
+  }
+  function placeSceneLayer(layer, scale, x, y, placement = layer.source?.scenePlacement) {
     const skeleton = layer.skeleton;
     skeleton.scaleX = scale * (placement?.scaleX ?? 1);
     skeleton.scaleY = scale * (placement?.scaleY ?? 1);
@@ -1629,7 +1648,11 @@
     const scale = fitMode ? ((cmpOn && cmp) ? cmp.fitScale : cut.fitScale) : userScale;
     const x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
     const y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
-    for (const layer of cutLayers()) placeSceneLayer(layer, scale, x, y);
+    cut.view = { scale, x, y };
+    const pose = placementAt(cut.scene?.primaryMotion, getTrack()?.getAnimationTime() ?? 0);
+    for (const layer of cutLayers()) {
+      placeSceneLayer(layer, scale, x, y, layer.skeleton === cut.skeleton ? pose : undefined);
+    }
     if (cmpOn && cmp) {
       cmp.skeleton.scaleX = scale;
       cmp.skeleton.scaleY = scale;
@@ -1695,7 +1718,7 @@
         state.apply(sample);
         K.updateWorldTransform(sample);
         K.applyHiddenSlots(sample, target.hiddenSlots);
-        bounds = mergeBounds(bounds, K.measureBounds(sample, SP));
+        bounds = mergeBounds(bounds, K.measureBounds(sample, SP, false));
       }
     } catch {}
     return bounds || target.bounds || null;
@@ -1703,8 +1726,12 @@
 
   function playAnimation(name, options = {}) {
     if (!cut) return;
+    animSel.value = name;
     if (!options.bd2VoiceTimeline) bd2Voice?.stop();
     portraitAudio?.animationChanged(name, options);
+    if (cut.scene?.skill && !cut.scene.frame) {
+      cut.scene.frame = measureAnimationBounds(cut.baseLayers[0], name);
+    }
     let bounds = null;
     for (const layer of cutLayers()) {
       const layerName = layerAnimationName(layer, name);
@@ -1722,6 +1749,7 @@
       if (layer.active) {
         K.updateWorldTransform(layer.skeleton);
         K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
+        if (cut.scene?.frame && !cmpOn) continue;
         const layerBounds = layer.source && layer.source.static
           ? layer.bounds
           : (layerName ? measureAnimationBounds(layer, layerName) : layer.bounds);
@@ -1738,12 +1766,14 @@
       K.updateWorldTransform(cmp.skeleton);
     }
     if (bounds) cut.bounds = bounds;
+    syncBackgroundButton();
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
       if (cmpBounds) cmp.bounds = cmpBounds;
     }
     if (animCtl) animCtl.refresh();
     if (fitMode && !options.keepView) refit();
+    else applyView();
     pbLoop.classList.toggle('active', options.loop ?? loopAnim);
     syncTimeline();
     syncUrl(name);
@@ -1877,7 +1907,8 @@
         if (msg.command === 'getCapabilities') {
           playerPost('capabilities', playerCapabilities(), msg.requestId);
         } else if (msg.command === 'play') {
-          playing = true; setPlayBtn(); playerPlayback(msg.requestId);
+          if (!playing) resumePlayback();
+          playerPlayback(msg.requestId);
         } else if (msg.command === 'pause') {
           playing = false; setPlayBtn(); playerPlayback(msg.requestId);
         } else if (msg.command === 'seek') {
@@ -1890,7 +1921,10 @@
         } else if (msg.command === 'setAnimation') {
           const name = String(p.name || '');
           if (!cut || !cut.data.animations.some(a => a.name === name)) throw new Error('动画不存在: ' + name);
-          animSel.value = name; playAnimation(name); playerPlayback(msg.requestId);
+          changeAnimation(name).then(changed => {
+            if (changed) playerPlayback(msg.requestId);
+            else replyError(new Error('动作切换已取消'));
+          }).catch(replyError);
         } else if (msg.command === 'setParts') {
           const changes = Array.isArray(p.parts) ? p.parts : [];
           for (const change of changes) {
@@ -1948,7 +1982,11 @@
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
     vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
-    vs.onchange = () => loadCutscene(Number(vs.value));
+    vs.onchange = () => {
+      const variant = Number(vs.value);
+      store.set('lastChar', { id: c.id, variant, anim: animSel.value });
+      loadCutscene(variant);
+    };
     updateCompareBtn();
     animSel.innerHTML = '<option>读取中…</option>';
     const startVar = restore && restore.variant != null ? restore.variant : 0;
@@ -1960,6 +1998,8 @@
     if (!cur) return;
     const p = new URLSearchParams(location.search);
     p.set('id', cur.id);
+    if (cur.cutscenes.length > 1) p.set('v', cut.variant);
+    else p.delete('v');
     if (animName) p.set('anim', animName); else p.delete('anim');
     const q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
@@ -2009,6 +2049,12 @@
     if (source.static) return true;
     return !!layerAnimationName(layer, name);
   }
+  function placeScenePrimary(target, layer) {
+    if (!target.scene?.primaryMotion || !target.view || layer.skeleton !== target.skeleton) return;
+    const { scale, x, y } = target.view;
+    const time = layer.state.getCurrent(0)?.getAnimationTime() ?? 0;
+    placeSceneLayer(layer, scale, x, y, placementAt(target.scene.primaryMotion, time));
+  }
   function applyCutHidden(target = cut) {
     for (const layer of cutLayers(target)) {
       if (layer && layer.hiddenSlots) K.applyHiddenSlots(layer.skeleton, layer.hiddenSlots);
@@ -2020,6 +2066,7 @@
       // Scene layers with only geometry and color curves do not restore hidden attachments.
       if (layer.source?.originalBackground || layer.source?.static) layer.skeleton.setSlotsToSetupPose();
       if (layer.state) layer.state.apply(layer.skeleton);
+      placeScenePrimary(target, layer);
       K.updateWorldTransform(layer.skeleton);
       if (layer.hiddenSlots) K.applyHiddenSlots(layer.skeleton, layer.hiddenSlots);
     }
@@ -2028,7 +2075,8 @@
     bd2Voice?.select(null);
     portraitAudio?.reset();
     if (cut) {
-      for (const layer of cutLayers(cut)) disposeAtlas(layer.atlas);
+      cut.animationRequest?.controller.abort();
+      for (const atlas of new Set(cutLayers(cut).map(layer => layer.atlas))) disposeAtlas(atlas);
       cut = null;
       if (partsCtl) partsCtl.refresh();
       if (animCtl) animCtl.refresh();
@@ -2129,6 +2177,14 @@
   $('#railCompare').addEventListener('click', () => toggleCompare());
   let cutRequest = null;
   let originalScenesRequest = null;
+  let skillScenesRequest = null;
+  function loadSkillSceneIndex() {
+    if (!skillScenesRequest) {
+      skillScenesRequest = K.fetchJSON('../skill-scenes.json?v=2', { timeout: 12000 })
+        .catch(() => { skillScenesRequest = null; return null; });
+    }
+    return skillScenesRequest;
+  }
   function loadOriginalSceneIndex() {
     if (!originalScenesRequest) {
       originalScenesRequest = K.fetchJSON('../background-scenes.json?v=20261117-bd2-scenes', { timeout: 12000 })
@@ -2148,8 +2204,10 @@
       atlas = files.atlas;
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
       const loader = new SP.AtlasAttachmentLoader(atlas);
-      const data = reuse ? baseLayer.data : (entry.format === 'json' || /\.json$/i.test(entry.skel)
-        ? new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(files.bytes)))
+      const json = !reuse && (entry.format === 'json' || /\.json$/i.test(entry.skel))
+        ? JSON.parse(new TextDecoder().decode(files.bytes)) : null;
+      const data = reuse ? baseLayer.data : (json
+        ? new SP.SkeletonJson(loader).readSkeletonData(json)
         : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes));
       const skeleton = new SP.Skeleton(data);
       skeleton.setToSetupPose();
@@ -2158,17 +2216,126 @@
       const state = new SP.AnimationState(stateData);
       K.updateWorldTransform(skeleton);
       return { source: entry, skeleton, data, state, atlas, bounds: K.measureBounds(skeleton, SP),
-        pma: !!atlas.pages[0]?.pma, active: true };
+        pma: !!atlas.pages[0]?.pma, active: true, primaryMotion: json?.artHubPlacement };
     } catch (error) { if (!reuse) K.disposeAtlas(atlas); throw error; }
+  }
+
+  function disposeSceneLayers(target, layers) {
+    const baseAtlases = new Set(target.baseLayers.map(layer => layer.atlas));
+    for (const atlas of new Set(layers.map(layer => layer.atlas))) {
+      if (!baseAtlases.has(atlas)) K.disposeAtlas(atlas);
+    }
+  }
+
+  async function loadAnimationScene(target, name, signal) {
+    if (target.scene?.name === name && !target.scene.failed) return target.scene;
+    let entries = target.originalScene?.compositeLayers.filter(layer => layer.activeWhen.includes(name)) || [];
+    let frame = target.originalScene?.frames?.[name];
+    let skill = false;
+    if (!entries.length && target.skillIndex && target.sceneId) {
+      const scene = (await target.skillIndex)?.[target.sceneId]?.[target.variant]?.[name];
+      entries = scene?.layers || [];
+      frame = scene?.frame;
+      skill = Boolean(scene);
+    }
+    if (signal.aborted) return null;
+    const results = await Promise.allSettled(entries.map(entry =>
+      loadCompositeLayer(entry, target.SP, target.seq, signal, target.baseLayers[0])));
+    const layers = results.filter(result => result.status === 'fulfilled').map(result => result.value);
+    const failed = results.some(result => result.status === 'rejected');
+    if (signal.aborted || failed) {
+      disposeSceneLayers(target, layers);
+      return signal.aborted ? null : { name, layers: [], failed };
+    }
+    return { name, layers, frame, skill, primaryMotion: layers.find(layer => layer.primaryMotion)?.primaryMotion };
+  }
+
+  function useAnimationScene(target, scene) {
+    if (target.scene === scene) return;
+    if (target.scene && target.voiceScenes?.get(target.scene.name) !== target.scene) {
+      disposeSceneLayers(target, target.scene.layers);
+    }
+    target.scene = scene;
+    target.layers = [...target.baseLayers, ...scene.layers];
+    for (const layer of scene.layers) {
+      layer.hiddenSlots = target.hiddenSlots;
+      if (target.originalBackgroundHidden && layer.source.originalBackground) {
+        hideBackgroundSlots(target, layer.data.slots.map(slot => slot.name));
+      }
+    }
+  }
+
+  async function prepareVoiceMotion(motions, signal) {
+    const target = cut;
+    if (!target || !motions.length) return;
+    const names = [...new Set(motions.map(clip => clip.animation))]
+      .filter(name => target.data.animations.some(anim => anim.name === name));
+    const scenes = await Promise.all(names.map(name => loadAnimationScene(target, name, signal)));
+    if (signal.aborted || target !== cut) {
+      disposeSceneLayers(target, scenes.filter(scene => scene && scene !== target.scene).flatMap(scene => scene.layers));
+      return;
+    }
+    target.voiceScenes = new Map(scenes.filter(Boolean).map(scene => [scene.name, scene]));
+  }
+
+  function releaseVoiceMotion() {
+    if (!cut?.voiceScenes) return;
+    const previous = [...cut.voiceScenes.values()].filter(scene => scene !== cut.scene);
+    cut.voiceScenes = null;
+    disposeSceneLayers(cut, previous.flatMap(scene => scene.layers));
+  }
+
+  async function changeAnimation(name, options = {}) {
+    const target = cut;
+    if (K.pngExporting || !target?.data.animations.some(anim => anim.name === name)) return false;
+    animSel.value = getTrack().animation.name;
+    target.animationRequest?.controller.abort();
+    const request = { controller: new AbortController() };
+    target.animationRequest = request;
+    if (target.scene?.name !== name && target.skillIndex) status('加载场景 · ' + name);
+    try {
+      const prepared = options.bd2VoiceTimeline && target.voiceScenes?.get(name);
+      const scene = prepared || await loadAnimationScene(target, name, request.controller.signal);
+      if (!scene || K.pngExporting || target !== cut || request !== target.animationRequest || (options.current && !options.current())) {
+        if (scene && scene !== target.scene && !prepared) disposeSceneLayers(target, scene.layers);
+        return false;
+      }
+      useAnimationScene(target, scene);
+      if (options.resume && !boneEditMode && !partEditMode) {
+        playing = true;
+        setPlayBtn();
+      }
+      playAnimation(name, options);
+      partsCtl?.refresh();
+      updatePartsBadge();
+      if (scene.failed) K.toast('场景背景读取失败，可重新点选动作重试', 'info');
+      status((cur.name || cur.id) + ' · ' + target.data.animations.length + ' 动作');
+      return true;
+    } finally {
+      if (target.animationRequest === request) target.animationRequest = null;
+    }
+  }
+
+  async function selectAnimation(name) {
+    bd2Voice?.stop();
+    try {
+      if (!await changeAnimation(name, { resume: true })) return;
+      const last = store.get('lastChar', {});
+      last.anim = name;
+      store.set('lastChar', last);
+    } catch (error) {
+      K.toast('动作切换失败 · ' + error.message, 'err');
+    }
   }
 
   function stagePreviewPath(v) {
     if (routeSource === 'bd2' && cur.thumbnail) return THUMB_PREFIX + cur.thumbnail;
-    if (routeSource === 'crosscore') {
+    if (routeSource === 'crosscore' || (routeSource === 'bd2' && cur.resourceType === 'lobby')) {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
       return thumbnail ? THUMB_PREFIX + thumbnail : null;
     }
-    return K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
+    const poster = K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
+    return poster && routeSource === 'bd2' ? poster + '?v=bd2-skill-covers-20261118' : poster;
   }
 
   async function loadCutscene(idx, restoreAnim) {
@@ -2182,8 +2349,9 @@
     highlightSlot = null;
     const v = cur.cutscenes[idx] || cur.cutscenes[0];
     const sceneId = cur.id;
-    const sceneIndex = routeSource === 'bd2' && cur.resourceType === 'cutscene' && v === cur.cutscenes[0]
-      ? loadOriginalSceneIndex() : null;
+    const withOriginalScenes = routeSource === 'bd2' && cur.resourceType === 'cutscene';
+    const sceneIndex = withOriginalScenes && v === cur.cutscenes[0] ? loadOriginalSceneIndex() : null;
+    const skillIndex = withOriginalScenes ? loadSkillSceneIndex() : null;
     if (!v) { loadingPreview.cancel(); status((cur.name || cur.id) + ' · 无过场'); return; }
     loadingPreview.begin(seq, { path: stagePreviewPath(v), label: aliasOf(cur.id) || cur.name || cur.id, trimImage: routeSource === 'crosscore' });
     status('加载: ' + (cur.name || cur.id) + ' …');
@@ -2220,73 +2388,63 @@
         || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
         || data.animations.find(a => /^loop/i.test(a.name))
         || data.animations[0];
-      const def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)
-        || (previewAnim && previewAnim.name);
+      const requested = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null);
+      let def = requested || previewAnim?.name;
       state.setAnimation(0, def, loopAnim);
       state.update(0);
       state.apply(skeleton);
       K.updateWorldTransform(skeleton);
       const stageNS = K.getSpine(cur && cur.spineVersion);
-      let bounds = K.measureBounds(skeleton, stageNS);
+      let bounds = K.measureBounds(skeleton, stageNS, false);
       if (!bounds && data.skins && data.skins.length) {
         // 部分 4.0 模型附件挂在皮肤上, 不设皮肤量不出包围盒
         const skin = data.skins.find(s => s.name === 'default') || data.skins[0];
         try { skeleton.setSkin(skin); skeleton.setSlotsToSetupPose(); state.apply(skeleton); K.updateWorldTransform(skeleton); } catch {}
-        bounds = K.measureBounds(skeleton, stageNS);
+        bounds = K.measureBounds(skeleton, stageNS, false);
       }
-      if (!bounds) throw new Error('empty bounds');
+      if (!bounds) {
+        const sample = { source: v, data };
+        bounds = measureAnimationBounds(sample, def);
+        for (const animation of data.animations) {
+          if (bounds) break;
+          if (animation.name === def) continue;
+          bounds = measureAnimationBounds(sample, animation.name);
+          if (bounds && !requested) def = animation.name;
+        }
+      }
+      if (!bounds) throw new Error('骨架没有可见画面');
       if (seq !== cutLoadSeq) { disposeAtlas(atlas); return; }
       const baseLayer = {
         source: v, skeleton, data, state, atlas, bounds,
         pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma),
         active: true,
       };
-      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds,
-              centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(), layers: [baseLayer], pma: baseLayer.pma };
-      const scene = sceneIndex ? (await sceneIndex)?.[sceneId] : null;
+      const originalScene = sceneIndex ? (await sceneIndex)?.[sceneId] : null;
       if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
-      const requiredLayers = v.compositeLayers || [];
-      const sceneryLayers = scene?.compositeLayers || [];
-      const results = await Promise.allSettled([...requiredLayers, ...sceneryLayers].map(layerEntry =>
-        loadCompositeLayer(layerEntry, SP, seq, request.signal, baseLayer)));
+      const results = await Promise.allSettled((v.compositeLayers || []).map(entry =>
+        loadCompositeLayer(entry, SP, seq, request.signal, baseLayer)));
       loadedLayers = results.filter(result => result.status === 'fulfilled').map(result => result.value);
-      const requiredResults = results.slice(0, requiredLayers.length);
-      const requiredFailure = requiredResults.find(result => result.status === 'rejected');
-      if (requiredFailure) throw requiredFailure.reason;
-      if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
+      const failure = results.find(result => result.status === 'rejected');
+      if (failure) throw failure.reason;
 
-      const sceneryResults = results.slice(requiredLayers.length);
-      if (sceneryResults.some(result => result.status === 'rejected')) {
-        // Omit the complete scene if a background request fails, so a stray foreground cannot cover the base pose.
-        const keep = requiredResults.map(result => result.value);
-        const keptAtlases = new Set([baseLayer.atlas, ...keep.map(layer => layer.atlas)]);
-        const unused = new Set(loadedLayers.map(layer => layer.atlas).filter(atlas => !keptAtlases.has(atlas)));
-        for (const atlas of unused) K.disposeAtlas(atlas);
-        loadedLayers = keep;
-      } else if (sceneryLayers.length) {
-        target.sourceVariant = { ...v, compositeLayers: [...requiredLayers, ...sceneryLayers], backgroundFrames: scene.frames };
+      const target = { variant: String(v.variant ?? idx), sourceVariant: v, skeleton, data, state, atlas, bounds,
+        centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(), baseLayers: [baseLayer, ...loadedLayers],
+        pma: baseLayer.pma, originalScene, skillIndex, sceneId, seq, SP, backgroundToggleSlots: new Set() };
+      const scene = await loadAnimationScene(target, def, request.signal);
+      if (!scene || seq !== cutLoadSeq) {
+        if (scene) disposeSceneLayers(target, scene.layers);
+        throw new DOMException('加载已取消', 'AbortError');
       }
-      target.layers.push(...loadedLayers);
+      useAnimationScene(target, scene);
       cut = target;
-      $('#btnOriginalBackground').hidden = !cut.layers.some(l=>l.source.originalBackground);
-      $('#btnOriginalBackground').textContent = '隐藏原背景';
       bd2Voice?.select(cur.id, v.variant ?? idx);
       for (const layer of cut.layers) layer.hiddenSlots = cut.hiddenSlots;
 
       restoreHidden();
-      if (partsCtl) partsCtl.refresh();
-      updatePartsBadge();
-      animSel.value = def;
-      animSel.onchange = () => {
-        if (cut) {
-          playAnimation(animSel.value);
-          const lc = store.get('lastChar', {});
-          lc.anim = animSel.value;
-          store.set('lastChar', lc);
-        }
-      };
-      if (animCtl) animCtl.refresh();
+      animSel.onchange = () => selectAnimation(animSel.value);
       playAnimation(def);
+      partsCtl?.refresh();
+      updatePartsBadge();
       refreshPoseList();
       if (fitMode) refit(); else set100();
       status((cur.name || cur.id) + ' · ' + data.animations.length + ' 动画 · ' + data.bones.length + ' 骨骼 · ' + cut.layers.length + ' 层');
@@ -2313,12 +2471,15 @@
   // The loop includes a separate shadow far from the portrait.
   const seirLoopFrame = { minX: -1460, minY: -2020, maxX: 1080, maxY: 940 };
   function artworkExportFrame(animation) {
+    if (cut?.scene?.name === animation && cut.scene.frame) return cut.scene.frame;
     if (cut?.sourceVariant.backgroundFrames?.[animation]) return cut.sourceVariant.backgroundFrames[animation];
     if (cut?.sourceVariant.skel === 'cutscene_char101101.skel.bytes' && animation === 'loop') return seirLoopFrame;
   }
   function pngPose(quality) {
-    const skeletons = cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
-    return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), artworkExportFrame(animSel.value));
+    const skeletons = drawCutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
+    const { scale, x, y } = cut.view;
+    return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion),
+      artworkExportFrame(animSel.value), { scaleX: scale, x, y });
   }
 
   // ---------- 动画导出：GIF 和视频均为两档 ----------
@@ -2332,7 +2493,9 @@
     const exportBackground = getBg();
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
-    const sourceVariant = cut.sourceVariant;
+    const sources = drawCutLayers().filter(layer => layer.active !== false).map(layer => layer.source);
+    const primarySource = cut.sourceVariant;
+    const primaryMotion = cut.scene?.primaryMotion;
     const frame = artworkExportFrame(animName);
     const kind = video ? 'video' : 'gif';
     const hiddenSlots = new Set(cut.hiddenSlots);
@@ -2355,7 +2518,7 @@
       // WebGL textures belong to their context. Reparse with an atlas loaded
       // into the export context instead of reusing the stage's attachments.
       const exportLayers = [], models = new Map();
-      for (const source of [sourceVariant, ...(sourceVariant.compositeLayers || [])].sort((a,b)=>(a.renderOrder || 0)-(b.renderOrder || 0))) {
+      for (const source of sources) {
         const base = '../' + source.dir, key = base + source.atlas + '|' + source.skel;
         let model = models.get(key);
         if (!model) {
@@ -2381,7 +2544,7 @@
           if (!L.active) continue;
           const track = L.state.getCurrent(0); if (track) track.trackTime = time;
           L.state.apply(L.skeleton);
-          placeSceneLayer(L, scale, x, y);
+          placeSceneLayer(L, scale, x, y, L.source === primarySource ? placementAt(primaryMotion, time) : undefined);
           K.updateWorldTransform(L.skeleton); K.applyHiddenSlots(L.skeleton, hiddenSlots);
         }
       };
@@ -2488,9 +2651,9 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON('../../thumbs/index.json?v=20261117-bd2-scene-covers').then(td => {
+    const thumbnails = K.fetchJSON('../../thumbs/index.json?v=bd2-skill-covers-20261118').then(td => {
       webThumbs = td.items || {};
-      if (routeSource === 'crosscore' && cur) {
+      if (cur && (routeSource === 'crosscore' || cur.resourceType === 'lobby')) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
         if (variant) loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
       }
@@ -2506,7 +2669,11 @@
     const last = store.get('lastChar', {});
     if (byUrl || embedded) {
       const first = byUrl || chars.find(x => x.id === last.id) || chars[0];
-      if (first) { selectChar(first, byUrl ? { anim: params.get('anim') } : last); closeGrid(); }
+      if (first) {
+        const variant = first.cutscenes.findIndex((v, index) => String(v.variant ?? index) === params.get('v'));
+        selectChar(first, byUrl ? { variant: Math.max(0, variant), anim: params.get('anim') } : last);
+        closeGrid();
+      }
       else status('没有可用资源');
     } else {
       openGrid();
@@ -2514,14 +2681,36 @@
     }
   }
 
+  function backgroundSlotNames() {
+    return cutLayers().filter(layer => layer.active !== false && layer.source.originalBackground)
+      .flatMap(layer => layer.data.slots.map(slot => slot.name));
+  }
+  function syncBackgroundButton() {
+    const names = backgroundSlotNames();
+    const button = $('#btnOriginalBackground');
+    button.hidden = !names.length;
+    button.textContent = names.some(name => !cut.hiddenSlots.has(name)) ? '隐藏原背景' : '显示原背景';
+  }
+  function hideBackgroundSlots(target, names) {
+    for (const name of names) {
+      if (!target.hiddenSlots.has(name)) target.backgroundToggleSlots.add(name);
+      target.hiddenSlots.add(name);
+    }
+  }
   $('#btnOriginalBackground').onclick = () => {
     if (!cut) return;
-    const names = cutLayers().filter(l=>l.source.originalBackground).flatMap(l=>l.data.slots.map(s=>s.name));
-    const hide = names.some(name=>!cut.hiddenSlots.has(name));
-    for (const name of names) { if (hide) cut.hiddenSlots.add(name); else cut.hiddenSlots.delete(name); }
+    const names = backgroundSlotNames();
+    cut.originalBackgroundHidden = names.some(name => !cut.hiddenSlots.has(name));
+    if (cut.originalBackgroundHidden) {
+      hideBackgroundSlots(cut, names);
+    } else {
+      for (const name of [...names, ...cut.backgroundToggleSlots]) cut.hiddenSlots.delete(name);
+      cut.backgroundToggleSlots.clear();
+    }
     applyCutLayerStates();
-    $('#btnOriginalBackground').textContent = hide ? '显示原背景' : '隐藏原背景';
+    syncBackgroundButton();
     partsCtl?.refresh();
+    updatePartsBadge();
   };
   $('#btnRetry').onclick = () => { if (cur) loadCutscene(Number(variantSel.value), animSel.value); else loadChars().catch(e => status(e.message)); };
   $('#btnGlobalSearch').onclick = () => K.openSearchPalette?.();
@@ -2880,11 +3069,17 @@
         active: () => Boolean(cut && stageMode && !boneEditMode && !partEditMode && !K.pngExporting && !document.hidden),
         error: message => K.toast(message, 'err', 3000, 'voice'),
         resume: () => { playing = true; setPlayBtn(); },
+        prepareMotion: prepareVoiceMotion,
+        releaseMotion: releaseVoiceMotion,
         motion: (clip, time, changed) => {
+          const job = bd2Voice.job;
           if (changed) {
-            animSel.value = clip.animation;
-            playAnimation(clip.animation, {loop:clip.loop, keepView:true, bd2VoiceTimeline:true});
+            changeAnimation(clip.animation, {
+              loop: clip.loop, keepView: true, bd2VoiceTimeline: true,
+              current: () => bd2Voice.job === job,
+            }).catch(error => K.toast(error.message, 'err'));
           }
+          if (getTrack()?.animation.name !== clip.animation) return;
           for (const layer of cutLayers()) {
             const track = layer.state?.getCurrent(0);
             if (track) track.trackTime = time;

@@ -149,11 +149,11 @@ for (const file of viewers) {
   const raw = {isContextLost: () => false, clearColor() {}, clear() {}, disable() {}};
   const renderer = {begin() {}, drawSkeleton() {}, end() {}};
   const size = {width: 390, height: 700};
-  const base = {cut: {drawLayers: [layer]}, cutLayers: () => [layer], layers: [layer], cv: size, canvas: size,
+  const base = {cut: {drawLayers: [layer]}, cutLayers: () => [layer], drawCutLayers: () => [layer], layers: [layer], cv: size, canvas: size,
     mgl: raw, gl: raw, renderer, cutLoadSeq: 11, loadSeq: 11, playerDrawnSeq: -1, viewerUiReady: true,
     loadingPreview: preview, getBg: () => 'checker', debugFlags: {}, highlightSlot: null, cmpOn: false, boneEditMode: false,
     K: {parseColor: (_color, fallback) => fallback, debugActive: () => false}, selIdx: -1, drawBoneMarker() {},
-    activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false, stageFrameForLoop: () => null};
+    activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false, stageFrame: () => null};
   const render = overrides => draw.runInNewContext({...base, ...overrides});
   preview.begin(11, {path: '/draw.webp'});
   const lost = {...raw, isContextLost: () => true};
@@ -187,7 +187,9 @@ for (const file of viewers) {
     env.cur = {id: 'portrait-000101', thumbnail: 'bd2/portraits/portrait-000101.webp'};
     check(env.stagePreviewPath({variant: '0'}), '../../thumbs/bd2/portraits/portrait-000101.webp', 'BD2 portrait uses its catalog cover');
     env.cur = {id: '000101'};
-    check(env.stagePreviewPath({variant: '0'}), '/arthub-viewer-web/posters/bd2/000101--0.webp', 'BD2 cutscene uses its dedicated poster');
+    const poster = new URL(env.stagePreviewPath({variant: '0'}), 'https://arthub.test');
+    check(poster.pathname, '/arthub-viewer-web/posters/bd2/000101--0.webp', 'BD2 cutscene uses its dedicated poster');
+    check(Boolean(poster.searchParams.get('v')), true, 'BD2 poster changes invalidate browser caches');
   }
   const chrome = html.match(/const isChrome = \(t\) =>[^\n]+/);
   assert.ok(chrome, file + ': test actual touch exclusion');

@@ -1487,14 +1487,7 @@
         const b = document.createElement('button');
         b.className = 'anim-row' + (!burstSession && a.name === curName ? ' on' : '');
         b.innerHTML = '<span class="an">' + K.esc(a.label || a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
-        b.onclick = () => {
-          animSel.value = a.name;
-          playAnimation(a.name);
-          const lc = store.get('lastChar', {});
-          lc.anim = a.name;
-          store.set('lastChar', lc);
-          refresh();
-        };
+        b.onclick = () => selectAnimation(a.name);
         listEl.appendChild(b);
         shown++;
       }
@@ -2052,6 +2045,17 @@
     return bounds || fallback;
   }
 
+  function selectAnimation(name) {
+    if (!cut) return;
+    animSel.value = name;
+    if (!boneEditMode && !partEditMode) playing = true;
+    playAnimation(name);
+    setPlayBtn();
+    const last = store.get('lastChar', {});
+    last.anim = name;
+    store.set('lastChar', last);
+  }
+
   function playAnimation(name, options = {}) {
     parkSkillBurst();
     if (!cut) return;
@@ -2566,7 +2570,7 @@
   function stagePreviewPath(v) {
     const cover = cur.burst?.cover;
     if (cover || v.nativeBurst) return cover || null;
-    if (routeSource === 'crosscore' || v.wallpaperId) {
+    if (routeSource === 'crosscore' || v.wallpaperId || v.variant === 'HD') {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
       return thumbnail ? THUMB_PREFIX + thumbnail : null;
     }
@@ -2689,14 +2693,7 @@
       if (partsCtl) partsCtl.refresh();
       updatePartsBadge();
       animSel.value = def;
-      animSel.onchange = () => {
-        if (cut) {
-          playAnimation(animSel.value);
-          const lc = store.get('lastChar', {});
-          lc.anim = animSel.value;
-          store.set('lastChar', lc);
-        }
-      };
+      animSel.onchange = () => selectAnimation(animSel.value);
       if (animCtl) animCtl.refresh();
       playAnimation(def);
       refreshPoseList();
@@ -2912,9 +2909,9 @@
     const thumbnailRev = routeSource === 'nikki' ? '?v=20261118-wallpaper-viewer' : '';
     const thumbnails = K.fetchJSON('../../thumbs/index.json' + thumbnailRev).then(td => {
       webThumbs = td.items || {};
-      if (cur && (routeSource === 'crosscore' || cur.resourceType === 'wallpaper')) {
-        const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
-        if (variant) loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
+      const variant = cur?.cutscenes[Number(variantSel.value)];
+      if (variant && (routeSource === 'crosscore' || variant.wallpaperId || variant.variant === 'HD')) {
+        loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
