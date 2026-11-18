@@ -2,7 +2,7 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261117-export-feedback';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredSpineFrame, authoredSpineExportFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261117-duke-normal-edge';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredSpineFrame, authoredSpineExportFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261118-azur-export-audit';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261116-forearm-pose';
@@ -489,6 +489,36 @@ interactButton.addEventListener('click', event => {
  setPanelOpen('interaction',open);
 },true);
 function spineBasic(hit){const area=selected.interaction.hitAreas.find(h=>h.id===hit);if(!area||controller.state.busy)return;let event=area.event;if(selected.id.endsWith('_hx')&&event==='TouchSpecial')event='TouchBody';const action=basicActions[event];if(action){if(!controller.action(action,{interactive:true}))sound(selected.voiceBank,motionCue(action),{voice:true});return;}const candidates=selected.animations.filter(n=>/^main_\d+$/.test(n));if(candidates.length)controller.action(candidates[Math.floor(Math.random()*candidates.length)],{interactive:true});else{const clips=selected.voice.activeClips.filter(c=>/^main_\d+$/.test(c.cue));const c=clips[Math.floor(Math.random()*clips.length)];if(c)sound(selected.voiceBank,c.cue,{voice:true});}}
+// The export renderer reuses the stage WebGL context. Keep its resized
+// canvas and successive export poses out of the visible preview.
+let exportPreview = null;
+function showExportPreview() {
+ const still = canvas.cloneNode(false);
+ still.removeAttribute('id');
+ still.setAttribute('aria-hidden', 'true');
+ still.dataset.exportPreview = '';
+ still.style.pointerEvents = 'none';
+ const context = still.getContext('2d');
+ if (!context) return;
+ context.drawImage(canvas, 0, 0);
+ const visibility = canvas.style.visibility;
+ canvas.before(still);
+ canvas.style.visibility = 'hidden';
+ exportPreview = { still, source: canvas, visibility };
+}
+function restoreExportPreview() {
+ if (!exportPreview) return;
+ exportPreview.source.style.visibility = exportPreview.visibility;
+ exportPreview.still.remove();
+ exportPreview = null;
+}
+
+const cameraLevelActions = new Set([
+ 'xinnong_5:idle18', 'baiyanjuren_4:idle3', 'qisheng_3:ex', 'qisheng_3:ex_touch',
+ 'qisheng_3:normal_touch', 'tianjinfeng_2:normal', 'tianjinfeng_3:normal',
+]);
+const currentActionKey = () => selected?.id + ':' + adapter?.timeline().name;
+
 const viewerUI=window.createInteractionViewerUI({
  animations:()=>array(selected?.animations).filter(name=>name!=='effect'||!adapter?.effectTimeline).map(name=>({name,duration:selected.motionDurations?.[name]||adapter?.duration?.(name)||0})),
  playback:()=>{const timeline=adapter?.timeline?.()||{};return {selecting:!!controller?.state.motionPending,ready:view.ready&&view.frames>2&&!exporting,key:selected?.id+':'+loadGeneration,name:timeline.name||controller?.state.motion,time:timeline.time??controller?.state.actionTime??0,duration:timeline.duration||selected?.motionDurations?.[controller?.state.motion]||0,loop:timeline.loop??$('loop').checked,playing:view.playing,speed:view.speed,canSeek:!!adapter?.seek};},
@@ -505,11 +535,23 @@ const viewerUI=window.createInteractionViewerUI({
  tools:{
   identity:()=>selected?.id+':'+loadGeneration,editor:()=>editor,name:()=>selected?.name||selected?.id||'azurlane',
   reload:()=>{const id=retryId||selected?.id;if(id)return loadModel(id).catch(fail);},openPanel:open=>setPanelOpen('interaction',open),stopAudio,
-   setExporting:value=>{if(value){stagePan.cancel();cancelInteraction();clearHint();}exporting=value;interactButton.disabled=value||!view.ready||!hasInteraction;viewerUI.update(true);},capture:(state,format,quality)=>adapter.capture(state,format,quality),
+   setExporting:value=>{
+    if (value && !exporting) {
+     stagePan.cancel();cancelInteraction();clearHint();
+     try { showExportPreview(); } catch (_) { /* Export remains available if a preview snapshot cannot be allocated. */ }
+    }
+    if (!value) restoreExportPreview();
+    exporting=value;
+    interactButton.disabled=value||!view.ready||!hasInteraction;
+    viewerUI.update(true);
+   },
+   capture:(state,format,quality)=>adapter.capture(state,format,quality),
   beforeExport:signal=>K.awaitExportTask(Promise.resolve(adapter?.prepareExport?.()),signal),
   videoDuration:state=>adapter?.videoDuration?.(state)??state.duration,setBackground:()=>{},
-  cameraLevel:()=>((selected?.id==='xinnong_5'&&adapter?.timeline().name==='idle18') || (selected?.id==='qisheng_3'&&adapter?.timeline().name==='ex') || (['tianjinfeng_2','tianjinfeng_3'].includes(selected?.id)&&adapter?.timeline().name==='normal'))?!!adapter.levelExport:null,
+  cameraLevel:()=>cameraLevelActions.has(currentActionKey()) ? !!adapter.levelExport : null,
   setCameraLevel:value=>{if(adapter)adapter.levelExport=value;},
+  cameraAngle:()=>currentActionKey()==='qisheng_3:normal_touch' ? adapter.levelAngle ?? 0 : null,
+  setCameraAngle:value=>{if(adapter)adapter.levelAngle=value;},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume,voiceTab:'voice',
   drawableOrder:part=>evidence.model?.internalModel.coreModel.getModel().drawables.renderOrders[part.index]||0,
@@ -569,6 +611,13 @@ function live2DFrameAtPose(frame, internal) {
  if (indices.some(i => i * 2 + 1 >= vertices.length)) return frame;
  const matrix = internal.localTransform;
  const points = indices.map(i => matrix.apply(new PIXI.Point(vertices[i * 2], vertices[i * 2 + 1])));
+ if (!anchor.corners && !anchor.includeCorners) {
+  // Cubism quads can list opposite corners consecutively. Walk the perimeter
+  // so the inscribed crop is never measured against a crossing diagonal.
+  const x = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+  const y = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+  points.sort((a, b) => Math.atan2(a.y - y, a.x - x) - Math.atan2(b.y - y, b.x - x));
+ }
  const rotation = anchor.align ? -Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x) : frame.rotation ?? 0;
  const cos = Math.cos(rotation), sin = Math.sin(rotation);
  const corners = anchor.align ? points.map(({ x, y }) => ({ x: x * cos - y * sin, y: x * sin + y * cos })) : points;
@@ -577,7 +626,11 @@ function live2DFrameAtPose(frame, internal) {
   centerX += corner.x / 4;
   centerY += corner.y / 4;
  }
- const aspect = (frame.maxX - frame.minX) / (frame.maxY - frame.minY);
+ const span = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+ const aspect = anchor.nativeAspect
+  ? (span(points[0], points[3]) + span(points[1], points[2])) / (span(points[0], points[1]) + span(points[3], points[2]))
+  : (frame.maxX - frame.minX) / (frame.maxY - frame.minY);
+ if (!Number.isFinite(aspect) || aspect <= 0) return frame;
  let halfHeight;
  if (anchor.includeCorners) {
   halfHeight = Math.max(...corners.map(corner => Math.max(Math.abs(corner.x - centerX) / aspect, Math.abs(corner.y - centerY))));
@@ -591,14 +644,30 @@ function live2DFrameAtPose(frame, internal) {
   }
   halfHeight *= .98;
  }
- if (!Number.isFinite(halfHeight) || halfHeight <= 0) return frame;
+ if (!Number.isFinite(halfHeight) || halfHeight < 1) return frame;
  const halfWidth = halfHeight * aspect;
  return { minX: centerX - halfWidth, minY: centerY - halfHeight * (1 + 2 * (anchor.headroom ?? 0)),
   maxX: centerX + halfWidth, maxY: centerY + halfHeight, rotation };
 }
+function live2DExportWindowAtPose(id, motion, internal) {
+ const spec = authoredLive2DExportWindow(id, motion);
+ if (!spec) return null;
+ const index = internal.getDrawableIndex(spec.drawable);
+ const model = internal.coreModel;
+ if (index < 0 || editor?.hidden.has(spec.drawable) || !model.getDrawableDynamicFlagIsVisible(index)
+  || model.getModel().drawables.opacities[index] < .2) return null;
+ if (spec.frame) return spec.frame;
+ const anchor = { drawable:spec.drawable, corners:spec.corners, whenVisible:true };
+ const probe = { anchor:{...anchor, nativeAspect:true} };
+ const frame = live2DFrameAtPose(probe, internal);
+ // A window used by another phase may be invisible. Keep the normal
+ // pixel bounds for that phase rather than applying a stale aperture.
+ if (frame === probe) return null;
+ return {...frame, anchor};
+}
 async function live2dPortrait(model,generation){
  installMotionCompatibility(PIXI.live2d);
- const app=new PIXI.Application({view:canvas,resizeTo:stage,autoStart:false,antialias:true,backgroundAlpha:0,resolution:Math.max(2,devicePixelRatio||1),autoDensity:true,preserveDrawingBuffer:true});
+ const app=new PIXI.Application({view:canvas,autoStart:false,antialias:true,backgroundAlpha:0,resolution:Math.max(2,devicePixelRatio||1),autoDensity:true,preserveDrawingBuffer:true});
  let live, preparedSettings;
  const dispose=()=>{const gl=app.renderer?.gl,core=live?.internalModel?.coreModel,native=core?.getModel(),moc=native&&mocOwners.get(native);try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}finally{preparedSettings?.release();}if(moc&&!core?.getModel()&&!releasedMocs.has(moc)){moc._release();releasedMocs.add(moc);releasedMocCount++;}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
  try {
@@ -777,7 +846,10 @@ async function live2dPortrait(model,generation){
  }
  api.videoDuration = playback => playback.duration;
  api.capture=(playback={},format,quality)=>{
-  const motionFrame = authoredLive2DExportFrame(model.id, playback.name || activeMotion);
+  const motion = playback.name || activeMotion;
+  const levelFrame = api.levelExport ? authoredLive2DLevelFrame(model.id, motion) : null;
+  const motionFrame = levelFrame ?? authoredLive2DExportFrame(model.id, motion)
+   ?? live2DExportWindowAtPose(model.id, motion, internal);
   const authoredFrame = live2DFrameAtPose(motionFrame, internal);
   let exportRotation = authoredFrame?.rotation ?? 0;
   if (api.levelExport && model.id === 'xinnong_5' && playback.name === 'idle18') {
@@ -791,7 +863,7 @@ async function live2dPortrait(model,generation){
   const rotateExport = p => { const c=Math.cos(exportRotation),s=Math.sin(exportRotation);return {x:p.x*c-p.y*s,y:p.x*s+p.y*c}; };
 
   const hitMeshes=new Set(model.interaction.hitAreas.map(area=>area.id));
-  const surrounds=new Set([...portraitSurrounds, ...(motionFrame?.hiddenDrawables ?? [])]);
+  const surrounds=new Set([...portraitSurrounds, ...authoredLive2DExportHidden(model.id, motion), ...(motionFrame?.hiddenDrawables ?? [])]);
   const measure=()=>{
   const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},rectangles=[];
   for(let i=0;i<core.drawables.ids.length;i++){
@@ -904,6 +976,11 @@ async function live2dPortrait(model,generation){
    }
    sample(time, draw);
   };
+  const resizeCapture = (width, height, resolution) => {
+   if (app.renderer.resolution === resolution && app.renderer.screen.width === width && app.renderer.screen.height === height) return;
+   app.renderer.resolution = resolution;
+   app.renderer.resize(width, height);
+  };
   const setCaptureFrame = (size, tile, rotation = exportRotation) => {
    live.pivot.set(0, 0);
    live.rotation = rotation;
@@ -914,10 +991,10 @@ async function live2dPortrait(model,generation){
   return {pixelYUp:false,fixedFrame:authoredFrame,pngSize:quality=>({...K.exportDimensions(bounds,quality,'png',authoredFrame ? 0 : undefined),fullFrame:true}),
    measure:time=>{editor.before();advance(time);return measure();},rewind,
    draw:(time,size,background)=>{const added=[...surrounds].filter(id=>!editor.hidden.has(id));for(const id of added)editor.hidden.add(id);try{editor.before();
-    if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();app.renderer.resolution=1;app.renderer.resize(tile.width,tile.height);setCaptureFrame(size,tile);live.deltaTime=0;app.render();return canvas;},background);
+    if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();resizeCapture(tile.width,tile.height,1);setCaptureFrame(size,tile);live.deltaTime=0;app.render();return canvas;},background);
     const followArtwork = size.fullFrame && motionFrame?.anchor && time !== null;
     if(size.fullFrame){
-     app.renderer.resolution=1;app.renderer.resize(size.width,size.height);
+     resizeCapture(size.width,size.height,1);
      if (followArtwork) {
       advance(time, false);
       const poseFrame = live2DFrameAtPose(motionFrame, internal);
@@ -926,7 +1003,7 @@ async function live2dPortrait(model,generation){
       setCaptureFrame({ ...size, scale, centerX: fit.x, centerY: fit.y }, null, poseFrame.rotation);
      } else setCaptureFrame(size);
     }
-    else{app.renderer.resolution=size.width/stage.clientWidth;app.renderer.resize(stage.clientWidth,stage.clientHeight);}
+    else resizeCapture(stage.clientWidth,stage.clientHeight,size.width/stage.clientWidth);
     if(time!==null&&!followArtwork)advance(time);else app.render();return canvas;}finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
    dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.rotation=transform.rotation;live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
@@ -1016,7 +1093,11 @@ async function spinePortrait(model,generation){
   dispose();
   throw error;
  }
- evidence.layers=layers;evidence.renderer=scene;model.animations=[...new Set(layers.flatMap(l=>l.data.animations.map(a=>a.name)))].sort();
+ evidence.layers=layers;evidence.renderer=scene;
+ model.animations=[...new Set(layers.flatMap(layer=>layer.data.animations.map(animation=>animation.name)))].sort();
+ // This auxiliary scene's one-second normal track contains no renderable
+ // attachments at any point. The visible stand2 track is its actual action.
+ if (model.id === 'zhibojianT') model.animations = model.animations.filter(name => name !== 'normal');
  let mainLayer=0,sequence=0;
  for(let i=0;i<layers.length;i++)layers[i].state.addListener({event:(entry,event)=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion)controller.event(event.data.name);},complete:entry=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion&&controller.state.busy)controller.finish();}});
  const api={sound,stopAudio,fold,assistantEvent:area=>{if(basicActions[area])sound(model.voiceBank,motionCue(basicActions[area]),{voice:true});},skin:name=>{for(const l of layers){const skin=l.data.findSkin(name||l.spec.initialSkin||model.defaultSkin||'default');if(skin){l.skeleton.setSkin(skin);l.skeleton.setSlotsToSetupPose();}}},effects:visible=>{evidence.effectsVisible=visible;},alpha:data=>{evidence.alphaData=data;},
@@ -1048,7 +1129,7 @@ async function spinePortrait(model,generation){
  const bounds=framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
- api.capture = animation => {
+ api.capture = (animation, format) => {
   const hidden = new Set(editor.hidden), surrounds = portraitSurroundNames(model.id);
   layers.forEach((layer, i) => {
    for (const slot of layer.skeleton.slots) if (surrounds.has(slot.data.name)) hidden.add(i + ':' + slot.data.name);
@@ -1056,11 +1137,18 @@ async function spinePortrait(model,generation){
   const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
    editor:{...editor, hidden}, animation, restore:()=>render(0) });
   const exportFrame = authoredSpineExportFrame(model.id, animation.name);
+  // This shot's alternate scene is positioned by the selected track. Sample
+  // its current time for PNG too, even while the preview is still mixing in.
+  if (format === 'png' && model.id === 'siwanshi_4' && animation.name === 'touch_special_normal') {
+   const draw = session.draw.bind(session);
+   session.draw = (time, size, background) => draw(time ?? animation.time ?? 0, size, background);
+  }
   let levelFrame;
-  if (api.levelExport && ((['tianjinfeng_2','tianjinfeng_3'].includes(model.id) && animation.name === 'normal') || (model.id === 'qisheng_3' && animation.name === 'ex'))) {
+  const qishengLevel = model.id === 'qisheng_3' && cameraLevelActions.has(model.id+':'+animation.name);
+  if (api.levelExport && (qishengLevel || (['tianjinfeng_2','tianjinfeng_3'].includes(model.id) && animation.name === 'normal'))) {
    const name = model.id === 'qisheng_3' ? 'bj' : model.id === 'tianjinfeng_2' ? 'bj_a' : 'bj_b';
-   // Measure the authored ex pose independently of an unfinished preview crossfade.
-   const levelLayers = model.id === 'qisheng_3' ? layers.map(layer => {
+   // Measure the selected action independently of the outgoing preview pose.
+   const levelLayers = qishengLevel ? layers.map(layer => {
     const skeleton = new spine.Skeleton(layer.data);
     if (layer.skeleton.skin) skeleton.setSkin(layer.skeleton.skin);
     skeleton.setToSetupPose();
@@ -1078,10 +1166,30 @@ async function spinePortrait(model,generation){
     // Mirrored attachments reverse the edge, not the intended camera orientation.
     if (rotation > Math.PI/2) rotation -= Math.PI;
     if (rotation < -Math.PI/2) rotation += Math.PI;
+    const manualAngle = qishengLevel && animation.name === 'normal_touch' ? (api.levelAngle ?? 0) * Math.PI / 180 : 0;
+    rotation += manualAngle;
     const cos = Math.cos(rotation), sin = Math.sin(rotation), xs=[],ys=[];
     for (let i=0;i<8;i+=2) { xs.push(vertices[i]*cos+vertices[i+1]*sin);ys.push(-vertices[i]*sin+vertices[i+1]*cos); }
-    const inset = model.id === 'qisheng_3' ? 8 : 0;
-    levelFrame = { minX:Math.min(...xs)+inset,minY:Math.min(...ys)+inset,maxX:Math.max(...xs)-inset,maxY:Math.max(...ys)-inset,rotation };
+    const inset = qishengLevel ? 8 : 0;
+    if (manualAngle) {
+     // Inscribe the original aspect ratio in the rotated picture so its
+     // transparent corners never become part of the downloaded video.
+     const cx = xs.reduce((a,b)=>a+b,0) / 4;
+     const cy = ys.reduce((a,b)=>a+b,0) / 4;
+     const width = Math.hypot(vertices[6]-vertices[0], vertices[7]-vertices[1]);
+     const height = Math.hypot(vertices[2]-vertices[0], vertices[3]-vertices[1]);
+     const aspect = width / height;
+     let halfHeight = Infinity;
+     for (let i=0;i<4;i++) {
+      const j=(i+1)%4, nx=ys[j]-ys[i], ny=xs[i]-xs[j];
+      const distance = Math.abs(nx * (cx-xs[i]) + ny * (cy-ys[i]));
+      halfHeight = Math.min(halfHeight, distance / (Math.abs(nx)*aspect + Math.abs(ny)));
+     }
+     levelFrame = {minX:cx-halfHeight*aspect+inset,minY:cy-halfHeight+inset,
+      maxX:cx+halfHeight*aspect-inset,maxY:cy+halfHeight-inset,rotation};
+    } else {
+     levelFrame = {minX:Math.min(...xs)+inset,minY:Math.min(...ys)+inset,maxX:Math.max(...xs)-inset,maxY:Math.max(...ys)-inset,rotation};
+    }
    }
   }
   if (levelFrame || exportFrame) session.fixedFrame = levelFrame || exportFrame;

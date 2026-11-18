@@ -1486,11 +1486,32 @@
     const reference = session.pngSize('medium'), source = session.draw(null, reference, null);
     return K.refineIllustrationSize(reference, source, quality, kind, session.pixelYUp !== false);
   };
-  K.animationExportSize = async ({ session, quality, kind, signal, onProgress }) => {
+  K.animationExportSize = async ({ session, duration, quality, kind, signal, onProgress }) => {
     const check = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
+    const noArtwork = error => /没有可导出的可见(?:立绘|部件)/.test(error.message);
     try {
       check(); await onProgress?.(0); check();
-      const size = K.illustrationExportSize(session, quality, kind);
+      let size;
+      try {
+        size = K.illustrationExportSize(session, quality, kind);
+      } catch (error) {
+        if (!session.measure || !(duration > 0) || !noArtwork(error)) throw error;
+        // A fade-in may have a deliberately blank opening pose. Probe later
+        // poses for framing, then rewind so the original opening is encoded.
+        for (const [index, fraction] of [.125, .25, .5, .75, .99].entries()) {
+          const time = duration * fraction;
+          await onProgress?.((index + 1) / 6); check();
+          session.rewind();
+          try {
+            const reference = { ...K.exportDimensions(session.measure(time), 'medium', 'png'), fullFrame: true, tiled: false };
+            size = K.refineIllustrationSize(reference, session.draw(time, reference, null), quality, kind, session.pixelYUp !== false);
+            break;
+          } catch (probeError) {
+            if (!noArtwork(probeError)) throw probeError;
+          }
+        }
+        if (!size) throw error;
+      }
       await onProgress?.(1); check(); return size;
     } finally { session.rewind(); }
   };
@@ -1544,6 +1565,7 @@
     const pngPrefs = animation ? null : K.Store?.('png-export');
     let pngMode = pngPrefs?.get('sizeMode', 'preset') || 'preset', pngEdge = pngPrefs?.get('edge', 4096) || 4096;
     let format = options.format === 'video' ? 'video' : 'gif';
+    const manualCamera = Number.isFinite(options.cameraAngle);
     pop.innerHTML = '<div class="col export-options"><div class="col-title">' + (animation ? '导出动画' : '导出 PNG') + '</div>'
       + (animation ? '<div class="export-formats" role="group" aria-label="动画文件格式"><button type="button" data-format="gif">GIF 动图</button><button type="button" data-format="video">视频</button></div>' : '')
       + '<div class="export-choices" role="radiogroup" aria-label="导出质量">'
@@ -1554,7 +1576,9 @@
           + p.label + '</strong><small>' + detail + '</small></button>';
       }).join('') + '</div><div class="export-detail" role="status"></div>'
       + (animation ? '' : '<details class="png-size-settings"><summary>尺寸设置（保持比例）</summary><label>尺寸方式<select class="png-size-mode" aria-label="PNG 尺寸方式"><option value="preset">按所选质量</option><option value="auto">自动适配设备</option><option value="custom">自定义长边</option></select></label><label class="png-edge-row" hidden>长边像素<input class="png-edge" type="number" min="1" max="2147483647" step="1" inputmode="numeric" aria-label="PNG 长边像素"></label><small class="muted">自动适配允许缩小；原始尺寸保留像素，超大图分块编码。</small></details><label><input type="checkbox" class="png-alpha"' + (options.transparent ? ' checked' : '') + '> 透明背景</label>')
-      + (typeof options.cameraLevel === 'boolean' ? '<label><input class="export-level" type="checkbox"' + (options.cameraLevel ? ' checked' : '') + '> 水平校正当前镜头（仅导出）</label>' : '')
+      + (typeof options.cameraLevel === 'boolean' ? '<label><input class="export-level" type="checkbox"' + (options.cameraLevel ? ' checked' : '') + '> '
+        + (manualCamera ? '手动旋转当前镜头（仅导出）' : '水平校正当前镜头（仅导出）') + '</label>' : '')
+      + (manualCamera ? '<label class="export-angle-row" hidden>旋转角度 <output></output><input class="export-angle" type="range" min="-30" max="30" step="0.5" aria-label="旋转角度"></label>' : '')
       + '<div class="export-actions"><button type="button" class="export-go"></button>'
       + (options.onCopy ? '<button type="button" class="export-copy">复制图片</button>' : '') + '</div></div>';
     const buttons = [...pop.querySelectorAll('.export-choice')], go = pop.querySelector('.export-go');
@@ -1611,7 +1635,20 @@
     formats.forEach(button => { button.onclick = () => { format = button.dataset.format; options.onFormatChange?.(format); update(); }; });
     if (modeSelect) { modeSelect.onchange = () => { pngMode = modeSelect.value; pngPrefs?.set('sizeMode', pngMode); update(); }; edgeInput.oninput = () => { pngEdge = edgeInput.value; if (Number(pngEdge) > 0) pngPrefs?.set('edge', pngEdge); update(); }; }
     const level = pop.querySelector('.export-level');
-    if (level) level.onchange = () => { options.onCameraLevel?.(level.checked); update(); };
+    const angleRow = pop.querySelector('.export-angle-row'), angle = angleRow?.querySelector('input');
+    if (angle) {
+      angle.value = options.cameraAngle;
+      const label = angleRow.querySelector('output');
+      const readAngle = () => { label.textContent = angle.value + '°'; };
+      readAngle();
+      angleRow.hidden = !level?.checked;
+      angle.oninput = readAngle;
+      angle.onchange = () => { options.onCameraAngle?.(angle.valueAsNumber); update(); };
+    }
+    if (level) level.onchange = () => {
+      if (angleRow) angleRow.hidden = !level.checked;
+      options.onCameraLevel?.(level.checked); update();
+    };
     const transparent = () => !!pop.querySelector('.png-alpha')?.checked;
     go.onclick = () => options.onExport(animation ? quality : pngRequest(), transparent(), format);
     if (copy) copy.onclick = () => options.onCopy(animation ? quality : pngRequest(), transparent());
@@ -1720,7 +1757,12 @@
       if (selected) return K.writeCanvasVideo(options, codec, selected);
     }
     let selected, lastError;
-    for (const format of K.videoExportFormats()) {
+    const formats = K.videoExportFormats();
+    // WebCodecs still prefers MP4. In the still-frame recorder path VP8
+    // reliably emits a keyframe for short captures on Chromium.
+    const vp8 = formats.findIndex(format => format.mimeType === 'video/webm;codecs=vp8');
+    if (vp8 > 0) formats.unshift(...formats.splice(vp8, 1));
+    for (const format of formats) {
       try {
         await K.recordExactCanvasVideo({ ...options, duration: 1 / preset.videoFps, draw() {}, onProgress: undefined }, format);
         selected = format; break;

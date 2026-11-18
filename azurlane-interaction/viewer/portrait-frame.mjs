@@ -14,6 +14,7 @@ const trackDrawable = (crop, drawable, options = {}) =>
  Object.freeze({ ...crop, anchor: Object.freeze({ drawable, ...options }) });
 const anchoragePool = frame(-240, -180, 9340, 8280);
 const cowpensRoom = frame(38, 33, 11651, 6586);
+const ringMatteWindow = frame(-1580, -909, 11182, 6344);
 // The sky has support vertices inside its four outer corners. Follow those corners as the camera tilts.
 const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654', { corners: [1, 0, 2, 3], align: true });
 const mogadorSkyWithCard = trackDrawable(mogadorSky, mogadorSky.anchor.drawable, { ...mogadorSky.anchor, headroom: .32 });
@@ -57,6 +58,11 @@ const live2dIdleFrames = new Map([
  ['z13_2', frame(-211, 121, 10268, 6584)],
 ]);
 const live2dIdleExportFrames = new Map([
+ ['qisheng_2', frame(102, 149, 7370, 4505)],
+ ['masaina_2', frame(-1515, -934, 11580, 6635)],
+ ['aersasi_3', frame(-1310, -820, 8575, 5500)],
+ ['zhenzhuhao_2', frame(-2100, -1240, 16105, 9460)],
+ ['baiyanjuren_4', frame(1116, 1804, 8868, 6190)],
  ['baifeng_3', frame(8, 8, 7992, 4566)], // Inside the four oversized surround meshes.
  ['zhangwu_2', frame(-1930, -1220, 11550, 6568)], // The room, without drifting petals outside it.
  ['ankeleiqi_2', Object.freeze({ ...anchoragePool, hiddenDrawables: ['ArtMesh532', 'ArtMesh533', 'ArtMesh534', 'ArtMesh536', 'ArtMesh542'] })],
@@ -150,6 +156,7 @@ const reviewedIdleExportFrames = [
   [Object.freeze({ ...frame(-42, 278, 8005, 4855), hiddenDrawables: ['ArtMesh893'] }), [5]],
  ]],
  ['antu_2', [
+  [frame(-1360, -62, 12210, 7544), [24]],
   [frame(-1499, -532, 12328, 7999), [8, 32]],
   [frame(-1285, -440, 12164, 8212), [5, 37]],
   [frame(-1258, -213, 12111, 7612), [10, 12, 21, 22, 36]],
@@ -163,6 +170,7 @@ const reviewedIdleExportFrames = [
   [frame(0, 0, 9990, 5740), [18]],
  ]],
  ['baifeng_2', [
+  [frame(-1655, -1070, 11265, 6472), [17, 19]],
   [rotatedFrame(-10701, -4033, 15473, 12369, 7.81), [9]],
  ]],
  ['baifeng_3', [
@@ -172,15 +180,26 @@ const reviewedIdleExportFrames = [
   [rotatedFrame(-1713, 254, 9284, 6547, 15.64), [23]],
  ]],
  ['baiyanjuren_4', [
-  [rotatedFrame(2234, -4691, 10689, 5486, -33.11), [16, 17]],
-  [rotatedFrame(864, 30, 10553, 5530, -13.76), [1]],
-  [rotatedFrame(563, -144, 10801, 5735, -13.76), [2]],
+  [rotatedFrame(2313, -4025, 10620, 4722, -33.11), [16, 17]],
+  [rotatedFrame(1170, 143, 10340, 5350, -13.76), [1]],
+  [rotatedFrame(890, 28, 10620, 5530, -13.76), [2]],
+  [frame(-2406, -18, 12342, 7999), [3, 4]],
+  [frame(-2172, 124, 12069, 7867), [5]],
+  [frame(1116, 1804, 8868, 6190), [6]],
+  [frame(1116, 1736, 8868, 6118), [7, 8]],
+  [frame(936, 1735, 8680, 6108), [9]],
+  [frame(752, 1821, 8843, 6082), [10]],
+  // The underwater shot sits inside a separate black matte.
+  [frame(1430, 2100, 8420, 5900), [11, 12, 13, 14, 15]],
+  [frame(-1910, 210, 15655, 10140), [18, 19]],
+  [frame(847, 1461, 8599, 5841), [23, 24]],
  ]],
  ['beilaosenlin_2', [
   [frame(218, 150, 14064, 7719), [7, 10, 13]],
   [rotatedFrame(-12451, -12504, 25313, 8671, -34.26), [9]],
  ]],
  ['benningdun_2', [
+  [ringMatteWindow, [1, 2, 3, 6, 7]],
   [frame(-1670, -985, 11155, 6305), [4, 13, 21, 33]],
   [frame(-1795, -890, 11020, 6140), [44, 45]],
   [frame(-1625, -1130, 10930, 6250), [48]],
@@ -189,6 +208,7 @@ const reviewedIdleExportFrames = [
   [frame(-1783, -1874, 11412, 6587), [32]],
  ]],
  ['bunao_3', [
+  [frame(82, 126, 7589, 7710), [3]],
   [frame(52, -177, 7610, 4455), [5]],
   [frame(30, -295, 7725, 4425), [7]],
   [frame(-27, 14, 7668, 4505), [6]],
@@ -280,7 +300,11 @@ const reviewedIdleExportFrames = [
  ['qisheng_2', [
   [frame(9, 113, 6923, 4111), [4, 5, 6, 8, 9]],
  ]],
+ ['sebao_2', [
+  [frame(216, 65, 13924, 7831), [1, 2, 3, 4, 5, 6, 7, 8, 9]],
+ ]],
  ['shi_3', [
+  [frame(60, 58, 10496, 8642), [2, 12, 13, 14, 18]],
   [frame(-10, -9, 10543, 8684), [23]],
  ]],
  ['shi_2', [
@@ -336,8 +360,14 @@ const reviewedIdleExportFrames = [
   [rotatedFrame(-12708, -6248, 25005, 14840, -20.32), [5]],
   [rotatedFrame(-6554, -3878, 17865, 9834, -17.93), [6]],
  ]],
+ ['xinnong_6', [
+  [frame(1515, 1072, 8682, 5314), [9, 10]],
+ ]],
  ['yanusi_7', [
   [frame(-1690, -1053, 11256, 6418), [20, 27, 28, 29, 37, 38, 42, 43, 44, 47, 48, 49, 50, 53, 54, 56, 57, 59, 60]],
+ ]],
+ ['yingxianzuo_3', [
+  [frame(-430, 1760, 10100, 5935), [1]],
  ]],
  ['yuanchou_3', [
   [frame(487, 396, 7655, 5044), [2]],
@@ -350,6 +380,8 @@ const reviewedIdleExportFrames = [
  ]],
  ['z13_2', [
   [frame(371, 405, 10326, 6304), [1]],
+  [frame(711, 800, 9320, 5785), [3]],
+  [frame(818, 893, 9158, 5770), [4, 5, 6]],
   [frame(-239, 39, 10279, 6599), [7, 8, 9, 11]],
   [frame(-237, 41, 10277, 7128), [2]],
   [frame(-240, 25, 10320, 6935), [10]],
@@ -459,12 +491,74 @@ export const authoredLive2DFrame = (id, motion) =>
  (cleanSceneFrame(id) && live2dIdleExportVariants.get(id)?.get(motion))
  || live2dIdleVariants.get(id)?.get(motion) || live2dFrames.get(id)
  || (motion === 'idle' ? live2dIdleFrames.get(id) : null) || cleanSceneFrame(id) || null;
+const live2dOpeningFrames = new Map([
+ ['aimudeng_2:home', frame(5, 5, 8360, 6498)],
+ ['chaijun_4:home', frame(3048, 3015, 17854, 13202)],
+ ['hemin_3:login', frame(18, 364, 6578, 6690)],
+ ['jiuyun_2:login', frame(1772, 1988, 6252, 5022)],
+ ['ougen_6:login', frame(1460, 2748, 7585, 6120)],
+ ['weiyan_6:login', frame(3134, 1175, 5889, 3973)],
+ ['z46_4:login', frame(826, 3, 10080, 5343)],
+ ['zengkehaijunshangjiang_2:login', frame(-751, 1850, 9972, 7055)],
+]);
 export const authoredLive2DExportFrame = (id, motion) =>
- (motion === 'idle' ? live2dIdleExportFrames.get(id) : live2dIdleExportVariants.get(id)?.get(motion))
+ live2dOpeningFrames.get(id + ':' + motion)
+ || (motion === 'idle' ? live2dIdleExportFrames.get(id) : live2dIdleExportVariants.get(id)?.get(motion))
  || authoredLive2DFrame(id, motion)
  || (id === 'kebensi_2' ? cowpensRoom : null)
  || (id === 'baifeng_3' ? live2dIdleExportFrames.get(id) : null);
+// These shutter bars cover the stage outside of the interactive close-up.
+const magicStageShutter = Object.freeze(['ArtMesh501', 'ArtMesh227']);
+const magicStageCloseUps = new Set(['idle2', 'idle13', 'idle14', 'idle15', 'idle16']);
+const mogadorInteractionCovers = Object.freeze(['ArtMesh1385', 'ArtMesh1410']);
+const lionSceneMatte = Object.freeze(['ArtMesh222', 'ArtMesh226', 'ArtMesh229', 'ArtMesh231',
+ 'ArtMesh243', 'ArtMesh244', 'ArtMesh287', 'ArtMesh288', 'ArtMesh686']);
+export function authoredLive2DExportHidden(id, motion) {
+ // These two opaque menu backdrops are only useful inside the game UI.
+ if (id === 'mojiaduoer_4') return mogadorInteractionCovers;
+ if (id === 'shi_2' && (motion === 'touch_idle1' || motion === 'effect')) return lionSceneMatte;
+ return id === 'xinnong_5' && magicStageCloseUps.has(motion) ? magicStageShutter : [];
+}
+
+// The pool background's upper edge is at -2.16° in the uncorrected shot.
+const argusLevelFrame = rotatedFrame(-2634, -57, 12257, 8409, 2.16);
+export const authoredLive2DLevelFrame = (id, motion) =>
+ id === 'baiyanjuren_4' && motion === 'idle3' ? argusLevelFrame : null;
+
+// Mesh vertices on the inside of each authored screen matte, in the
+// order top-left, bottom-left, bottom-right, top-right.
+const live2dExportWindows = new Map([
+ ['ankeleiqi_4', { drawable:'ArtMesh44', corners:[4, 5, 6, 7] }],
+ ['baiyanjuren_4', { drawable:'ArtMesh323', corners:[4, 5, 6, 7], motions:/^(?:home|touch_idle\d+)$/ }],
+ ['benningdun_2', { drawable:'jiezhihuan7', frame:ringMatteWindow, motions:/./ }],
+ ['chaijun_6', { drawable:'jiezhihuan7', frame:ringMatteWindow, motions:/./ }],
+ ['jinshi_2', { drawable:'ArtMesh24', corners:[4, 5, 6, 7], motions:/^touch_(?:idle|drag)\d+$/ }],
+ ['aogusite_4', { drawable:'ArtMesh1077', corners:[4, 5, 6, 7] }],
+ ['gaoxiong_7', { drawable:'ArtMesh531', corners:[4, 5, 6, 7] }],
+ ['guandao_3', { drawable:'ArtMesh8', corners:[4, 6, 7, 8] }],
+ ['mingji_2', { drawable:'ArtMesh674', corners:[4, 5, 6, 7],
+   closeUps:new Set(['idle15', 'idle16', 'idle20', 'idle23', 'idle28', 'idle30']) }],
+ ['mojiaduoer_4', { drawable:'ArtMesh654', frame:mogadorSky, motions:/./ }],
+ ['naximofu_2', { drawable:'ArtMesh301', corners:[9, 8, 7, 4] }],
+ ['qiye_7', { drawable:'MB_blackbgjuxing3', corners:[4, 5, 6, 7], motions:/^login$/ }],
+ ['qisheng_2', { drawable:'ArtMesh363', corners:[1, 3, 2, 0], motions:/./ }],
+ ['sailimiye_2', { drawable:'ArtMesh779', corners:[0, 1, 2, 3] }],
+ ['u2501_2', { drawable:'ArtMesh932', corners:[4, 5, 6, 7], motions:/^(?:idle|touch_)\w*$/ }],
+ ['wuzang_4', { drawable:'ArtMesh', corners:[4, 5, 6, 7] }],
+]);
+export function authoredLive2DExportWindow(id, motion) {
+ const spec = live2dExportWindows.get(id);
+ return spec && (spec.motions ?? /^idle\d*$/).test(motion) && !spec.closeUps?.has(motion) ? spec : null;
+}
+
 const spineExportMotionFrames = new Map([
+ ['na_2_doa:normal', frame(-2010, 6, 2013, 2365)],
+ ['xianghe_4:normal', frame(-2648, -3844, 2501, 1995)],
+ ['digaiteluyin_2:normal', frame(-2685, 64, 2645, 3040)],
+ ['yuekechengii_2:normal', frame(-1481, -628, 1719, 1787)],
+ ['qisheng_3:normal_touch', frame(-1809, 8, 1988, 3264)],
+ ['siwanshi_4:touch_special_normal', frame(-1238, -827, 1381, 917)], // The second shot moves onto the canvas as the selected clip is sampled.
+ ['yuekechengii_4:login', frame(-1495, 8, 1613, 1832)],
  // Inset past the background texture's transparent antialias edge.
  ['yuekegongjue_5:normal', frame(-1948, -1739, 1947, 1248)],
  ['tianjinfeng_3:normal', frame(-2398, 8, 2398, 2724)], // Inside the classroom background; exclude atlas-edge pixels.

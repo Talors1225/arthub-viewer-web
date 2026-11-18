@@ -250,7 +250,9 @@
           centerX: size.centerX + (tile.x + tile.width / 2 - size.width / 2) / size.scale,
           centerY: size.centerY + (size.height / 2 - tile.y - tile.height / 2) / size.scale,
         }, background));
-        canvas.width = size.width; canvas.height = size.height; gl.viewport(0, 0, size.width, size.height);
+        if (canvas.width !== size.width) canvas.width = size.width;
+        if (canvas.height !== size.height) canvas.height = size.height;
+        gl.viewport(0, 0, size.width, size.height);
         camera.setViewport(size.width, size.height); camera.zoom = size.fullFrame ? 1 / size.scale : saved.width * saved.zoom / size.width;
         const rotation = size.fullFrame ? this.fixedFrame?.rotation || 0 : 0;
         const cos = Math.cos(rotation), sin = Math.sin(rotation);
@@ -485,6 +487,7 @@
       showPopup(button, animation ? '导出动画' : '导出 PNG', pop => K.mountExportOptions(pop, {
         kind: animation ? 'animation' : 'png', quality: 'high', transparent: background === 'checker',
         cameraLevel: cfg.cameraLevel?.(), onCameraLevel: value => { cfg.setCameraLevel?.(value); nativeSize = null; },
+        cameraAngle: cfg.cameraAngle?.(), onCameraAngle: value => { cfg.setCameraAngle?.(value); nativeSize = null; },
         ...(!animation ? { getSize: previewSize } : {}),
         isPreparing: () => !!cfg.editor() && !driver.playback().ready,
         getDetail: (quality, format) => {
