@@ -60,7 +60,7 @@ const live2dIdleFrames = new Map([
 const live2dIdleExportFrames = new Map([
  ['qisheng_2', frame(102, 149, 7370, 4505)],
  ['masaina_2', frame(-1515, -934, 11580, 6635)],
- ['aersasi_3', frame(-1310, -820, 8575, 5500)],
+ ['aersasi_3', frame(-1230, -765, 8500, 5420)], // Inside the forest backdrop throughout the idle cycle.
  ['zhenzhuhao_2', frame(-2100, -1240, 16105, 9460)],
  ['baiyanjuren_4', frame(1116, 1804, 8868, 6190)],
  ['baifeng_3', frame(8, 8, 7992, 4566)], // Inside the four oversized surround meshes.
@@ -574,6 +574,44 @@ const spineExportMotionFrames = new Map([
 ]);
 export const authoredSpineExportFrame = (id, motion) => spineExportMotionFrames.get(id + ':' + motion) || authoredSpineFrame(id);
 export const authoredSpineFrame = id => spineFrames.get(id) || null;
+
+// These crops stay inside the illustrated background over the exported action.
+// Tracked windows use left, top, right, and bottom fractions of the picture.
+const sceneVideoCrops = new Map([
+ ['aijier_4:idle', frame(64, 74, 14204, 9942)],
+ ['baifeng_2:idle', frame(-1641, -1065, 11212, 6470)],
+ ['baifeng_2:idle9', rotatedFrame(-10337, -3669, 15200, 12005, 7.81)],
+ ['baiyanjuren_4:idle9', frame(936, 1735, 8680, 6000)],
+ ['chaijun_6:idle', frame(-2588, -1064, 12204, 7497)],
+ ['feiteliedadi_4:idle11', rotatedFrame(-1666, -2518, 17801, 8676, -10.09)],
+ ['fulankelin_2:normal', frame(-2026, -1190, 2329, 1194)],
+ ['gaoxiong_7:idle1', { inset: [0.03, 0, 0, 0] }],
+ ['guanghui_9:idle', frame(-4910, -2855, 14895, 10140)],
+ ['guanghui_9:touch_special', frame(-4910, -2855, 14895, 10140)],
+ ['hailunna_4:idle', frame(-1341, 927, 7492, 6537)],
+ ['huashengdun_3:normal', frame(-2356, -127, 2252, 2739)],
+ ['jian_3:idle', frame(33, 19, 1901, 1084)],
+ ['lafeiii_3:idle', frame(-5686, 124, 13398, 10001)],
+ ['lafeiii_4:normal', frame(-1780, 17, 1990, 2246)],
+ ['leiniya_2:normal', frame(-1332, 13, 1438, 1613)],
+ ['liekexingdunii_2:idle', frame(203, 188, 13872, 7970)],
+ ['liekexingdunii_2:idle8', rotatedFrame(-1348, -1434, 15974, 8697, -6.49)],
+ ['mojiaduoer_3:idle', frame(275, 222, 8415, 4519)],
+ ['mojiaduoer_4:idle', { inset: [0, 0.017, 0, 0.039] }],
+ ['nina_2:normal', frame(-1897, 132, 1902, 2132)],
+ ['shi_3:idle', frame(75, 25, 10514, 8659)],
+ ['siwanshi_3:idle1', frame(1216, 526, 9681, 5271)],
+ ['tiancheng_cv_3:idle', frame(30, 92, 7737, 5108)],
+ ['tiancheng_cv_3:idle14', frame(-455, 115, 8337, 5809)],
+ ['weineituo_2:idle', frame(-748, 1356, 8040, 6800)],
+ ['wuqi_3:idle', frame(432, 262, 9132, 5223)],
+ ['wuqi_3:touch_special', frame(432, 262, 9132, 5207)],
+ ['yuekegongjue_5:ex', frame(-1954, -1724, 1953, 1233)],
+ ['yunlong_2:ex', frame(-1578, 12, 1634, 2014)],
+ ['yunlong_2:normal', frame(-1578, 12, 1634, 2014)],
+ ['z13_2:idle1', frame(700, 561, 10326, 6217)],
+]);
+export const authoredSceneVideoCrop = (id, motion) => sceneVideoCrops.get(id + ':' + motion) || null;
 export function portraitFrameBounds(id, rectangles) {
  const rule=rules[id];if(!rule)return null;
  const valid=rectangles.filter(r=>r.visible!==false&&r.bounds?.length===4&&r.bounds.every(Number.isFinite)&&r.bounds[2]>r.bounds[0]&&r.bounds[3]>r.bounds[1]);

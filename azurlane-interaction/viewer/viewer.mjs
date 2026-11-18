@@ -2,7 +2,7 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261117-export-feedback';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredSpineFrame, authoredSpineExportFrame,defaultPortraitStageFrame} from './portrait-frame.mjs?v=20261118-azur-export-audit';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneVideoCrop} from './portrait-frame.mjs?v=20261118-scene-video-edges';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261116-forearm-pose';
@@ -596,6 +596,17 @@ function stageBoundsForFrame(frame) {
   y: (frame.minY + frame.maxY) / 2,
  };
 }
+function sceneVideoCrop(model, motion, format) {
+ if (format !== 'video' || editor.hidden.size || editor.poses.size) return null;
+ return authoredSceneVideoCrop(model.id, motion);
+}
+function insetLive2DFrame(frame, inset) {
+ if (!frame || !inset) return frame;
+ const [left, top, right, bottom] = inset;
+ const width = frame.maxX - frame.minX, height = frame.maxY - frame.minY;
+ return { ...frame, minX: frame.minX + width * left, minY: frame.minY + height * top,
+  maxX: frame.maxX - width * right, maxY: frame.maxY - height * bottom };
+}
 function live2DFrameAtPose(frame, internal) {
  const anchor = frame?.anchor;
  if (!anchor) return frame;
@@ -848,9 +859,11 @@ async function live2dPortrait(model,generation){
  api.capture=(playback={},format,quality)=>{
   const motion = playback.name || activeMotion;
   const levelFrame = api.levelExport ? authoredLive2DLevelFrame(model.id, motion) : null;
-  const motionFrame = levelFrame ?? authoredLive2DExportFrame(model.id, motion)
+  const safeCrop = sceneVideoCrop(model, motion, format);
+  const motionFrame = levelFrame ?? (safeCrop?.inset ? null : safeCrop) ?? authoredLive2DExportFrame(model.id, motion)
    ?? live2DExportWindowAtPose(model.id, motion, internal);
-  const authoredFrame = live2DFrameAtPose(motionFrame, internal);
+  const captureFrameAtPose = () => insetLive2DFrame(live2DFrameAtPose(motionFrame, internal), safeCrop?.inset);
+  const authoredFrame = captureFrameAtPose();
   let exportRotation = authoredFrame?.rotation ?? 0;
   if (api.levelExport && model.id === 'xinnong_5' && playback.name === 'idle18') {
    const index = internal.getDrawableIndex('ArtMesh370');
@@ -997,7 +1010,7 @@ async function live2dPortrait(model,generation){
      resizeCapture(size.width,size.height,1);
      if (followArtwork) {
       advance(time, false);
-      const poseFrame = live2DFrameAtPose(motionFrame, internal);
+      const poseFrame = captureFrameAtPose();
       const fit = stageBoundsForFrame(poseFrame);
       const scale = size.scale * (authoredFrame.maxX - authoredFrame.minX) / fit.width;
       setCaptureFrame({ ...size, scale, centerX: fit.x, centerY: fit.y }, null, poseFrame.rotation);
@@ -1136,7 +1149,7 @@ async function spinePortrait(model,generation){
   });
   const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
    editor:{...editor, hidden}, animation, restore:()=>render(0) });
-  const exportFrame = authoredSpineExportFrame(model.id, animation.name);
+  const exportFrame = sceneVideoCrop(model, animation.name, format) ?? authoredSpineExportFrame(model.id, animation.name);
   // This shot's alternate scene is positioned by the selected track. Sample
   // its current time for PNG too, even while the preview is still mixing in.
   if (format === 'png' && model.id === 'siwanshi_4' && animation.name === 'touch_special_normal') {
