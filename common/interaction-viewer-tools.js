@@ -175,23 +175,30 @@
 
   // Reuse the current GL textures, but animate independent skeleton/state
   // objects. Export cannot trigger the portrait controller's events or phases.
-  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, fixedFrame, visible = () => true, extraBounds = () => [] }) => {
+  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, fixedFrame, fromSetupPose = false, setupRotation = layer => layer.spec?.rotation, visible = () => true, extraBounds = () => [] }) => {
     const width = canvas.width, height = canvas.height, camera = renderer.camera;
     const saved = { up: camera.up && { ...camera.up }, width: camera.viewportWidth, height: camera.viewportHeight, zoom: camera.zoom, x: camera.position.x, y: camera.position.y, z: camera.position.z };
     const copies = layers.map((layer, index) => {
       const original = layer.skeleton, skeleton = new ns.Skeleton(original.data);
+      const track = fromSetupPose && layer.spec?.freeze ? null : original.data.findAnimation(animation.name);
+      const initialFromTrack = fromSetupPose && !!track;
       if (original.skin) skeleton.setSkin(original.skin);
       Object.assign(skeleton, { x: original.x, y: original.y, scaleX: original.scaleX, scaleY: original.scaleY });
       Object.assign(skeleton.color, original.color);
-      original.bones.forEach((bone, i) => Object.assign(skeleton.bones[i], poseOf(bone)));
-      original.slots.forEach((slot, i) => { skeleton.slots[i].setAttachment(slot.attachment); Object.assign(skeleton.slots[i].color, slot.color); skeleton.slots[i].deform = slot.deform.slice(); if (slot.darkColor && skeleton.slots[i].darkColor) Object.assign(skeleton.slots[i].darkColor, slot.darkColor); });
-      skeleton.drawOrder = original.drawOrder.map(slot => skeleton.slots[slot.data.index]);
+      if (initialFromTrack) {
+        // The outgoing shot may leave a cover on a slot the chosen track never keys.
+        skeleton.setToSetupPose();
+        skeleton.bones[0].rotation += setupRotation(layer) || 0;
+      } else {
+        original.bones.forEach((bone, i) => Object.assign(skeleton.bones[i], poseOf(bone)));
+        original.slots.forEach((slot, i) => { skeleton.slots[i].setAttachment(slot.attachment); Object.assign(skeleton.slots[i].color, slot.color); skeleton.slots[i].deform = slot.deform.slice(); if (slot.darkColor && skeleton.slots[i].darkColor) Object.assign(skeleton.slots[i].darkColor, slot.darkColor); });
+        skeleton.drawOrder = original.drawOrder.map(slot => skeleton.slots[slot.data.index]);
+      }
       const state = new ns.AnimationState(new ns.AnimationStateData(original.data));
       for (const entry of layer.state.tracks.filter(Boolean)) {
         if (!original.data.findAnimation(entry.animation.name)) continue;
         const copy = state.setAnimation(entry.trackIndex, entry.animation.name, entry.loop); copy.mixDuration = 0; copy.trackTime = entry.trackTime;
       }
-      const track = original.data.findAnimation(animation.name);
       if (track) { state.clearTracks(); state.setAnimation(0, track.name, !!animation.loop).mixDuration = 0; }
       const base = skeleton.bones.map(poseOf);
       const baseSlots = skeleton.slots.map(slot => ({
@@ -199,19 +206,11 @@
         deform: slot.deform.slice(), sequenceIndex: slot.sequenceIndex,
       }));
       const baseOrder = skeleton.drawOrder.slice();
-      return { ...layer, skeleton, state, index, base, baseSlots, baseOrder, lastTime: null, pma: layer.atlas?.pages?.[0]?.pma ?? true };
+      return { ...layer, skeleton, state, index, base, baseSlots, baseOrder, initialFromTrack, lastTime: null, pma: layer.atlas?.pages?.[0]?.pma ?? true };
     });
-    // Measure the frozen visible pose in model units, independently of the camera.
-    const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-    const include = b => { if (b) for (const key of Object.keys(bounds)) bounds[key] = key.startsWith('min') ? Math.min(bounds[key], b[key]) : Math.max(bounds[key], b[key]); };
-    copies.forEach((item, i) => {
-      for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${i}:${slot.data.name}`)) slot.color.a = 0;
-      worldUpdate(item.skeleton, ns);
-      if (visible(layers[i], i)) include(K.measureBounds(item.skeleton, ns, false));
-    });
-    for (const b of extraBounds()) include(b);
     const pose = time => {
       for (const item of copies) {
+        const sampleTime = time === null && item.initialFromTrack ? 0 : time;
         item.base.forEach((base, i) => Object.assign(item.skeleton.bones[i], base));
         // Framing probes may seek forwards and then rewind. Restore slots as
         // well as bones: late attachments, opacity and draw order must not leak
@@ -223,15 +222,31 @@
           slot.deform = base.deform.slice(); slot.sequenceIndex = base.sequenceIndex;
         });
         item.skeleton.drawOrder = item.baseOrder.slice();
-        if (time !== null && item.lastTime !== null && time < item.lastTime)
+        if (sampleTime !== null && item.lastTime !== null && sampleTime < item.lastTime)
           for (const entry of item.state.tracks.filter(Boolean)) entry.resetRotationDirections?.();
-        item.lastTime = time;
-        if (time !== null) { for (const entry of item.state.tracks.filter(Boolean)) { entry.trackTime = time; entry.animationLast = entry.nextAnimationLast = time; } item.state.apply(item.skeleton); }
+        item.lastTime = sampleTime;
+        if (sampleTime !== null) {
+          for (const entry of item.state.tracks.filter(Boolean)) {
+            entry.trackTime = sampleTime;
+            entry.animationLast = entry.nextAnimationLast = sampleTime;
+          }
+          item.state.apply(item.skeleton);
+        }
         for (const bone of item.skeleton.bones) { const edited = editor?.poses.get(`${item.index}:${bone.data.name}`); if (edited) Object.assign(bone, edited); }
         for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${item.index}:${slot.data.name}`)) slot.color.a = 0;
         worldUpdate(item.skeleton, ns);
       }
     };
+    // Lay out the selected action at time zero before measuring its picture.
+    if (fromSetupPose) pose(null);
+    const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    const include = b => { if (b) for (const key of Object.keys(bounds)) bounds[key] = key.startsWith('min') ? Math.min(bounds[key], b[key]) : Math.max(bounds[key], b[key]); };
+    copies.forEach((item, i) => {
+      for (const slot of item.skeleton.slots) if (editor?.hidden.has(`${i}:${slot.data.name}`)) slot.color.a = 0;
+      worldUpdate(item.skeleton, ns);
+      if (visible(layers[i], i)) include(K.measureBounds(item.skeleton, ns, false));
+    });
+    for (const b of extraBounds()) include(b);
     return {
       fixedFrame,
       pngSize(quality) { const frame = this.fixedFrame; return { ...K.exportDimensions(frame || bounds, quality, 'png', frame ? 0 : undefined), fullFrame: true }; },

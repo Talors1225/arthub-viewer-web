@@ -2382,7 +2382,8 @@
       const state = new SP.AnimationState(stateData);
       // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
       animSel.innerHTML = data.animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
-      const urlAnim = new URLSearchParams(location.search).get('anim');
+      const link = new URLSearchParams(location.search);
+      const urlAnim = link.get('id') === cur.id ? link.get('anim') : null;
       const saved = restoreAnim && data.animations.some(a => a.name === restoreAnim) ? restoreAnim : null;
       const previewAnim = (v.previewAnimation && data.animations.find(a => a.name === v.previewAnimation))
         || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))

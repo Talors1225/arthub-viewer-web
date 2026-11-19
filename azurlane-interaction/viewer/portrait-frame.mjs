@@ -12,14 +12,31 @@ export const portraitSurroundNames=id=>new Set(rules[id]?.surrounds||[]);
 const frame = (minX, minY, maxX, maxY) => Object.freeze({ minX, minY, maxX, maxY });
 const trackDrawable = (crop, drawable, options = {}) =>
  Object.freeze({ ...crop, anchor: Object.freeze({ drawable, ...options }) });
+const openingMatte = (crop, drawable, corners) => trackDrawable(crop, drawable,
+ { corners, nativeAspect: true, includeCorners: true, fadeToFrame: true });
 const anchoragePool = frame(-240, -180, 9340, 8280);
 const cowpensRoom = frame(38, 33, 11651, 6586);
 const ringMatteWindow = frame(-1580, -909, 11182, 6344);
+const baltimoreScene = frame(-818, -595, 8801, 8571);
+const guamRoom = frame(500, 814, 10785, 6450);
+const clemenceauOpening = openingMatte(frame(-260, 200, 9380, 7160), 'MB_blackbgjuxing', [4, 5, 6, 7]);
+const unicornOpening = openingMatte(frame(-2770, 630, 11270, 9000), 'ArtMesh1', [4, 5, 6, 7]);
+const benningtonOpening = openingMatte(frame(-1900, -1445, 11400, 6480), 'ArtMesh271', [1, 3, 2, 0]);
+const pirateCarWindow = openingMatte(frame(-2140, -760, 12600, 7850), 'ArtMesh674', [4, 5, 6, 7]);
+const lionTransitionWindow = frame(-230, 210, 12410, 6595);
+const lionTransitionCrop = Object.freeze({ ...lionTransitionWindow, anchor: Object.freeze({
+ edges: [['ArtMesh226', 2, 3], ['ArtMesh231', 0, 1], ['ArtMesh222', 0, 1], ['ArtMesh229', 2, 3]],
+ nativeAspect: true, fadeToFrame: true,
+}) });
 // The sky has support vertices inside its four outer corners. Follow those corners as the camera tilts.
 const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654', { corners: [1, 0, 2, 3], align: true });
 const mogadorSkyWithCard = trackDrawable(mogadorSky, mogadorSky.anchor.drawable, { ...mogadorSky.anchor, headroom: .32 });
+const mogadorAircraft = frame(-1596, 53, 1963, 2074);
+const vicksburgNormalFrame = frame(-1515, -1835, 1841, 915);
+const vicksburgExFrame = frame(-1487, -1799, 1820, 876);
 // Match the scene inside the outer matte. Live2D uses a top-left origin.
 const live2dFrames = new Map([
+ ['baerdimo_6', baltimoreScene], // Preserve the scene while fog drifts beyond its edges.
  ['shuixinghao_2', frame(0, 0, 8000, 5500)], // Authored canvas excludes the oversized MB_blackbgjuxing matte.
  ['feiteliekaer_4', frame(0, 0, 9449, 5570)], // Authored camera canvas; off-canvas scene cards are not presentation bounds.
  ['jinjiang_2', frame(0, 0, 8000, 4712)],
@@ -31,7 +48,6 @@ const live2dFrames = new Map([
 const live2dIdleFrames = new Map([
  ['ankeleiqi_2', anchoragePool],
  ['aogusite_4', frame(39, 34, 9972, 5719)],
- ['baerdimo_6', frame(-818, -595, 8801, 8571)],
  ['dafeng_6', frame(-1900, 925, 9280, 7070)], // Inside the beach scene's picture frame.
  ['dafeng_7', frame(-11200, -3500, 16000, 14500)], // Keep the complete pool table in the two overhead opening shots.
  ['gaoxiong_7', frame(931, 143, 9157, 5868)],
@@ -102,9 +118,13 @@ const live2dIdleVariants = new Map([
   ['idle17', poolTableFront],
   ['idle18', frame(690, -1170, 15190, 8980)],
  ])],
- ['mojiaduoer_4', groupedIdleFrames([
-  [mogadorSky, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 21, 22, 23, 24, 29, 30, 32, 36, 37, 38, 39, 40, 41, 42, 50]],
-  [mogadorSkyWithCard, [34]],
+ ['mojiaduoer_4', new Map([
+  ...groupedIdleFrames([
+   [mogadorSky, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 21, 22, 23, 24, 29, 30, 32, 36, 37, 38, 39, 40, 41, 42, 50]],
+   [mogadorSkyWithCard, [34]],
+  ]),
+  ['touch_drag9', mogadorSkyWithCard],
+  ['touch_drag10', mogadorSkyWithCard],
  ])],
  ['wuerlixi_3', groupedIdleFrames([[live2dIdleFrames.get('wuerlixi_3'), [1]]])],
  ['wuqi_3', groupedIdleFrames([
@@ -449,7 +469,8 @@ const defaultStageFrames = new Map([
  ['leiniya_2', frame(-1348, -3, 1452, 1633)],
  ['makeboluo_3', frame(-1495, -11, 1520, 1782)],
  ['mojiaduoer_2', frame(-45, 526, 7545, 7544)],
- ['mojiaduoer_5', frame(-1735, -40, 2122, 2188)],
+ ['mojiaduoer_4', mogadorSky],
+ ['mojiaduoer_5', mogadorAircraft],
  ['nengdai_3', frame(287, 183, 4732, 4801)],
  ['nengdai_9', frame(-1429, -4, 1435, 1611)],
  ['ninghai_4', frame(1290, 3, 3152, 4345)],
@@ -487,8 +508,43 @@ export const defaultPortraitStageFrame = id => defaultStageFrames.get(id) || nul
 // all drawable bounds for idle2/etc includes giant matte or curtain geometry.
 const cleanSceneFrame = id => id === 'xinnong_6' ? live2dIdleFrames.get(id)
  : ['zhangwu_2','baifeng_3'].includes(id) ? live2dIdleExportFrames.get(id) : null;
+// Use the reviewed picture area when a surrounding matte or effect dominates the preview.
+const live2dMotionStageFrames = new Map([
+ ['aersasi_3:idle', frame(-1230, -765, 8500, 5420)],
+ ['gezi_2:idle6', guamRoom],
+ ['gezi_2:touch_idle13', frame(315, 564, 10951, 6663)],
+ ['gezi_2:touch_idle18', guamRoom],
+ ['benningdun_2:login', benningtonOpening],
+ ['chuyue_2:touch_drag3', openingMatte(defaultStageFrames.get('chuyue_2'), 'MB_blackbgjuxing3', [4, 5, 6, 7])],
+ ['dujiaoshou_6:login', unicornOpening],
+ ['kelaimengsuo_2:login', clemenceauOpening],
+ ['mingji_2:touch_idle19', pirateCarWindow],
+ ['mingji_2:touch_idle26', pirateCarWindow],
+ ['rangbaer_5:touch_idle3', openingMatte(defaultStageFrames.get('rangbaer_5'), 'ArtMesh557', [1, 3, 2, 0])],
+ ['shi_2:touch_drag11', lionTransitionCrop],
+ ['gaoxiong_7:touch_idle18', frame(2123, 817, 8199, 4282)],
+ ['daofeng_4:idle', frame(671, -41, 6460, 5404)],
+ ['daofeng_4:home', frame(17, -76, 7191, 5404)], // The first glint occupies only a few pixels.
+ ['hailunna_4:wedding', trackDrawable(frame(-1500, 851, 7604, 6597), 'MB_blackbgjuxing',
+  { corners: [4, 5, 6, 7], whenVisible: true, includeCorners: true })],
+ ['dulianglai_2:login', frame(768, 704, 14385, 9146)],
+ ['wuerlixi_2:login', frame(-1100, -365, 9480, 8720)],
+ ['weiyan_4:home', frame(0, 0, 8000, 8000)], // The wide panning background extends outside the native camera canvas.
+ ['weiyan_6:home', openingMatte(frame(115, -214, 7523, 6900), 'ArtMesh44', [4, 5, 6, 7])],
+ ['z46_3:login', frame(580, -1600, 12550, 6800)], // Keep the opening flag and the later character in the camera window.
+ ['jialisuoniye_3:touch_special', frame(7, 637, 9534, 6070)],
+ ['jinshi_2:touch_idle16', frame(713, 607, 7302, 4477)],
+ ['baiyanjuren_4:touch_idle14', frame(1448, 2091, 8410, 5881)],
+ ['guandao_3:home', frame(1051, 1711, 8864, 6887)],
+ ['edu_3:home', openingMatte(frame(100, -30, 8015, 5250), 'ArtMesh159', [5, 7, 6, 4])],
+ ['pinghai_6:login', openingMatte(frame(590, -120, 5316, 5150), 'mask_black_16b11', [1, 3, 2, 0])],
+ ['qianwei_2:home', frame(-1196, -508, 7316, 6098)],
+ ['bulaimodun_4:home', openingMatte(frame(-1066, 67, 7134, 8254), 'mask_black_16b11', [1, 3, 2, 0])],
+ ['ougen_5:idle', frame(126, 1520, 8447, 8151)],
+]);
 export const authoredLive2DFrame = (id, motion) =>
- (cleanSceneFrame(id) && live2dIdleExportVariants.get(id)?.get(motion))
+ live2dMotionStageFrames.get(id + ':' + motion)
+ || (cleanSceneFrame(id) && live2dIdleExportVariants.get(id)?.get(motion))
  || live2dIdleVariants.get(id)?.get(motion) || live2dFrames.get(id)
  || (motion === 'idle' ? live2dIdleFrames.get(id) : null) || cleanSceneFrame(id) || null;
 const live2dOpeningFrames = new Map([
@@ -511,13 +567,17 @@ export const authoredLive2DExportFrame = (id, motion) =>
 const magicStageShutter = Object.freeze(['ArtMesh501', 'ArtMesh227']);
 const magicStageCloseUps = new Set(['idle2', 'idle13', 'idle14', 'idle15', 'idle16']);
 const mogadorInteractionCovers = Object.freeze(['ArtMesh1385', 'ArtMesh1410']);
+const pirateCarMatte = Object.freeze(['ArtMesh1072']);
+// Game interface backdrops can paint over the standalone artwork.
+export const authoredLive2DInterfaceCovers = id => id === 'mojiaduoer_4' ? mogadorInteractionCovers
+ : id === 'mingji_2' ? pirateCarMatte : [];
 const lionSceneMatte = Object.freeze(['ArtMesh222', 'ArtMesh226', 'ArtMesh229', 'ArtMesh231',
  'ArtMesh243', 'ArtMesh244', 'ArtMesh287', 'ArtMesh288', 'ArtMesh686']);
+const jianwuOpeningMatte = Object.freeze(['ArtMesh460', 'ArtMesh463', 'ArtMesh464', 'ArtMesh465']);
 export function authoredLive2DExportHidden(id, motion) {
- // These two opaque menu backdrops are only useful inside the game UI.
- if (id === 'mojiaduoer_4') return mogadorInteractionCovers;
  if (id === 'shi_2' && (motion === 'touch_idle1' || motion === 'effect')) return lionSceneMatte;
- return id === 'xinnong_5' && magicStageCloseUps.has(motion) ? magicStageShutter : [];
+ if (id === 'jianwu_2' && motion === 'home') return jianwuOpeningMatte;
+ return id === 'xinnong_5' && magicStageCloseUps.has(motion) ? magicStageShutter : authoredLive2DInterfaceCovers(id);
 }
 
 // The pool background's upper edge is at -2.16° in the uncorrected shot.
@@ -527,6 +587,7 @@ export const authoredLive2DLevelFrame = (id, motion) =>
 
 // Mesh vertices on the inside of each authored screen matte, in the
 // order top-left, bottom-left, bottom-right, top-right.
+const sceneWindowMotions = /^(?:idle\d*|touch_\w+|main_\d+|mail|mission(?:_complete)?|complete|effect|wedding)$/;
 const live2dExportWindows = new Map([
  ['ankeleiqi_4', { drawable:'ArtMesh44', corners:[4, 5, 6, 7] }],
  ['baiyanjuren_4', { drawable:'ArtMesh323', corners:[4, 5, 6, 7], motions:/^(?:home|touch_idle\d+)$/ }],
@@ -534,17 +595,19 @@ const live2dExportWindows = new Map([
  ['chaijun_6', { drawable:'jiezhihuan7', frame:ringMatteWindow, motions:/./ }],
  ['jinshi_2', { drawable:'ArtMesh24', corners:[4, 5, 6, 7], motions:/^touch_(?:idle|drag)\d+$/ }],
  ['aogusite_4', { drawable:'ArtMesh1077', corners:[4, 5, 6, 7] }],
- ['gaoxiong_7', { drawable:'ArtMesh531', corners:[4, 5, 6, 7] }],
+ ['gaoxiong_7', { drawable:'ArtMesh531', corners:[4, 5, 6, 7], motions:sceneWindowMotions }],
  ['guandao_3', { drawable:'ArtMesh8', corners:[4, 6, 7, 8] }],
- ['mingji_2', { drawable:'ArtMesh674', corners:[4, 5, 6, 7],
+ ['jianwu_2', { drawable:'ArtMesh182', corners:[1, 3, 2, 0], motions:/^home$/ }],
+ ['mingji_2', { drawable:'ArtMesh674', corners:[4, 5, 6, 7], motions:sceneWindowMotions,
    closeUps:new Set(['idle15', 'idle16', 'idle20', 'idle23', 'idle28', 'idle30']) }],
  ['mojiaduoer_4', { drawable:'ArtMesh654', frame:mogadorSky, motions:/./ }],
  ['naximofu_2', { drawable:'ArtMesh301', corners:[9, 8, 7, 4] }],
  ['qiye_7', { drawable:'MB_blackbgjuxing3', corners:[4, 5, 6, 7], motions:/^login$/ }],
  ['qisheng_2', { drawable:'ArtMesh363', corners:[1, 3, 2, 0], motions:/./ }],
- ['sailimiye_2', { drawable:'ArtMesh779', corners:[0, 1, 2, 3] }],
+ ['sailimiye_2', { drawable:'ArtMesh779', corners:[0, 1, 2, 3], motions:sceneWindowMotions }],
+ ['tiancheng_cv_3', { drawable:'MB_blackbgjuxing', corners:[4, 5, 6, 7], motions:/^touch_idle20$/ }],
  ['u2501_2', { drawable:'ArtMesh932', corners:[4, 5, 6, 7], motions:/^(?:idle|touch_)\w*$/ }],
- ['wuzang_4', { drawable:'ArtMesh', corners:[4, 5, 6, 7] }],
+ ['wuzang_4', { drawable:'ArtMesh', corners:[4, 5, 6, 7], motions:sceneWindowMotions }],
 ]);
 export function authoredLive2DExportWindow(id, motion) {
  const spec = live2dExportWindows.get(id);
@@ -558,10 +621,13 @@ const spineExportMotionFrames = new Map([
  ['yuekechengii_2:normal', frame(-1481, -628, 1719, 1787)],
  ['qisheng_3:normal_touch', frame(-1809, 8, 1988, 3264)],
  ['siwanshi_4:touch_special_normal', frame(-1238, -827, 1381, 917)], // The second shot moves onto the canvas as the selected clip is sampled.
+ ['siwanshi_4:login', frame(-1284, -754, 1360, 833)],
+ ['feiteliedadi_5:login', frame(-1965, -13, 2064, 2376)],
  ['yuekechengii_4:login', frame(-1495, 8, 1613, 1832)],
  // Inset past the background texture's transparent antialias edge.
  ['yuekegongjue_5:normal', frame(-1948, -1739, 1947, 1248)],
  ['tianjinfeng_3:normal', frame(-2398, 8, 2398, 2724)], // Inside the classroom background; exclude atlas-edge pixels.
+ ['tianjinfeng_3:change_in', frame(-2398, 8, 2398, 2724)],
  ['qisheng_3:normal', frame(-1817, 0, 1997, 3272)],
  ['jumeihuali_2:normal', frame(-2945, 5, 2945, 3390)],
  ['anninvwang_3:normal', frame(-1334, 0, 1366, 1801)],
@@ -573,11 +639,39 @@ const spineExportMotionFrames = new Map([
  ['bisimaiz_3:normal', frame(-2174, -8, 2120, 2463)],
 ]);
 export const authoredSpineExportFrame = (id, motion) => spineExportMotionFrames.get(id + ':' + motion) || authoredSpineFrame(id);
-export const authoredSpineFrame = id => spineFrames.get(id) || null;
+const spineMotionStageFrames = new Map([
+ ['tianjinfeng_2:normal', spineExportMotionFrames.get('tianjinfeng_2:normal')],
+ ['weikesibao_2:normal', vicksburgNormalFrame],
+ ['weikesibao_2:ex', vicksburgExFrame],
+]);
+export const authoredSpineFrame = (id, motion) => spineMotionStageFrames.get(id + ':' + motion) || spineFrames.get(id) || null;
+
+// The visible scene inside the game's matte defines the picture in every export format.
+const sceneExportCrops = new Map([
+ ['guandao_3:idle', frame(256, 1387, 9703, 6755)],
+ ...['normal', 'login', 'change_out', 'touch_body', 'touch_head', 'touch_special', 'touch_special_2', 'touch_special_normal']
+  .map(motion => ['mojiaduoer_5:' + motion, mogadorAircraft]),
+ ['guandao_3:idle1', frame(273, 1489, 9616, 6725)],
+ ['guandao_3:idle17', frame(273, 1289, 9685, 6364)],
+ ['guandao_3:idle2', frame(273, 1483, 9639, 6742)],
+ ['guandao_3:idle3', frame(273, 1415, 9616, 6698)],
+ ['antu_2:idle15', frame(-1099, 67, 12015, 7352)],
+ ['baifeng_2:touch_idle19', frame(-1655, -1012, 11266, 6426)],
+ ['jinluhao_3:login', frame(-1842, -816, 15547, 8570)],
+ ['sebao_2:touch_idle7', frame(278, 145, 13871, 7804)],
+ ['ankeleiqi_4:idle14', rotatedFrame(1348, 1046, 8422, 5321, 1.91)],
+ ['yanusi_7:touch_idle57', frame(-1520, -816, 11094, 6285)],
+ ['jianwu_2:home', { inset: [0.03, 0.038, 0.04, 0.037] }],
+]);
 
 // These crops stay inside the illustrated background over the exported action.
 // Tracked windows use left, top, right, and bottom fractions of the picture.
+const mogadorVideoInset = { inset: [0.0132, 0.0366, 0.0132, 0.0921] };
 const sceneVideoCrops = new Map([
+ ['feiteliedadi_4:idle', frame(151, 136, 14778, 8554)],
+ ['feiteliekaer_3:idle', frame(29, 26, 5289, 3133)],
+ ['naximofu_4:normal', frame(-2892, 211, 2850, 3195)],
+ ['yingrui_4:normal', frame(-1677, -980, 1689, 957)],
  ['aijier_4:idle', frame(64, 74, 14204, 9942)],
  ['baifeng_2:idle', frame(-1641, -1065, 11212, 6470)],
  ['baifeng_2:idle9', rotatedFrame(-10337, -3669, 15200, 12005, 7.81)],
@@ -610,8 +704,151 @@ const sceneVideoCrops = new Map([
  ['yunlong_2:ex', frame(-1578, 12, 1634, 2014)],
  ['yunlong_2:normal', frame(-1578, 12, 1634, 2014)],
  ['z13_2:idle1', frame(700, 561, 10326, 6217)],
+ ['aersasi_3:idle17', frame(-872, -27, 8906, 5984)],
+ ['aimudeng_2:idle', frame(51, 68, 5024, 6443)],
+ ['aimudeng_2:touch_special', frame(51, 1620, 4990, 6443)],
+ ['ankeleiqi_4:idle', frame(-648, 119, 9759, 5729)],
+ ['benningdun_2:idle', frame(-1639, -1385, 11097, 6527)],
+ ['buleisite_3:idle', frame(1004, 1426, 18082, 10809)],
+ ['buleisite_3:touch_special', frame(1042, 1201, 17556, 10922)],
+ ['dulianglai_2:idle', frame(1509, 1513, 14173, 9803)],
+ ['dulianglai_2:idle1', frame(1558, 1593, 14066, 9732)],
+ ['gangyishawa_3:idle', frame(51, 72, 12434, 7417)],
+ ['gangyishawa_3:idle9', frame(46, 117, 12862, 7719)],
+ ['gaoxiong_7:idle11', { inset: [0, 0, 0, 0.17] }],
+ ['guanghui_7:idle', frame(-1079, 966, 9344, 7431)],
+ ['guanghui_7:touch_idle11', frame(-919, 966, 9346, 7431)],
+ ['i404_2:login', frame(-1441, 12, 1260, 1558)],
+ ['i404_3:login', frame(-1441, 12, 1260, 1558)],
+ ['jianwu_2:idle', frame(-2010, -1168, 11263, 6970)],
+ ['jianwu_3:touch_special', frame(-6843, -3369, 6860, 4586)],
+ ['jinluhao_4:touch_head', frame(-1570, 14, 1824, 1979)],
+ ['junzhu_5:idle', frame(-113, -21, 1908, 1189)],
+ ['junzhu_5:touch_idle8', frame(-23, -15, 1906, 1103)],
+ ['kewei_6:idle', frame(-4256, -1326, 17988, 10455)],
+ ['kewei_6:idle6', frame(-3410, -1504, 17189, 9406)],
+ ['lvzuofu_2:idle', frame(-1129, 1004, 7883, 6304)],
+ ['lvzuofu_2:wedding', frame(-1129, 1023, 7883, 6304)],
+ ['meiyinci_3:idle', frame(504, 611, 6469, 3816)],
+ ['molisen_3:drag_ex', frame(-1655, 21, 1651, 1894)],
+ ['nabulesi_2:idle', frame(378, 784, 15505, 8207)],
+ ['nabulesi_2:touch_drag11', frame(628, 784, 15505, 8238)],
+ ['naximofu_2:idle', frame(430, 461, 13151, 7335)],
+ ['qianjian_2:idle', frame(109, 91, 7895, 4973)],
+ ['qianjian_2:idle3', frame(99, 102, 7895, 4964)],
+ ['qiannai_2_doa:drag_ex', frame(-1016, 18, 1008, 1210)],
+ ['qisheng_2:touch_special', frame(195, 276, 7361, 4450)],
+ ['qiye_10:idle', frame(-2280, -937, 11812, 7071)],
+ ['qiye_9:idle', frame(-3206, 157, 11096, 7925)],
+ ['rangbaer_5:idle', frame(-3019, 421, 11253, 7851)],
+ ['shi_2:idle', frame(1005, 313, 11969, 6628)],
+ ['siwanshi_4:touch_special', frame(-1136, -619, 1249, 714)],
+ ['telafaerjia_2:idle', frame(584, 481, 6197, 3624)],
+ ['telafaerjia_2:idle6', frame(3, 196, 6490, 3706)],
+ ['tiancheng_cv_2:idle', frame(2186, 1871, 17513, 10524)],
+ ['xinnong_4:idle', frame(-4522, -759, 13743, 9182)],
+ ['yanusi_7:idle', frame(-1532, -963, 11101, 6334)],
+ ['yunxian_2:idle', frame(-5089, -53, 13620, 10526)],
+ ['yunxian_3:idle', frame(375, 297, 7819, 4388)],
+ ['aogusite_3:normal', frame(-2389, -1444, 2481, 1508)],
+ ['feiteliedadi_4:idle1', frame(238, 190, 14739, 8475)],
+ ['feiteliedadi_4:idle10', frame(238, 190, 14739, 8475)],
+ ['feiteliedadi_4:idle12', rotatedFrame(-2930, -3074, 19032, 9444, -10.08)],
+ ['feiteliedadi_4:idle15', frame(-3552, -1762, 18286, 10732)],
+ ['feiteliedadi_4:idle16', rotatedFrame(-4611, -1032, 17994, 11996, 7.77)],
+ ['feiteliedadi_4:idle17', rotatedFrame(-9394, -1782, 22170, 16353, 6.95)],
+ ['feiteliedadi_4:idle2', rotatedFrame(-2522, -4336, 19298, 8017, -20.27)],
+ ['feiteliedadi_4:idle20', rotatedFrame(-5574, -2104, 19326, 12212, 5.67)],
+ ['feiteliedadi_4:idle21', rotatedFrame(-2749, -2936, 18441, 9158, -8.42)],
+ ['feiteliedadi_4:idle22', rotatedFrame(-3544, -3012, 19501, 10180, -8.37)],
+ ['feiteliedadi_4:idle23', rotatedFrame(-4598, -2843, 20691, 11598, -8.38)],
+ ['feiteliedadi_4:idle25', rotatedFrame(-8435, -4197, 24298, 14495, -9.97)],
+ ['feiteliedadi_4:idle27', rotatedFrame(-8352, -3721, 24380, 15051, -6)],
+ ['feiteliedadi_4:idle29', frame(195, 171, 14745, 8510)],
+ ['feiteliedadi_4:idle3', rotatedFrame(-2602, 470, 15554, 10941, 10.8)],
+ ['feiteliedadi_4:idle30', frame(181, 160, 14766, 8535)],
+ ['feiteliedadi_4:idle32', frame(181, 160, 14766, 8535)],
+ ['feiteliedadi_4:idle33', frame(181, 160, 14766, 8535)],
+ ['feiteliedadi_4:idle35', frame(181, 160, 14766, 8535)],
+ ['feiteliedadi_4:idle36', frame(181, 160, 14766, 8535)],
+ ['feiteliedadi_4:idle38', frame(-3442, -2292, 18204, 10129)],
+ ['feiteliedadi_4:idle39', frame(-3442, -2292, 18204, 10129)],
+ ['feiteliedadi_4:idle4', rotatedFrame(-1369, -2331, 17376, 8380, -9.46)],
+ ['feiteliedadi_4:idle41', frame(-3006, -1900, 17801, 10041)],
+ ['feiteliedadi_4:idle42', frame(-3006, -1900, 17801, 10041)],
+ ['feiteliedadi_4:idle50', frame(-6795, -2475, 21308, 13633)],
+ ['feiteliedadi_4:idle6', frame(238, 190, 14739, 8475)],
+ ['feiteliedadi_4:idle7', frame(-3234, -1317, 17996, 10828)],
+ ['feiteliedadi_4:idle8', rotatedFrame(-4239, -311, 16935, 11870, 11.36)],
+ ['feiteliekaer_3:idle1', frame(39, 33, 5283, 3125)],
+ ['feiteliekaer_3:idle2', frame(39, 33, 5283, 3125)],
+ ['feiteliekaer_3:idle3', frame(-2253, -978, 8230, 5203)],
+ ['feiteliekaer_3:idle4', frame(-2270, -1125, 8213, 5056)],
+ ['feiteliekaer_3:idle5', frame(-2340, -945, 8416, 5371)],
+ ['mojiaduoer_4:idle10', mogadorVideoInset],
+ ['mojiaduoer_4:idle11', mogadorVideoInset],
+ ['mojiaduoer_4:idle12', mogadorVideoInset],
+ ['mojiaduoer_4:idle13', mogadorVideoInset],
+ ['mojiaduoer_4:idle14', mogadorVideoInset],
+ ['mojiaduoer_4:idle15', mogadorVideoInset],
+ ['mojiaduoer_4:idle2', mogadorVideoInset],
+ ['mojiaduoer_4:idle3', mogadorVideoInset],
+ ['mojiaduoer_4:idle4', mogadorVideoInset],
+ ['mojiaduoer_4:idle5', mogadorVideoInset],
+ ['mojiaduoer_4:idle6', mogadorVideoInset],
+ ['mojiaduoer_4:idle7', mogadorVideoInset],
+ ['mojiaduoer_4:idle8', mogadorVideoInset],
+ ['mojiaduoer_4:idle9', mogadorVideoInset],
+ ['xinnong_4:idle8', frame(-4429, -670, 13636, 9142)],
+ ['balaka_2:normal', frame(335, 226, 5724, 3090)],
+ ['bawu_2:normal', frame(-1625, 32, 1720, 1994)],
+ ['changmen_6:normal', frame(643, 234, 5547, 3555)],
+ ['fuluoxiluofu_3:normal', frame(-1039, -320, 1937, 1408)],
+ ['geluosite_3:normal', frame(-1881, -1092, 2010, 1249)],
+ ['guanghui_8:normal', frame(-2511, 51, 2980, 3151)],
+ ['haerfude_2:normal', frame(-2529, -1851, 2855, 1991)],
+ ['i404_2:normal', frame(-1434, 29, 1251, 1545)],
+ ['i404_3:normal', frame(-1434, 29, 1251, 1545)],
+ ['jianwu_3:normal', frame(-6803, -3303, 6784, 4541)],
+ ['jianwu_4:normal', frame(-2220, 51, 2330, 2633)],
+ ['jianye_5:ex', frame(-1741, -1099, 1860, 849)],
+ ['jianye_5:normal', frame(-1741, -1099, 1860, 849)],
+ ['kaiersheng_3:ex', frame(-2559, -284, 2575, 2710)],
+ ['kaiersheng_3:normal', frame(-2559, -284, 2575, 2710)],
+ ['kala_2:normal', frame(-1931, 82, 1948, 2246)],
+ ['kansasi_2:normal', frame(-1673, 27, 1866, 2421)],
+ ['kashan_2:normal', frame(-2667, 3, 2292, 2563)],
+ ['kewei_5:normal', frame(-2131, -1312, 2182, 1090)],
+ ['kuangsan_2:normal', frame(-2603, 265, 2580, 3238)],
+ ['linglai_2:normal', frame(-1759, -1061, 1625, 997)],
+ ['lingyangzhe3_2:normal', frame(398, 344, 6397, 3793)],
+ ['liuliang_2:normal', frame(-2807, 69, 2968, 3448)],
+ ['moermansike_3:normal', frame(-3219, -2057, 3482, 1669)],
+ ['molisen_3:ex', frame(-1632, 48, 1636, 1880)],
+ ['nengdai_9:normal', frame(-1397, 24, 1397, 1577)],
+ ['qiershazhi_3:normal', frame(-2776, -1480, 2777, 1468)],
+ ['qisheng_3:ex', frame(-1794, 26, 1975, 3048)],
+ ['sikula_4:normal', frame(-2347, -172, 2242, 3093)],
+ ['sisinai_2:normal', frame(-2919, -820, 3400, 2914)],
+ ['siwanshi_4:normal', frame(-1123, -604, 1245, 707)],
+ ['talin_4:normal', frame(-2589, 57, 2460, 3103)],
+ ['tansuozhe_2:normal', frame(-3556, -955, 3362, 3174)],
+ ['weikesibao_2:ex', vicksburgExFrame],
+ ['weikesibao_2:normal', vicksburgNormalFrame],
+ ['wuerlixi_4:normal', frame(-4829, -3727, 5332, 2050)],
+ ['xingzuo_2:normal', frame(-1317, -528, 1432, 1141)],
+ ['xinzexi_4:normal', frame(-3950, -2193, 3954, 2162)],
+ ['yongqi_2:normal', frame(-1867, 101, 1905, 2376)],
+ ['yueke_ger_4:normal', frame(-1763, 69, 1867, 2866)],
+ ['yunxian_3:idle4', frame(-510, 146, 8804, 5211)],
+ ['z15_2:normal', frame(-2019, 35, 1975, 2500)],
+ ['z52_2:normal', frame(-1750, -995, 1836, 1121)],
+ ['zhaohe_4:normal', frame(-1486, 60, 1769, 1894)],
 ]);
-export const authoredSceneVideoCrop = (id, motion) => sceneVideoCrops.get(id + ':' + motion) || null;
+export function authoredSceneExportCrop(id, motion, format) {
+ const key = id + ':' + motion;
+ return sceneExportCrops.get(key) ?? (format === 'video' ? sceneVideoCrops.get(key) : null) ?? null;
+}
 export function portraitFrameBounds(id, rectangles) {
  const rule=rules[id];if(!rule)return null;
  const valid=rectangles.filter(r=>r.visible!==false&&r.bounds?.length===4&&r.bounds.every(Number.isFinite)&&r.bounds[2]>r.bounds[0]&&r.bounds[3]>r.bounds[1]);

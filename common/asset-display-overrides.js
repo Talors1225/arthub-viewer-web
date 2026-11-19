@@ -425,5 +425,13 @@
     return { ...entry, ...patch };
   }
 
-  return Object.freeze({ metadata, get, apply });
+  function crosscoreAnimations(skeletonPath, animations) {
+    // This prefab only contains a fade-to-black slot. Its copied idle and click
+    // tracks leave that slot transparent for the entire animation.
+    return /(?:^|\/)30300_skin_bluebuck03a\.json$/i.test(skeletonPath || '')
+      ? animations.filter(animation => animation.name === 'guochang')
+      : animations;
+  }
+
+  return Object.freeze({ metadata, get, apply, crosscoreAnimations });
 });

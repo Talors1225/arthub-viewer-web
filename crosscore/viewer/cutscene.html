@@ -410,7 +410,7 @@
   </aside>
 
 <script src="vendor/spine-webgl.js"></script>
-<script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
+<script src="../../common/asset-display-overrides.js?v=20261119-transition-animations"></script>
 <script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
 <script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
@@ -1196,7 +1196,7 @@
       const curTrack = cut.state.getCurrent(0);
       const curName = curTrack ? curTrack.animation.name : '';
       let shown = 0;
-      for (const a of cut.data.animations) {
+      for (const a of cut.animations) {
         if (q && !a.name.toLowerCase().includes(q)) continue;
         const b = document.createElement('button');
         b.className = 'anim-row' + (a.name === curName ? ' on' : '');
@@ -1817,7 +1817,7 @@
     }, location.origin);
   }
   function playerCapabilities() {
-    const animations = cut?.data?.animations || [];
+    const animations = cut?.animations || [];
     const parts = (cut?.data?.slots || []).map(slot => ({
       name: String(slot.name), visible: !cut.hiddenSlots.has(String(slot.name)),
     }));
@@ -2201,15 +2201,17 @@
       stateData.defaultMix = 0.15;
       const state = new SP.AnimationState(stateData);
       // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
-      animSel.innerHTML = data.animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
-      const urlAnim = new URLSearchParams(location.search).get('anim');
-      const saved = restoreAnim && data.animations.some(a => a.name === restoreAnim) ? restoreAnim : null;
-      const previewAnim = (v.previewAnimation && data.animations.find(a => a.name === v.previewAnimation))
-        || data.animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
-        || data.animations.find(a => /^idle[_ -]?\d+$/i.test(a.name))
-        || data.animations.find(a => /^loop/i.test(a.name))
-        || data.animations[0];
-      let def = saved || (urlAnim && data.animations.some(a => a.name === urlAnim) ? urlAnim : null)
+      const animations = window.ArtHubDisplayOverrides.crosscoreAnimations(v.skel, data.animations);
+      animSel.innerHTML = animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.name) + '</option>').join('');
+      const link = new URLSearchParams(location.search);
+      const urlAnim = link.get('id') === cur.id ? link.get('anim') : null;
+      const saved = restoreAnim && animations.some(a => a.name === restoreAnim) ? restoreAnim : null;
+      const previewAnim = (v.previewAnimation && animations.find(a => a.name === v.previewAnimation))
+        || animations.find(a => /^(?:idle|stand|standing|default)$/i.test(a.name))
+        || animations.find(a => /^idle[_ -]?\d+$/i.test(a.name))
+        || animations.find(a => /^loop/i.test(a.name))
+        || animations[0];
+      let def = saved || (urlAnim && animations.some(a => a.name === urlAnim) ? urlAnim : null)
         || (previewAnim && previewAnim.name);
       state.setAnimation(0, def, loopAnim);
       state.update(0);
@@ -2231,7 +2233,7 @@
         const target = { data, skeleton };
         bounds = measureAnimationBounds(target, def, false);
         if (!bounds) {
-          for (const animation of data.animations) {
+          for (const animation of animations) {
             if (animation.name === def) continue;
             bounds = measureAnimationBounds(target, animation.name, false);
             if (bounds) {
@@ -2248,7 +2250,7 @@
         pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma),
         active: true,
       };
-      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds, fixedFrame,
+      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, animations, state, atlas, bounds, fixedFrame,
               centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(), layers: [baseLayer], pma: baseLayer.pma };
       const results = await Promise.allSettled((v.compositeLayers || []).map(layerEntry =>
         loadCompositeLayer(layerEntry, SP, seq, request.signal, baseLayer)));
@@ -2464,7 +2466,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON('../../thumbs/index.json').then(td => {
+    const thumbnails = K.fetchJSON('../../thumbs/index.json?v=20261119-framing').then(td => {
       webThumbs = td.items || {};
       if (routeSource === 'crosscore' && cur) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];

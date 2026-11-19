@@ -7,10 +7,11 @@ const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint 
 const seashoreIdleFrame = { minX: -1334, minY: -679, maxX: 1346, maxY: 773 };
 const arpeggioIdleFrame = { minX: -1056, minY: -582, maxX: 1112, maxY: 644 };
 const loadingPreview = K.createLoadingPreview(stage);
+const thumbnailRevision = id => Number(id) === 7003005 ? '?v=20261119-framing' : '';
 let previewSequence = 0, previewScene = null, previewPending = false;
 window.__crosscorePreviewFailure = reason => loadingPreview.fail(previewSequence, reason);
 const initialPreviewId = new URL(location.href).searchParams.get('model');
-if (/^\d+$/.test(initialPreviewId || '')) loadingPreview.begin(0, { path: K.siteRoot() + 'thumbs/crosscore/interaction-' + initialPreviewId + '.webp', label: '当前立绘', trimImage: true });
+if (/^\d+$/.test(initialPreviewId || '')) loadingPreview.begin(0, { path: K.siteRoot() + 'thumbs/crosscore/interaction-' + initialPreviewId + '.webp' + thumbnailRevision(initialPreviewId), label: '当前立绘', trimImage: true });
 const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
 if (!gl) throw new Error('WebGL 不可用，请在本机浏览器开启硬件加速后重试。');
 const context = new SP.ManagedWebGLRenderingContext(gl), renderer = new SP.SceneRenderer(canvas, context);
@@ -34,7 +35,10 @@ $('#thumbGrid').dataset.kitDensityReady = '1';
 let sortMode = libraryPrefs.get('sortMode', 'name'), sortDirection = libraryPrefs.get('sortDirection', 'asc');
 const thumbnailManifest = await fetch('../../thumbs/index.json').then(r => r.ok ? r.json() : null).catch(() => null);
 const libraryThumbs = thumbnailManifest?.items || {};
-const thumbnailFor = row => libraryThumbs['crosscore-interaction:' + row.id];
+const thumbnailFor = row => {
+  const path = libraryThumbs['crosscore-interaction:' + row.id];
+  return path ? path + thumbnailRevision(row.id) : null;
+};
 
 let editor = null, exporting = false, volume = Number(localStorage.getItem('arthub:crosscore:volume') ?? .65);
 audio.volume = volume;
@@ -431,7 +435,9 @@ function startAnimationPreview(name, time = 0, loop = playback.loop) {
   scene.update(0, now());
 }
 const viewerUI = window.createInteractionViewerUI({
-  animations: () => scene?.main.skeleton.data.animations.map(animation => ({ name: animation.name, duration: animation.duration })) || [],
+  animations: () => scene ? window.ArtHubDisplayOverrides.crosscoreAnimations(
+    scene.main.def.skeleton, scene.main.skeleton.data.animations,
+  ).map(({ name, duration }) => ({ name, duration })) : [],
   playback: () => ({ ...timeline(), ready: !!scene && !!controller && $('#loading').hidden, playing: playback.playing, speed: playback.speed, key: model?.id + ':' + scene?.definition.name }),
   setPlaying: playing => { playback.playing = playing; if (!playing) audio.pause(); else if (audioResult?.status === 'playing') audio.play().catch(() => {}); },
   setSpeed: speed => { playback.speed = speed; },
@@ -445,9 +451,11 @@ const viewerUI = window.createInteractionViewerUI({
     setExporting: value => { exporting = value; }, setBackground: () => {},
     soundEnabled, setSoundEnabled, voiceTab: 'voice',
     volume: () => volume, setVolume: value => { volume = value; audio.volume = value; $('#asmrPlayer').volume = value; localStorage.setItem('arthub:crosscore:volume', value); },
-    capture: animation => {
+    capture: (animation, format) => {
       const captureScene = Object.create(scene);
       return window.createInteractionSpineCapture({ layers: scene.layers, ns: SP, canvas, renderer, gl, editor, animation,
+        fromSetupPose: !!animationPreview && (format === 'video' || format === 'gif'),
+        setupRotation: layer => layer.def.render.rotation,
         fixedFrame: scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame
           : scene.definition.name === '20110_skin_Arpeggio07_spine' && animation.name === 'idle1' ? arpeggioIdleFrame : undefined,
         visible: layer => scene.visible(layer),

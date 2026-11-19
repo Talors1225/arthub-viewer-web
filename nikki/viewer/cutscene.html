@@ -1755,7 +1755,7 @@
 
   // ---------- 播放条 ----------
   const getTrack = () => { const t = cut && cut.state.getCurrent(0); return t && t.animation ? t : null; };
-  const sceneAnimations = () => cut?.wallpaperActions || cut?.data.animations || [];
+  const sceneAnimations = () => cut?.animations || [];
 
   function updateStageClickMode() {
     stage.dataset.clickMode = boneEditMode ? 'pose' : partEditMode ? 'part-editing' : cut?.wallpaperActions ? 'interaction' : 'audio';
@@ -2622,12 +2622,17 @@
       const state = new SP.AnimationState(stateData);
       // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
       const wallpaperActions = v.wallpaperScene ? wallpaper.actions(v.wallpaperScene, SP) : null;
-      const animations = wallpaperActions || data.animations;
+      const lightLayer = v.skel === 'c103_00_bg.skel';
+      const animations = wallpaperActions || (lightLayer ? data.animations.filter(({ name }) =>
+        /_02$/.test(name) || ['action', 'bg_idle', 'idle_alt', 'expression_0', 'expression_0_alt'].includes(name),
+      ) : data.animations);
       const findAnimation = name => animations.find(item => item.name === name);
       animSel.innerHTML = animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.label || a.name) + '</option>').join('');
-      const urlAnim = new URLSearchParams(location.search).get('anim');
-      // This standalone light layer has an empty character-idle placeholder.
-      const preferredName = v.previewAnimation || (v.skel === 'c103_00_bg.skel' ? 'bg_idle' : null);
+      const link = new URLSearchParams(location.search);
+      const urlAnim = link.get('id') === cur.id ? link.get('anim') : null;
+      // The light layer and turrets need the idle clip for their own asset type.
+      const turret = /^tower_pulsegun_tower_lv[123]\.skel$/.test(v.skel);
+      const preferredName = v.previewAnimation || (lightLayer ? 'bg_idle' : turret ? 'idle_left_down' : null);
       const preferred = preferredName && findAnimation(preferredName);
       const restore = name => preferred && name === v.legacyPreviewAnimation ? preferred.name : name;
       const saved = restore(restoreAnim);
@@ -2654,6 +2659,18 @@
         try { skeleton.setSkin(skin); skeleton.setSlotsToSetupPose(); state.apply(skeleton); K.updateWorldTransform(skeleton); } catch {}
         bounds = K.measureBounds(skeleton, stageNS);
       }
+      if (!bounds && turret) {
+        const probe = new SP.Skeleton(data);
+        const probeState = new SP.AnimationState(new SP.AnimationStateData(data));
+        const track = probeState.setAnimation(0, def, false);
+        for (const fraction of [.2, .45, .7, .9]) {
+          track.trackTime = fraction * track.animation.duration;
+          probeState.apply(probe);
+          K.updateWorldTransform(probe);
+          bounds = K.measureBounds(probe, stageNS, false);
+          if (bounds) break;
+        }
+      }
       if (!bounds && v.nativeBurst) {
         const track = state.getCurrent(0);
         if (track) for (const fraction of [.2,.45,.7,.9]) {
@@ -2671,7 +2688,7 @@
         pma: !!(atlas.pages && atlas.pages[0] && atlas.pages[0].pma),
         active: true,
       };
-      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, state, atlas, bounds,
+      const target = { variant: String(v.variant || idx), sourceVariant: v, skeleton, data, animations, state, atlas, bounds,
               centerX: 0, centerY: 0, fitScale: 1, hiddenSlots: new Set(), layers: [baseLayer], pma: baseLayer.pma };
       const results = await Promise.allSettled((v.compositeLayers || []).map(layerEntry =>
         loadCompositeLayer(layerEntry, SP, seq, request.signal, baseLayer)));
@@ -2906,7 +2923,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnailRev = routeSource === 'nikki' ? '?v=20261118-wallpaper-viewer' : '';
+    const thumbnailRev = '?v=20261119-framing';
     const thumbnails = K.fetchJSON('../../thumbs/index.json' + thumbnailRev).then(td => {
       webThumbs = td.items || {};
       const variant = cur?.cutscenes[Number(variantSel.value)];
@@ -2915,7 +2932,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261118-wallpaper-viewer' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261119-framing' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));

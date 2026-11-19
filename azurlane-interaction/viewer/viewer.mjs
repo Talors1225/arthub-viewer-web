@@ -1,8 +1,8 @@
 import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
-import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261117-export-feedback';
+import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneVideoCrop} from './portrait-frame.mjs?v=20261118-scene-video-edges';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop} from './portrait-frame.mjs?v=20261119-clip-capture';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261116-forearm-pose';
@@ -51,8 +51,15 @@ const blendedVideoPortraits = new Set([
  'zhala_2', 'zhenzhuhao_2',
 ]);
 const refreshedPortraitCovers = new Set(["shengluyisi_2", "yuekegongjue_5", "qisheng_3", "anninvwang_3", "shuixinghao_2", "tiejiaohao_2", "sailimiye_2", "lilisha_2", "jumeihuali_2"]);
-const thumbRevision = id => refreshedPortraitCovers.has(id) ? "?v=20261117-framed" : portraitsWithSkinOne.has(id) ? '?v=20261110-az-spine-skins' : '';
-const previewPath = id => K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(id)+'.webp'+thumbRevision(id);
+const recroppedPortraitCovers = new Set([
+ 'aisaikesi_9', 'fage_2', 'huangjiacaifu_3', 'jinshi_2', 'mojiaduoer_5', 'tiancheng_cv_2', 'yanusi_3',
+]);
+const thumbRevision = id => recroppedPortraitCovers.has(id) ? '?v=20261119-framing'
+ : refreshedPortraitCovers.has(id) ? '?v=20261117-framed' : portraitsWithSkinOne.has(id) ? '?v=20261110-az-spine-skins' : '';
+const previewPath = id => {
+ const coverId = id === 'wuqi_3_hx' ? 'wuqi_3' : id;
+ return K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(coverId)+'.webp'+thumbRevision(coverId);
+};
 let previewPending=false,nextPreviewCheck=0;
 const previewSample=document.createElement('canvas');previewSample.width=previewSample.height=64;
 const previewContext=previewSample.getContext('2d',{willReadFrequently:true});
@@ -269,7 +276,7 @@ $('btnPrev').onclick=()=>step(-1);$('btnNext').onclick=()=>step(1);
 function step(direction){if(!allModels.length)return;const index=allModels.findIndex(m=>m.id===selected?.id);const next=index<0?(direction>0?0:allModels.length-1):(index+direction+allModels.length)%allModels.length;setPanelOpen('library',false);loadModel(allModels[next].id).catch(fail);}
 $('play').onclick=()=>{view.playing=!view.playing;$('play').textContent=view.playing?'暂停':'播放';if(ctx)(view.playing?ctx.resume():ctx.suspend()).catch(()=>{});};
 $('speed').onchange=()=>view.speed=Number($('speed').value);
-$('animation').onchange=()=>{unlockAudio().catch(()=>{});controller?.action($('animation').value,{force:true,idle:$('loop').checked,interactive:true,manual:true});};
+$('animation').onchange=()=>{unlockAudio().catch(()=>{});controller?.action($('animation').value,{force:true,idle:$('loop').checked,interactive:true,manual:true,resetPose:true});};
 $('loop').onchange=()=>$('animation').onchange();
 $('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'声音：关':'声音：开';evidence.audio.muted=muted;if(muted)stopAudio();else unlockAudio().catch(()=>{});};
 function auditionVoice(clip){
@@ -596,9 +603,9 @@ function stageBoundsForFrame(frame) {
   y: (frame.minY + frame.maxY) / 2,
  };
 }
-function sceneVideoCrop(model, motion, format) {
- if (format !== 'video' || editor.hidden.size || editor.poses.size) return null;
- return authoredSceneVideoCrop(model.id, motion);
+function sceneExportCrop(model, motion, format) {
+ if (editor.hidden.size || editor.poses.size) return null;
+ return authoredSceneExportCrop(model.id, motion, format);
 }
 function insetLive2DFrame(frame, inset) {
  if (!frame || !inset) return frame;
@@ -607,14 +614,49 @@ function insetLive2DFrame(frame, inset) {
  return { ...frame, minX: frame.minX + width * left, minY: frame.minY + height * top,
   maxX: frame.maxX - width * right, maxY: frame.maxY - height * bottom };
 }
+function intersectMatteEdges([a, b], [c, d]) {
+ const ax = b.x - a.x, ay = b.y - a.y, bx = d.x - c.x, by = d.y - c.y;
+ const determinant = ax * by - ay * bx;
+ if (Math.abs(determinant) < 1) return null;
+ const t = ((c.x - a.x) * by - (c.y - a.y) * bx) / determinant;
+ return new PIXI.Point(a.x + ax * t, a.y + ay * t);
+}
+function matteAperture(edges, internal) {
+ const opacity = internal.coreModel.getModel().drawables.opacities;
+ const lines = [];
+ for (const [id, start, end] of edges) {
+  const index = internal.getDrawableIndex(id);
+  if (index < 0 || opacity[index] < .99 || editor?.hidden.has(id)) return null;
+  const vertices = internal.getDrawableVertices(index);
+  if (!vertices || Math.max(start, end) * 2 + 1 >= vertices.length) return null;
+  lines.push([start, end].map(position => internal.localTransform.apply(
+   new PIXI.Point(vertices[position * 2], vertices[position * 2 + 1]),
+  )));
+ }
+ const [top, left, bottom, right] = lines;
+ const corners = [intersectMatteEdges(top, left), intersectMatteEdges(bottom, left),
+  intersectMatteEdges(bottom, right), intersectMatteEdges(top, right)];
+ if (corners.some(point => !point || !Number.isFinite(point.x) || !Number.isFinite(point.y))) return null;
+ // When the shutter closes, its inner edges cross. Keep the stage frame for that cut.
+ const [p, q, r] = corners;
+ if ((q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y) < 100000) return null;
+ return corners;
+}
 function live2DFrameAtPose(frame, internal) {
  const anchor = frame?.anchor;
  if (!anchor) return frame;
+ if (anchor.edges) {
+  const corners = matteAperture(anchor.edges, internal);
+  return corners ? cropAtMatteCorners(frame, anchor, corners, 1) : frame;
+ }
  const index = internal.getDrawableIndex(anchor.drawable);
  if (index < 0) return frame;
- if (anchor.whenVisible) {
+ let weight = 1;
+ if (anchor.whenVisible || anchor.fadeToFrame) {
   const model = internal.coreModel;
-  if (editor?.hidden.has(anchor.drawable) || !model.getDrawableDynamicFlagIsVisible(index) || model.getModel().drawables.opacities[index] < .2) return frame;
+  const opacity = model.getModel().drawables.opacities[index];
+  if (editor?.hidden.has(anchor.drawable) || !model.getDrawableDynamicFlagIsVisible(index) || opacity < (anchor.fadeToFrame ? .001 : .2)) return frame;
+  if (anchor.fadeToFrame) weight = Math.min(1, opacity);
  }
  const vertices = internal.getDrawableVertices(index);
  if (!vertices || (!anchor.corners && vertices.length !== 8)) return frame;
@@ -629,6 +671,9 @@ function live2DFrameAtPose(frame, internal) {
   const y = points.reduce((sum, point) => sum + point.y, 0) / points.length;
   points.sort((a, b) => Math.atan2(a.y - y, a.x - x) - Math.atan2(b.y - y, b.x - x));
  }
+ return cropAtMatteCorners(frame, anchor, points, weight);
+}
+function cropAtMatteCorners(frame, anchor, points, weight) {
  const rotation = anchor.align ? -Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x) : frame.rotation ?? 0;
  const cos = Math.cos(rotation), sin = Math.sin(rotation);
  const corners = anchor.align ? points.map(({ x, y }) => ({ x: x * cos - y * sin, y: x * sin + y * cos })) : points;
@@ -657,8 +702,12 @@ function live2DFrameAtPose(frame, internal) {
  }
  if (!Number.isFinite(halfHeight) || halfHeight < 1) return frame;
  const halfWidth = halfHeight * aspect;
- return { minX: centerX - halfWidth, minY: centerY - halfHeight * (1 + 2 * (anchor.headroom ?? 0)),
+ const crop = { minX: centerX - halfWidth, minY: centerY - halfHeight * (1 + 2 * (anchor.headroom ?? 0)),
   maxX: centerX + halfWidth, maxY: centerY + halfHeight, rotation };
+ if (weight === 1) return crop;
+ // As the opening matte fades, reveal the rest of the full scene continuously.
+ for (const edge of ['minX', 'minY', 'maxX', 'maxY']) crop[edge] = frame[edge] + (crop[edge] - frame[edge]) * weight;
+ return crop;
 }
 function live2DExportWindowAtPose(id, motion, internal) {
  const spec = authoredLive2DExportWindow(id, motion);
@@ -713,6 +762,8 @@ async function live2dPortrait(model,generation){
  let effectManager,effectMotion,effectTimeline,effectTime=0,sampleExportEffect=null;const renderedParameters=core.parameters.values.slice();
  const dragCover = model.id === 'wuqi_3' ? core.drawables.ids.indexOf('ArtMesh766') : -1;
  const coverDragParameter = indexes.get('touch_drag6');
+ const interfaceCovers = authoredLive2DInterfaceCovers(model.id).map(id => internal.getDrawableIndex(id)).filter(index => index >= 0);
+ const savedCoverOpacity = new Float32Array(interfaceCovers.length);
  const hotspots = model.interaction.hitAreas.map(area => ({ ...area, index: internal.getDrawableIndex(area.id) })).filter(area => area.index >= 0);
  const hotspotVertices = ({ index }) => {
   const { drawables } = core;
@@ -725,14 +776,20 @@ async function live2dPortrait(model,generation){
  internal.draw = gl => {
   viewerUI.tools.after();
   // The converted drag cover is opaque at rest and hides the entire room.
-  if (dragCover < 0 || coverDragParameter === undefined || renderedParameters[coverDragParameter] > .001) {
-   nativeDraw(gl);
-   return;
+  const hideDragCover = dragCover >= 0 && coverDragParameter !== undefined && !(renderedParameters[coverDragParameter] > .001);
+  if (!interfaceCovers.length && !hideDragCover) return nativeDraw(gl);
+  const opacities = core.drawables.opacities, dragOpacity = hideDragCover ? opacities[dragCover] : 0;
+  if (hideDragCover) opacities[dragCover] = 0;
+  for (let i = 0; i < interfaceCovers.length; i++) {
+   const index = interfaceCovers[i];
+   savedCoverOpacity[i] = opacities[index];
+   opacities[index] = 0;
   }
-  const opacity = core.drawables.opacities[dragCover];
-  core.drawables.opacities[dragCover] = 0;
   try { nativeDraw(gl); }
-  finally { core.drawables.opacities[dragCover] = opacity; }
+  finally {
+   for (let i = 0; i < interfaceCovers.length; i++) opacities[interfaceCovers[i]] = savedCoverOpacity[i];
+   if (hideDragCover) opacities[dragCover] = dragOpacity;
+  }
  };
  const lookParams=array(model.interaction.lookParameters).filter(p=>indexes.has(p.id));
  const manager=internal.motionManager,queue=manager.queueManager||manager.motionManager;
@@ -773,7 +830,7 @@ async function live2dPortrait(model,generation){
  let stageClip = null;
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
   prepareExport:async()=>{await loadEffect();if(generation===loadGeneration)api.refreshEffect();},
-  setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&displayedStageCrop!==undefined;},
+  setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&!stageCrop?.anchor&&displayedStageCrop!==undefined;},
   refit:()=>{refitPending=true;},
   effectTimeline: hasEffectControls(model.id) ? effectTimeline : null,
   refreshEffect:()=>{
@@ -859,11 +916,12 @@ async function live2dPortrait(model,generation){
  api.capture=(playback={},format,quality)=>{
   const motion = playback.name || activeMotion;
   const levelFrame = api.levelExport ? authoredLive2DLevelFrame(model.id, motion) : null;
-  const safeCrop = sceneVideoCrop(model, motion, format);
+  const safeCrop = sceneExportCrop(model, motion, format);
   const motionFrame = levelFrame ?? (safeCrop?.inset ? null : safeCrop) ?? authoredLive2DExportFrame(model.id, motion)
    ?? live2DExportWindowAtPose(model.id, motion, internal);
   const captureFrameAtPose = () => insetLive2DFrame(live2DFrameAtPose(motionFrame, internal), safeCrop?.inset);
-  const authoredFrame = captureFrameAtPose();
+  const animatedMatte = motionFrame?.anchor?.fadeToFrame && (format === 'video' || format === 'gif');
+  const authoredFrame = animatedMatte ? motionFrame : captureFrameAtPose();
   let exportRotation = authoredFrame?.rotation ?? 0;
   if (api.levelExport && model.id === 'xinnong_5' && playback.name === 'idle18') {
    const index = internal.getDrawableIndex('ArtMesh370');
@@ -1012,7 +1070,9 @@ async function live2dPortrait(model,generation){
       advance(time, false);
       const poseFrame = captureFrameAtPose();
       const fit = stageBoundsForFrame(poseFrame);
-      const scale = size.scale * (authoredFrame.maxX - authoredFrame.minX) / fit.width;
+      const widthFit = (authoredFrame.maxX - authoredFrame.minX) / fit.width;
+      const heightFit = (authoredFrame.maxY - authoredFrame.minY) / fit.height;
+      const scale = size.scale * (animatedMatte ? Math.min(widthFit, heightFit) : widthFit);
       setCaptureFrame({ ...size, scale, centerX: fit.x, centerY: fit.y }, null, poseFrame.rotation);
      } else setCaptureFrame(size);
     }
@@ -1032,10 +1092,10 @@ async function live2dPortrait(model,generation){
    fittingBounds=baseFrame?stageBoundsForFrame(baseFrame):K.live2DViewBounds(internal,natural,[...model.interaction.hitAreas.map(a=>a.id),...portraitSurrounds]);
    stageCropFixed=false;refitPending=false;
   }
-  // Interaction keeps the last displayed shot, including its rotation and crop.
-  if (!stageCropFixed) {
+  // Fixed interaction preserves the viewer transform. A drawn scene window can still move inside it.
+  if (!stageCropFixed || stageCrop?.anchor) {
    displayedStageCrop = live2DFrameAtPose(stageCrop, internal) ?? null;
-   stageCropFixed = fixedView.checked && stage.dataset.panMode === 'interact'
+   stageCropFixed = !stageCrop?.anchor && fixedView.checked && stage.dataset.panMode === 'interact'
     && !controller.state.motionPending && renderedStageMotion === activeMotion;
   }
   const crop = displayedStageCrop;
@@ -1107,15 +1167,56 @@ async function spinePortrait(model,generation){
   throw error;
  }
  evidence.layers=layers;evidence.renderer=scene;
+ const mogadorAircraft = model.id === 'mojiaduoer_5';
  model.animations=[...new Set(layers.flatMap(layer=>layer.data.animations.map(animation=>animation.name)))].sort();
  // This auxiliary scene's one-second normal track contains no renderable
  // attachments at any point. The visible stand2 track is its actual action.
  if (model.id === 'zhibojianT') model.animations = model.animations.filter(name => name !== 'normal');
+ // The aircraft form's numbered tracks are still poses used by expressions.
+ if (mogadorAircraft) model.animations = model.animations.filter(name => !/^[1-5]$/.test(name));
  let mainLayer=0,sequence=0;
  for(let i=0;i<layers.length;i++)layers[i].state.addListener({event:(entry,event)=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion)controller.event(event.data.name);},complete:entry=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion&&controller.state.busy)controller.finish();}});
  const api={sound,stopAudio,fold,assistantEvent:area=>{if(basicActions[area])sound(model.voiceBank,motionCue(basicActions[area]),{voice:true});},skin:name=>{for(const l of layers){const skin=l.data.findSkin(name||l.spec.initialSkin||model.defaultSkin||'default');if(skin){l.skeleton.setSkin(skin);l.skeleton.setSlotsToSetupPose();}}},effects:visible=>{evidence.effectsVisible=visible;},alpha:data=>{evidence.alphaData=data;},
   expression:cue=>{if(!cue){for(const l of layers)l.state.setEmptyAnimation(1,.15);return;}if(controller?.state.busy)return;const field=({touch_1:'touch',touch_2:'touch2',touch_head:'headtouch',task:'mission',get:'unlock'})[cue]||cue;let name=model.expression?.base?.[field]||model.expression?.base?.default;const extra=model.expression?.extra?.[field];for(const row of array(extra))if(row[0]<=controller.state.favor)name=row[1];if(name===undefined||name===null||name==='')return;const multiple=model.interaction.spine?.multiple_face;if(array(multiple?.name).length&&Number.isFinite(Number(name))){const offset=array(multiple.data).find(r=>r[0]===controller.state.idle)?.[1]||0;name=String(Number(name)+offset);}name=String(name);for(const l of layers)if(l.data.findAnimation(name))l.state.setAnimation(1,name,true);evidence.expression={cue,name};},
-  play:async(name,loop,options={})=>{sequence++;if(model.id==='yuekegongjue_5'&&options.manual){for(const l of layers){l.state.clearTracks();l.skeleton.setToSetupPose();if(l.spec.rotation)l.skeleton.bones[0].rotation+=l.spec.rotation;}}let max=-1;for(let i=0;i<layers.length;i++){const a=layers[i].data.findAnimation(name);if(a&&a.duration>max){max=a.duration;mainLayer=i;}}for(const l of layers){const a=l.data.findAnimation(name);if(a&&!l.spec.freeze){for(const track of array(options.clear))l.state.setEmptyAnimation(track,0);l.state.setAnimation(0,name,loop);}else if(!l.state.getCurrent(0)){const def=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(def)l.state.setAnimation(0,def.name,true);}l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}evidence.animation=name;$('animation').value=name;},
+  play:async(name,loop,options={})=>{
+   sequence++;
+   if (options.manual && (options.resetPose || mogadorAircraft || model.id === 'yuekegongjue_5')) {
+    for (const layer of layers) {
+     if (model.id === 'yuekegongjue_5') layer.state.clearTracks();
+     else {
+      if (layer.spec.freeze || !layer.data.findAnimation(name)) continue;
+      layer.state.clearTrack(0);
+     }
+     layer.skeleton.setToSetupPose();
+     if (layer.spec.rotation) layer.skeleton.bones[0].rotation += layer.spec.rotation;
+    }
+   }
+   let max = -1;
+   for (let i = 0; i < layers.length; i++) {
+    const action = layers[i].data.findAnimation(name);
+    if (action && action.duration > max) { max = action.duration; mainLayer = i; }
+   }
+   for (const layer of layers) {
+    const action = layer.data.findAnimation(name);
+    if (action && !layer.spec.freeze) {
+     for (const track of array(options.clear)) layer.state.setEmptyAnimation(track, 0);
+     layer.state.setAnimation(0, name, loop);
+    } else if (!layer.state.getCurrent(0)) {
+     const start = layer.data.findAnimation(layer.spec.defaultAnimation || model.defaultAnimation) || layer.data.animations[0];
+     if (start) layer.state.setAnimation(0, start.name, true);
+    }
+    layer.state.apply(layer.skeleton);
+    layer.skeleton.updateWorldTransform();
+   }
+   evidence.animation = name;
+   $('animation').value = name;
+   const nextFrame = authoredSpineFrame(model.id, name) || baseStageFrame;
+   if (nextFrame !== stageFrameCrop) {
+    stageFrameCrop = nextFrame;
+    bounds = stageFrameCrop ? stageBoundsForFrame(stageFrameCrop) : framing.bounds;
+    evidence.bounds = bounds;
+   }
+  },
   duration:name=>Math.max(0,...layers.map(layer=>layer.data.findAnimation(name)?.duration||0)),
   timeline:()=>{const item=layers[mainLayer]?.state.getCurrent(0),duration=item?.animation?.duration||0,elapsed=Math.max(0,item?.trackTime||0);return {name:item?.animation?.name,time:duration?(item.loop?elapsed%duration:Math.min(duration,elapsed)):0,duration,loop:!!item?.loop};},
   seek:seconds=>{for(const layer of layers){const item=layer.state.getCurrent(0);if(!item)continue;const time=Math.max(0,Math.min(item.animation.duration-.0001,seconds));item.trackTime=item.trackLast=item.nextTrackLast=time;item.animationLast=item.nextAnimationLast=time;layer.state.apply(layer.skeleton);layer.skeleton.updateWorldTransform();}},
@@ -1135,11 +1236,12 @@ async function spinePortrait(model,generation){
  };
  for(const l of layers){const a=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(a)l.state.setAnimation(0,a.name,true);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}
  const authoredFrame = authoredSpineFrame(model.id);
- const stageFrameCrop = authoredFrame || defaultPortraitStageFrame(model.id);
+ const baseStageFrame = authoredFrame || defaultPortraitStageFrame(model.id);
+ let stageFrameCrop = authoredSpineFrame(model.id, model.defaultAnimation) || baseStageFrame;
  const rectangles=[];
  if (!authoredFrame) for(const l of layers)for(const slot of l.skeleton.drawOrder){const a=slot.attachment;let vertices;if(a instanceof spine.RegionAttachment){vertices=new Float32Array(8);a.computeWorldVertices(slot.bone,vertices,0,2);}else if(a instanceof spine.MeshAttachment){vertices=new Float32Array(a.worldVerticesLength);a.computeWorldVertices(slot,0,a.worldVerticesLength,vertices,0,2);}if(!vertices?.length)continue;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(let i=0;i<vertices.length;i+=2){minX=Math.min(minX,vertices[i]);maxX=Math.max(maxX,vertices[i]);minY=Math.min(minY,vertices[i+1]);maxY=Math.max(maxY,vertices[i+1]);}rectangles.push({name:slot.data.name,bounds:[minX,minY,maxX,maxY]});}
- const framing = stageFrameCrop ? { bounds: stageBoundsForFrame(stageFrameCrop), excluded: [] } : fitSceneBounds(rectangles);
- const bounds=framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+ const framing = baseStageFrame ? { bounds: stageBoundsForFrame(baseStageFrame), excluded: [] } : fitSceneBounds(rectangles);
+ let bounds=stageFrameCrop?stageBoundsForFrame(stageFrameCrop):framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
  api.capture = (animation, format) => {
@@ -1148,8 +1250,8 @@ async function spinePortrait(model,generation){
    for (const slot of layer.skeleton.slots) if (surrounds.has(slot.data.name)) hidden.add(i + ':' + slot.data.name);
   });
   const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
-   editor:{...editor, hidden}, animation, restore:()=>render(0) });
-  const exportFrame = sceneVideoCrop(model, animation.name, format) ?? authoredSpineExportFrame(model.id, animation.name);
+   editor:{...editor, hidden}, animation, fromSetupPose:format !== 'png', restore:()=>render(0) });
+  const exportFrame = sceneExportCrop(model, animation.name, format) ?? authoredSpineExportFrame(model.id, animation.name);
   // This shot's alternate scene is positioned by the selected track. Sample
   // its current time for PNG too, even while the preview is still mixing in.
   if (format === 'png' && model.id === 'siwanshi_4' && animation.name === 'touch_special_normal') {
@@ -1283,7 +1385,7 @@ async function loadModel(id,{history=true,formToken=null,initialAction=null}={})
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
  const previousTrace=adapter.trace;adapter.trace=(type,data)=>{previousTrace?.call(adapter,type,data);recordHintVisit(type,data);};
  controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:highestFavor(model)}):new SpineController(model,adapter,{storage:localStorage,favor:highestFavor(model)});evidence.controller=controller;evidence.adapter=adapter;controls();if(initialAction && model.animations.includes(initialAction))controller.action(initialAction,{force:true,manual:true,voice:false,onComplete:()=>{controller?.playIdle();formToken?.complete?.();}});else controller.playIdle();
-  view.ready=evidence.ready=true;interactButton.disabled=!hasInteraction;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
+ view.ready=evidence.ready=true;interactButton.disabled=!hasInteraction;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
  updateFormButton();
  if(history){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);K.history.push(entry(model));}return true;
 }
@@ -1300,4 +1402,4 @@ function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;try{i
  if(previewPending&&view.frames>2&&!controller.state.motionPending&&now>=nextPreviewCheck){nextPreviewCheck=now+100;const gl=evidence.app?.renderer?.gl||canvas.getContext('webgl2')||canvas.getContext('webgl');if(gl&&!gl.isContextLost()&&canvas.width>1&&canvas.height>1){previewContext.clearRect(0,0,64,64);previewContext.drawImage(canvas,0,0,64,64);const pixels=previewContext.getImageData(0,0,64,64).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>8){loadingPreview.ready(loadGeneration);previewPending=false;break;}}}
  updateFormButton();viewerUI.update();if(now>=nextEvidence){record();nextEvidence=now+250;}}}catch(e){view.ready=evidence.ready=false;fail(e);}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
-try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json'),getJson(THUMB_PREFIX+'index.json',false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}
+try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json'),getJson(THUMB_PREFIX+'index.json?v=20261119-framing',false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}

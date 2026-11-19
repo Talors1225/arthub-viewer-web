@@ -353,7 +353,7 @@ export class SpineController extends Controller {
   const motion=names.includes(name)?name:this.model.id.endsWith('_hx')&&names.includes(name+'_hx')?name+'_hx':null;
   if(!motion){if(!this.state.missingActions.includes(name))this.state.missingActions.push(name);this.log('missing-action',{name});return false;}
   Object.assign(this.state,{action:name,motion,busy:!options.idle,actionTime:0});this.actionOptions=options;const g=++this.generation;
-  Promise.resolve(this.adapter.play?.(motion,!!options.idle,{generation:g,manual:!!options.manual,clear:options.config?.clear_track})).catch(e=>{if(g!==this.generation||this.disposed)return;this.state.errors.push(String(e));this.state.busy=false;});
+  Promise.resolve(this.adapter.play?.(motion,!!options.idle,{generation:g,manual:!!options.manual,resetPose:!!options.resetPose,clear:options.config?.clear_track})).catch(e=>{if(g!==this.generation||this.disposed)return;this.state.errors.push(String(e));this.state.busy=false;});
   if(options.interactive&&!this.current){this.sound(this.model.voiceBank,motionCue(name),{voice:true});}
   this.log('action',{name,idle:!!options.idle});return true;
  }

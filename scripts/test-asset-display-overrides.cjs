@@ -11,6 +11,11 @@ const read = rel => fs.readFileSync(file(rel), 'utf8');
 const api = require(file('common/asset-display-overrides.js'));
 let checks = 0;
 function equal(actual, expected, message) { assert.deepEqual(actual, expected, message); checks++; }
+const bluebuckAnimations = ['idle', 'click1', 'guochang'].map(name => ({ name }));
+equal(api.crosscoreAnimations('30300_skin_Bluebuck03a.json', bluebuckAnimations),
+  [{ name: 'guochang' }], 'Bluebuck fade prefab offers its visible transition');
+equal(api.crosscoreAnimations('/crosscore/spine/30300_skin_Bluebuck03b.json', bluebuckAnimations),
+  bluebuckAnimations, 'Bluebuck character prefab retains its actions');
 const records = api.metadata.overrides.nikki;
 equal(Object.keys(records).length, 70, 'all reviewed entries, including the final eight');
 const fixture = {
