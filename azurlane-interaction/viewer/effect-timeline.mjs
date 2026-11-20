@@ -1,12 +1,32 @@
+// Stepped curves can select textures or toggle masks. Only blend paths with
+// values that change continuously between their authored keys.
+function blendableCurve(curve, segments, points) {
+ if(!curve.segmentCount||(curve.type!==1&&curve.type!==2))return false;
+ const first=segments[curve.baseSegmentIndex]?.basePointIndex;
+ if(first===undefined)return false;
+ let changes=false;
+ for(let i=curve.baseSegmentIndex;i<curve.baseSegmentIndex+curve.segmentCount;i++){
+  const {basePointIndex,segmentType}=segments[i];
+  const length=segmentType===1?3:1;
+  const start=points[basePointIndex].value;
+  const end=points[basePointIndex+length].value;
+  if((segmentType===2||segmentType===3)&&start!==end)return false;
+  for(let offset=1;offset<=length;offset++)changes||=points[basePointIndex+offset].value!==points[first].value;
+ }
+ return changes;
+}
+
 // The effect queue has its own clock; seeking it must not seek the character.
 export class EffectTimeline {
  constructor(manager,motion){
   this.manager=manager;this.duration=Number(motion.getLoopDuration());
   if(!Number.isFinite(this.duration)||this.duration<=0)throw Error('特效时长不可用');
   this.fps=Number.isFinite(motion._sourceFrameRate)&&motion._sourceFrameRate>0?motion._sourceFrameRate:30;
-  this.parameterIds=Object.freeze([...new Set((motion._motionData?.curves||[]).filter(curve=>curve.type===1).map(curve=>curve.id))]);
+  const {curves=[],segments=[],points=[]}=motion._motionData||{};
+  this.parameterIds=Object.freeze([...new Set(curves.filter(curve=>curve.type===1).map(curve=>curve.id))]);
+  this.blendableIds=new Set(curves.filter(curve=>blendableCurve(curve,segments,points)).map(curve=>curve.id));
   motion.setIsLoop(true);motion.setIsLoopFadeIn?.(false);this.entry=manager.startMotion(motion,false,0);
-  this.fade=Math.max(0,motion.getFadeInTime(),...(motion._motionData?.curves||[]).map(c=>c.fadeInTime||0))+1;
+  this.fade=Math.max(0,motion.getFadeInTime(),...curves.map(c=>c.fadeInTime||0))+1;
   this.time=0;this.speed=1;this.fixed=false;this.settled=false;
  }
  state(){return {time:this.time,duration:this.duration,fps:this.fps,speed:this.speed,fixed:this.fixed};}

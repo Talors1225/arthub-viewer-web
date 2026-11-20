@@ -37,4 +37,24 @@ timeline.setSpeed(.5);
 timeline.advance(1); assert.equal(timeline.time, 2);
 timeline.restore(playing); assert.equal(timeline.speed, 2);
 timeline.setSpeed(NaN); assert.equal(timeline.speed, 2);
+const effectWithFlipbook = new EffectTimeline(manager, {
+ ...motion,
+ _motionData:{
+  curves:[
+   {type:1,id:'Curtain',segmentCount:1,baseSegmentIndex:0},
+   {type:1,id:'SpriteFrame',segmentCount:1,baseSegmentIndex:1},
+   {type:2,id:'Mask',segmentCount:1,baseSegmentIndex:2},
+   {type:1,id:'Constant',segmentCount:1,baseSegmentIndex:3},
+   {type:1,id:'Light',segmentCount:2,baseSegmentIndex:4},
+  ],
+  segments:[
+   {basePointIndex:0,segmentType:0},{basePointIndex:2,segmentType:2},
+   {basePointIndex:4,segmentType:3},{basePointIndex:6,segmentType:0},
+   {basePointIndex:8,segmentType:2},{basePointIndex:9,segmentType:1},
+  ],
+  points:[0,1,0,7,0,1,.5,.5,0,0,.2,.6,0].map(value=>({value})),
+ }
+});
+assert.deepEqual([...effectWithFlipbook.blendableIds],['Curtain','Light'],
+ 'export blends continuous effects and leaves flipbook indices and stepped masks on their authored frames');
 console.log('Effect loop, playback rate, freeze and restoration checks passed');

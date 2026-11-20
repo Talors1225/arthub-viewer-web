@@ -1,6 +1,6 @@
 import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
-import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-speed';
+import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-loop-catalog';
 import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
 import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261120-frame-edges';
 import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261120-frame-validation';
@@ -37,15 +37,16 @@ function stageFrame(){
 const loadingPreview=K.createLoadingPreview(stage);
 const arromanchesPortrait = 'aluomangshi_2';
 const portraitsWithSkinOne = new Set([arromanchesPortrait, 'feiteliedadi_5', 'yuekechengii_4']);
+// Existing reviewed exports can intentionally blend texture selections and
+// masks. Preserve those transitions and use continuous tracks for new cases.
 const loopedEffectPortraits = new Set([
  'kebensi_2', 'shuixinghao_2', 'pulimaosi_3', 'xingdengbao_3', 'xinnong_5', 'xinnong_6', 'dafeng_7',
  'yanusi_7', 'aogusite_4', 'adaerbote_3', 'bailong_3', 'jian_3',
 ]);
-// Reviewed default motions whose independent effects do not close with the character's cycle.
 const blendedVideoPortraits = new Set([
  'aerbien_3', 'aersasi_2', 'aersasi_3', 'ankeleiqi_2', 'baerdimo_6', 'benningdun_2',
  'bulaimodun_4', 'bulaimodun_5', 'chaijun_5', 'dafeng_6', 'dujiaoshou_6', 'gezi_2',
- 'jiluofu_3', 'jinshi_2', 'junhe_4', 'kewei_6', 'kuersike_2', 'luoma_2', 'luyijiushi_2',
+ 'jiluofu_3', 'jinshi_2', 'kewei_6', 'kuersike_2', 'luoma_2', 'luyijiushi_2',
  'meikelunbao_2', 'mingji_2', 'nengdai_3', 'qianwei_2', 'qiye_7', 'qiye_9', 'qiye_10',
  'shi_2', 'sitelasibao_2', 'tianlangxing_5', 'weineituo_2', 'wuerlixi_3', 'wuzang_4',
  'xianghe_2', 'xingdengbao_2', 'xinnong_4', 'xuefeng_3', 'xukufu_3', 'yuekechengii_3',
@@ -960,20 +961,22 @@ async function live2dPortrait(model,generation){
   seek:(seconds,delta=0,draw=true,settleFade=false)=>{const item=[...(queue?._motions||[])].reverse().find(item=>!item.isFinished()&&item._motion);if(!item)return;const duration=model.motionDurations?.[activeMotion]||item._motion.getLoopDuration(),time=Math.max(0,Math.min(duration-.0001,seconds)),clock=live.elapsedTime/1000;const fade=settleFade?Math.max(0,item._motion.getFadeInTime(),...item._motion._motionData.curves.map(curve=>curve.fadeInTime||0)):0;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time-fade);item.setEndTime(item._motion.isLoop()?-1:clock-time+duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;if(draw)app.render();},
   polygons:()=>hotspots.map(h=>{const vertices=hotspotVertices(h);if(!vertices?.length)return null;const pts=[];for(let j=0;j<vertices.length;j+=2){const p=new PIXI.Point(vertices[j],vertices[j+1]);internal.localTransform.apply(p,p);live.worldTransform.apply(p,p);pts.push([p.x,p.y]);}return {id:h.id,vertices:pts};}).filter(Boolean)
  };
- function exportLoopPlan(playback, captureMotion, effect) {
+ function exportLoopPlan(playback, captureMotion, effect, reviewedFormat) {
   const {duration,name} = playback;
   if (!playback.loop || !/^idle\d*$/.test(name) || !Number.isFinite(duration) || duration <= 0 ||
       !captureMotion?._motion?.isLoop()) return null;
   const reviewedDefault = blendedVideoPortraits.has(model.id) &&
    (name === model.defaultAnimation || model.id === 'wuerlixi_3' && name === 'idle1');
-  const alignEffect = !!effect && !effect.fixed && (loopedEffectPortraits.has(model.id) || reviewedDefault);
+  const reviewedEffect = reviewedFormat && (loopedEffectPortraits.has(model.id) || reviewedDefault);
+  const continuousEffect = model.motionLoop?.effect === true && effectTimeline?.blendableIds.size>0;
+  const alignEffect = !!effect && !effect.fixed && (reviewedEffect || continuousEffect);
   if (!alignEffect) return {duration,alignEffect,transition:0};
   const effectElapsed = duration * effect.speed;
   const cycles = Math.round(effectElapsed / effect.duration);
   const closes = cycles > 0 && Math.abs(effectElapsed - cycles * effect.duration) < .0001;
   // Keep the character's original cycle. Ease only the effect's animated
   // values into the phase they would have just before the first frame.
-  return {duration,alignEffect,transition:closes ? 0 : Math.min(2, duration / 3)};
+  return {duration,alignEffect,reviewedEffect,transition:closes ? 0 : Math.min(2, duration / 3)};
  }
  api.videoDuration = playback => playback.duration;
  api.capture=(playback={},format,quality)=>{
@@ -1027,17 +1030,24 @@ async function live2dPortrait(model,generation){
   const captureMotion = [...(originalQueue || [])].reverse().find(item => !item.isFinished() && item._motion);
   const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectTimeline?.manager),entries=[...(originalQueue||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot();
   const video = format === 'video', animated = video || format === 'gif';
-  const syncGifEffect = format === 'gif' && ['curtains','wheel'].includes(effectControlPortraits[model.id]);
-  const loop = video || syncGifEffect
-   ? exportLoopPlan(playback, captureMotion, savedEffect) : null;
-  const breath = loop ? internal.breath : null;
+  const reviewedGif = format === 'gif' && ['curtains','wheel'].includes(effectControlPortraits[model.id]);
+  const reviewedFormat = video || reviewedGif;
+  const syncGifEffect = format === 'gif' && savedEffect && model.motionLoop?.effect === true;
+  const loop = reviewedFormat || syncGifEffect
+   ? exportLoopPlan(playback, captureMotion, savedEffect, reviewedFormat) : null;
+  // Keep the existing GIF pose sampling when only the background needs a seam.
+  const warmCharacter = loop && reviewedFormat;
+  const breath = internal.breath;
   const breathTime = breath?._currentTime;
-  const loopTimeline = loop && K.exportTimeline(loop.duration, quality, format);
+  const loopTimeline = warmCharacter && K.exportTimeline(loop.duration, quality, format);
   const step = loopTimeline ? loopTimeline.duration / loopTimeline.frames : 0;
-  const warmFrames = loop ? Math.ceil(Math.min(2, loop.duration) / step) : 0;
+  const warmFrames = warmCharacter ? Math.ceil(Math.min(2, loop.duration) / step) : 0;
   const warmTime = warmFrames * step;
-  const effectChannels = loop?.transition ? [core.parameters.values, core.parts.opacities].map(values => ({
+  const effectChannels = loop?.transition ? [
+   [core.parameters.ids, core.parameters.values], [core.parts.ids, core.parts.opacities],
+  ].map(([ids,values]) => ({
    values, original: values.slice(), alternate: values.slice(),
+   indices: ids.flatMap((id,i)=>loop.reviewedEffect||effectTimeline.blendableIds.has(id)?[i]:[]),
   })) : [];
   let lastTime=0,warmed=false;
   // The SDK restores base parameters after deforming a frame. Rebuild from
@@ -1056,10 +1066,12 @@ async function live2dPortrait(model,generation){
    internal.coreModel._savedParameters = nativeSaved.slice();
    lastTime = 0; warmed = false;
   };
-  const sampleEffect = time => {
+  const sampleEffect = (time, approachOpening = false) => {
    const elapsed = loop?.alignEffect ? time : Math.max(0,time);
    const clock = savedEffect.time + elapsed * savedEffect.speed;
-   const phase = savedEffect.fixed ? savedEffect.time : loopPhase(clock, savedEffect.duration);
+   // A clip starting at the effect's first frame may have a different last
+   // pose in the authored effect. Approach the opening within its own cycle.
+   const phase = savedEffect.fixed ? savedEffect.time : loopPhase(approachOpening ? Math.max(0,clock) : clock, savedEffect.duration);
    effectTimeline.sample(internal.coreModel, phase, loop?.alignEffect || savedEffect.settled || clock >= savedEffect.duration);
   };
   const sample = (time, draw) => {
@@ -1071,36 +1083,36 @@ async function live2dPortrait(model,generation){
      const fraction = Math.min(1, (time - blendStart) / loop.transition);
      const blend = fraction * fraction * (3 - 2 * fraction);
      for (const {values, original} of effectChannels) original.set(values);
-     sampleEffect(time - loop.duration);
+     sampleEffect(time - loop.duration, !loop.reviewedEffect);
      for (const {values, original, alternate} of effectChannels) {
       alternate.set(values);
       values.set(original);
      }
      sampleEffect(time);
-     for (const {values, alternate} of effectChannels) {
-      for (let i = 0; i < values.length; i++) values[i] += (alternate[i] - values[i]) * blend;
+     for (const {values, alternate, indices} of effectChannels) {
+      for (const i of indices) values[i] += (alternate[i] - values[i]) * blend;
      }
     };
    } else if (animated && savedEffect) sampleExportEffect = () => sampleEffect(time);
    const deltaTime = Math.max(0, time - lastTime);
    // Cubism adds a separate breathing oscillator before the authored effect layer.
    // Keep its phase constant so it does not change across the exported seam.
-   if (Number.isFinite(breathTime)) breath._currentTime = breathTime - deltaTime;
+   if (warmCharacter && Number.isFinite(breathTime)) breath._currentTime = breathTime - deltaTime;
    try {
     // Export the selected clip's actual pose, not the live preview's fade-in
     // from whichever animation happened to be playing before it.
-    api.seek(loop ? loopPhase(time, loop.duration) : time, deltaTime, draw, video || !!loop);
+    api.seek(warmCharacter ? loopPhase(time, loop.duration) : time, deltaTime, draw, video || !!warmCharacter);
    } finally {
     sampleExportEffect = null;
    }
    lastTime = time;
   };
   const advance = (time, draw = true) => {
-   if ((video || loop) && !warmed) {
+   if ((video || warmCharacter) && !warmed) {
     // Isolate the active clip, including touch/main motions in video exports.
     // Keep the original array untouched so rewind restores outgoing fades too.
     queue._motions = captureMotion ? [captureMotion] : [];
-    if (loop) {
+    if (warmCharacter) {
      // Enter a looping first frame from its previous cycle to settle physics.
      lastTime = -warmTime;
      for (let frame = warmFrames; frame > 0; frame--) sample(-frame * step, false);
