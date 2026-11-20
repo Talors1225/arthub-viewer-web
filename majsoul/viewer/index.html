@@ -415,6 +415,7 @@
   const zIn = $('#zIn'), zOut = $('#zOut'), zFit = $('#zFit'), zPct = $('#zPct');
   const btnDebug = $('#btnDebug'), btnPng = $('#btnPng');
   const rightPanel = $('#floatPanel'), partsTargetEl = $('#partsTarget');
+  const layersPage = rightPanel.querySelector('[data-page="layers"]');
   const gridView = $('#gridView'), rail = $('#rail'), topPill = $('#topPill'), toolStrip = $('#toolStrip');
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const pbPlay = $('#pbPlay'), pbSpeed = $('#pbSpeed'), pbSpeedVal = $('#pbSpeedVal');
@@ -808,7 +809,10 @@
         if (L.visible) K.drawSlotHighlight(renderer, L.skeleton, highlightSlot);
       }
     }
-    if (selIdx >= 0 && layers[selIdx] && layers[selIdx].visible) {
+    // The layer selection outline belongs to the editor, not the portrait or its thumbnail.
+    const editingLayers = !embedded && !capturePending && !document.body.classList.contains('immersive') &&
+      rightPanel.classList.contains('open') && layersPage.classList.contains('on');
+    if (editingLayers && selIdx >= 0 && layers[selIdx]?.visible) {
       try {
         const L = layers[selIdx];
         const b = L.rawBounds;

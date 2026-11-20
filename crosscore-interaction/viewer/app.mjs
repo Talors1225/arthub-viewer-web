@@ -427,14 +427,24 @@ function timeline() {
   const entry = timelineEntry(), duration = entry?.animation?.duration || 0, elapsed = Math.max(0, entry?.trackTime || 0);
   return { name: entry?.animation?.name, duration, time: duration ? (entry.loop ? elapsed % duration : Math.min(duration, elapsed)) : 0, loop: !!entry?.loop };
 }
+function resetPreviewPose() {
+  // Spine leaves properties that the next track does not key at their last values.
+  scene.slotAlphas.clear();
+  for (const { skeleton, def } of scene.layers) {
+    skeleton.setToSetupPose();
+    if (def.render.rotation) skeleton.bones[0].rotation += def.render.rotation;
+  }
+}
 function endAnimationPreview() {
   if (!animationPreview || !scene) return;
   for (const layer of scene.layers) layer.state.clearTrack(PREVIEW_TRACK);
+  resetPreviewPose();
   animationPreview = null; activeTrack = 0; scene.update(0, now());
 }
 function startAnimationPreview(name, time = 0, loop = playback.loop) {
   if (!scene?.hasAnimation(name)) return;
   stopAudio(); playback.loop = loop; animationPreview = { name }; activeTrack = PREVIEW_TRACK;
+  resetPreviewPose();
   for (const layer of scene.layers) {
     layer.state.clearTrack(PREVIEW_TRACK);
     const animation = layer.skeleton.data.findAnimation(name); if (!animation) continue;

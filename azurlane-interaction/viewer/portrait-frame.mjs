@@ -33,6 +33,12 @@ const lionShutterCrop = Object.freeze({ ...lionTransitionCrop, anchor: Object.fr
  // Follow the opening while keeping the closing shutter from enlarging a slit.
  syncPose: true, minWidth: 4500,
 }) });
+const lionBeachWindow = [
+ ['ArtMesh222',0,1], ['ArtMesh229',2,3], ['ArtMesh226',2,3], ['ArtMesh231',0,1],
+];
+const lionPhotoWindow = [
+ ['ArtMesh287',2,3], ['ArtMesh288',2,3], ['ArtMesh243',2,3], ['ArtMesh244',2,3],
+];
 // The sky has support vertices inside its four outer corners. Follow those corners as the camera tilts.
 const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654', { corners: [1, 0, 2, 3], align: true });
 const mogadorSkyWithCard = trackDrawable(mogadorSky, mogadorSky.anchor.drawable, { ...mogadorSky.anchor, headroom: .32 });
@@ -692,6 +698,13 @@ const live2dSceneApertures = new Map([
    preserveAngle:true, reviewed:true }],
  ['luyijiushi_4', { drawable:'ArtMesh650', corners:[4,9,8,5],
    minOpacity:.99, preserveAngle:true, reviewed:true }],
+ // Use the rectangular interior of these painted backdrops.
+ ['qiye_9', { drawable:'tiankong', corners:[5,1,0,3], inset:[.018,.023,.018,.028], reviewed:true }],
+ ['telafaerjia_2', { drawable:'tiankong', corners:[1,3,2,0], inset:[.085,.07,.091,.086], reviewed:true }],
+ ['lafeier_2', { drawable:'ArtMesh192', corners:[1,3,2,0], inset:[.023,.101,.032,.079], reviewed:true }],
+ ['shi_2', { edges:lionPhotoWindow, inside:[{edges:lionBeachWindow}], aspect:1.83,
+  animationAspect:1.83, motions:/^touch_drag16$/, reviewed:true,
+  alternate:{ edges:lionBeachWindow, inside:[], preserveAngle:true, aspect:2, inset:[.12,.05,.12,.12] } }],
  ['zengkehaijunshangjiang_2', { drawable:'ArtMesh463', corners:[6,7,8,5],
    minOpacity:.99, preserveAngle:true, reviewed:true }],
  ['ankeleiqi_4', { drawable:'ArtMesh44', corners:[4,5,6,7],

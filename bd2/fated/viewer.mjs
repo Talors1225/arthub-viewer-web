@@ -40,8 +40,8 @@ const frameMattes = {
   dating22: { BK_side: ['BK_side', 'BK_side2'], BK_ud: ['BK_ud', 'BK_ud2'] },
 };
 const matteTransitions = {
-  dating16: ['motion1_15', 'motion1_16', 'motion1_17'],
-  dating18: ['mix6_32_1', 'mix6_33_1'],
+  dating16: { clips: ['motion1_15', 'motion1_16', 'motion1_17'], regions: ['ID1_fr)Bk glow'] },
+  dating18: { clips: ['mix6_32_1', 'mix6_33_1'], regions: ['B_BG_black'] },
 };
 
 function findFrameMattes(model, skeleton) {
@@ -56,16 +56,17 @@ function findFrameMattes(model, skeleton) {
 }
 
 function muteFrameMattes({ model, mattes, state }) {
-  const transitions = matteTransitions[model.id];
-  if (transitions) {
-    for (const track of state.tracks) {
-      for (let entry = track; entry; entry = entry.mixingFrom) {
-        if (transitions.includes(entry.animation.name)) return [];
-      }
+  const transition = matteTransitions[model.id];
+  const preserveFade = transition && state.tracks.some(track => {
+    for (let entry = track; entry; entry = entry.mixingFrom) {
+      if (transition.clips.includes(entry.animation.name)) return true;
     }
-  }
+    return false;
+  });
   const muted = [];
   for (const { region, slot } of mattes) {
+    // A transition can use its own vignette while the outer frame is still attached.
+    if (preserveFade && transition.regions.includes(region)) continue;
     if (slot.attachment?.region?.name !== region || slot.color.a <= 0) continue;
     muted.push([slot, slot.color.a]);
     slot.color.a = 0;

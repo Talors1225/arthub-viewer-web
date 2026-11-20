@@ -431,7 +431,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261120-nikke-minigames"></script>
-<script src="../../common/asset-loader.js?v=20261120-framed-thumbs"></script>
+<script src="../../common/asset-loader.js?v=20261121-scene-fit"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -508,6 +508,29 @@
     ['EventScene_memoriesteller_02.skel', { minX: -995, minY: -246, maxX: 995, maxY: 1744 }],
     ['EventScene_terminusticket_01.skel', { minX: -1186, minY: 306, maxX: 1217, maxY: 2735 }],
   ]);
+  const c103SkillFrame = { minX: -1602, minY: -52, maxX: 1679, maxY: 3229 };
+  const c103BackgroundFrame = { minX: -1640, minY: -81, maxX: 1705, maxY: 3265 };
+  // The effect layers extend past the opening of the water scene.
+  const c513SkillFrame = { minX: -1495, minY: -365, maxX: 1495, maxY: 2625 };
+  const skillSceneFrames = new Map([
+    ['c017_01_skillcut.skel', {
+      idle: { minX: -1410, minY: -359, maxX: 1568, maxY: 2619 },
+      idle2: { minX: -1477, minY: -359, maxX: 1501, maxY: 2619 },
+    }],
+    ['c073_00_skillcut.skel', {
+      idle_2: { minX: -2400, minY: 355, maxX: 2060, maxY: 4570 },
+    }],
+    ['c103_00_skillcut.skel', { idle: c103SkillFrame, skillcut_1: c103SkillFrame,
+      bg_idle: c103BackgroundFrame, bg_skillcut_1: c103BackgroundFrame }],
+    ['c513_01_skillcut.skel', { idle: c513SkillFrame, idle_bg: c513SkillFrame,
+      skill_cut: c513SkillFrame, skill_cut_bg: c513SkillFrame }],
+    ['c580_01_skillcut.skel', {
+      idle: { minX: -1514, minY: -194, maxX: 1385, maxY: 2698 },
+    }],
+    ['c582_00_skillcut.skel', {
+      idle_0: { minX: -945, minY: -247, maxX: 1041, maxY: 1739 },
+    }],
+  ]);
   const viewerParams = new URLSearchParams(location.search);
   const embedded = viewerParams.get('embed') === '1';
   const store = K.Store(routeSource);
@@ -582,6 +605,12 @@
   // Only reviewed ending compositions are automatic. An arbitrary sampled
   // background is not the native lighting/particle composition of an idle.
   const reviewedSkillBackdrops = new Set(['core-26015', 'core-26115']);
+  // The two building meshes leave space for the original bg_city sprite from core-26129.
+  const nativeSkillBackdrop = {
+    skeleton: 'c580_01_skillcut.skel', motion: 'idle',
+    object: 'nikki/bursts/objects/46685e74cbdeeee6555d7f52cecc0262565653e3b69c65e73f8418ebe8924436.png',
+    bounds: { minX: -2017, minY: -396, maxX: 1744, maxY: 3365 },
+  };
   let showGameBackground = false, skillBackdrop = null;
   const savedBurstVolume = store.get('burstVolume', .3);
   let burstVolume = Number.isFinite(savedBurstVolume) ? Math.max(0, Math.min(1, savedBurstVolume)) : .3;
@@ -626,7 +655,9 @@
   }
 
   function activeSkillBackdrop() {
-    return showGameBackground && !burstSession ? skillBackdrop : null;
+    if (burstSession) return null;
+    if (showGameBackground && skillBackdrop) return skillBackdrop;
+    return cut?.artworkBackdrop?.motion === animSel.value ? cut.artworkBackdrop : null;
   }
   function drawSkillBackdrop(renderer, skeleton, backdrop, texture, animationTime) {
     if (!backdrop) return;
@@ -2112,7 +2143,8 @@
     if (bounds) cut.bounds = bounds;
     const variant = cut.sourceVariant;
     const previewFrame = name === variant.previewAnimation ? variant.previewFrame : null;
-    cut.frame = previewFrame || (name === 'idle' ? idleSceneFrames.get(variant.skel) : null);
+    cut.frame = skillSceneFrames.get(variant.skel)?.[name] || previewFrame ||
+      (name === 'idle' ? idleSceneFrames.get(variant.skel) : null);
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
       if (cmpBounds) cmp.bounds = cmpBounds;
@@ -2427,6 +2459,8 @@
   function disposeCut() {
     portraitAudio?.reset();
     if (cut) {
+      cut.artworkBackdrop?.texture.dispose();
+      cut.artworkBackdrop?.image.close();
       for (const atlas of new Set(cutLayers(cut).map(layer => layer.atlas))) disposeAtlas(atlas);
       cut = null;
       if (partsCtl) partsCtl.refresh();
@@ -2707,6 +2741,20 @@
         target.wallpaperActions = wallpaperActions;
         target.frame = wallpaper.frame;
       }
+      if (v.skel === nativeSkillBackdrop.skeleton) {
+        let image;
+        try {
+          const blob = await K.fetchAssetBlob(burstObjectURL(nativeSkillBackdrop.object), { signal: request.signal });
+          image = await createImageBitmap(blob);
+          request.signal.throwIfAborted();
+          if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
+          target.artworkBackdrop = { ...nativeSkillBackdrop, image, texture: new SP.GLTexture(mgl, image) };
+        } catch (error) {
+          image?.close();
+          if (seq !== cutLoadSeq || K.isAbort(error)) throw error;
+          K.toast('技能场景背景读取失败', 'err');
+        }
+      }
       cut = target;
       updateStageClickMode();
       for (const layer of cut.layers) layer.hiddenSlots = cut.hiddenSlots;
@@ -2939,7 +2987,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261120-scene-layers' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261121-scene-fit' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));

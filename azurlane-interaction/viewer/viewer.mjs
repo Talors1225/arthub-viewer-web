@@ -2,8 +2,8 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-loop-catalog';
 import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261120-yorktown-export-frame';
-import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261120-scene-rims-red-reveal';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261121-scene-fit';
+import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261121-scene-fit';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261120-plymouth-arm-seam';
@@ -658,11 +658,13 @@ function live2DFrameAtPose(frame, internal) {
  const anchor = frame?.anchor;
  if (!anchor) return frame;
  if (anchor.points) {
-  const corners = mattePoints(anchor.points, internal, anchor.minOpacity, anchor.minOpacity !== undefined);
+  const corners = mattePoints(anchor.points, internal, anchor.trackWhenTransparent ? 0 : anchor.minOpacity,
+   !anchor.trackWhenTransparent && anchor.minOpacity !== undefined);
   return corners ? cropAtMatteCorners(frame, anchor, corners, 1) : frame;
  }
  if (anchor.edges) {
-  const corners = matteAperture(anchor.edges, internal, anchor.minOpacity, anchor.reviewed);
+  const corners = matteAperture(anchor.edges, internal, anchor.trackWhenTransparent ? 0 : anchor.minOpacity,
+   !anchor.trackWhenTransparent && anchor.reviewed);
   return corners ? cropAtMatteCorners(frame, anchor, corners, 1) : frame;
  }
  const index = internal.getDrawableIndex(anchor.drawable);
@@ -671,8 +673,9 @@ function live2DFrameAtPose(frame, internal) {
  if (anchor.whenVisible || anchor.fadeToFrame) {
   const model = internal.coreModel;
   const opacity = model.getModel().drawables.opacities[index];
-  if (editor?.hidden.has(anchor.drawable) || !model.getDrawableDynamicFlagIsVisible(index)
-      || opacity < (anchor.minOpacity ?? (anchor.fadeToFrame ? .001 : .2))) return frame;
+  if (editor?.hidden.has(anchor.drawable)) return frame;
+  if (!anchor.trackWhenTransparent && (!model.getDrawableDynamicFlagIsVisible(index)
+      || opacity < (anchor.minOpacity ?? (anchor.fadeToFrame ? .001 : .2)))) return frame;
   if (anchor.fadeToFrame) weight = Math.min(1, opacity);
  }
  const vertices = internal.getDrawableVertices(index);
@@ -803,33 +806,38 @@ async function live2dPortrait(model,generation){
  const baseFrame = authoredLive2DFrame(model.id) || defaultStageFrame, portraitSurrounds = portraitSurroundNames(model.id);
  const aperture = authoredLive2DSceneAperture(model.id);
  const apertureRule = motion => {
+  const generated = automaticSceneAperture(model.id,motion);
+  if (generated?.reviewed && generated.trackWhenTransparent) return generated;
   const shot=aperture?.shots?.find(rule=>rule.motions.test(motion));
   if (shot) return shot;
-  const generated = automaticSceneAperture(model.id,motion);
   if (generated?.reviewed) return generated;
   if (!aperture?.reviewed) return generated ?? aperture;
   return !aperture.motions || aperture.motions.test(motion) ? aperture : generated;
  };
  const hasApertureFallback = motion => !!aperture && (!aperture.reviewed || !!aperture.fallback)
   && (!aperture.motions || aperture.motions.test(motion));
- const apertureAtPose = (motion = activeMotion) => {
-  const rule = apertureRule(motion);
+ const frameForAperture = rule => {
   if (rule?.fixedFrame) return rule.fixedFrame;
-  const apertureProbe = rule && { anchor:{...rule,nativeAspect:true,alignTop:!rule.preserveAngle,whenVisible:true} };
-  if (!apertureProbe) return null;
-  let frame = live2DFrameAtPose(apertureProbe, internal);
-  if (frame === apertureProbe) {
-   if (!rule.alternate) return null;
-   const alternate = { anchor:{...apertureProbe.anchor,...rule.alternate} };
-   frame = live2DFrameAtPose(alternate, internal);
-   if (frame === alternate) return null;
+  if (!rule) return null;
+  const resolve = source => {
+   const probe = { anchor:{...source,nativeAspect:true,alignTop:!source.preserveAngle,whenVisible:true} };
+   const frame = live2DFrameAtPose(probe, internal);
+   return frame === probe ? null : frame;
+  };
+  let source = rule;
+  let frame = resolve(source);
+  if (!frame && rule.alternate) {
+   source = {...rule,...rule.alternate};
+   frame = resolve(source);
   }
-  for (const limit of rule.inside ?? []) {
+  if (!frame) return null;
+  for (const limit of source.inside ?? []) {
    const corners = limit.edges ? matteAperture(limit.edges, internal) : mattePoints(limit.points, internal);
    if (corners) frame = cropInsideAperture(frame, corners, limit.keepOpening);
   }
-  return frame;
+  return insetLive2DFrame(frame, source.inset);
  };
+ const apertureAtPose = (motion = activeMotion) => frameForAperture(apertureRule(motion));
  const apertureFallback = aperture && (aperture.fallback || baseFrame ||
   { minX:0, minY:0, maxX:natural.width, maxY:natural.height });
  const pivotX = natural.width / 2, pivotY = natural.height / 2;

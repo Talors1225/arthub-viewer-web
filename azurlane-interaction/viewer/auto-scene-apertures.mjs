@@ -606,7 +606,10 @@ export const automaticSceneApertures = {
      8,
      5
     ],
-    "vertexCount": 10
+    "vertexCount": 10,
+    "preserveAngle": true,
+    "trackWhenTransparent": true,
+    "reviewed": true
    },
    "motions": [
     "home",
@@ -620,6 +623,9 @@ export const automaticSceneApertures = {
     "touch_idle3",
     "touch_idle4",
     "touch_idle5",
+    "touch_idle6",
+    "touch_idle8",
+    "touch_idle14",
     "touch_idle9"
    ]
   }
@@ -726,12 +732,29 @@ export const automaticSceneApertures = {
      2,
      0
     ],
-    "vertexCount": 16
+    "vertexCount": 16,
+    "minOpacity": 0.96
    },
    "motions": [
     "idle4",
     "idle5",
     "idle6",
+    "touch_idle8",
+    "touch_idle9"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh363",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 16
+   },
+   "motions": [
     "idle8",
     "idle9",
     "login",
@@ -742,8 +765,6 @@ export const automaticSceneApertures = {
     "touch_idle15",
     "touch_idle16",
     "touch_idle7",
-    "touch_idle8",
-    "touch_idle9",
     "touch_special",
     "wedding"
    ]
@@ -2056,9 +2077,6 @@ export const automaticSceneApertures = {
  ],
  "feiteliedadi_4": [
   {
-   "motions": [
-    "idle44"
-   ],
    "aperture": {
     "edges": [
      [
@@ -2087,7 +2105,58 @@ export const automaticSceneApertures = {
     "animationAspect": 1.69,
     "maxOpeningWidth": 16300,
     "reviewed": true
-   }
+   },
+   "motions": [
+    "idle44"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh226",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 12,
+    "reviewed": true,
+    "inset": [
+     0.007,
+     0.007,
+     0.007,
+     0.007
+    ],
+    "minOpacity": 0.96
+   },
+   "motions": [
+    "touch_idle8",
+    "touch_idle16",
+    "idle27",
+    "touch_idle20"
+   ]
+  }
+ ],
+ "ankeleiqi_4": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh425",
+    "corners": [
+     5,
+     11,
+     9,
+     7
+    ],
+    "vertexCount": 16,
+    "preserveAngle": true,
+    "trackWhenTransparent": true,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_drag5",
+    "idle14",
+    "idle13"
+   ]
   }
  ]
 };

@@ -417,7 +417,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261120-visible-effects"></script>
-<script src="../../common/asset-loader.js?v=20261120-framed-thumbs"></script>
+<script src="../../common/asset-loader.js?v=20261121-scene-fit"></script>
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -2188,7 +2188,16 @@
   }
   function loadOriginalSceneIndex() {
     if (!originalScenesRequest) {
-      originalScenesRequest = K.fetchJSON('../background-scenes.json?v=20261120-scene-aperture', { timeout: 12000 })
+      originalScenesRequest = Promise.all([
+        K.fetchJSON('../background-scenes.json?v=20261120-scene-aperture', { timeout: 12000 }),
+        K.fetchJSON('../scene-camera-frames.json?v=20261121-scene-fit', { timeout: 8000 }).catch(() => null),
+      ]).then(([scenes, cameraFrames]) => {
+        // The same scene frame feeds the preview, PNG and animation exporters.
+        for (const [id, frames] of Object.entries(cameraFrames || {})) {
+          if (Object.hasOwn(scenes, id)) Object.assign(scenes[id].frames, frames);
+        }
+        return scenes;
+      })
         .catch(() => { originalScenesRequest = null; return null; });
     }
     return originalScenesRequest;
