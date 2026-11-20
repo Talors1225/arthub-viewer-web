@@ -1,24 +1,64 @@
 const curveOrder = { Model: 0, Parameter: 1, PartOpacity: 2 };
 const installed = new WeakSet();
 
-export function correctedPortraitPose(data, id, motion) {
- // This converted resting pose folds the right forearm into the torso.
- // Keep the animated joints intact; correct only the verified static offset.
- if (id !== 'pulimaosi_3' || motion !== 'idle16') return data;
- const index = data?.Curves?.findIndex(c => c.Target === 'Parameter' && c.Id === 'Param144');
- if (!(index >= 0)) return data;
- const curve = data.Curves[index], segments = curve.Segments.slice(), values = [1];
- for (let at = 2; at < segments.length;) {
-  const kind = segments[at], count = kind === 1 ? 6 : [0, 2, 3].includes(kind) ? 2 : 0;
-  if (!count || at + count >= segments.length) return data;
-  for (let n = 2; n <= count; n += 2) values.push(at + n);
-  at += count + 1;
+function smoothTaper(value) {
+ const t = Math.max(0, Math.min(1, value));
+ return t * t * (3 - 2 * t);
+}
+
+function closePlymouthArmSeam(vertices) {
+ // The forearm's skin overlay starts below the upper arm in this pose.
+ // Use its own vertices to extend the join towards the shoulder as it moves.
+ const cuff = 63 * 2, shoulder = 82 * 2, innerSide = 4 * 2, outerSide = 56 * 2;
+ const baseX = vertices[cuff], baseY = vertices[cuff + 1];
+ const riseX = vertices[shoulder] - baseX, riseY = vertices[shoulder + 1] - baseY;
+ const innerX = vertices[innerSide], innerY = vertices[innerSide + 1];
+ const widthX = innerX - vertices[outerSide], widthY = innerY - vertices[outerSide + 1];
+ const area = widthX * riseY - widthY * riseX;
+ if (!Number.isFinite(area) || Math.abs(area) < 1e-6) return;
+ for (let i = 0; i < vertices.length; i += 2) {
+  const x = vertices[i], y = vertices[i + 1];
+  const along = (widthX * (y - baseY) - widthY * (x - baseX)) / area;
+  const across = ((innerX - x) * riseY - (innerY - y) * riseX) / area;
+  const joinWeight = smoothTaper(along + .03);
+  const lift = joinWeight * .65;
+  const slide = joinWeight * smoothTaper(1.55 * across) * .18;
+  vertices[i] += riseX * lift + widthX * slide;
+  vertices[i + 1] += riseY * lift + widthY * slide;
  }
- // Do not overwrite a future corrected asset or a genuinely animated curve.
- if (!values.every(i => Math.abs(segments[i] + 5.9) < .001)) return data;
- for (const i of values) segments[i] = 0;
- const Curves = data.Curves.slice(); Curves[index] = { ...curve, Segments: segments };
- return { ...data, Curves };
+}
+
+export function configurePortraitRendering(renderer, drawables, id) {
+ if (id !== 'pulimaosi_3') return;
+ const [elbow, shirt, hand, upperArm] = ['ArtMesh552', 'ArtMesh237', 'ArtMesh550', 'ArtMesh395']
+  .map(name => drawables.ids.indexOf(name));
+ if (elbow < 0 || shirt < 0 || hand < 0) return;
+ const {renderOrders, opacities} = drawables;
+ const savedOrders = renderOrders.slice();
+ const elbowVertices = drawables.vertexPositions?.[elbow];
+ const savedVertices = elbowVertices?.length === 120 * 2 ? elbowVertices.slice() : null;
+ const draw = renderer.doDrawModel;
+ renderer.doDrawModel = function (...args) {
+  const from = renderOrders[elbow], to = renderOrders[shirt];
+  if (!(from < to && to < renderOrders[hand]) ||
+      opacities[elbow] < .001 || opacities[shirt] < .001 || opacities[hand] < .001) return draw.apply(this, args);
+  // The hand sits in front of the shirt. Draw its elbow connector above the
+  // shirt as well, while preserving the order of every other drawable.
+  savedOrders.set(renderOrders);
+  const joinVisible = savedVertices && upperArm >= 0 && opacities[upperArm] >= .001;
+  if (joinVisible) savedVertices.set(elbowVertices);
+  try {
+   for (let i = 0; i < renderOrders.length; i++) {
+    if (renderOrders[i] > from && renderOrders[i] <= to) renderOrders[i]--;
+   }
+   renderOrders[elbow] = to;
+   if (joinVisible) closePlymouthArmSeam(elbowVertices);
+   return draw.apply(this, args);
+  } finally {
+   renderOrders.set(savedOrders);
+   if (joinVisible) elbowVertices.set(savedVertices);
+  }
+ };
 }
 
 export function orderedMotionData(data) {
@@ -78,7 +118,6 @@ export function configurePortraitMotions(manager, model, parameters) {
  const resetMotions = new Set(Object.entries(states).filter(([name, state]) => baseStates.has(name) && state.writeDefaults).map(([name, state]) => state.motion || name));
  const create = manager.createMotion;
  manager.createMotion = function (data, group, definition) {
-  data = correctedPortraitPose(data, model.id, group);
   const motion = create.call(this, resetMotions.has(group) ? motionWithDefaults(data, defaults) : data, group, definition);
   const update = motion.doUpdateParameters;
   if (update) motion.doUpdateParameters = function (model, time, weight, entry) {

@@ -134,6 +134,8 @@
   };
   // 保留原始文件，但不把非角色、解析失败或缩略图链路无法稳定渲染的条目放进查看器。
   const NIKKE_VIEWER_OMIT_PREFIX = /^(?:favoriteitem_|pirate_ui_deco_monkey_|azxservicetime_)/i;
+  // 独立的小游戏素材也可能被发布索引归类为过场。
+  const NIKKE_MINIGAME_PREFIX = /^(?:(?:catalog-|chapter\d+_)?mvg|fortheking_monster|foolsday_monster|far_cutscene|icedragonsaga|dessert|(?:catchcoin|climbing|running|smash|stackup)soda|tcr)_/i;
   const NIKKE_VIEWER_OMIT_IDS = new Set([
     // Atlas references point to pages/sequence frames that are absent from the extracted atlas.
     'EventScene_Chap_22_06', 'EventScene_Main_01_02', 'c160_skillcut', 'c112_01',
@@ -143,7 +145,10 @@
     // Known incomplete catalog-only entries retained in the source index for auditability.
     'c102_00_skillcut', 'c210_00_skillcut',
     // Independent scene layers and props are still available to their compositions.
-    'Chapter4_Glass_Back2', 'Chapter4_Glass_Front', 'ce009_skill_03',
+    'Chapter4_Glass_Back2', 'Chapter4_Glass_Front',
+    'ce009_skill_01', 'ce009_skill_02', 'ce009_skill_03', 'mecha_shifty',
+    'c915_00', 'c931_00', 'c931_01', 'c945_00', 'c976_00', 'c984_00', 'c984_01',
+    'c999_00', 'dummy_aim_00', 'dummy_cover_00',
     'c017_01_bg', 'c017_02_bg', 'c103_00_bg', 'c105_00_bg', 'c262_01_bg',
     'c441_00_bg', 'c450_03_bg', 'c451_03_bg', 'c511_03_bg', 'c513_03_bg', 'c513_03_fg',
     'c515_00_bg', 'c515_00_fg', 'c580_01_bg', 'c582_01_bg', 'c582_01_fg',
@@ -152,7 +157,8 @@
   ]);
   K.shouldOmitNikkeViewerEntry = (entry) => {
     const id = String(entry && entry.id || '');
-    return entry?.resourceType === 'catalog' || NIKKE_VIEWER_OMIT_PREFIX.test(id) || NIKKE_VIEWER_OMIT_IDS.has(id);
+    return entry?.resourceType === 'catalog' || NIKKE_VIEWER_OMIT_PREFIX.test(id)
+      || NIKKE_MINIGAME_PREFIX.test(id) || NIKKE_VIEWER_OMIT_IDS.has(id);
   };
   K.classifyNikkeCatalog = (entry) => {
     if (!entry || entry.type !== 'catalog') return null;
@@ -1480,11 +1486,44 @@
     return { x: crop.x * source.width / canvas.width, y: crop.y * source.height / canvas.height,
       width: crop.width * source.width / canvas.width, height: crop.height * source.height / canvas.height };
   };
-  K.refineIllustrationSize = (reference, source, quality, kind = 'png', yUp = true) => {
+  function illustrationBoundsInReference(reference, source, yUp = true) {
     const crop = K.canvasIllustrationBounds(source), x = reference.centerX + (crop.x - reference.width / 2) / reference.scale;
     const y1 = reference.centerY + (yUp ? reference.height / 2 - crop.y - crop.height : crop.y - reference.height / 2) / reference.scale;
-    const bounds = { minX: x, minY: y1, maxX: x + crop.width / reference.scale, maxY: y1 + crop.height / reference.scale };
+    return { minX: x, minY: y1, maxX: x + crop.width / reference.scale, maxY: y1 + crop.height / reference.scale };
+  }
+  K.refineIllustrationSize = (reference, source, quality, kind = 'png', yUp = true) => {
+    const bounds = illustrationBoundsInReference(reference, source, yUp);
     return { ...K.exportDimensions(bounds, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
+  };
+  K.animationFramingSize = (reference, duration, quality, kind, draw, visibleTime) => {
+    const sample = time => {
+      try { return illustrationBoundsInReference(reference, draw(time)); }
+      catch (error) {
+        if (!/没有可导出的可见立绘/.test(error.message)) throw error;
+        return null;
+      }
+    };
+    for (const time of new Set([0, Math.min(.1, duration / 4), Math.min(.5, duration / 2)])) {
+      const bounds = sample(time);
+      if (bounds) return K.exportDimensions(bounds, quality, kind, 0);
+    }
+    if (!(duration > 0)) return null;
+    // A delayed entrance can show a few small particles before the artwork.
+    // Combine the substantial later poses while retaining the full timeline.
+    const bounds = [.125, .25, .5, .75, .875, .99].map(fraction => sample(duration * fraction)).filter(Boolean);
+    // A short effect can sit between all of the evenly spaced samples.
+    if (!bounds.length && Number.isFinite(visibleTime)) {
+      const effectBounds = sample(visibleTime);
+      if (effectBounds) bounds.push(effectBounds);
+    }
+    const area = b => (b.maxX - b.minX) * (b.maxY - b.minY);
+    if (!bounds.length) return null;
+    const cutoff = Math.max(...bounds.map(area)) * .25;
+    const visible = bounds.filter(b => area(b) >= cutoff);
+    return K.exportDimensions({
+      minX: Math.min(...visible.map(b => b.minX)), minY: Math.min(...visible.map(b => b.minY)),
+      maxX: Math.max(...visible.map(b => b.maxX)), maxY: Math.max(...visible.map(b => b.maxY)),
+    }, quality, kind, 0);
   };
   K.illustrationExportSize = (session, quality, kind = 'png') => {
     if (session.fixedFrame) {

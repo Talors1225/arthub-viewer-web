@@ -416,7 +416,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
+<script src="../../common/kit.js?v=20261120-visible-effects"></script>
 <script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -1707,6 +1707,7 @@
     let bounds = null;
     try {
       const sample = new SP.Skeleton(target.data);
+      if (target.skeleton?.skin) sample.setSkin(target.skeleton.skin);
       placeSceneLayer({ source: target.source, skeleton: sample }, 1, 0, 0);
       for (const time of times) {
         sample.setToSetupPose();
@@ -2403,7 +2404,7 @@
         bounds = K.measureBounds(skeleton, stageNS, false);
       }
       if (!bounds) {
-        const sample = { source: v, data };
+        const sample = { source: v, data, skeleton };
         bounds = measureAnimationBounds(sample, def);
         for (const animation of data.animations) {
           if (bounds) break;
@@ -2493,7 +2494,8 @@
     const exportBackground = getBg();
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
-    const sources = drawCutLayers().filter(layer => layer.active !== false).map(layer => layer.source);
+    const sources = drawCutLayers().filter(layer => layer.active !== false)
+      .map(layer => ({ source: layer.source, skinName: layer.skeleton.skin?.name }));
     const primarySource = cut.sourceVariant;
     const primaryMotion = cut.scene?.primaryMotion;
     const frame = artworkExportFrame(animName);
@@ -2518,7 +2520,7 @@
       // WebGL textures belong to their context. Reparse with an atlas loaded
       // into the export context instead of reusing the stage's attachments.
       const exportLayers = [], models = new Map();
-      for (const source of sources) {
+      for (const { source, skinName } of sources) {
         const base = '../' + source.dir, key = base + source.atlas + '|' + source.skel;
         let model = models.get(key);
         if (!model) {
@@ -2530,7 +2532,10 @@
             : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes);
           model = { data, atlas: files.atlas }; models.set(key, model);
         }
-        const skeleton = new SP.Skeleton(model.data); skeleton.setToSetupPose();
+        const skeleton = new SP.Skeleton(model.data);
+        const skin = skinName && model.data.findSkin(skinName);
+        if (skin) skeleton.setSkin(skin);
+        skeleton.setToSetupPose();
         const stateData = new SP.AnimationStateData(model.data); stateData.defaultMix = 0;
         const state = new SP.AnimationState(stateData);
         const layer = { ...model, source, skeleton, state };
@@ -2552,15 +2557,19 @@
       if (!size) {
         // 第一遍: 推进并求动画全程包围盒
         let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+        let largestAttachmentArea = 0, visibleTime;
         for (let k = 0; k < frames; k++) {
           job.check();
-          applyExportFrame(timeline.timeAt(k));
+          const time = timeline.timeAt(k);
+          applyExportFrame(time);
           for (const L of exportLayers) {
             if (!L.active) continue;
-            const b = K.measureBounds(L.skeleton, SP);
+            const b = K.measureBounds(L.skeleton, SP, false);
             if (b) {
               bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
               bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
+              const area = (b.maxX - b.minX) * (b.maxY - b.minY);
+              if (area > largestAttachmentArea) { largestAttachmentArea = area; visibleTime = time; }
             }
           }
           if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
@@ -2568,14 +2577,13 @@
         if (!isFinite(bMinX)) throw new Error('空包围盒');
         const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
         cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
-        for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
+        size = K.animationFramingSize(reference, anim.duration, quality, kind, time => {
           applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
           raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
           for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
           r2.end();
-          try { size = K.refineIllustrationSize(reference, cv2, quality, kind); break; }
-          catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
-        }
+          return cv2;
+        }, visibleTime);
       }
       if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;

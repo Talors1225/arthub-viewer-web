@@ -2,10 +2,10 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop} from './portrait-frame.mjs?v=20261120-catalog-matte';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop} from './portrait-frame.mjs?v=20261120-ward-shutter-frame';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
-import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261116-forearm-pose';
+import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261120-plymouth-arm-seam';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage'),interactionHint=$('interaction-hint'),hintButton=$('show-hint');
 const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),nextHintButton=$('next-hint');
@@ -162,6 +162,7 @@ $('thumbGrid').dataset.kitDensityReady='1';
 let retiredModels={};
 const canonicalModelId=id=>retiredModels[id]||id;
 const THUMB_PREFIX='../../thumbs/';
+const THUMB_INDEX=THUMB_PREFIX+'index.json?v=20261120-soviet-scene';
 const enc=path=>path.split('/').map(encodeURIComponent).join('/');
 const labels={touch_1:'普通触摸',touch_2:'特殊触摸',touch_head:'摸头',login:'登录',home:'回港',task:'任务',mission_complete:'任务完成',main_1:'主界面 1',main_2:'主界面 2',main_3:'主界面 3',propose:'誓约'};
 function fail(error){const message=error.message||String(error);loadingPreview.fail(loadGeneration,message);$('status').textContent='加载失败：'+message;evidence.errors.push(message);}
@@ -715,6 +716,7 @@ function cropAtMatteCorners(frame, anchor, points, weight) {
   halfHeight *= .98;
  }
  if (!Number.isFinite(halfHeight) || halfHeight < 1) return frame;
+ halfHeight = Math.max(halfHeight, (anchor.minWidth ?? 0) / (2 * aspect));
  const halfWidth = halfHeight * aspect;
  const crop = { minX: centerX - halfWidth, minY: centerY - halfHeight * (1 + 2 * (anchor.headroom ?? 0)),
   maxX: centerX + halfWidth, maxY: centerY + halfHeight, rotation };
@@ -808,6 +810,7 @@ async function live2dPortrait(model,generation){
  const lookParams=array(model.interaction.lookParameters).filter(p=>indexes.has(p.id));
  const manager=internal.motionManager,queue=manager.queueManager||manager.motionManager;
  configurePortraitMotions(manager,model,core.parameters);
+ configurePortraitRendering(internal.renderer,core.drawables,model.id);
  // A separate queue retains the Unity effect layer when the base motion changes.
  let effectLoad;
  const loadEffect = () => effectLoad ||= (async () => {
@@ -1105,7 +1108,7 @@ async function live2dPortrait(model,generation){
    if (effectTimeline) effectTimeline.advance(dt * view.speed);
    else effectTime += dt * view.speed;
    live.update(dt * 1000 * view.speed);
-   if (stageCrop?.anchor?.aperture && live.deltaTime) {
+   if ((stageCrop?.anchor?.aperture || stageCrop?.anchor?.syncPose) && live.deltaTime) {
     // Measure the same pose that will be drawn so a moving matte cannot outrun its crop.
     internal.update(live.deltaTime, live.elapsedTime);
     live.deltaTime = 0;
@@ -1420,4 +1423,4 @@ function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;try{i
  if(previewPending&&view.frames>2&&!controller.state.motionPending&&now>=nextPreviewCheck){nextPreviewCheck=now+100;const gl=evidence.app?.renderer?.gl||canvas.getContext('webgl2')||canvas.getContext('webgl');if(gl&&!gl.isContextLost()&&canvas.width>1&&canvas.height>1){previewContext.clearRect(0,0,64,64);previewContext.drawImage(canvas,0,0,64,64);const pixels=previewContext.getImageData(0,0,64,64).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>8){loadingPreview.ready(loadGeneration);previewPending=false;break;}}}
  updateFormButton();viewerUI.update();if(now>=nextEvidence){record();nextEvidence=now+250;}}}catch(e){view.ready=evidence.ready=false;fail(e);}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
-try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json?v=20261120-scene-layers'),getJson(K.thumbnailURL(THUMB_PREFIX+'index.json'),false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}
+try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json?v=20261120-scene-layers'),getJson(K.thumbnailURL(THUMB_INDEX),false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}

@@ -396,7 +396,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
+<script src="../../common/kit.js?v=20261120-delayed-framing"></script>
 <script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -950,7 +950,7 @@
       const stateData = new spine.AnimationStateData(data);
       stateData.defaultMix = 0.15;
       const state = new spine.AnimationState(stateData);
-      const idleAnim = animMatch(data, /idle|stand|dai|wait/i) || data.animations[0]?.name;
+      const idleAnim = animMatch(data, /^idle$/i) || animMatch(data, /idle|stand|dai|wait/i) || data.animations[0]?.name;
       if (idleAnim) state.setAnimation(0, idleAnim, true);
       return { entry, skeleton, data, state, atlas, fitScale: 1, ox: 0, oy: 0, rot: 0, opacity: 1,
         visible: true, idleAnim, hiddenSlots: new Set(), rawBounds: null };
@@ -959,6 +959,15 @@
 
   function disposeLayer(L) {
     K.disposeAtlas(L.atlas);
+  }
+
+  function measureFramedArt(activeLayers, measure) {
+    // This scene sends the hand far offstage during its celebration.
+    const hand = activeLayers.find(layer => layer.entry.group === '401305')?.skeleton.findSlot('i-hand');
+    if (!hand || Math.abs(hand.bone.x) < 1000000) return measure();
+    const opacity = hand.color.a;
+    hand.color.a = 0;
+    try { return measure(); } finally { hand.color.a = opacity; }
   }
 
   function persistHidden() {
@@ -1760,7 +1769,7 @@
       for (let k = 0; k < plan.frames; k++) {
         job.check(); pose(plan.timeAt(k));
         for (const L of models) {
-          const b = K.measureBounds(L.skeleton, spine); if (!b) continue;
+          const b = measureFramedArt([L], () => K.measureBounds(L.skeleton, spine)); if (!b) continue;
           bounds.minX = Math.min(bounds.minX, b.minX); bounds.minY = Math.min(bounds.minY, b.minY);
           bounds.maxX = Math.max(bounds.maxX, b.maxX); bounds.maxY = Math.max(bounds.maxY, b.maxY);
         }
@@ -1768,15 +1777,18 @@
       }
       const reference = K.exportDimensions(bounds, 'medium');
       cv.width = reference.width; cv.height = reference.height; K.syncRendererSize(cv, context, outputRenderer);
-      let size;
-      for (const time of [0, Math.min(.1, plan.duration / 4), Math.min(.5, plan.duration / 2)]) {
-        pose(time, reference.scale, reference.centerX, reference.centerY);
-        raw.clearColor(0, 0, 0, 0); raw.clear(raw.COLOR_BUFFER_BIT); outputRenderer.begin();
-        for (const L of models) outputRenderer.drawSkeleton(L.skeleton, false);
-        outputRenderer.end();
-        try { size = K.refineIllustrationSize(reference, cv, quality, video ? 'video' : 'gif'); break; }
-        catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
-      }
+      const kind = video ? 'video' : 'gif';
+      const celebration = models.length === 1 && models[0].entry.group === '401305'
+        && /^celebrate(?:_idle)?$/.test(animationName);
+      const size = celebration
+        ? K.exportDimensions(bounds, quality, kind, 0)
+        : K.animationFramingSize(reference, plan.duration, quality, kind, time => {
+          pose(time, reference.scale, reference.centerX, reference.centerY);
+          raw.clearColor(0, 0, 0, 0); raw.clear(raw.COLOR_BUFFER_BIT); outputRenderer.begin();
+          for (const L of models) outputRenderer.drawSkeleton(L.skeleton, false);
+          outputRenderer.end();
+          return cv;
+        });
       if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height;
       if (Math.max(W, H) > raw.getParameter(raw.MAX_TEXTURE_SIZE)) throw new Error('导出尺寸超过设备支持，请选择中等质量');
@@ -1841,7 +1853,10 @@
 
   // ---------- PNG 导出弹窗 ----------
   makeStagePopup(btnPng, (pop) => {
-    const poseFor = quality => K.pngExportPose(layers.filter(L => L.visible).map(L => L.skeleton), quality, spine);
+    const poseFor = quality => {
+      const visible = layers.filter(L => L.visible);
+      return measureFramedArt(visible, () => K.pngExportPose(visible.map(L => L.skeleton), quality, spine));
+    };
     K.mountExportOptions(pop, {
       kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: getBg() === 'checker',
       onChange: quality => store.set('pngExportQuality', quality),

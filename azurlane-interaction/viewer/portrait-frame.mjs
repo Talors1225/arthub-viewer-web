@@ -1,4 +1,4 @@
-// Reviewed scene anchors. The original models and render order are unchanged.
+// Reviewed scene anchors in the model's native coordinates.
 // These layers sit outside the illustrated scene and can dominate its bounds.
 const rules = {
  dafeng_4: { surrounds:['ArtMesh149','ArtMesh269','ArtMesh270','ArtMesh271'] },
@@ -27,6 +27,11 @@ const lionTransitionWindow = frame(-230, 210, 12410, 6595);
 const lionTransitionCrop = Object.freeze({ ...lionTransitionWindow, anchor: Object.freeze({
  edges: [['ArtMesh226', 2, 3], ['ArtMesh231', 0, 1], ['ArtMesh222', 0, 1], ['ArtMesh229', 2, 3]],
  nativeAspect: true, fadeToFrame: true,
+}) });
+const lionShutterCrop = Object.freeze({ ...lionTransitionCrop, anchor: Object.freeze({
+ ...lionTransitionCrop.anchor,
+ // Follow the opening while keeping the closing shutter from enlarging a slit.
+ syncPose: true, minWidth: 4500,
 }) });
 // The sky has support vertices inside its four outer corners. Follow those corners as the camera tilts.
 const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654', { corners: [1, 0, 2, 3], align: true });
@@ -514,8 +519,79 @@ export const defaultPortraitStageFrame = id => defaultStageFrames.get(id) || nul
 // all drawable bounds for idle2/etc includes giant matte or curtain geometry.
 const cleanSceneFrame = id => id === 'xinnong_6' ? live2dIdleFrames.get(id)
  : ['zhangwu_2','baifeng_3'].includes(id) ? live2dIdleExportFrames.get(id) : null;
+const lionAlleyWindow = trackDrawable(frame(13, 4, 10591, 8778), 'ArtMesh3',
+ { corners: [4, 7, 6, 5], whenVisible: true, aspect: 1.206 });
+const alsacePoolWindow = trackDrawable(frame(-4050, 1083, 13479, 10115), 'ArtMesh4',
+ { corners: [14, 15, 12, 13], whenVisible: true, aspect: 1.941 });
+const plymouthWardWindow = trackDrawable(frame(-1350, -550, 10040, 6820), 'ArtMesh349', {
+ corners: [1, 0, 2, 3], align: true, aspect: 1.72,
+ aperture: [['ArtMesh381', 2, 3], ['ArtMesh383', 0, 2], ['ArtMesh382', 0, 1], ['ArtMesh384', 0, 2]],
+});
+const formidableClassroom = frame(12, 1020, 8960, 6265);
+const eugenRestaurantWindow = trackDrawable(frame(409, 248, 7750, 4172), 'ArtMesh3',
+ { corners: [4, 7, 6, 5], whenVisible: true, aspect: 1.87, syncPose: true });
+const auroraOpening = openingMatte(frame(-120, -220, 7110, 7080), 'mask_black_16b11', [1, 3, 2, 0]);
+const bremertonOpening = openingMatte(frame(306, -84, 6912, 7085), 'ArtMesh78', [7, 4, 5, 6]);
+const fritzRumeyOpening = openingMatte(frame(-1950, 425, 10935, 7355), 'ArtMesh548', [4, 6, 9, 5]);
+const ulrichOpening = openingMatte(live2dIdleFrames.get('wuerlixi_3'), 'ArtMesh448', [4, 6, 9, 5]);
+const strasbourgOpening = openingMatte(frame(80, -560, 11690, 6660), 'ArtMesh64', [14, 15, 12, 13]);
+const edgeOpeningMatte = (crop, edges) =>
+ Object.freeze({ ...crop, anchor: Object.freeze({ edges, nativeAspect: true, fadeToFrame: true }) });
+const romaOpening = edgeOpeningMatte(frame(-930, -410, 7740, 7310),
+ [['ArtMesh328', 2, 3], ['ArtMesh327', 1, 2], ['ArtMesh329', 0, 1], ['ArtMesh326', 0, 3]]);
+const clevelandOpening = edgeOpeningMatte(frame(320, -90, 8930, 8890),
+ [['MB_blackbgyuhua8', 2, 3], ['MB_blackbgyuhua6', 2, 3], ['MB_blackbgyuhua9', 0, 1], ['MB_blackbgyuhua7', 0, 1]]);
+const yorktownRoom = frame(-2130, -1140, 16495, 9020);
+const goldenHindSceneWindow = frame(-2070, -940, 15760, 8798);
+const janusSceneWindow = frame(-1520, -816, 11094, 6285);
+const hindenburgScroll = frame(1410, 640, 6593, 3715);
 // Use the reviewed picture area when a surrounding matte or effect dominates the preview.
 const live2dMotionStageFrames = new Map([
+ ['chaijun_5:home', openingMatte(frame(-720, -1300, 8200, 6830), 'ArtMesh771', [4, 9, 8, 5])],
+ ['feiteliedadi_3:home', openingMatte(frame(-210, -298, 8260, 5890), 'ArtMesh603', [4, 9, 8, 5])],
+ ['ougen_6:home', openingMatte(frame(340, 24, 8540, 9645), 'ArtMesh108', [4, 7, 6, 5])],
+ ['ouruola_4:home', auroraOpening],
+ ['ouruola_4:login', auroraOpening],
+ ['bulaimodun_2:home', bremertonOpening],
+ ['bulaimodun_2:login', bremertonOpening],
+ ['aerbien_3:home', openingMatte(frame(32, 500, 7590, 6964), 'MB_blackbgjuxing', [4, 5, 6, 7])],
+ ['gangyishawa_3:login', openingMatte(frame(-18, -12, 12516, 7490), 'ArtMesh407', [8, 9, 10, 11])],
+ ['kelifulan_8:login', clevelandOpening],
+ ['beilaosenlin_2:touch_idle19', frame(330, 253, 14095, 7773)],
+ ['aogusite_4:touch_idle16', live2dIdleFrames.get('aogusite_4')],
+ ['fulici_2:home', fritzRumeyOpening],
+ ['fulici_2:login', fritzRumeyOpening],
+ ['luoma_2:home', romaOpening],
+ ['luoma_2:login', romaOpening],
+ ['mojiaduoer_3:login', openingMatte(frame(600, -40, 8190, 4595), 'ArtMesh82', [4, 9, 8, 5])],
+ ['sitelasibao_2:home', strasbourgOpening],
+ ['sitelasibao_2:login', strasbourgOpening],
+ ['wuerlixi_3:home', ulrichOpening],
+ ['wuerlixi_3:login', ulrichOpening],
+ ['yuekechengii_3:home', yorktownRoom],
+ ['yuekechengii_3:change_in', yorktownRoom],
+ ['z46_4:home', frame(760, -82, 7008, 5900)],
+ ['bunao_3:touch_idle15', frame(74, 117, 7601, 4354)],
+ ...[29, 32, 35, 44].map(n => ['jinluhao_3:touch_idle' + n, goldenHindSceneWindow]),
+ ...[27, 37, 38, 39, 44, 45, 46, 53, 55, 56, 57, 58].map(n => ['yanusi_7:touch_idle' + n, janusSceneWindow]),
+ ...['main_1', 'main_2', 'main_3', 'main_4', 'mail', 'mission', 'mission_complete', 'complete',
+  'touch_head', 'touch_body', 'touch_special', 'wedding'].map(motion => ['shi_2:' + motion, lionTransitionWindow]),
+ ...[9, 10, 11].map(n => ['xingdengbao_3:touch_idle' + n, hindenburgScroll]),
+ ['masaina_2:touch_idle17', trackDrawable(frame(-1555, -946, 11636, 6706), 'ArtMesh602',
+  { corners: [4, 7, 6, 5], whenVisible: true, aspect: 1.716 })],
+ ...['touch_drag6', 'touch_idle13', 'touch_idle15', 'touch_idle40']
+  .map(motion => ['shi_3:' + motion, lionAlleyWindow]),
+ ...[2, 3, 4, 5].map(n => ['aersasi_2:touch_drag' + n, alsacePoolWindow]),
+ ...['home', 'login', 'main_1', 'main_2', 'effect', 'touch_drag7', 'touch_drag17', 'touch_drag18', 'touch_drag19',
+  'touch_drag20', 'touch_drag21', 'touch_drag22', 'touch_drag23', 'touch_idle1', 'touch_idle2', 'touch_idle4',
+  'touch_idle5', 'touch_idle20', 'touch_idle22', 'touch_idle23', 'touch_idle24', 'touch_idle29', 'touch_idle30']
+  .map(motion => ['pulimaosi_3:' + motion, plymouthWardWindow]),
+ ...['idle14', 'idle16'].map(motion =>
+  ['pulimaosi_3:' + motion, live2dIdleExportVariants.get('pulimaosi_3').get(motion)]),
+ ...['idle3', 'touch_drag11', 'touch_drag12'].map(motion => ['kewei_4:' + motion, formidableClassroom]),
+ ...['login', 'home', 'main_1', 'effect', 'mission_complete', 'touch_body', 'touch_idle1', 'touch_idle9',
+  'touch_idle14', 'touch_idle20', 'touch_idle21', 'touch_idle24', 'touch_idle25']
+  .map(motion => ['ougen_8:' + motion, eugenRestaurantWindow]),
  ...['change_out', 'idle36', 'idle37', 'idle38', 'idle39', 'idle40', 'touch_idle25', 'touch_idle36', 'touch_special']
   .map(motion => ['mojiaduoer_4:' + motion, mogadorCloseUp]),
  ['mojiaduoer_4:idle50', mogadorWideShot],
@@ -531,6 +607,7 @@ const live2dMotionStageFrames = new Map([
  ['mingji_2:touch_idle26', pirateCarWindow],
  ['rangbaer_5:touch_idle3', openingMatte(defaultStageFrames.get('rangbaer_5'), 'ArtMesh557', [1, 3, 2, 0])],
  ['shi_2:touch_drag11', lionTransitionCrop],
+ ['shi_2:touch_drag15', lionShutterCrop],
  ['gaoxiong_7:touch_idle18', frame(2123, 817, 8199, 4282)],
  ['daofeng_4:idle', frame(671, -41, 6460, 5404)],
  ['daofeng_4:home', frame(17, -76, 7191, 5404)], // The first glint occupies only a few pixels.
@@ -669,7 +746,7 @@ const sceneExportCrops = new Map([
  ['jinluhao_3:login', frame(-1842, -816, 15547, 8570)],
  ['sebao_2:touch_idle7', frame(278, 145, 13871, 7804)],
  ['ankeleiqi_4:idle14', rotatedFrame(1348, 1046, 8422, 5321, 1.91)],
- ['yanusi_7:touch_idle57', frame(-1520, -816, 11094, 6285)],
+ ['yanusi_7:touch_idle57', janusSceneWindow],
  ['jianwu_2:home', { inset: [0.03, 0.038, 0.04, 0.037] }],
 ]);
 

@@ -411,7 +411,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261119-transition-animations"></script>
-<script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
+<script src="../../common/kit.js?v=20261120-delayed-framing"></script>
 <script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -2304,6 +2304,7 @@
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
+    const skinNames = new Map(cutLayers().map(layer => [layer.source, layer.skeleton.skin?.name]));
     const exportLoop = loopAnim;
     const fixedFrame = cut.fixedFrame;
     const hiddenSlots = new Set(cut.hiddenSlots);
@@ -2338,7 +2339,11 @@
             : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes);
           model = { data, atlas: files.atlas }; models.set(key, model);
         }
-        const skeleton = new SP.Skeleton(model.data); skeleton.setToSetupPose();
+        const skeleton = new SP.Skeleton(model.data);
+        const skinName = skinNames.get(source);
+        const skin = skinName && model.data.findSkin(skinName);
+        if (skin) skeleton.setSkin(skin);
+        skeleton.setToSetupPose();
         const stateData = new SP.AnimationStateData(model.data); stateData.defaultMix = 0;
         const state = new SP.AnimationState(stateData);
         const layer = { ...model, source, skeleton, state };
@@ -2379,14 +2384,13 @@
         const animationBounds = { minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY };
         const reference = K.exportDimensions(animationBounds, 'medium');
         cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
-        for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
+        size = K.animationFramingSize(reference, anim.duration, quality, kind, time => {
           applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
           raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
           for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
           r2.end();
-          try { size = K.refineIllustrationSize(reference, cv2, quality, kind); break; }
-          catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
-        }
+          return cv2;
+        });
         if (!size && routeSource === 'crosscore') {
           // Some transitions stay transparent through the early pixel probes.
           size = K.exportDimensions(animationBounds, quality, kind, 0);

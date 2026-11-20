@@ -20,7 +20,7 @@ function animationGroupsFor(picture) {
 }
 import { FatedGestures } from './gestures.mjs?v=20261117-resources';
 import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
-import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261112-export-repair';
+import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261120-recording-surface';
 
 const K = window.SpineKit;
 const $ = id => document.getElementById(id);
@@ -355,10 +355,11 @@ function navigate(id) {
   renderRoute();
 }
 
-function drawPortrait(picture, cropPreview = false) {
+function drawPortrait(picture, cropPreview = false, clearColor = null) {
   const { mgl, renderer } = gl;
   const raw = mgl.gl;
-  raw.clearColor(0, 0, 0, 0);
+  if (clearColor) raw.clearColor(...clearColor, 1);
+  else raw.clearColor(0, 0, 0, 0);
   raw.clear(raw.COLOR_BUFFER_BIT);
   if (!picture || picture.loadingVariants) return;
   const { skeleton, model } = picture;
@@ -398,7 +399,10 @@ function renderFrame(t) {
   gestures.applyOverrides(updateWorld);
   gestures.updateDragDestination(t);
   if (!gestures.gesture?.dragging) delete canvas.dataset.gesture;
-  if (!captureVideoFrame(t)) drawPortrait(scene, !videoRecording?.capturing);
+  if (!captureVideoFrame(t)) {
+    const recording = videoRecording?.capturing;
+    drawPortrait(scene, !recording, recording ? videoRecording.clearColor : null);
+  }
   updateTools();
   const gauge = gestures.gauge;
   scoreMeter.hidden = !gauge;
@@ -540,7 +544,7 @@ function captureVideoFrame(now) {
   const session = videoRecording;
   if (!session?.capturing || !session.capture) return false;
   try {
-    session.capture.frame(now, () => drawPortrait(session.picture));
+    session.capture.frame(now, () => drawPortrait(session.picture, false, session.clearColor));
     const seconds = Math.min(VIDEO_LIMIT, Math.max(0, Math.floor((now - session.started) / 1000)));
     const text = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
     if (recordingTime.value !== text) recordingTime.value = text;
@@ -557,7 +561,9 @@ async function recordPortrait(quality, withAudio) {
   const { x, y, scaleX, scaleY } = skeleton;
   const view = { width: canvas.width, height: canvas.height, transform: { x, y, scaleX, scaleY } };
   const controller = new AbortController();
-  const session = videoRecording = { picture: scene, view, controller, capturing: true };
+  const background = stageBackground.get();
+  const clearColor = background === 'checker' ? null : K.parseColor(background, [0, 0, 0]);
+  const session = videoRecording = { picture: scene, view, controller, clearColor, capturing: true };
   K.closeToolPopup();
   more.disabled = true;
   try {
@@ -577,16 +583,18 @@ async function recordPortrait(quality, withAudio) {
     skeleton.x = -size.centerX * size.scale;
     skeleton.y = -size.centerY * size.scale;
     applyWorldPose();
-    drawPortrait(scene);
+    drawPortrait(scene, false, clearColor);
     recordingTime.value = '0:00';
     $('recording-state').textContent = '准备录制';
     $('video-save').disabled = true;
     recordingBar.hidden = false;
+    // Let the recording layout render before starting the capture clock.
+    await K.awaitExportTask(new Promise(resolve => setTimeout(resolve, 200)), controller.signal);
     if (withAudio) {
       try { session.audio = scene.sound?.captureAudio(); } catch {}
       if (!session.audio) K.toast('本次录制没有录入互动声音', 'info');
     }
-    session.capture = await startVideoCapture(K, canvas, quality, stageBackground.get(), session.audio?.track, controller.signal);
+    session.capture = await startVideoCapture(K, canvas, quality, background, session.audio?.track, controller.signal, !!clearColor);
     session.started = performance.now();
     $('recording-state').textContent = '录制中';
     $('video-save').disabled = false;

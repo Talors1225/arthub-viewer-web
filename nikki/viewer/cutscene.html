@@ -430,7 +430,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261120-catalog-matte"></script>
+<script src="../../common/kit.js?v=20261120-nikke-minigames"></script>
 <script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -2623,9 +2623,13 @@
       // 先定默认动画并应用, 再量包围盒(setup pose 与动画姿态差异可能很大)
       const wallpaperActions = v.wallpaperScene ? wallpaper.actions(v.wallpaperScene, SP) : null;
       const lightLayer = v.skel === 'c103_00_bg.skel';
-      const animations = wallpaperActions || (lightLayer ? data.animations.filter(({ name }) =>
+      let animations = wallpaperActions || (lightLayer ? data.animations.filter(({ name }) =>
         /_02$/.test(name) || ['action', 'bg_idle', 'idle_alt', 'expression_0', 'expression_0_alt'].includes(name),
       ) : data.animations);
+      if (v.skel === 'c850_03.skel') {
+        // These tracks only expose a mouth attachment when played on their own.
+        animations = animations.filter(({ name }) => name !== 'bg_idle2' && name !== 'bg_idle3');
+      }
       const findAnimation = name => animations.find(item => item.name === name);
       animSel.innerHTML = animations.map(a => '<option value="' + K.esc(a.name) + '">' + K.esc(a.label || a.name) + '</option>').join('');
       const link = new URLSearchParams(location.search);
@@ -2754,6 +2758,7 @@
     const timeline = K.exportTimeline(anim.duration, quality, format);
     const { frames } = timeline;
     const sourceVariant = cut.sourceVariant;
+    const skinNames = new Map(cutLayers().map(layer => [layer.source, layer.skeleton.skin?.name]));
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
     const backdrop = activeSkillBackdrop();
@@ -2792,7 +2797,10 @@
           model = { data, atlas: files.atlas }; models.set(key, model);
         }
         const skeleton = new SP.Skeleton(model.data);
-        applyVariantSkin(skeleton, assetSource);
+        const skinName = skinNames.get(source);
+        const skin = skinName && model.data.findSkin(skinName);
+        if (skin) skeleton.setSkin(skin);
+        else applyVariantSkin(skeleton, assetSource);
         skeleton.setToSetupPose();
         const stateData = new SP.AnimationStateData(model.data); stateData.defaultMix = 0;
         const state = new SP.AnimationState(stateData);
@@ -2838,14 +2846,13 @@
         const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
         cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
         size = backdrop ? K.exportDimensions(mergeBounds({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, backdrop.bounds), quality, kind, 0) : null;
-        if (!size) for (const time of [0, Math.min(.1, anim.duration / 4), Math.min(.5, anim.duration / 2)]) {
+        size ??= K.animationFramingSize(reference, anim.duration, quality, kind, time => {
           applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
           raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
           for (const L of exportDrawLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
           r2.end();
-          try { size = K.refineIllustrationSize(reference, cv2, quality, video ? 'video' : 'gif'); break; }
-          catch (error) { if (!/没有可导出/.test(error.message)) throw error; }
-        }
+          return cv2;
+        });
       }
       if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;

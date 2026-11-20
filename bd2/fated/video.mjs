@@ -23,7 +23,7 @@ function verifyVideoTrack(blob) {
   });
 }
 
-export async function startVideoCapture(K, source, quality, background, audioTrack, signal) {
+function compositeSurface(K, source, background) {
   const output = document.createElement('canvas');
   output.width = source.width;
   output.height = source.height;
@@ -33,23 +33,37 @@ export async function startVideoCapture(K, source, quality, background, audioTra
     K.paintExportBackground(context, output.width, output.height, background);
     context.drawImage(source, 0, 0);
   };
-  paint();
-  signal.throwIfAborted();
-  if (window.VideoEncoder && window.VideoFrame && (!audioTrack || window.AudioEncoder)) {
-    try {
-      const codec = await import('../../common/vendor/mediabunny-1.61.0.esm.js');
-      const recording = await encodeLiveFrames(K, codec, output, paint, quality, audioTrack, signal);
-      if (recording) return recording;
-    } catch (error) {
-      signal.throwIfAborted();
-      console.warn('逐帧录制不可用，尝试浏览器录制', error);
-    }
-  }
-  signal.throwIfAborted();
-  return recordCanvasStream(K, output, paint, quality, audioTrack);
+  const release = () => { output.width = output.height = 1; };
+  return { canvas: output, paint, release };
 }
 
-async function encodeLiveFrames(K, codec, canvas, paint, quality, audioTrack, signal) {
+export async function startVideoCapture(K, source, quality, background, audioTrack, signal, sourceHasBackground) {
+  let composite;
+  if (window.VideoEncoder && window.VideoFrame && (!audioTrack || window.AudioEncoder)) {
+    try {
+      signal.throwIfAborted();
+      const codec = await import('../../common/vendor/mediabunny-1.61.0.esm.js');
+      // A solid WebGL background lets the encoder sample the rendered canvas directly.
+      const surface = sourceHasBackground ? { canvas: source } : (composite = compositeSurface(K, source, background));
+      const recording = await encodeLiveFrames(K, codec, surface, quality, audioTrack, signal);
+      if (recording) return recording;
+    } catch (error) {
+      if (!signal.aborted) console.warn('逐帧录制不可用，尝试浏览器录制', error);
+    }
+  }
+  try {
+    signal.throwIfAborted();
+    composite ??= compositeSurface(K, source, background);
+    composite.paint();
+    return recordCanvasStream(K, composite, quality, audioTrack);
+  } catch (error) {
+    composite?.release();
+    throw error;
+  }
+}
+
+async function encodeLiveFrames(K, codec, surface, quality, audioTrack, signal) {
+  const { canvas, paint } = surface;
   const audioSettings = audioTrack?.getSettings();
   for (const format of K.canvasVideoEncodings) {
     signal.throwIfAborted();
@@ -74,11 +88,11 @@ async function encodeLiveFrames(K, codec, canvas, paint, quality, audioTrack, si
       const audioError = audio?.errorPromise;
       const wait = task => K.awaitExportTask(audioError ? Promise.race([task, audioError]) : task, signal);
       await wait(output.start());
-      paint();
+      paint?.();
       const first = new codec.VideoSample(canvas, { timestamp: 0, duration: 1 / VIDEO_FPS });
       try { await wait(video.add(first, { keyFrame: true })); }
       finally { first.close(); }
-      return liveEncoderSession(output, video, audioError, audio, format, canvas, paint, performance.now(), codec.VideoSample);
+      return liveEncoderSession(output, video, audioError, audio, format, surface, performance.now(), codec.VideoSample);
     } catch (error) {
       await output.cancel().catch(() => {});
       signal.throwIfAborted();
@@ -88,12 +102,13 @@ async function encodeLiveFrames(K, codec, canvas, paint, quality, audioTrack, si
   return null;
 }
 
-function liveEncoderSession(output, video, audioError, audio, format, canvas, paint, started, VideoSample) {
+function liveEncoderSession(output, video, audioError, audio, format, surface, started, VideoSample) {
+  const { canvas, paint, release } = surface;
   let stopping = false, pending, frameError, previous = 0, lastKeyFrame = 0;
   const interval = 1 / VIDEO_FPS, sampleSlack = .002;
   let nextSample = interval;
-  // Retain only a few pending snapshots so a slow encoder cannot exhaust memory.
-  const maxQueued = Math.max(1, Math.min(4, Math.floor(32 * 1024 * 1024 / (canvas.width * canvas.height * 4))));
+  // Absorb brief encoder stalls while bounding the memory held by pending frames.
+  const maxQueued = Math.max(1, Math.min(8, Math.floor(64 * 1024 * 1024 / (canvas.width * canvas.height * 4))));
   const queue = [];
   let resolve, reject;
   const result = new Promise((accept, fail) => { resolve = accept; reject = fail; });
@@ -121,7 +136,7 @@ function liveEncoderSession(output, video, audioError, audio, format, canvas, pa
         reject(failure);
       } finally {
         clearQueue();
-        canvas.width = canvas.height = 1;
+        release?.();
       }
     })();
   };
@@ -149,7 +164,7 @@ function liveEncoderSession(output, video, audioError, audio, format, canvas, pa
       previous = time;
       try {
         draw();
-        paint();
+        paint?.();
         if (queue.length >= maxQueued) queue.shift().close();
         queue.push(new VideoSample(canvas, { timestamp: time, duration: interval }));
         if (!pending) pending = drain().catch(failFrame).finally(() => { pending = null; });
@@ -159,7 +174,8 @@ function liveEncoderSession(output, video, audioError, audio, format, canvas, pa
   };
 }
 
-function recordCanvasStream(K, output, paint, quality, audioTrack) {
+function recordCanvasStream(K, surface, quality, audioTrack) {
+  const { canvas: output, paint } = surface;
   if (!output.captureStream || !window.MediaRecorder) throw new Error('当前浏览器不支持录制互动视频');
   const mimeTypes = K.videoExportFormats().map(format => {
     if (!audioTrack || !format.mimeType.includes(';codecs=')) return format.mimeType;
@@ -181,7 +197,7 @@ function recordCanvasStream(K, output, paint, quality, audioTrack) {
   let recorder, lastError;
   const release = () => {
     track.stop();
-    output.width = output.height = 1;
+    surface.release();
   };
   try {
     if (audioTrack) stream.addTrack(audioTrack);

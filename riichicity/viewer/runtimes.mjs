@@ -102,14 +102,30 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       expression(name){if(!data.findSkin(name))return false;skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);return true;},
       playOnce(name,back){if(!data.findAnimation(name))return false;state.setAnimation(0,name,name===back);if(back&&back!==name&&data.findAnimation(back))state.addAnimation(0,back,true,0);return true;},
       setTools(value){tools=value;},dispose,
-      play(name,loop=true){if(!data.findAnimation(name))throw Error('动画不存在');state.setAnimation(0,name,loop);},
+      play(name,loop=true){
+        if(!data.findAnimation(name))throw Error('动画不存在');
+        // The manual list can jump between separate shots. Restore their
+        // setup attachments and clipping masks before applying the next shot.
+        state.clearTracks();
+        skeleton.setToSetupPose();
+        state.setAnimation(0,name,loop);
+      },
       loop(value){const track=state.getCurrent(0);if(track)track.loop=value;},
       seek(time){const track=state.getCurrent(0);if(track){track.trackTime=Math.max(0,Math.min(track.animation.duration,time));track.animationLast=track.nextAnimationLast=track.trackTime;state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);}},
       skin(name){skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);const next=stageBounds||modelBounds(skeleton,ns,model.visibleBounds);if(next&&next.maxX>next.minX&&next.maxY>next.minY&&[next.minX,next.minY,next.maxX,next.maxY].every(Number.isFinite))bounds=next;},
       playback(){const t=state.getCurrent(0),d=t?.animation.duration||0;return {name:t?.animation.name||'',duration:d,time:d?(t.loop?t.trackTime%d:Math.min(d,t.trackTime)):0,loop:t?.loop??true};},
       render(dt,view){if(disposed)return;lastView=view;const {w,h,density}=resize(canvas);lastFrame=stageFrame(canvas);gl.viewport(0,0,canvas.width,canvas.height);tools?.before();if(view.playing){state.update(dt*view.speed);skeleton.update?.(dt*view.speed);}state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.update);tools?.after();
         const a=world(w/2,h/2),b=world(w/2+1,h/2);renderer.camera.setViewport(canvas.width,canvas.height);renderer.camera.zoom=(b.x-a.x)/density;renderer.camera.position.set(a.x,a.y,0);renderer.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);renderer.begin();renderer.drawSkeleton(skeleton,!!atlas.pages[0]?.pma);renderer.end();},
-      capture(animation){return window.createInteractionSpineCapture({layers,ns,canvas,renderer,gl,editor,animation,restore:()=>api.render(0,lastView)});},
+      capture(animation){
+        const session=window.createInteractionSpineCapture({layers,ns,canvas,renderer,gl,editor,animation,restore:()=>api.render(0,lastView)});
+        if(model.remote&&model.id==='spine_1006603'&&animation.name.startsWith('1/')){
+          // The second shot parks these two slots far offscreen in this shot.
+          const slots=skeleton.slots.filter(slot=>slot.data.name!=='2_89'&&slot.data.name!=='2_90');
+          const picture=K.measureBounds({slots,color:skeleton.color},ns,false);
+          if(validBounds(picture))session.pngSize=quality=>({...K.exportDimensions(picture,quality),fullFrame:true});
+        }
+        return session;
+      },
     };return api;
   }catch(error){dispose();throw error;}
 }

@@ -70,8 +70,7 @@ const assetEnd=kit.indexOf('\n  function galleryFrameInfo',assetBegin);
 vm.runInContext(kit.slice(assetBegin,assetEnd),context);
 const stale={catalogNormalized:true,characters:[{id:'c984_00',type:'catalog',resourceType:'lobby',name:'wrong cached portrait',originalName:'raw panel'}]};
 const corrected=context.rules.decorateNikkeIndex(stale);
-equal(corrected.characters[0].resourceType,'other','correct a stale embedded resourceType');
-equal(corrected.characters[0].name,'语音通讯屏 · SOUND ONLY','correct stale embedded names');
+equal(corrected.characters.length,0,'hide the communications panel even with a stale portrait category');
 const oldCatalogResult=context.rules.decorateAssetIndex({characters:stale.characters},'nikki');
 equal(oldCatalogResult.characters[0].resourceType,'other','old naming directory cannot overwrite reviewed categories');
 equal(oldCatalogResult.characters[0].displayName,'语音通讯屏 · SOUND ONLY','old naming directory cannot overwrite reviewed names');
@@ -84,15 +83,24 @@ const availabilityFixture = {
     { id: 'pirate_ui_deco_monkey_test' },
     { id: 'directory-sprite', type: 'catalog', resourceType: 'catalog' },
     { id: 'azxservicetime_forest', resourceType: 'idle' },
+    { id: 'mvg_shop_b', resourceType: 'cutscene' },
+    { id: 'catalog-mvg_no_gro_cube', resourceType: 'cutscene' },
+    { id: 'Chapter4_mvg_bo_gro_starfish', resourceType: 'cutscene' },
+    { id: 'fortheking_monster_ant', resourceType: 'cutscene' },
+    { id: 'smashsoda_mary', resourceType: 'cutscene' },
+    { id: 'c945_00', resourceType: 'lobby' },
     { id: 'c112_01' },
     { id: 'c210_00_skillcut', type: 'catalog', burst: { key: 'core-1' } },
     { id: 'c150_00_skillcut--core-26174', type: 'catalog' },
     { id: 'c870_00', type: 'catalog', resourceType: 'lobby' },
+    { id: 'EventScene_Aesigthediver_01', resourceType: 'cutscene' },
+    { id: 'favoriteitemscene_c030_00', resourceType: 'wallpaper' },
   ],
 };
 const availability = context.rules.decorateNikkeIndex(availabilityFixture).characters;
-equal(Array.from(availability, entry => entry.id), ['c210_00_skillcut', 'c150_00_skillcut--core-26174', 'c870_00'],
-  'omit non-portraits and incomplete originals while retaining playable core entries');
+equal(Array.from(availability, entry => entry.id), ['c210_00_skillcut', 'c150_00_skillcut--core-26174', 'c870_00',
+  'EventScene_Aesigthediver_01', 'favoriteitemscene_c030_00'],
+  'omit minigame units and props while retaining character animations, complete scenes and wallpapers');
 equal(Array.from(availability.slice(0, 2), entry => entry.type), ['skill', 'skill'], 'core entries stay in the skill category');
 
 const indexRel=isSource?'data/nikki/index/nikki_chars.json':'nikki/nikki_chars.json';
