@@ -142,6 +142,13 @@
     'c392_cover_00', 'c550_aim_00', 'c801_aim_00', 'c802_aim_00', 'c802_cover_00',
     // Known incomplete catalog-only entries retained in the source index for auditability.
     'c102_00_skillcut', 'c210_00_skillcut',
+    // Independent scene layers and props are still available to their compositions.
+    'Chapter4_Glass_Back2', 'Chapter4_Glass_Front', 'ce009_skill_03',
+    'c017_01_bg', 'c017_02_bg', 'c103_00_bg', 'c105_00_bg', 'c262_01_bg',
+    'c441_00_bg', 'c450_03_bg', 'c451_03_bg', 'c511_03_bg', 'c513_03_bg', 'c513_03_fg',
+    'c515_00_bg', 'c515_00_fg', 'c580_01_bg', 'c582_01_bg', 'c582_01_fg',
+    'c600_00_bg', 'c601_00_bg', 'c870_02_bg', 'c870_02_fg',
+    'c871_00_bg', 'c871_01_bg', 'c871_02_bg', 'c872_00_bg',
   ]);
   K.shouldOmitNikkeViewerEntry = (entry) => {
     const id = String(entry && entry.id || '');

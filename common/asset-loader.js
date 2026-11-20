@@ -4,6 +4,8 @@
   const K = window.SpineKit;
   if (!K) return;
 
+  K.thumbnailURL = path => path ? path + (path.includes('?') ? '&' : '?') + 'art=20261120-transparent' : null;
+
   K.siteRoot = () => {
     const parts = location.pathname.split('/').filter(Boolean);
     const at = parts.findIndex(p => ['bd2', 'bd2mod', 'nikki', 'nikke', 'majsoul', 'azurlane-interaction', 'crosscore-interaction', 'crosscore', 'gallery'].includes(p));
@@ -38,7 +40,7 @@
   // generator. A stage preview never waits for the library thumbnail manifest.
   K.stagePosterPath = (game, id, variant = '0') => {
     if (!['nikki', 'bd2', 'majsoul'].includes(game) || !id) return null;
-    return K.siteRoot() + 'posters/' + game + '/' + encodeURIComponent(String(id) + '--' + String(variant)) + '.webp';
+    return K.thumbnailURL(K.siteRoot() + 'posters/' + game + '/' + encodeURIComponent(String(id) + '--' + String(variant)) + '.webp');
   };
   // A transparent poster stays visible until the current model submits
   // its first draw. Old loads and image callbacks cannot replace a newer one.
@@ -250,6 +252,31 @@
     if (signal.aborted) onAbort(); else img.src = url;
   });
 
+  function fitSpineAtlasPage(atlas, page, image) {
+    const width = image.naturalWidth, height = image.naturalHeight;
+    if (!page.width || !page.height || !width || !height || (page.width === width && page.height === height)) return;
+    // Extracted textures can be resampled to a different resolution. Mesh UVs
+    // use the decoded image size, so the region offsets must use that scale too.
+    const scaleX = width / page.width, scaleY = height / page.height;
+    for (const region of atlas.regions) {
+      if (region.page !== page) continue;
+      const rotated = region.degrees === 90 || region.degrees === 270;
+      const localX = rotated ? scaleY : scaleX, localY = rotated ? scaleX : scaleY;
+      region.x *= scaleX;
+      region.y *= scaleY;
+      region.width *= localX;
+      region.height *= localY;
+      region.offsetX *= localX;
+      region.offsetY *= localY;
+      region.originalWidth *= localX;
+      region.originalHeight *= localY;
+      region.u2 = (region.x + (rotated ? region.height : region.width)) / width;
+      region.v2 = (region.y + (rotated ? region.width : region.height)) / height;
+    }
+    page.width = width;
+    page.height = height;
+  }
+
   // Skeleton and atlas download together; texture concurrency is capped at three.
   // All workers settle before disposing an incomplete atlas, including on cancellation.
   K.loadSpineFiles = async (SP, gl, options) => {
@@ -274,6 +301,7 @@
             const blob = await readSpineResponse(url, signal, 'blob', options);
             const img = await decodeImage(blob, signal);
             if (signal.aborted) throw signal.reason || abortError();
+            fitSpineAtlasPage(atlas, page, img);
             const texture = new SP.GLTexture(gl, img);
             page.texture = texture;
             page.setTexture(texture);

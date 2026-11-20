@@ -50,15 +50,9 @@ const blendedVideoPortraits = new Set([
  'xianghe_2', 'xingdengbao_2', 'xinnong_4', 'xuefeng_3', 'xukufu_3', 'yuekechengii_3',
  'zhala_2', 'zhenzhuhao_2',
 ]);
-const refreshedPortraitCovers = new Set(["shengluyisi_2", "yuekegongjue_5", "qisheng_3", "anninvwang_3", "shuixinghao_2", "tiejiaohao_2", "sailimiye_2", "lilisha_2", "jumeihuali_2"]);
-const recroppedPortraitCovers = new Set([
- 'aisaikesi_9', 'fage_2', 'huangjiacaifu_3', 'jinshi_2', 'mojiaduoer_5', 'tiancheng_cv_2', 'yanusi_3',
-]);
-const thumbRevision = id => recroppedPortraitCovers.has(id) ? '?v=20261119-framing'
- : refreshedPortraitCovers.has(id) ? '?v=20261117-framed' : portraitsWithSkinOne.has(id) ? '?v=20261110-az-spine-skins' : '';
 const previewPath = id => {
  const coverId = id === 'wuqi_3_hx' ? 'wuqi_3' : id;
- return K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(coverId)+'.webp'+thumbRevision(coverId);
+ return K.thumbnailURL(K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(coverId)+'.webp');
 };
 let previewPending=false,nextPreviewCheck=0;
 const previewSample=document.createElement('canvas');previewSample.width=previewSample.height=64;
@@ -254,7 +248,7 @@ function populate(){
  for(const m of pageItems){const card=document.createElement('div');card.className='thumb-card'+(m.id===selected?.id?' active':'');card.dataset.id=m.id;card.setAttribute('role','button');card.tabIndex=0;card.setAttribute('aria-label',portraitName(m));
   const preview=document.createElement('div');preview.className='ph';const text=document.createElement('div');text.className='tm';const name=document.createElement('div'),tag=document.createElement('span'),star=document.createElement('button');name.className='tn';tag.className='tt';star.className='tstar'+(K.favs.has(entry(m).k)?' on':'');name.textContent=portraitName(m);tag.textContent=m.type==='live2d'?'Live2D':'Spine';star.type='button';star.title=K.favs.has(entry(m).k)?'取消收藏':'收藏';star.setAttribute('aria-label',star.title);star.setAttribute('aria-pressed',String(K.favs.has(entry(m).k)));star.innerHTML=K.uiIcon('star',18,K.favs.has(entry(m).k));text.append(name);card.append(preview,text,tag,star);
   const thumb=libraryThumbs['azurlane:'+m.id];
-  K.setPreview(preview,thumb?THUMB_PREFIX+thumb+thumbRevision(m.id):null);
+  K.setPreview(preview,thumb?K.thumbnailURL(THUMB_PREFIX+thumb):null);
   const variant=variantLabel(m);if(variant){const badge=document.createElement('span');badge.className='tv';badge.textContent=variant;badge.title=variant==='HX版'?'原游戏 HX 变体，模型或动作配置与标准版存在差异':variant;card.append(badge);}
   card.addEventListener('click',event=>{if(event.target.closest('.tstar'))return;setPanelOpen('library',false);loadModel(m.id).catch(fail);});card.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&!event.target.closest('.tstar')){event.preventDefault();setPanelOpen('library',false);loadModel(m.id).catch(fail);}});star.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();K.favs.toggle(entry(m));populate();});fragment.append(card);
  }
@@ -1171,7 +1165,6 @@ async function spinePortrait(model,generation){
  model.animations=[...new Set(layers.flatMap(layer=>layer.data.animations.map(animation=>animation.name)))].sort();
  // This auxiliary scene's one-second normal track contains no renderable
  // attachments at any point. The visible stand2 track is its actual action.
- if (model.id === 'zhibojianT') model.animations = model.animations.filter(name => name !== 'normal');
  // The aircraft form's numbered tracks are still poses used by expressions.
  if (mogadorAircraft) model.animations = model.animations.filter(name => !/^[1-5]$/.test(name));
  let mainLayer=0,sequence=0;
@@ -1402,4 +1395,4 @@ function frame(now){const dt=Math.min(.1,(now-previous)/1000);previous=now;try{i
  if(previewPending&&view.frames>2&&!controller.state.motionPending&&now>=nextPreviewCheck){nextPreviewCheck=now+100;const gl=evidence.app?.renderer?.gl||canvas.getContext('webgl2')||canvas.getContext('webgl');if(gl&&!gl.isContextLost()&&canvas.width>1&&canvas.height>1){previewContext.clearRect(0,0,64,64);previewContext.drawImage(canvas,0,0,64,64);const pixels=previewContext.getImageData(0,0,64,64).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>8){loadingPreview.ready(loadGeneration);previewPending=false;break;}}}
  updateFormButton();viewerUI.update();if(now>=nextEvidence){record();nextEvidence=now+250;}}}catch(e){view.ready=evidence.ready=false;fail(e);}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
-try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json'),getJson(THUMB_PREFIX+'index.json?v=20261119-framing',false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}
+try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json?v=20261120-scene-layers'),getJson(K.thumbnailURL(THUMB_PREFIX+'index.json'),false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}

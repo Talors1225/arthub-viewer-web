@@ -7,11 +7,10 @@ const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint 
 const seashoreIdleFrame = { minX: -1334, minY: -679, maxX: 1346, maxY: 773 };
 const arpeggioIdleFrame = { minX: -1056, minY: -582, maxX: 1112, maxY: 644 };
 const loadingPreview = K.createLoadingPreview(stage);
-const thumbnailRevision = id => Number(id) === 7003005 ? '?v=20261119-framing' : '';
 let previewSequence = 0, previewScene = null, previewPending = false;
 window.__crosscorePreviewFailure = reason => loadingPreview.fail(previewSequence, reason);
 const initialPreviewId = new URL(location.href).searchParams.get('model');
-if (/^\d+$/.test(initialPreviewId || '')) loadingPreview.begin(0, { path: K.siteRoot() + 'thumbs/crosscore/interaction-' + initialPreviewId + '.webp' + thumbnailRevision(initialPreviewId), label: '当前立绘', trimImage: true });
+if (/^\d+$/.test(initialPreviewId || '')) loadingPreview.begin(0, { path: K.thumbnailURL(K.siteRoot() + 'thumbs/crosscore/interaction-' + initialPreviewId + '.webp'), label: '当前立绘', trimImage: true });
 const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
 if (!gl) throw new Error('WebGL 不可用，请在本机浏览器开启硬件加速后重试。');
 const context = new SP.ManagedWebGLRenderingContext(gl), renderer = new SP.SceneRenderer(canvas, context);
@@ -33,11 +32,11 @@ K.initTheme(libraryPrefs); K.bindThemePalette($('#btnTheme'), libraryPrefs);
 $('#thumbGrid').dataset.density = libraryPrefs.get('density', 'standard');
 $('#thumbGrid').dataset.kitDensityReady = '1';
 let sortMode = libraryPrefs.get('sortMode', 'name'), sortDirection = libraryPrefs.get('sortDirection', 'asc');
-const thumbnailManifest = await fetch('../../thumbs/index.json').then(r => r.ok ? r.json() : null).catch(() => null);
+const thumbnailManifest = await fetch(K.thumbnailURL('../../thumbs/index.json')).then(r => r.ok ? r.json() : null).catch(() => null);
 const libraryThumbs = thumbnailManifest?.items || {};
 const thumbnailFor = row => {
   const path = libraryThumbs['crosscore-interaction:' + row.id];
-  return path ? path + thumbnailRevision(row.id) : null;
+  return K.thumbnailURL(path);
 };
 
 let editor = null, exporting = false, volume = Number(localStorage.getItem('arthub:crosscore:volume') ?? .65);

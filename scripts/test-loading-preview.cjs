@@ -54,11 +54,13 @@ const context = vm.createContext({window: {SpineKit: K},
   DOMException, AbortController, URL, setTimeout, clearTimeout});
 const loader = fs.readFileSync(path.join(root, 'common/asset-loader.js'), 'utf8');
 new vm.Script(loader, {filename: 'asset-loader.js'}).runInContext(context);
-check(K.stagePosterPath('nikki', 'c871_01', 'Catalog'), '/arthub-viewer-web/posters/nikki/c871_01--Catalog.webp', 'direct poster URL without thumbnail manifest');
-check(K.stagePosterPath('nikki', 'c871_02', 'Catalog'), '/arthub-viewer-web/posters/nikki/c871_02--Catalog.webp', 'costume variants cannot share a poster');
+const posterURL = (game, id, variant) => new URL(K.stagePosterPath(game, id, variant), 'https://arthub.test/');
+check(posterURL('nikki', 'c871_01', 'Catalog').pathname, '/arthub-viewer-web/posters/nikki/c871_01--Catalog.webp', 'direct poster URL without thumbnail manifest');
+check(posterURL('nikki', 'c871_02', 'Catalog').pathname, '/arthub-viewer-web/posters/nikki/c871_02--Catalog.webp', 'costume variants cannot share a poster');
+check(posterURL('nikki', 'c871_01', 'Catalog').searchParams.has('art'), true, 'updated artwork bypasses the old preview cache');
 check(K.stagePosterPath('unknown', 'sample'), null, 'unknown source cannot escape poster root');
 context.location.pathname = '/bd2/viewer/cutscene.html';
-check(K.stagePosterPath('bd2', '000101'), '/posters/bd2/000101--0.webp', 'local root supported');
+check(posterURL('bd2', '000101').pathname, '/posters/bd2/000101--0.webp', 'local root supported');
 context.location.pathname = '/arthub-viewer-web/nikki/viewer/cutscene.html';
 const stage = new Element('div'); stage.className = 'stage';
 const preview = K.createLoadingPreview(stage);
@@ -175,21 +177,22 @@ for (const file of viewers) {
   const variant = {variant: 'Lobby'}, cur = {id: 'sample', cutscenes: [variant, {variant: 'Skill'}]};
   const env = vm.createContext({K, routeSource: 'nikki', cur, THUMB_PREFIX: '../../thumbs/', webThumbs: {}});
   vm.runInContext(helper[0], env);
-  check(env.stagePreviewPath(file.includes('majsoul') ? {id: 'sample'} : variant),
+  const previewPath = variant => env.stagePreviewPath(variant).split('?')[0];
+  check(previewPath(file.includes('majsoul') ? {id: 'sample'} : variant),
     file.includes('majsoul') ? '/arthub-viewer-web/posters/majsoul/sample--binary.webp' : '/arthub-viewer-web/posters/nikki/sample--Lobby.webp', file + ': matching resource poster without gallery lookup');
-  if (!file.includes('majsoul')) check(env.stagePreviewPath(cur.cutscenes[1]), '/arthub-viewer-web/posters/nikki/sample--Skill.webp', file + ': variant has its own image');
+  if (!file.includes('majsoul')) check(previewPath(cur.cutscenes[1]), '/arthub-viewer-web/posters/nikki/sample--Skill.webp', file + ': variant has its own image');
   else {
-    check(env.stagePreviewPath({id:'sample', composite:true}), '/arthub-viewer-web/posters/majsoul/sample--layers.webp', 'composite poster contains all layers');
-    check(env.stagePreviewPath({id:'sample', skel:'different.json'}), '/arthub-viewer-web/posters/majsoul/sample--json.webp', 'duplicate ID JSON variant retains separate poster');
+    check(previewPath({id:'sample', composite:true}), '/arthub-viewer-web/posters/majsoul/sample--layers.webp', 'composite poster contains all layers');
+    check(previewPath({id:'sample', skel:'different.json'}), '/arthub-viewer-web/posters/majsoul/sample--json.webp', 'duplicate ID JSON variant retains separate poster');
   }
   if (file === 'bd2/viewer/cutscene.html') {
     env.routeSource = 'bd2';
     env.cur = {id: 'portrait-000101', thumbnail: 'bd2/portraits/portrait-000101.webp'};
-    check(env.stagePreviewPath({variant: '0'}), '../../thumbs/bd2/portraits/portrait-000101.webp', 'BD2 portrait uses its catalog cover');
+    check(previewPath({variant: '0'}), '../../thumbs/bd2/portraits/portrait-000101.webp', 'BD2 portrait uses its catalog cover');
     env.cur = {id: '000101'};
     const poster = new URL(env.stagePreviewPath({variant: '0'}), 'https://arthub.test');
     check(poster.pathname, '/arthub-viewer-web/posters/bd2/000101--0.webp', 'BD2 cutscene uses its dedicated poster');
-    check(Boolean(poster.searchParams.get('v')), true, 'BD2 poster changes invalidate browser caches');
+    check(Boolean(poster.searchParams.get('art')), true, 'BD2 poster changes invalidate browser caches');
   }
   const chrome = html.match(/const isChrome = \(t\) =>[^\n]+/);
   assert.ok(chrome, file + ': test actual touch exclusion');

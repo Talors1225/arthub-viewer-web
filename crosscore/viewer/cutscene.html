@@ -412,7 +412,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261119-transition-animations"></script>
 <script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
-<script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+<script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -957,7 +957,7 @@
     const ph = card.querySelector('.ph');
     const variant = String(c.cutscenes?.[0]?.variant || '0');
     const thumbPath = webThumbs[routeSource + ':' + c.id + ':' + variant];
-    K.setPreview(ph, thumbPath ? THUMB_PREFIX + thumbPath : null);
+    K.setPreview(ph, thumbPath ? K.thumbnailURL(THUMB_PREFIX + thumbPath) : null);
     grid.appendChild(card);
   }
 
@@ -1951,7 +1951,7 @@
     const rt = $('#railThumb');
     rt.innerHTML = '';
     const preview = webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
-    K.setPreview(rt, preview ? THUMB_PREFIX + preview : null);
+    K.setPreview(rt, preview ? K.thumbnailURL(THUMB_PREFIX + preview) : null);
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
     vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
@@ -2157,7 +2157,7 @@
   function stagePreviewPath(v) {
     if (routeSource === 'crosscore') {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
-      return thumbnail ? THUMB_PREFIX + thumbnail : null;
+      return thumbnail ? K.thumbnailURL(THUMB_PREFIX + thumbnail) : null;
     }
     return K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
   }
@@ -2466,7 +2466,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON('../../thumbs/index.json?v=20261119-framing').then(td => {
+    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json')).then(td => {
       webThumbs = td.items || {};
       if (routeSource === 'crosscore' && cur) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
@@ -2474,7 +2474,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const data = await K.fetchJSON(indexUrl);
+    const data = await K.fetchJSON(K.thumbnailURL(indexUrl));
     chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
     chars.sort((a, b) => a.id.localeCompare(b.id));
     $('#gridSub').textContent = chars.length + ' 个资源';

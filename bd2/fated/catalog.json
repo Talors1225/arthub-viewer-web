@@ -151,7 +151,8 @@
         "minY": -2250.0,
         "maxX": 2400.0,
         "maxY": 2250.0
-      }
+      },
+      "thumbnail": "fated/dating8.webp"
     },
     {
       "id": "dating9",
@@ -170,7 +171,8 @@
         "minY": -1750.0,
         "maxX": 1425.0,
         "maxY": 1750.0
-      }
+      },
+      "thumbnail": "fated/dating9.webp"
     },
     {
       "id": "dating10",
@@ -189,7 +191,8 @@
         "minY": -2000.0,
         "maxX": 1500.0,
         "maxY": 2000.0
-      }
+      },
+      "thumbnail": "fated/dating10.webp"
     },
     {
       "id": "dating11",
@@ -208,7 +211,8 @@
         "minY": -2250.0,
         "maxX": 2000.0,
         "maxY": 2250.0
-      }
+      },
+      "thumbnail": "fated/dating11.webp"
     },
     {
       "id": "dating12",
@@ -227,7 +231,8 @@
         "minY": -1850.0,
         "maxX": 1750.0,
         "maxY": 1850.0
-      }
+      },
+      "thumbnail": "fated/dating12.webp"
     },
     {
       "id": "dating13",
@@ -246,7 +251,8 @@
         "minY": -1500.0,
         "maxX": 2000.0,
         "maxY": 1500.0
-      }
+      },
+      "thumbnail": "fated/dating13.webp"
     },
     {
       "id": "dating14",
@@ -271,7 +277,8 @@
         "minY": -2800,
         "maxX": 4000,
         "maxY": 1630
-      }
+      },
+      "thumbnail": "fated/dating14.webp"
     },
     {
       "id": "dating15",
@@ -290,7 +297,8 @@
         "minY": -1300.0,
         "maxX": 1500.0,
         "maxY": 1300.0
-      }
+      },
+      "thumbnail": "fated/dating15.webp"
     },
     {
       "id": "dating16",
@@ -309,7 +317,8 @@
         "minY": -1500.0,
         "maxX": 1500.0,
         "maxY": 1500.0
-      }
+      },
+      "thumbnail": "fated/dating16.webp"
     },
     {
       "id": "dating17",
@@ -334,7 +343,8 @@
         "minY": -1300,
         "maxX": 2000,
         "maxY": 1500
-      }
+      },
+      "thumbnail": "fated/dating17.webp"
     },
     {
       "id": "dating18",
@@ -359,7 +369,8 @@
         "minY": -2750,
         "maxX": 2000,
         "maxY": 2250
-      }
+      },
+      "thumbnail": "fated/dating18.webp"
     },
     {
       "id": "dating19",
@@ -378,7 +389,8 @@
         "minY": -2000.0,
         "maxX": 2000.0,
         "maxY": 2000.0
-      }
+      },
+      "thumbnail": "fated/dating19.webp"
     },
     {
       "id": "dating20",
@@ -403,7 +415,8 @@
         "minY": -1500,
         "maxX": 1500,
         "maxY": 1250
-      }
+      },
+      "thumbnail": "fated/dating20.webp"
     },
     {
       "id": "dating21",
@@ -422,7 +435,8 @@
         "minY": -1750.0,
         "maxX": 2000.0,
         "maxY": 1750.0
-      }
+      },
+      "thumbnail": "fated/dating21.webp"
     },
     {
       "id": "dating22",
@@ -465,7 +479,8 @@
             "maxY": 1700.0
           }
         }
-      }
+      },
+      "thumbnail": "fated/dating22.webp"
     }
   ]
 }

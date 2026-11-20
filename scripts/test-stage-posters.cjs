@@ -63,7 +63,7 @@ for (const {game, catalog, source, viewer, sourceViewer} of routes) {
       check(url.origin === pageUrl.origin && url.pathname.startsWith(sitePath), key + ': preview stays on the site asset route');
       const relative = decodeURIComponent(url.pathname.slice(sitePath.length));
       if (game === 'nikki' && character.burst?.cover) {
-        check(selected === character.burst.cover && relative === 'nikki/burst-covers/' + character.burst.key + '.webp', key + ': matching skill cover');
+        check(relative === 'nikki/burst-covers/' + character.burst.key + '.webp', key + ': matching skill cover');
         checkWebp(path.join(root, relative), key);
         previewCounts.burst++;
       } else if (game === 'bd2' && character.thumbnail) {

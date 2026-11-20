@@ -1,5 +1,5 @@
 {
-  "version": "20261119-framing",
+  "version": "20261120-transparent",
   "items": {
     "bd2:000101:0": "bd2/scenes-20261117/000101.webp",
     "bd2:000103:0": "bd2/scenes-20261117/000103.webp",
@@ -3941,6 +3941,21 @@
     "nikki:favoriteitemscene_c390_00:0": "nikki/c9965ec7f23b2bff0b3a.webp",
     "nikki:favoriteitemscene_c411_00:0": "nikki/edf0dbae360276b18b2c.webp",
     "nikki:favoriteitemscene_c550_00:0": "nikki/888174d4fde693e246ff.webp",
-    "nikki:favoriteitemscene_c580_00:0": "nikki/7da861551ea9ac788fb3.webp"
+    "nikki:favoriteitemscene_c580_00:0": "nikki/7da861551ea9ac788fb3.webp",
+    "fated:dating8": "fated/dating8.webp",
+    "fated:dating9": "fated/dating9.webp",
+    "fated:dating10": "fated/dating10.webp",
+    "fated:dating11": "fated/dating11.webp",
+    "fated:dating12": "fated/dating12.webp",
+    "fated:dating13": "fated/dating13.webp",
+    "fated:dating14": "fated/dating14.webp",
+    "fated:dating15": "fated/dating15.webp",
+    "fated:dating16": "fated/dating16.webp",
+    "fated:dating17": "fated/dating17.webp",
+    "fated:dating18": "fated/dating18.webp",
+    "fated:dating19": "fated/dating19.webp",
+    "fated:dating20": "fated/dating20.webp",
+    "fated:dating21": "fated/dating21.webp",
+    "fated:dating22": "fated/dating22.webp"
   }
 }

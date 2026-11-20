@@ -71,7 +71,7 @@ function renderLibrary() {
     link.className = 'card';
     link.href = modelURL(model.id);
     const image = document.createElement('img');
-    image.src = asset('thumbs/' + model.id + '.webp');
+    image.src = K.thumbnailURL(model.thumbnail ? K.siteRoot() + 'thumbs/' + model.thumbnail : asset('thumbs/' + model.id + '.webp'));
     image.alt = '';
     image.loading = 'lazy';
     const label = document.createElement('strong');
@@ -891,7 +891,7 @@ async function start() {
     if (url.origin === location.origin || url.protocol === 'https:') audioRoot = url;
   }
   const [catalog, rules, sound] = await Promise.all([
-    K.fetchJSON('./catalog.json?v=20261111-export-frame'), K.fetchJSON('./rules.json'),
+    K.fetchJSON('./catalog.json?v=20261120-covers'), K.fetchJSON('./rules.json'),
     audioRoot ? K.fetchJSON(new URL('manifest.json', audioRoot).href).catch(() => null) : null,
   ]);
   if (catalog.schemaVersion !== 1 || !catalog.models.length) throw new Error('资源目录为空或版本不匹配');

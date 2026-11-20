@@ -417,7 +417,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261114-interaction-export-loading"></script>
-<script src="../../common/asset-loader.js?v=20261104-unified-final"></script>
+<script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -940,7 +940,7 @@
     const ph = card.querySelector('.ph');
     const variant = String(c.cutscenes?.[0]?.variant || '0');
     const thumbPath = c.thumbnail || webThumbs[routeSource + ':' + c.id + ':' + variant];
-    K.setPreview(ph, thumbPath ? THUMB_PREFIX + thumbPath : null);
+    K.setPreview(ph, thumbPath ? K.thumbnailURL(THUMB_PREFIX + thumbPath) : null);
     grid.appendChild(card);
   }
 
@@ -1978,7 +1978,7 @@
     const rt = $('#railThumb');
     rt.innerHTML = '';
     const preview = c.thumbnail || webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
-    K.setPreview(rt, preview ? THUMB_PREFIX + preview : null);
+    K.setPreview(rt, preview ? K.thumbnailURL(THUMB_PREFIX + preview) : null);
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
     vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
@@ -2329,13 +2329,12 @@
   }
 
   function stagePreviewPath(v) {
-    if (routeSource === 'bd2' && cur.thumbnail) return THUMB_PREFIX + cur.thumbnail;
+    if (routeSource === 'bd2' && cur.thumbnail) return K.thumbnailURL(THUMB_PREFIX + cur.thumbnail);
     if (routeSource === 'crosscore' || (routeSource === 'bd2' && cur.resourceType === 'lobby')) {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
-      return thumbnail ? THUMB_PREFIX + thumbnail : null;
+      return thumbnail ? K.thumbnailURL(THUMB_PREFIX + thumbnail) : null;
     }
-    const poster = K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
-    return poster && routeSource === 'bd2' ? poster + '?v=bd2-skill-covers-20261118' : poster;
+    return K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
   }
 
   async function loadCutscene(idx, restoreAnim) {
@@ -2652,7 +2651,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON('../../thumbs/index.json?v=bd2-skill-covers-20261118').then(td => {
+    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json')).then(td => {
       webThumbs = td.items || {};
       if (cur && (routeSource === 'crosscore' || cur.resourceType === 'lobby')) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
