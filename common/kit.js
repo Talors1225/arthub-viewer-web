@@ -133,7 +133,7 @@
     idle: '待机', store: '客户端提取', unknown: '其它',
   };
   // 保留原始文件，但不把非角色、解析失败或缩略图链路无法稳定渲染的条目放进查看器。
-  const NIKKE_VIEWER_OMIT_PREFIX = /^(?:favoriteitem_|pirate_ui_deco_monkey_)/i;
+  const NIKKE_VIEWER_OMIT_PREFIX = /^(?:favoriteitem_|pirate_ui_deco_monkey_|azxservicetime_)/i;
   const NIKKE_VIEWER_OMIT_IDS = new Set([
     // Atlas references point to pages/sequence frames that are absent from the extracted atlas.
     'EventScene_Chap_22_06', 'EventScene_Main_01_02', 'c160_skillcut', 'c112_01',
@@ -152,7 +152,7 @@
   ]);
   K.shouldOmitNikkeViewerEntry = (entry) => {
     const id = String(entry && entry.id || '');
-    return NIKKE_VIEWER_OMIT_PREFIX.test(id) || NIKKE_VIEWER_OMIT_IDS.has(id);
+    return entry?.resourceType === 'catalog' || NIKKE_VIEWER_OMIT_PREFIX.test(id) || NIKKE_VIEWER_OMIT_IDS.has(id);
   };
   K.classifyNikkeCatalog = (entry) => {
     if (!entry || entry.type !== 'catalog') return null;

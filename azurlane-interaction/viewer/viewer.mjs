@@ -2,7 +2,7 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
 import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop} from './portrait-frame.mjs?v=20261119-clip-capture';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop} from './portrait-frame.mjs?v=20261120-catalog-matte';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions} from './portrait-motion.mjs?v=20261116-forearm-pose';
@@ -615,12 +615,12 @@ function intersectMatteEdges([a, b], [c, d]) {
  const t = ((c.x - a.x) * by - (c.y - a.y) * bx) / determinant;
  return new PIXI.Point(a.x + ax * t, a.y + ay * t);
 }
-function matteAperture(edges, internal) {
+function matteAperture(edges, internal, minOpacity = .99) {
  const opacity = internal.coreModel.getModel().drawables.opacities;
  const lines = [];
  for (const [id, start, end] of edges) {
   const index = internal.getDrawableIndex(id);
-  if (index < 0 || opacity[index] < .99 || editor?.hidden.has(id)) return null;
+  if (index < 0 || opacity[index] < minOpacity || editor?.hidden.has(id)) return null;
   const vertices = internal.getDrawableVertices(index);
   if (!vertices || Math.max(start, end) * 2 + 1 >= vertices.length) return null;
   lines.push([start, end].map(position => internal.localTransform.apply(
@@ -665,7 +665,27 @@ function live2DFrameAtPose(frame, internal) {
   const y = points.reduce((sum, point) => sum + point.y, 0) / points.length;
   points.sort((a, b) => Math.atan2(a.y - y, a.x - x) - Math.atan2(b.y - y, b.x - x));
  }
- return cropAtMatteCorners(frame, anchor, points, weight);
+ const crop = cropAtMatteCorners(frame, anchor, points, weight);
+ const aperture = anchor.aperture && matteAperture(anchor.aperture, internal, .12);
+ return aperture ? cropInsideAperture(crop, aperture) : crop;
+}
+function cropInsideAperture(crop, corners) {
+ const cos = Math.cos(crop.rotation ?? 0), sin = Math.sin(crop.rotation ?? 0);
+ const [topLeft, bottomLeft, bottomRight, topRight] = corners.map(({ x, y }) => ({
+  x: x * cos - y * sin, y: x * sin + y * cos,
+ }));
+ const minX = Math.max(crop.minX, topLeft.x, bottomLeft.x);
+ const maxX = Math.min(crop.maxX, topRight.x, bottomRight.x);
+ const minY = Math.max(crop.minY, topLeft.y, topRight.y);
+ const maxY = Math.min(crop.maxY, bottomLeft.y, bottomRight.y);
+ if (minX === crop.minX && maxX === crop.maxX && minY === crop.minY && maxY === crop.maxY) return crop;
+ // Keep the opening inside the underlying artwork, including while the bars move.
+ const aspect = (crop.maxX - crop.minX) / (crop.maxY - crop.minY);
+ const height = Math.min(maxY - minY, (maxX - minX) / aspect) * .99;
+ if (height < 1) return crop;
+ const width = height * aspect, x = (minX + maxX) / 2, y = (minY + maxY) / 2;
+ return { minX: x - width / 2, minY: y - height / 2,
+  maxX: x + width / 2, maxY: y + height / 2, rotation: crop.rotation };
 }
 function cropAtMatteCorners(frame, anchor, points, weight) {
  const rotation = anchor.align ? -Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x) : frame.rotation ?? 0;
@@ -677,9 +697,9 @@ function cropAtMatteCorners(frame, anchor, points, weight) {
   centerY += corner.y / 4;
  }
  const span = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
- const aspect = anchor.nativeAspect
+ const aspect = anchor.aspect ?? (anchor.nativeAspect
   ? (span(points[0], points[3]) + span(points[1], points[2])) / (span(points[0], points[1]) + span(points[3], points[2]))
-  : (frame.maxX - frame.minX) / (frame.maxY - frame.minY);
+  : (frame.maxX - frame.minX) / (frame.maxY - frame.minY));
  if (!Number.isFinite(aspect) || aspect <= 0) return frame;
  let halfHeight;
  if (anchor.includeCorners) {
@@ -1081,6 +1101,16 @@ async function live2dPortrait(model,generation){
   const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
   if (app.renderer.screen.width !== w || app.renderer.screen.height !== h) app.renderer.resize(w, h);
   const frame = stageFrame();
+  if (view.playing) {
+   if (effectTimeline) effectTimeline.advance(dt * view.speed);
+   else effectTime += dt * view.speed;
+   live.update(dt * 1000 * view.speed);
+   if (stageCrop?.anchor?.aperture && live.deltaTime) {
+    // Measure the same pose that will be drawn so a moving matte cannot outrun its crop.
+    internal.update(live.deltaTime, live.elapsedTime);
+    live.deltaTime = 0;
+   }
+  }
   fittingBounds ||= K.live2DViewBounds(internal, natural, [...model.interaction.hitAreas.map(a => a.id), ...portraitSurrounds]);
   if(refitPending&&!controller.state.motionPending&&renderedStageMotion===activeMotion){
    fittingBounds=baseFrame?stageBoundsForFrame(baseFrame):K.live2DViewBounds(internal,natural,[...model.interaction.hitAreas.map(a=>a.id),...portraitSurrounds]);
@@ -1117,11 +1147,6 @@ async function live2dPortrait(model,generation){
    canvas.style.removeProperty('clip-path');
    stage.style.removeProperty('touch-action');
    stageClipPath = '';
-  }
-  if (view.playing) {
-   if (effectTimeline) effectTimeline.advance(dt * view.speed);
-   else effectTime += dt * view.speed;
-   live.update(dt * 1000 * view.speed);
   }
   app.render();
   renderedStageMotion = activeMotion;

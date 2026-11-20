@@ -82,10 +82,12 @@ const availabilityFixture = {
   characters: [
     { id: 'favoriteitem_test' },
     { id: 'pirate_ui_deco_monkey_test' },
+    { id: 'directory-sprite', type: 'catalog', resourceType: 'catalog' },
+    { id: 'azxservicetime_forest', resourceType: 'idle' },
     { id: 'c112_01' },
     { id: 'c210_00_skillcut', type: 'catalog', burst: { key: 'core-1' } },
     { id: 'c150_00_skillcut--core-26174', type: 'catalog' },
-    { id: 'c870_00' },
+    { id: 'c870_00', type: 'catalog', resourceType: 'lobby' },
   ],
 };
 const availability = context.rules.decorateNikkeIndex(availabilityFixture).characters;

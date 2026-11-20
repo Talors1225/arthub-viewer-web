@@ -31,6 +31,12 @@ const lionTransitionCrop = Object.freeze({ ...lionTransitionWindow, anchor: Obje
 // The sky has support vertices inside its four outer corners. Follow those corners as the camera tilts.
 const mogadorSky = trackDrawable(frame(-3080, -2400, 11080, 7840), 'ArtMesh654', { corners: [1, 0, 2, 3], align: true });
 const mogadorSkyWithCard = trackDrawable(mogadorSky, mogadorSky.anchor.drawable, { ...mogadorSky.anchor, headroom: .32 });
+// The blue mattes close over the sky during these camera moves.
+const mogadorMatteEdges = [['ArtMesh669', 2, 3], ['ArtMesh672', 0, 1], ['ArtMesh1153', 0, 1], ['ArtMesh671', 2, 3]];
+const mogadorCloseUp = trackDrawable(mogadorSky, mogadorSky.anchor.drawable,
+ { ...mogadorSky.anchor, aperture: mogadorMatteEdges, aspect: 1.738 });
+const mogadorWideShot = trackDrawable(mogadorSky, mogadorSky.anchor.drawable,
+ { ...mogadorSky.anchor, aperture: mogadorMatteEdges, aspect: 1.563 });
 const mogadorAircraft = frame(-1596, 53, 1963, 2074);
 const vicksburgNormalFrame = frame(-1515, -1835, 1841, 915);
 const vicksburgExFrame = frame(-1487, -1799, 1820, 876);
@@ -510,6 +516,9 @@ const cleanSceneFrame = id => id === 'xinnong_6' ? live2dIdleFrames.get(id)
  : ['zhangwu_2','baifeng_3'].includes(id) ? live2dIdleExportFrames.get(id) : null;
 // Use the reviewed picture area when a surrounding matte or effect dominates the preview.
 const live2dMotionStageFrames = new Map([
+ ...['change_out', 'idle36', 'idle37', 'idle38', 'idle39', 'idle40', 'touch_idle25', 'touch_idle36', 'touch_special']
+  .map(motion => ['mojiaduoer_4:' + motion, mogadorCloseUp]),
+ ['mojiaduoer_4:idle50', mogadorWideShot],
  ['aersasi_3:idle', frame(-1230, -765, 8500, 5420)],
  ['gezi_2:idle6', guamRoom],
  ['gezi_2:touch_idle13', frame(315, 564, 10951, 6663)],

@@ -19,6 +19,12 @@ assert.deepEqual(authoredLive2DInterfaceCovers('mojiaduoer_4'), ['ArtMesh1385', 
 assert.deepEqual(authoredLive2DInterfaceCovers('mojiaduoer_4'), authoredLive2DExportHidden('mojiaduoer_4', 'idle7'));
 assert.deepEqual(authoredLive2DInterfaceCovers('mojiaduoer_5'), []);
 assert.deepEqual(defaultPortraitStageFrame('mojiaduoer_4'), stage('mojiaduoer_4', 'idle'));
+assert.equal(stage('mojiaduoer_4', 'idle').anchor.aperture, undefined);
+for (const motion of ['change_out', 'idle36', 'idle37', 'idle38', 'idle39', 'idle40', 'idle50', 'touch_idle25', 'touch_idle36', 'touch_special']) {
+ const crop = stage('mojiaduoer_4', motion);
+ assert.deepEqual(output('mojiaduoer_4', motion), crop);
+ assert.deepEqual(crop.anchor.aperture.map(edge => edge[0]), ['ArtMesh669', 'ArtMesh672', 'ArtMesh1153', 'ArtMesh671']);
+}
 for (const motion of ['touch_drag9', 'touch_drag10']) {
  assert.deepEqual(stage('mojiaduoer_4', motion), stage('mojiaduoer_4', 'idle34'));
  assert.deepEqual(output('mojiaduoer_4', motion), stage('mojiaduoer_4', motion));
