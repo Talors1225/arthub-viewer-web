@@ -38,7 +38,7 @@ const loadingPreview=K.createLoadingPreview(stage);
 const arromanchesPortrait = 'aluomangshi_2';
 const portraitsWithSkinOne = new Set([arromanchesPortrait, 'feiteliedadi_5', 'yuekechengii_4']);
 const loopedEffectPortraits = new Set([
- 'kebensi_2', 'pulimaosi_3', 'xingdengbao_3', 'xinnong_5', 'xinnong_6', 'dafeng_7',
+ 'kebensi_2', 'shuixinghao_2', 'pulimaosi_3', 'xingdengbao_3', 'xinnong_5', 'xinnong_6', 'dafeng_7',
  'yanusi_7', 'aogusite_4', 'adaerbote_3', 'bailong_3', 'jian_3',
 ]);
 // Reviewed default motions whose independent effects do not close with the character's cycle.
@@ -1027,7 +1027,8 @@ async function live2dPortrait(model,generation){
   const captureMotion = [...(originalQueue || [])].reverse().find(item => !item.isFinished() && item._motion);
   const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectTimeline?.manager),entries=[...(originalQueue||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot();
   const video = format === 'video', animated = video || format === 'gif';
-  const loop = video || format === 'gif' && effectControlPortraits[model.id] === 'curtains'
+  const syncGifEffect = format === 'gif' && ['curtains','wheel'].includes(effectControlPortraits[model.id]);
+  const loop = video || syncGifEffect
    ? exportLoopPlan(playback, captureMotion, savedEffect) : null;
   const breath = loop ? internal.breath : null;
   const breathTime = breath?._currentTime;

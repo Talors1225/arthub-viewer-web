@@ -23,15 +23,20 @@ export function paginationItems(page,total){
  const pages=new Set([1,total,page-1,page,page+1]);if(page<=2)pages.add(3);if(page>=total-1)pages.add(total-2);
  const result=[];for(const n of [...pages].filter(n=>n>=1&&n<=total).sort((a,b)=>a-b)){if(result.length&&n-result.at(-1)>1)result.push(null);result.push(n);}return result;
 }
-export function modelPreviewPath(model,models){return(model.auxiliary?models.find(item=>item.skinKey===model.skinKey&&!item.auxiliary)?.thumbnail:null)||model.thumbnail;}
+export function modelPreviewPath(model,models,resolveThumbnail){
+ const main=model.auxiliary?models.find(item=>item.skinKey===model.skinKey&&!item.auxiliary):null;
+ return resolveThumbnail?.(main||model)||main?.thumbnail||model.thumbnail;
+}
 
 // The chess-piece layer has no visible attachments without the game logic.
 const chessLayerId='spine_1000905__haixia-tunvlang2',chessPortraitId='spine_1000905__haixia-tunvlang';
 
 export async function createCatalog({selectModel,status}){
- const catalog=await window.SpineKit.fetchJSON('../characters.json',{timeout:20000});
+ const K=window.SpineKit;
+ const thumbnails=K.fetchJSON(K.thumbnailURL(K.siteRoot()+'thumbs/index.json'),{timeout:4500}).catch(()=>null);
+ const catalog=await K.fetchJSON('../characters.json',{timeout:20000});
  if(catalog.game!=='riichicity'||!Array.isArray(catalog.characters)||!catalog.characters.length)throw Error('麻雀一番街资源目录为空。');
- const $=id=>document.getElementById(id),K=window.SpineKit,characters=catalog.characters;
+ const $=id=>document.getElementById(id),characters=catalog.characters;
  const models=characters.flatMap(c=>c.variants).filter(model=>model.id!==chessLayerId&&model.id!=='spine_1003606__lengquanhuiyaziSP-shanyao2');
  const chessPortrait=models.find(model=>model.id===chessPortraitId);
  const chessLayerFavorite=K.favs.list().find(item=>item.k==='riichicity:'+chessLayerId);
@@ -41,7 +46,7 @@ export async function createCatalog({selectModel,status}){
   if(!K.favs.has(entry.k))K.favs.toggle(entry);
  }
  const voicePanel=createVoicePanel(catalog.assetBase);
- let entryRequested=false,navigationModel=null;
+ let entryRequested=false,navigationModel=null,indexedThumbnails=null;
  const choose=model=>{entryRequested=true;navigationModel=model;selectModel(model);};
  const query=new URL(location.href).searchParams;
  const initialId=query.get('id');
@@ -55,7 +60,11 @@ export async function createCatalog({selectModel,status}){
  $('modelSection').hidden=false;
  function favorite(item,isRole=false){return {k:'riichicity:'+(isRole?'role:':'')+item.id,src:'riichicity',t:item.name,s:isRole?'角色':item.skin,u:location.pathname+'?'+(isRole?'character=':'id=')+encodeURIComponent(item.id)};}
  function matches(model,q){return !q||(model.name+' '+model.skin+' '+model.id).toLocaleLowerCase().includes(q);}
- function previewPath(item){return modelPreviewPath(item,models);}
+ function indexedThumbnail(model){
+  const file=indexedThumbnails?.['riichicity:'+model.id];
+  return file?K.thumbnailURL(K.siteRoot()+'thumbs/'+file):null;
+ }
+ function previewPath(item){return modelPreviewPath(item,models,indexedThumbnail);}
  function imageCard(item,title,subtitle,action,flagged=false,isRole=false){
   const card=document.createElement('div');card.className='thumb-card';card.setAttribute('role','button');card.tabIndex=0;
   const art=document.createElement('span');art.className='ph';
@@ -108,6 +117,11 @@ export async function createCatalog({selectModel,status}){
  $('catalogSort').onchange=()=>{page=1;render();};$('catalogSortDir').onclick=()=>{descending=!descending;$('catalogSortDir').textContent=descending?'降序':'升序';$('catalogSortDir').title=descending?'当前降序':'当前升序';page=1;render();};
  matchMedia('(max-width:720px)').addEventListener('change',()=>{page=1;render();});
  K.initLibraryUsability?.();K.initLibraryUI?.();render();status('点击立绘即可播放。');
+ thumbnails.then(result=>{
+  if(!result?.items)return;
+  indexedThumbnails=result.items;
+  render();
+ });
  return {models,render,voicePanel,previewPath,fetchBundle:(model,signal)=>fetchModelBundle(model,signal,catalog.assetBase),
   loaded(model,engine){selected=navigationModel=model;render();voicePanel.setModel(model,engine,entryRequested);entryRequested=false;const url=new URL(location.href);if(role)url.searchParams.set('character',role);else url.searchParams.delete('character');url.searchParams.set('id',model.id);history.replaceState(null,'',url);},
   cancelNavigation(){navigationModel=selected;entryRequested=false;},

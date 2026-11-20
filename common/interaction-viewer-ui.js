@@ -137,10 +137,12 @@
           effectControls.time.textContent = `${effect.time.toFixed(2)} / ${effect.duration.toFixed(2)}s`;
           effectControls.range.setAttribute('aria-valuetext', effect.time.toFixed(2) + ' 秒，共 ' + effect.duration.toFixed(2) + ' 秒');
           effectControls.speed.value = String(effect.speed);
-          effectControls.speedValue.textContent = effect.speed + '×';
+          const speedLabel = effect.speed + '×';
+          effectControls.speedValue.textContent = speedLabel;
           effectControls.speed.setAttribute('aria-valuetext', effect.speed + ' 倍');
           effectControls.fixed.checked = effect.fixed;
-          effectControls.status.textContent = effect.fixed ? '已固定' : state.playing ? '播放中' : '已暂停';
+          const status = effect.fixed ? '已固定' : state.playing ? '' : '已暂停';
+          effectControls.status.textContent = status ? speedLabel + ' · ' + status : speedLabel;
           for (const control of [effectControls.range, effectControls.speed, effectControls.fixed, effectControls.restart]) control.disabled = !effect.ready;
         }
       }

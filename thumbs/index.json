@@ -1,5 +1,5 @@
 {
-  "version": "20261120-soviet-scene",
+  "version": "20261120-framed-thumbs",
   "items": {
     "bd2:000101:0": "bd2/scenes-20261117/000101.webp",
     "bd2:000103:0": "bd2/scenes-20261117/000103.webp",
@@ -3956,6 +3956,8 @@
     "fated:dating19": "fated/dating19.webp",
     "fated:dating20": "fated/dating20.webp",
     "fated:dating21": "fated/dating21.webp",
-    "fated:dating22": "fated/dating22.webp"
+    "fated:dating22": "fated/dating22.webp",
+    "fated:dating6": "fated/dating6.webp",
+    "riichicity:spine_1003004__ferngjian-sp-jingtou": "riichicity/spine_1003004__ferngjian-sp-jingtou.webp"
   }
 }

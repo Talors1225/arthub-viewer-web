@@ -988,7 +988,7 @@ async function start() {
     if (url.origin === location.origin || url.protocol === 'https:') audioRoot = url;
   }
   const [catalog, rules, sound] = await Promise.all([
-    K.fetchJSON('./catalog.json?v=20261120-scene-framing'), K.fetchJSON('./rules.json'),
+    K.fetchJSON('./catalog.json?v=20261120-framed-thumbs'), K.fetchJSON('./rules.json'),
     audioRoot ? K.fetchJSON(new URL('manifest.json', audioRoot).href).catch(() => null) : null,
   ]);
   if (catalog.schemaVersion !== 1 || !catalog.models.length) throw new Error('资源目录为空或版本不匹配');
