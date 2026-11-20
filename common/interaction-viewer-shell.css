@@ -663,6 +663,7 @@ body.game-interaction-viewer #floatPanel .viewer-sound-volume input[type="range"
 .game-interaction-viewer .viewer-effect-timeline summary::-webkit-details-marker { display: none; }
 .game-interaction-viewer .viewer-effect-chevron { display: inline-flex; flex: 0 0 14px; transform: rotate(-90deg); }
 .game-interaction-viewer .viewer-effect-timeline[open] .viewer-effect-chevron { transform: none; }
+.game-interaction-viewer .viewer-effect-title { white-space: nowrap; }
 .game-interaction-viewer .viewer-effect-timeline summary [data-effect-status] { margin-left: auto; color: var(--muted, #97a2b3); font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .game-interaction-viewer .viewer-effect-body { padding: 0 12px 12px; }
 .game-interaction-viewer .viewer-effect-progress { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; font-size: 12px; }
@@ -678,6 +679,7 @@ body.game-interaction-viewer #floatPanel #effectFixed { width: 16px; height: 16p
 body.game-interaction-viewer #floatPanel #effectRestart { min-height: 32px; padding: 5px 12px; font-size: 12px; }
 .game-interaction-viewer .viewer-effect-body p { color: var(--muted, #97a2b3); font-size: 11px; line-height: 1.5; margin: 6px 0 0; }
 @media (max-width: 480px) {
+  .game-interaction-viewer .viewer-effect-timeline [data-effect-summary-state] { display: none; }
   .game-interaction-viewer .viewer-effect-speed { grid-template-columns: 1fr auto; gap: 0 8px; }
   .game-interaction-viewer .viewer-effect-speed input { grid-column: 1 / -1; grid-row: 2; }
   .game-interaction-viewer .viewer-effect-actions { flex-wrap: wrap; gap: 4px 6px; }

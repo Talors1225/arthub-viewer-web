@@ -34,7 +34,7 @@
     let effectControls = null, effectScrubbing = false, effectKey = null;
     if (driver.effectPlayback && controls.animFilter?.closest('[data-panel-page]')) {
       const section = document.createElement('details'); section.className = 'viewer-effect-timeline'; section.hidden = true;
-      section.innerHTML = `<summary><span class="viewer-effect-chevron" aria-hidden="true">${K.uiIcon('chevronDown', 14)}</span>背景特效<span data-effect-status></span></summary>
+      section.innerHTML = `<summary><span class="viewer-effect-chevron" aria-hidden="true">${K.uiIcon('chevronDown', 14)}</span><span class="viewer-effect-title">背景特效</span><span data-effect-status><span data-effect-summary-speed></span><span data-effect-summary-state></span></span></summary>
         <div class="viewer-effect-body">
           <label class="viewer-effect-progress" for="effectProgress">特效进度<output id="effectTime" for="effectProgress"></output></label>
           <input id="effectProgress" type="range" min="0" max="1000" step="1" value="0" aria-label="背景特效进度">
@@ -48,7 +48,8 @@
         </div>`;
       controls.animFilter.closest('[data-panel-page]').prepend(section);
       effectControls = { section, range: byId('effectProgress'), time: byId('effectTime'), speed: byId('effectSpeed'),
-        speedValue: byId('effectSpeedValue'), fixed: byId('effectFixed'), restart: byId('effectRestart'), status: section.querySelector('[data-effect-status]') };
+        speedValue: byId('effectSpeedValue'), fixed: byId('effectFixed'), restart: byId('effectRestart'),
+        summarySpeed: section.querySelector('[data-effect-summary-speed]'), summaryState: section.querySelector('[data-effect-summary-state]') };
       effectControls.range.addEventListener('pointerdown', () => { effectScrubbing = true; });
       effectControls.range.addEventListener('input', () => invoke(() => { const state = driver.effectPlayback(); if (state?.ready) driver.seekEffect(Number(effectControls.range.value)); update(true); }));
       for (const event of ['change', 'pointercancel', 'blur']) effectControls.range.addEventListener(event, () => { effectScrubbing = false; update(true); });
@@ -139,10 +140,10 @@
           effectControls.speed.value = String(effect.speed);
           const speedLabel = effect.speed + '×';
           effectControls.speedValue.textContent = speedLabel;
+          effectControls.summarySpeed.textContent = speedLabel;
           effectControls.speed.setAttribute('aria-valuetext', effect.speed + ' 倍');
           effectControls.fixed.checked = effect.fixed;
-          const status = effect.fixed ? '已固定' : state.playing ? '' : '已暂停';
-          effectControls.status.textContent = status ? speedLabel + ' · ' + status : speedLabel;
+          effectControls.summaryState.textContent = effect.fixed ? ' · 已固定' : state.playing ? '' : ' · 已暂停';
           for (const control of [effectControls.range, effectControls.speed, effectControls.fixed, effectControls.restart]) control.disabled = !effect.ready;
         }
       }
