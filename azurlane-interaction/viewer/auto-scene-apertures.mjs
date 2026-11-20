@@ -101,6 +101,24 @@ export const automaticSceneApertures = {
    "motions": [
     "main_1"
    ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh546",
+    "corners": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "home",
+    "touch_idle6"
+   ]
   }
  ],
  "aogusite_4": [
@@ -408,6 +426,24 @@ export const automaticSceneApertures = {
     "touch_idle6",
     "touch_idle7"
    ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh634",
+    "corners": [
+     11,
+     8,
+     9,
+     10
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "login",
+    "touch_idle8"
+   ]
   }
  ],
  "liekexingdunii_2": [
@@ -500,6 +536,63 @@ export const automaticSceneApertures = {
    },
    "motions": [
     "mission_complete"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh674",
+    "corners": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_idle9",
+    "touch_idle10",
+    "touch_idle11",
+    "touch_idle18",
+    "touch_idle20",
+    "touch_idle21",
+    "touch_idle24"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh501",
+    "corners": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "effect"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh501",
+    "corners": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "main_1"
    ]
   }
  ],
@@ -603,6 +696,23 @@ export const automaticSceneApertures = {
    },
    "motions": [
     "login"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh306",
+    "corners": [
+     6,
+     7,
+     8,
+     9
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
    ]
   }
  ],
@@ -738,6 +848,1246 @@ export const automaticSceneApertures = {
    "motions": [
     "login"
    ]
+  }
+ ],
+ "baerdimo_6": [
+  {
+   "aperture": {
+    "drawable": "MB_blackbgjuxing",
+    "corners": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "wedding"
+   ]
+  }
+ ],
+ "buleisite_3": [
+  {
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh243",
+      0,
+      2
+     ],
+     [
+      "ArtMesh226",
+      0,
+      2
+     ],
+     [
+      "ArtMesh229",
+      1,
+      3
+     ],
+     [
+      "ArtMesh227",
+      1,
+      3
+     ]
+    ],
+    "minOpacity": 0.88,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  },
+  {
+   "aperture": {
+    "edges": [
+     [
+      "MB_blackbgyuhua3",
+      2,
+      3
+     ],
+     [
+      "MB_blackbgyuhua4",
+      2,
+      3
+     ],
+     [
+      "MB_blackbgyuhua2",
+      1,
+      0
+     ],
+     [
+      "MB_blackbgyuhua5",
+      1,
+      0
+     ]
+    ],
+    "minOpacity": 0.92,
+    "outset": 0.004,
+    "reviewed": true,
+    "animationAspect": 1.4
+   },
+   "motions": [
+    "touch_special"
+   ]
+  }
+ ],
+ "guangrong_3": [
+  {
+   "aperture": {
+    "drawable": "heikuang",
+    "corners": [
+     5,
+     7,
+     6,
+     4
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "wedding"
+   ]
+  }
+ ],
+ "jianye_2": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh220",
+    "corners": [
+     5,
+     7,
+     6,
+     4
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "lisailiu_3": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh258",
+    "corners": [
+     5,
+     7,
+     6,
+     4
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "mingji_2": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh415",
+    "corners": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "idle28",
+    "touch_drag9"
+   ]
+  }
+ ],
+ "xuefeng_3": [
+  {
+   "aperture": {
+    "drawable": "mask",
+    "corners": [
+     5,
+     7,
+     6,
+     4
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "yilishabai_6": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh70",
+    "corners": [
+     5,
+     7,
+     6,
+     4
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "home",
+    "login",
+    "wedding"
+   ]
+  }
+ ],
+ "shi_2": [
+  {
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh226",
+      2,
+      3
+     ],
+     [
+      "ArtMesh231",
+      0,
+      1
+     ],
+     [
+      "ArtMesh222",
+      0,
+      1
+     ],
+     [
+      "ArtMesh229",
+      2,
+      3
+     ]
+    ],
+    "minOpacity": 0.88,
+    "reviewed": true
+   },
+   "motions": [
+    "idle2",
+    "idle3",
+    "idle6",
+    "idle7",
+    "idle8",
+    "idle9",
+    "touch_drag1",
+    "touch_drag4",
+    "touch_drag7",
+    "touch_drag8",
+    "touch_drag9",
+    "touch_drag10",
+    "touch_drag14"
+   ]
+  },
+  {
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh226",
+      2,
+      3
+     ],
+     [
+      "ArtMesh231",
+      0,
+      1
+     ],
+     [
+      "ArtMesh222",
+      0,
+      1
+     ],
+     [
+      "ArtMesh229",
+      2,
+      3
+     ]
+    ],
+    "minOpacity": 0.22,
+    "outset": 0.0075,
+    "reviewed": true
+   },
+   "motions": [
+    "idle5"
+   ]
+  },
+  {
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh226",
+      2,
+      3
+     ],
+     [
+      "ArtMesh231",
+      0,
+      1
+     ],
+     [
+      "ArtMesh222",
+      0,
+      1
+     ],
+     [
+      "ArtMesh229",
+      2,
+      3
+     ]
+    ],
+    "minOpacity": 0.92,
+    "outset": 0.012,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  },
+  {
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh226",
+      2,
+      3
+     ],
+     [
+      "ArtMesh231",
+      0,
+      1
+     ],
+     [
+      "ArtMesh222",
+      0,
+      1
+     ],
+     [
+      "ArtMesh229",
+      2,
+      3
+     ]
+    ],
+    "minOpacity": 0.22,
+    "outset": 0.0095,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
+   ]
+  }
+ ],
+ "yunxian_2": [
+  {
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh79",
+      1,
+      2
+     ],
+     [
+      "ArtMesh243",
+      1,
+      2
+     ],
+     [
+      "ArtMesh232",
+      0,
+      3
+     ],
+     [
+      "ArtMesh233",
+      0,
+      3
+     ]
+    ],
+    "minOpacity": 0.88,
+    "reviewed": true
+   },
+   "motions": [
+    "home",
+    "login"
+   ]
+  }
+ ],
+ "zhala_2": [
+  {
+   "aperture": {
+    "drawable": "mask_black_16b11",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.95,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "zhangwu_2": [
+  {
+   "aperture": {
+    "edges": [
+     [
+      "MB_blackbgyuhua3",
+      2,
+      3
+     ],
+     [
+      "MB_blackbgyuhua4",
+      2,
+      3
+     ],
+     [
+      "MB_blackbgyuhua7",
+      0,
+      1
+     ],
+     [
+      "MB_blackbgyuhua5",
+      0,
+      1
+     ]
+    ],
+    "minOpacity": 0.88,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_idle27"
+   ]
+  },
+  {
+   "aperture": {
+    "edges": [
+     [
+      "MB_blackbgyuhua3",
+      2,
+      3
+     ],
+     [
+      "MB_blackbgyuhua4",
+      2,
+      3
+     ],
+     [
+      "MB_blackbgyuhua2",
+      0,
+      1
+     ],
+     [
+      "MB_blackbgyuhua5",
+      0,
+      1
+     ]
+    ],
+    "minOpacity": 0.88,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_idle31"
+   ]
+  }
+ ],
+ "guanghui_9": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh416",
+    "corners": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "complete",
+    "idle",
+    "idle1",
+    "idle2",
+    "idle3",
+    "idle9",
+    "idle10",
+    "idle13",
+    "idle14",
+    "idle15",
+    "idle17",
+    "idle18",
+    "idle19",
+    "idle20",
+    "idle21",
+    "idle22",
+    "idle23",
+    "idle25",
+    "idle28",
+    "idle29",
+    "idle30",
+    "login",
+    "mail",
+    "main_1",
+    "main_2",
+    "main_3",
+    "touch_body",
+    "touch_drag7",
+    "touch_drag9",
+    "touch_drag13",
+    "touch_drag14",
+    "touch_drag16",
+    "touch_drag17",
+    "touch_head",
+    "touch_idle3",
+    "touch_idle9",
+    "touch_idle18",
+    "touch_idle21",
+    "touch_idle23",
+    "touch_idle24",
+    "touch_idle25",
+    "touch_idle26",
+    "touch_idle28",
+    "touch_idle29",
+    "touch_idle39",
+    "touch_idle40",
+    "touch_idle42",
+    "touch_special",
+    "wedding"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh546",
+    "corners": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "vertexCount": 12,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "idle5",
+    "idle6",
+    "idle8",
+    "idle12",
+    "idle16",
+    "idle26",
+    "idle27",
+    "mission",
+    "mission_complete",
+    "touch_drag6",
+    "touch_drag8",
+    "touch_drag10",
+    "touch_drag11",
+    "touch_drag12",
+    "touch_drag18",
+    "touch_idle2",
+    "touch_idle6",
+    "touch_idle7",
+    "touch_idle8",
+    "touch_idle10",
+    "touch_idle12",
+    "touch_idle13",
+    "touch_idle15",
+    "touch_idle16",
+    "touch_idle17",
+    "touch_idle19",
+    "touch_idle20",
+    "touch_idle27",
+    "touch_idle30",
+    "touch_idle36",
+    "touch_idle37",
+    "touch_idle38"
+   ]
+  }
+ ],
+ "wuqi_3": [
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": 1692,
+     "minY": 935,
+     "maxX": 8010,
+     "maxY": 4298
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "idle11"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ui_14",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_drag4"
+   ]
+  }
+ ],
+ "bailong_3": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh160",
+    "corners": [
+     4,
+     6,
+     9,
+     5
+    ],
+    "vertexCount": 10,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "wedding"
+   ]
+  }
+ ],
+ "chaijun_3": [
+  {
+   "aperture": {
+    "drawable": "jixingkuai3",
+    "corners": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "chaijun_4": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh818",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
+   ]
+  }
+ ],
+ "chaijun_5": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh816",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
+   ]
+  }
+ ],
+ "hemin_3": [
+  {
+   "aperture": {
+    "drawable": "mask",
+    "corners": [
+     5,
+     7,
+     6,
+     4
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "guandao_2": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh596",
+    "corners": [
+     2,
+     3,
+     0,
+     1
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
+   ]
+  }
+ ],
+ "huonululu_5": [
+  {
+   "aperture": {
+    "drawable": "mask_black_16b11",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "linuo_3": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh245",
+    "corners": [
+     4,
+     9,
+     8,
+     5
+    ],
+    "vertexCount": 11,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
+   ]
+  }
+ ],
+ "shengluyisi_4": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh177",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
+   ]
+  }
+ ],
+ "tiancheng_3": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh552",
+    "corners": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "alternate": {
+     "drawable": "ArtMesh444",
+     "corners": [
+      4,
+      7,
+      6,
+      5
+     ],
+     "vertexCount": 11,
+     "minOpacity": 0.22,
+     "outset": 0.012
+    },
+    "animationAspect": 1.835,
+    "reviewed": true
+   },
+   "motions": [
+    "home"
+   ]
+  }
+ ],
+ "shi_3": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh0",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "idle12",
+    "touch_idle13"
+   ]
+  }
+ ],
+ "u2501_2": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh926",
+    "corners": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_idle22"
+   ]
+  }
+ ],
+ "wuqi_2": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "tiancheng_cv_3": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh1129",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 4,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_idle11",
+    "touch_idle13",
+    "touch_idle15"
+   ]
+  }
+ ],
+ "xinnong_3": [
+  {
+   "aperture": {
+    "drawable": "mask_black_16b11",
+    "corners": [
+     1,
+     3,
+     2,
+     0
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "xingdengbao_3": [
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": 1578,
+     "minY": 808,
+     "maxX": 6484,
+     "maxY": 3518
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "effect",
+    "idle7",
+    "idle8",
+    "idle9",
+    "idle10",
+    "touch_idle9",
+    "touch_idle10",
+    "touch_idle11"
+   ]
+  }
+ ],
+ "yanusi_3": [
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": -691,
+     "minY": 594,
+     "maxX": 5039,
+     "maxY": 4969
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "wedding"
+   ]
+  }
+ ],
+ "xinnong_5": [
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": -1383,
+     "minY": 212,
+     "maxX": 11546,
+     "maxY": 9174
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "idle6",
+    "idle7",
+    "idle8",
+    "touch_drag11"
+   ]
+  },
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": -235,
+     "minY": 500,
+     "maxX": 10398,
+     "maxY": 8020
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "main_1"
+   ]
+  },
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": 52,
+     "minY": 212,
+     "maxX": 10398,
+     "maxY": 8020
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "complete",
+    "mission"
+   ]
+  },
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": 52,
+     "minY": 500,
+     "maxX": 10398,
+     "maxY": 8020
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "idle"
+   ]
+  },
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": -1096,
+     "minY": -77,
+     "maxX": 11546,
+     "maxY": 9174
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "touch_drag13"
+   ]
+  },
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": 52,
+     "minY": 500,
+     "maxX": 10398,
+     "maxY": 7731
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "effect"
+   ]
+  },
+  {
+   "aperture": {
+    "fixedFrame": {
+     "minX": -1383,
+     "minY": -77,
+     "maxX": 11546,
+     "maxY": 9174
+    },
+    "reviewed": true
+   },
+   "motions": [
+    "touch_drag12"
+   ]
+  }
+ ],
+ "yichui_2": [
+  {
+   "aperture": {
+    "drawable": "mask_black",
+    "corners": [
+     7,
+     6,
+     5,
+     4
+    ],
+    "vertexCount": 8,
+    "minOpacity": 0.22,
+    "reviewed": true
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "wuerlixi_2": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh339",
+    "corners": [
+     5,
+     6,
+     7,
+     4
+    ],
+    "vertexCount": 11,
+    "minOpacity": 0.97,
+    "outset": 0.0075,
+    "reviewed": true,
+    "animationAspect": 1.65
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "yuekechengii_3": [
+  {
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh459",
+      2,
+      3
+     ],
+     [
+      "ArtMesh315",
+      0,
+      2
+     ],
+     [
+      "ArtMesh460",
+      1,
+      0
+     ],
+     [
+      "ArtMesh458",
+      3,
+      1
+     ]
+    ],
+    "minOpacity": 0.97,
+    "outset": 0.018,
+    "reviewed": true
+   },
+   "motions": [
+    "touch_idle5"
+   ]
+  }
+ ],
+ "yingxianzuo_3": [
+  {
+   "aperture": {
+    "drawable": "ArtMesh606",
+    "corners": [
+     4,
+     7,
+     6,
+     5
+    ],
+    "vertexCount": 11,
+    "minOpacity": 0.25,
+    "outset": 0.004,
+    "reviewed": true,
+    "animationAspect": 1.6
+   },
+   "motions": [
+    "home"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh606",
+    "corners": [
+     4,
+     7,
+     6,
+     5
+    ],
+    "vertexCount": 11,
+    "minOpacity": 0.22,
+    "outset": 0.004,
+    "reviewed": true,
+    "animationAspect": 1.6
+   },
+   "motions": [
+    "touch_idle2"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh606",
+    "corners": [
+     4,
+     7,
+     6,
+     5
+    ],
+    "vertexCount": 11,
+    "minOpacity": 0.97,
+    "outset": 0.0075,
+    "reviewed": true,
+    "animationAspect": 1.6
+   },
+   "motions": [
+    "touch_idle3"
+   ]
+  },
+  {
+   "aperture": {
+    "drawable": "ArtMesh606",
+    "corners": [
+     4,
+     7,
+     6,
+     5
+    ],
+    "vertexCount": 11,
+    "minOpacity": 0.25,
+    "outset": 0.0075,
+    "reviewed": true,
+    "animationAspect": 1.6
+   },
+   "motions": [
+    "login"
+   ]
+  }
+ ],
+ "feiteliedadi_4": [
+  {
+   "motions": [
+    "idle44"
+   ],
+   "aperture": {
+    "edges": [
+     [
+      "ArtMesh230",
+      2,
+      3
+     ],
+     [
+      "ArtMesh232",
+      0,
+      1
+     ],
+     [
+      "ArtMesh229",
+      0,
+      1
+     ],
+     [
+      "ArtMesh231",
+      2,
+      3
+     ]
+    ],
+    "minOpacity": 0.22,
+    "outset": 0.0075,
+    "animationAspect": 1.69,
+    "maxOpeningWidth": 16300,
+    "reviewed": true
+   }
   }
  ]
 };

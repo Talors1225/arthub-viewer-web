@@ -2,8 +2,8 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-loop-catalog';
 import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261120-frame-edges';
-import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261120-frame-validation';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261120-yorktown-export-frame';
+import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261120-scene-rims-red-reveal';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261120-plymouth-arm-seam';
@@ -744,6 +744,8 @@ function cropAtMatteCorners(frame, anchor, points, weight) {
  halfHeight = Math.max(halfHeight, (anchor.minWidth ?? 0) / (2 * aspect));
  if (anchor.outset > 0) halfHeight *= 1 + 2 * Math.min(.15, anchor.outset);
  const halfWidth = halfHeight * aspect;
+ // Ignore a shutter whose opening is still wider than the camera's scene.
+ if (anchor.maxOpeningWidth > 0 && halfWidth * 2 > anchor.maxOpeningWidth) return frame;
  const crop = { minX: centerX - halfWidth, minY: centerY - halfHeight * (1 + 2 * (anchor.headroom ?? 0)),
   maxX: centerX + halfWidth, maxY: centerY + halfHeight, rotation };
  if (weight === 1) return crop;
@@ -804,6 +806,7 @@ async function live2dPortrait(model,generation){
   const shot=aperture?.shots?.find(rule=>rule.motions.test(motion));
   if (shot) return shot;
   const generated = automaticSceneAperture(model.id,motion);
+  if (generated?.reviewed) return generated;
   if (!aperture?.reviewed) return generated ?? aperture;
   return !aperture.motions || aperture.motions.test(motion) ? aperture : generated;
  };
@@ -811,10 +814,16 @@ async function live2dPortrait(model,generation){
   && (!aperture.motions || aperture.motions.test(motion));
  const apertureAtPose = (motion = activeMotion) => {
   const rule = apertureRule(motion);
+  if (rule?.fixedFrame) return rule.fixedFrame;
   const apertureProbe = rule && { anchor:{...rule,nativeAspect:true,alignTop:!rule.preserveAngle,whenVisible:true} };
   if (!apertureProbe) return null;
   let frame = live2DFrameAtPose(apertureProbe, internal);
-  if (frame === apertureProbe) return null;
+  if (frame === apertureProbe) {
+   if (!rule.alternate) return null;
+   const alternate = { anchor:{...apertureProbe.anchor,...rule.alternate} };
+   frame = live2DFrameAtPose(alternate, internal);
+   if (frame === alternate) return null;
+  }
   for (const limit of rule.inside ?? []) {
    const corners = limit.edges ? matteAperture(limit.edges, internal) : mattePoints(limit.points, internal);
    if (corners) frame = cropInsideAperture(frame, corners, limit.keepOpening);
@@ -825,7 +834,7 @@ async function live2dPortrait(model,generation){
   { minX:0, minY:0, maxX:natural.width, maxY:natural.height });
  const pivotX = natural.width / 2, pivotY = natural.height / 2;
  evidence.model=live;evidence.app=app;editor=window.createInteractionLive2DEditor({live,core,hitAreas:model.interaction.hitAreas});const mouthIds=internal.settings.json.Groups?.find(g=>g.Name==='LipSync')?.Ids||[];
- let effectTimeline, effectBaseParameters, sampleExportEffect;
+ let effectTimeline, effectBaseParameters, sampleExportPose;
  const renderedParameters=core.parameters.values.slice(), effectParameterIndices=new Set();
  const dragCover = model.id === 'wuqi_3' ? core.drawables.ids.indexOf('ArtMesh766') : -1;
  const coverDragParameter = indexes.get('touch_drag6');
@@ -887,7 +896,7 @@ async function live2dPortrait(model,generation){
  internal.on('beforeModelUpdate',()=>{
   const parameters=core.parameters;
   effectBaseParameters?.set(parameters.values);
-  if(sampleExportEffect)sampleExportEffect();
+  if(sampleExportPose)sampleExportPose();
   else if(effectTimeline){try{effectTimeline.sample(internal.coreModel);}catch(e){evidence.effectLayerError=String(e);effectTimeline=null;api.effectTimeline=null;}}
   const ignoreLook=controller?.states?.some(s=>s.active&&s.config.ignore_react===1);
   if(!ignoreLook)for(const p of lookParams){const i=indexes.get(p.id),rates=model.skinConfig.l2d_drag_rate,rate=Array.isArray(rates)?rates[p.axis]??1:1,value=p.factor*(p.axis===0?look.x:p.axis===1?look.y:look.x*look.y)*rate,range=model.skinConfig.l2d_para_range?.[p.id]||[parameters.minimumValues[i],parameters.maximumValues[i]];parameters.values[i]=Math.max(range[0],Math.min(range[1],parameters.values[i]+value));}
@@ -994,7 +1003,8 @@ async function live2dPortrait(model,generation){
    minX:fittingBounds.x-fittingBounds.width/2, minY:fittingBounds.y-fittingBounds.height/2,
    maxX:fittingBounds.x+fittingBounds.width/2, maxY:fittingBounds.y+fittingBounds.height/2,
   } : null;
-  const captureFrameAtPose = () => useAperture && apertureAtPose(motion)
+  const captureAperture = () => useAperture ? apertureAtPose(motion) : null;
+  const captureFrameAtPose = (opening = captureAperture()) => opening
    || insetLive2DFrame(live2DFrameAtPose(motionFrame || fallback, internal), safeCrop?.inset);
   const animatedMatte = !useAperture && motionFrame?.anchor?.fadeToFrame && (format === 'video' || format === 'gif');
   const authoredFrame = animatedMatte ? motionFrame : captureFrameAtPose();
@@ -1024,7 +1034,15 @@ async function live2dPortrait(model,generation){
    if(b.maxX>b.minX&&b.maxY>b.minY){rectangles.push({name:core.drawables.ids[i],bounds:[b.minX,b.minY,b.maxX,b.maxY]});for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);}
   }
   return model.id==='guanghui_9'?portraitFrameBounds(model.id,rectangles)||bounds:bounds;};
-  const bounds=authoredFrame || measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y,rotation:live.rotation};
+  let bounds = authoredFrame || measure();
+  if (authoredFrame && followReviewedScene && rule.animationAspect && (format === 'video' || format === 'gif')) {
+   // An animation has one output size even when an authored opening changes
+   // shape. Size the file independently of the pose displayed at export time.
+   const fit = stageBoundsForFrame(authoredFrame);
+   const halfWidth = fit.width / 2, halfHeight = halfWidth / rule.animationAspect;
+   bounds = {minX:fit.x-halfWidth, minY:fit.y-halfHeight, maxX:fit.x+halfWidth, maxY:fit.y+halfHeight};
+  }
+  const transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y,rotation:live.rotation};
   const parameters=core.parameters.values.slice(),renderedFrame=renderedParameters.slice(),effectBaseFrame=effectBaseParameters?.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
   const originalQueue = queue?._motions;
   const captureMotion = [...(originalQueue || [])].reverse().find(item => !item.isFinished() && item._motion);
@@ -1032,17 +1050,31 @@ async function live2dPortrait(model,generation){
   const video = format === 'video', animated = video || format === 'gif';
   const reviewedGif = format === 'gif' && ['curtains','wheel'].includes(effectControlPortraits[model.id]);
   const reviewedFormat = video || reviewedGif;
+  const goldenHind = ['jinluhao_2','jinluhao_3'].includes(model.id) && model.motionLoop?.[motion] === true;
+  const goldenHindGif = format === 'gif' && goldenHind;
   const syncGifEffect = format === 'gif' && savedEffect && model.motionLoop?.effect === true;
-  const loop = reviewedFormat || syncGifEffect
+  const loop = reviewedFormat || syncGifEffect || goldenHindGif
    ? exportLoopPlan(playback, captureMotion, savedEffect, reviewedFormat) : null;
-  // Keep the existing GIF pose sampling when only the background needs a seam.
-  const warmCharacter = loop && reviewedFormat;
+  const warmCharacter = loop && (reviewedFormat || goldenHindGif);
   const breath = internal.breath;
   const breathTime = breath?._currentTime;
   const loopTimeline = warmCharacter && K.exportTimeline(loop.duration, quality, format);
   const step = loopTimeline ? loopTimeline.duration / loopTimeline.frames : 0;
   const warmFrames = warmCharacter ? Math.ceil(Math.min(2, loop.duration) / step) : 0;
   const warmTime = warmFrames * step;
+  // This skin has looping idle clips whose continuous deformation tracks
+  // end at a different pose. Close the loop in the rig before drawing, while
+  // texture switches and the independently animated background stay intact.
+  const motionData = loop && goldenHind && captureMotion._motion._motionData;
+  const poseChannels = motionData ? motionData.curves.flatMap(curve => {
+   const i = indexes.get(curve.id);
+   if (curve.type !== 1 || i === undefined || effectParameterIndices.has(i)) return [];
+   const segments = motionData.segments.slice(curve.baseSegmentIndex, curve.baseSegmentIndex + curve.segmentCount);
+   return segments.some(segment => segment.segmentType > 1) ? [] : [i];
+  }) : [];
+  const poseBlend = poseChannels.length ? Math.min(1, loop.duration / 5) : 0;
+  const openingBlend = model.id === 'jinluhao_3' && ['idle17','idle22'].includes(motion) ? .16 : 0;
+  let firstPose;
   const effectChannels = loop?.transition ? [
    [core.parameters.ids, core.parameters.values], [core.parts.ids, core.parts.opacities],
   ].map(([ids,values]) => ({
@@ -1064,7 +1096,7 @@ async function live2dPortrait(model,generation){
    internal.coreModel.update();
    core.parameters.values.set(parameters); renderedParameters.set(renderedFrame);
    internal.coreModel._savedParameters = nativeSaved.slice();
-   lastTime = 0; warmed = false;
+   lastTime = 0; warmed = false; firstPose = undefined;
   };
   const sampleEffect = (time, approachOpening = false) => {
    const elapsed = loop?.alignEffect ? time : Math.max(0,time);
@@ -1076,8 +1108,23 @@ async function live2dPortrait(model,generation){
   };
   const sample = (time, draw) => {
    live.elapsedTime = elapsed + (warmTime + time) * 1000;
-   if (loop?.transition) {
-    sampleExportEffect = () => {
+   if (poseBlend || animated && savedEffect) {
+    sampleExportPose = () => {
+     const values = core.parameters.values;
+     if (poseBlend) {
+      if (time === 0) firstPose = values.slice();
+      else if (firstPose && time > 0 && time < openingBlend) {
+       const fraction = time / openingBlend;
+       const blend = fraction * fraction * (3 - 2 * fraction);
+       for (const i of poseChannels) values[i] = firstPose[i] + (values[i] - firstPose[i]) * blend;
+      } else if (firstPose && time > loop.duration - poseBlend) {
+       const fraction = Math.min(1, 1 - (loop.duration - time) / poseBlend);
+       const blend = fraction * fraction * (3 - 2 * fraction);
+       for (const i of poseChannels) values[i] += (firstPose[i] - values[i]) * blend;
+      }
+     }
+     if (!savedEffect) return;
+     if (!loop?.transition) { sampleEffect(time); return; }
      const blendStart = loop.duration - loop.transition;
      if (time <= blendStart) { sampleEffect(time); return; }
      const fraction = Math.min(1, (time - blendStart) / loop.transition);
@@ -1093,7 +1140,7 @@ async function live2dPortrait(model,generation){
       for (const i of indices) values[i] += (alternate[i] - values[i]) * blend;
      }
     };
-   } else if (animated && savedEffect) sampleExportEffect = () => sampleEffect(time);
+   }
    const deltaTime = Math.max(0, time - lastTime);
    // Cubism adds a separate breathing oscillator before the authored effect layer.
    // Keep its phase constant so it does not change across the exported seam.
@@ -1103,7 +1150,7 @@ async function live2dPortrait(model,generation){
     // from whichever animation happened to be playing before it.
     api.seek(warmCharacter ? loopPhase(time, loop.duration) : time, deltaTime, draw, video || !!warmCharacter);
    } finally {
-    sampleExportEffect = null;
+    sampleExportPose = null;
    }
    lastTime = time;
   };
@@ -1133,27 +1180,53 @@ async function live2dPortrait(model,generation){
    live.position.set(size.width / 2 - size.centerX * size.scale - (tile?.x ?? 0),
     size.height / 2 - size.centerY * size.scale - (tile?.y ?? 0));
   };
-  return {pixelYUp:false,fixedFrame:authoredFrame,pngSize:quality=>({...K.exportDimensions(bounds,quality,'png',authoredFrame ? 0 : undefined),fullFrame:true}),
+  let clippedCapture;
+  function clipCaptureToArtwork(width, height) {
+   const left = Math.max(0, Math.ceil((canvas.width - width) / 2));
+   const top = Math.max(0, Math.ceil((canvas.height - height) / 2));
+   if (!left && !top) return canvas;
+   clippedCapture ||= document.createElement('canvas');
+   if (clippedCapture.width !== canvas.width) clippedCapture.width = canvas.width;
+   if (clippedCapture.height !== canvas.height) clippedCapture.height = canvas.height;
+   const context = clippedCapture.getContext('2d');
+   const artworkWidth = canvas.width - 2 * left, artworkHeight = canvas.height - 2 * top;
+   context.clearRect(0, 0, canvas.width, canvas.height);
+   if (artworkWidth > 0 && artworkHeight > 0) {
+    context.drawImage(canvas, left, top, artworkWidth, artworkHeight, left, top, artworkWidth, artworkHeight);
+   }
+   return clippedCapture;
+  }
+  return {pixelYUp:false,fixedFrame:authoredFrame && bounds,pngSize:quality=>({...K.exportDimensions(bounds,quality,'png',authoredFrame ? 0 : undefined),fullFrame:true}),
    measure:time=>{editor.before();advance(time);return measure();},rewind,
    draw:(time,size,background)=>{const added=[...surrounds].filter(id=>!editor.hidden.has(id));for(const id of added)editor.hidden.add(id);try{editor.before();
     if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();resizeCapture(tile.width,tile.height,1);setCaptureFrame(size,tile);live.deltaTime=0;app.render();return canvas;},background);
     const followArtwork = size.fullFrame && (useAperture || motionFrame?.anchor) && time !== null;
+    let clipWidth, clipHeight;
     if(size.fullFrame){
      resizeCapture(size.width,size.height,1);
      if (followArtwork) {
       advance(time, false);
-      const poseFrame = captureFrameAtPose();
+      const opening = captureAperture();
+      const poseFrame = captureFrameAtPose(opening);
       if (poseFrame) {
        const fit = stageBoundsForFrame(poseFrame);
        const widthFit = size.width / fit.width, heightFit = size.height / fit.height;
        const contain = animatedMatte || followReviewedScene && Math.max(widthFit, heightFit)>Math.min(widthFit, heightFit)*1.02;
        const scale = contain ? Math.min(widthFit, heightFit) : useAperture ? Math.max(widthFit, heightFit) : widthFit;
        setCaptureFrame({ ...size, scale, centerX: fit.x, centerY: fit.y }, null, poseFrame.rotation);
+       if (opening && followReviewedScene && contain) {
+        // The preview clips the moving opening with CSS. The encoder reads
+        // canvas pixels directly, so clear the matte outside the same opening.
+        clipWidth = fit.width * scale;
+        clipHeight = fit.height * scale;
+       }
       } else setCaptureFrame(size);
      } else setCaptureFrame(size);
     }
     else resizeCapture(stage.clientWidth,stage.clientHeight,size.width/stage.clientWidth);
-    if(time!==null&&!followArtwork)advance(time);else app.render();return canvas;}finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
+    if(time!==null&&!followArtwork)advance(time);else app.render();
+    return clipWidth ? clipCaptureToArtwork(clipWidth, clipHeight) : canvas;
+   }finally{for(const id of added)editor.hidden.delete(id);editor.before();}},
    dispose:()=>{rewind();live.pivot.set(transform.px,transform.py);live.rotation=transform.rotation;live.scale.set(transform.sx,transform.sy);live.position.set(transform.x,transform.y);app.renderer.resolution=resolution;app.renderer.resize(stage.clientWidth,stage.clientHeight);render(0);}};
  };
  let fittingBounds = baseFrame && stageBoundsForFrame(baseFrame), refitPending=false;

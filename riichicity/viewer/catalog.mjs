@@ -6,17 +6,23 @@ export async function fetchModelBundle(model,signal,assetBase='/riichicity/asset
  for(const path of paths)if(!path||path.includes('\\')||path.startsWith('/')||path.split('/').some(p=>!p||p==='..'||p==='.')||/^[a-z][a-z\d+.-]*:/i.test(path))throw Error('资源路径无效');
  const controller=new AbortController(),abort=()=>controller.abort(signal.reason);
  if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});
- const timeout=setTimeout(()=>controller.abort(Error('立绘加载超时，请检查网络后重试')),60000);
  try{
   const records=await Promise.all(paths.map(async path=>{
-   const response=await fetch(assetBase+path.split('/').map(encodeURIComponent).join('/'),{signal:controller.signal});
-   if(!response.ok)throw Error('资源读取失败（'+response.status+'）：'+path.split('/').pop());
-   return {path,file:await response.blob()};
+   const url=assetBase+path.split('/').map(encodeURIComponent).join('/');
+   try{
+    const file=await window.SpineKit.fetchAssetBlob(url,{
+     signal:controller.signal,timeout:90000,retryIdleMs:15000,retryHTTP:true,
+    });
+    return {path,file};
+   }catch(error){
+    if(controller.signal.aborted)throw controller.signal.reason;
+    throw Error(path.split('/').pop()+' · '+error.message,{cause:error});
+   }
   }));
   if(controller.signal.aborted)throw controller.signal.reason;
   return new LocalBundle(records);
  }catch(error){controller.abort();throw error;}
- finally{clearTimeout(timeout);signal?.removeEventListener('abort',abort);}
+ finally{signal?.removeEventListener('abort',abort);}
 }
 
 export function paginationItems(page,total){

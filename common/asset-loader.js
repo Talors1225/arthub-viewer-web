@@ -189,9 +189,11 @@
     const response = await fetch(url, transfer ? { signal, cache: transfer.cache } : { signal });
     if (!response.ok) {
       const kind = response.status === 404 ? '资源不存在' : response.status === 403 ? '资源访问被拒绝' : '资源请求失败';
-      throw new Error(kind + ' (HTTP ' + response.status + ')');
+      const error = new Error(kind + ' (HTTP ' + response.status + ')');
+      error.status = response.status;
+      throw error;
     }
-    if (!transfer || !response.body) return response[method]();
+    if (!transfer || !response.body || typeof TransformStream !== 'function') return response[method]();
     transfer.touch();
     const body = response.body.pipeThrough(new TransformStream({
       transform(chunk, stream) {
@@ -202,7 +204,7 @@
     return new Response(body, { headers: response.headers })[method]();
   };
   const readSpineResponse = async (url, signal, method, options) => {
-    if (!options.retryIdleMs || typeof TransformStream !== 'function') {
+    if (!options.retryIdleMs) {
       return readResponse(url, signal, method);
     }
     for (let retry = false; ; retry = true) {
@@ -213,7 +215,8 @@
         });
       } catch (cause) {
         const error = transfer.signal.reason || cause;
-        if (retry || signal.aborted || (!transfer.signal.aborted && !(error instanceof TypeError))) {
+        const temporaryHTTP = options.retryHTTP && (error.status === 408 || error.status === 429 || error.status >= 500);
+        if (retry || signal.aborted || (!transfer.signal.aborted && !(error instanceof TypeError) && !temporaryHTTP)) {
           throw error;
         }
         options.onProgress?.('资源传输中断，正在重试…');
@@ -225,6 +228,11 @@
   K.fetchJSON = async (url, options = {}) => {
     const request = scope(options.signal, options.timeout || 15000);
     try { return await readResponse(url, request.signal, 'json'); }
+    finally { request.close(); }
+  };
+  K.fetchAssetBlob = async (url, options = {}) => {
+    const request = scope(options.signal, options.timeout || 60000);
+    try { return await readSpineResponse(url, request.signal, 'blob', options); }
     finally { request.close(); }
   };
   K.disposeAtlas = atlas => {

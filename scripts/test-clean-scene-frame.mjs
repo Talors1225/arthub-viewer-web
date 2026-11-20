@@ -22,6 +22,10 @@ assert.deepEqual(authoredLive2DScreenEdges('guangrong_3', 'login'), ['heikuang']
 assert(!authoredLive2DExportHidden('guangrong_3', 'login').includes('heikuang'), 'keep the crop anchor available during export');
 assert.deepEqual(authoredLive2DScreenEdges('bulaimodun_4', 'login'), ['mask_black_16b11']);
 assert.deepEqual(authoredLive2DScreenEdges('bulaimodun_4', 'home'), [], 'preserve the animated shutter in home');
+for (const motion of ['touch_drag5', 'touch_idle5', 'idle17', 'login']) {
+ assert.deepEqual(authoredLive2DScreenEdges('yuekechengii_3', motion), ['ArtMesh315', 'ArtMesh458', 'ArtMesh459', 'ArtMesh460']);
+ assert.deepEqual(output('yuekechengii_3', motion), defaultPortraitStageFrame('yuekechengii_3'));
+}
 assert.deepEqual(defaultPortraitStageFrame('mojiaduoer_4'), stage('mojiaduoer_4', 'idle'));
 assert.equal(stage('mojiaduoer_4', 'idle').anchor.aperture, undefined);
 for (const motion of ['change_out', 'idle36', 'idle37', 'idle38', 'idle39', 'idle40', 'idle50', 'touch_idle25', 'touch_idle36', 'touch_special']) {
@@ -60,10 +64,11 @@ for (const [id, motion, drawable] of [
  assert.deepEqual(output(id, motion), crop);
 }
 assert.equal(stage('pulimaosi_3', 'touch_drag20').anchor.aperture.length, 4);
-for (const motion of ['main_2', 'touch_idle29']) {
+for (const motion of ['idle5', 'idle11', 'idle15', 'main_2', 'touch_idle29', 'touch_drag12']) {
  assert.deepEqual(stage('pulimaosi_3', motion), stage('pulimaosi_3', 'touch_drag20'));
  assert.deepEqual(stage('pulimaosi_3', motion), output('pulimaosi_3', motion));
 }
+assert.equal(stage('pulimaosi_3', 'idle15').anchor.alignTop, true);
 for (const motion of ['idle14', 'idle16']) {
  assert(stage('pulimaosi_3', motion));
  assert.deepEqual(stage('pulimaosi_3', motion), output('pulimaosi_3', motion));

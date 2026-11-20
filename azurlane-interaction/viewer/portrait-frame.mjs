@@ -45,6 +45,12 @@ const mogadorWideShot = trackDrawable(mogadorSky, mogadorSky.anchor.drawable,
 const mogadorAircraft = frame(-1596, 53, 1963, 2074);
 const vicksburgNormalFrame = frame(-1515, -1835, 1841, 915);
 const vicksburgExFrame = frame(-1487, -1799, 1820, 876);
+// The four outer bars move independently of the painted ward. Follow the
+// scene itself and clip it to the opening, including during close-ups.
+const plymouthWardWindow = trackDrawable(frame(-1350, -550, 10040, 6820), 'ArtMesh349', {
+ corners: [1, 3, 2, 0], alignTop: true, nativeAspect: true, syncPose: true,
+ aperture: [['ArtMesh381', 2, 3], ['ArtMesh383', 0, 2], ['ArtMesh382', 0, 1], ['ArtMesh384', 0, 2]],
+});
 // The small picture inset in the underwater scene is its own shot.
 const amagiInsetScene = frame(1506, 1302, 6260, 4396);
 // Match the scene inside the outer matte. Live2D uses a top-left origin.
@@ -53,6 +59,7 @@ const live2dFrames = new Map([
  ['shuixinghao_2', frame(0, 0, 8000, 5500)], // Authored canvas excludes the oversized MB_blackbgjuxing matte.
  ['feiteliekaer_4', frame(0, 0, 9449, 5570)], // Authored camera canvas; off-canvas scene cards are not presentation bounds.
  ['jinjiang_2', frame(0, 0, 8000, 4712)],
+ ['pulimaosi_3', plymouthWardWindow],
  ['suweiaitongmeng_3', frame(0, 0, 19310, 13260)],
  ['anninvwang_2', frame(-100, 220, 8160, 5060)],
  ['guanghui_9', frame(-5050, -3100, 15070, 10385)],
@@ -72,7 +79,6 @@ const live2dIdleFrames = new Map([
  ['mingji_2', frame(36, 95, 8963, 5313)],
  ['mojiaduoer_4', mogadorSky],
  ['ougen_8', frame(-13, 6, 8676, 5391)],
- ['pulimaosi_3', frame(27, 31, 7965, 4736)],
  ['xinnong_6', frame(8, 8, 10052, 6770)], // Trim curtain geometry outside the illustrated room.
  ['qiershazhi_2', frame(-3798, -907, 11880, 9978)],
  ['sebao_2', frame(208, 56, 13932, 7841)],
@@ -323,12 +329,7 @@ const reviewedIdleExportFrames = [
   [frame(-1017, -576, 9121, 5778), [5]],
  ]],
  ['pulimaosi_3', [
-  [frame(1, 7, 7975, 4707), [4, 5, 6, 7, 8, 9, 10, 11, 14, 16, 17]],
-  [frame(-917, 6, 8945, 5790), [12]],
-  [trackDrawable(frame(0, 0, 8000, 4740), 'ArtMesh30', { includeCorners: true }), [15]],
-  [frame(-907, -603, 8631, 5056), [3]],
-  [frame(-228, -454, 7846, 4306), [2]],
-  [rotatedFrame(-1144, -545, 9507, 5874, -3.34), [13]],
+  [frame(1, 7, 7975, 4707), [14, 16]],
  ]],
  ['qisheng_2', [
   [frame(9, 113, 6923, 4111), [4, 5, 6, 8, 9]],
@@ -525,10 +526,6 @@ const lionAlleyWindow = trackDrawable(frame(13, 4, 10591, 8778), 'ArtMesh3',
  { corners: [4, 7, 6, 5], whenVisible: true, aspect: 1.206 });
 const alsacePoolWindow = trackDrawable(frame(-4050, 1083, 13479, 10115), 'ArtMesh4',
  { corners: [14, 15, 12, 13], whenVisible: true, aspect: 1.941 });
-const plymouthWardWindow = trackDrawable(frame(-1350, -550, 10040, 6820), 'ArtMesh349', {
- corners: [1, 0, 2, 3], align: true, aspect: 1.72,
- aperture: [['ArtMesh381', 2, 3], ['ArtMesh383', 0, 2], ['ArtMesh382', 0, 1], ['ArtMesh384', 0, 2]],
-});
 const formidableClassroom = frame(12, 1020, 8960, 6265);
 const eugenRestaurantWindow = trackDrawable(frame(409, 248, 7750, 4172), 'ArtMesh3',
  { corners: [4, 7, 6, 5], whenVisible: true, aspect: 1.87, syncPose: true });
@@ -585,10 +582,6 @@ const live2dMotionStageFrames = new Map([
  ...['touch_drag6', 'touch_idle13', 'touch_idle15', 'touch_idle40']
   .map(motion => ['shi_3:' + motion, lionAlleyWindow]),
  ...[2, 3, 4, 5].map(n => ['aersasi_2:touch_drag' + n, alsacePoolWindow]),
- ...['home', 'login', 'main_1', 'main_2', 'effect', 'touch_drag7', 'touch_drag17', 'touch_drag18', 'touch_drag19',
-  'touch_drag20', 'touch_drag21', 'touch_drag22', 'touch_drag23', 'touch_idle1', 'touch_idle2', 'touch_idle4',
-  'touch_idle5', 'touch_idle20', 'touch_idle22', 'touch_idle23', 'touch_idle24', 'touch_idle29', 'touch_idle30']
-  .map(motion => ['pulimaosi_3:' + motion, plymouthWardWindow]),
  ...['idle14', 'idle16'].map(motion =>
   ['pulimaosi_3:' + motion, live2dIdleExportVariants.get('pulimaosi_3').get(motion)]),
  ...['idle3', 'touch_drag11', 'touch_drag12'].map(motion => ['kewei_4:' + motion, formidableClassroom]),
@@ -641,7 +634,54 @@ export const authoredLive2DFrame = (id, motion) =>
 // are a screen mask and must never be counted as part of the artwork.
 const reviewedMatte = (drawable, corners, motions) =>
  ({ drawable, corners, motions, minOpacity:.99, preserveAngle:true, reviewed:true });
+// These two portraits share the same four outer plates and camera window.
+const bookAndRoadWindow = Object.freeze({ reviewed:true, minOpacity:.93, edges:[
+ ['jiezhihuan6',1,2], ['jiezhihuan9',1,2], ['jiezhihuan7',0,3], ['jiezhihuan8',0,3],
+] });
 const live2dSceneApertures = new Map([
+ ['benningdun_2', bookAndRoadWindow],
+ ['chaijun_6', bookAndRoadWindow],
+ ['baifeng_2', { reviewed:true, edges:[
+  ['ArtMesh786',1,2], ['ArtMesh787',1,2], ['ArtMesh785',0,3], ['ArtMesh788',0,3],
+ ], alternate:{ edges:[
+  ['ArtMesh791',1,2], ['ArtMesh789',1,2], ['ArtMesh793',0,3], ['ArtMesh790',0,3],
+ ] } }],
+ ['baifeng_3', { reviewed:true, edges:[
+  ['ArtMesh280',2,3], ['ArtMesh283',2,3], ['ArtMesh281',2,3], ['ArtMesh282',2,3],
+ ], inside:[{ keepOpening:true, edges:[
+  ['ArtMesh616',2,3], ['ArtMesh618',0,2], ['ArtMesh617',0,1], ['ArtMesh619',1,3],
+ ] }] }],
+ ['beikaluolaina_2', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7],
+  motions:/^(?:home|effect|login)$/, minOpacity:.97, reviewed:true }],
+ ['aierdeliqi_5', { drawable:'mask_black', corners:[7,6,5,4], motions:/^effect$/,
+  minOpacity:.97, reviewed:true }],
+ ['chicheng_5', { drawable:'heikuang', corners:[8,9,10,11], motions:/^(?:home|login)$/,
+  minOpacity:.25, reviewed:true }],
+ ['baiyanjuren_4', { drawable:'ArtMesh323', corners:[4,5,6,7], motions:/^(?:home|touch_idle\d+)$/,
+  minOpacity:.25, reviewed:true }],
+ ['haiyinlixi_2', { drawable:'ArtMesh71', corners:[4,5,6,7], motions:/^(?:home|login|wedding)$/,
+  minOpacity:.25, reviewed:true }],
+ ['buleisite_2', { reviewed:true, minOpacity:.9, motions:/^(?:home|login)$/, edges:[
+  ['youyanzhu2',1,2], ['youyanzhu5',1,2], ['youyanzhu3',0,3], ['youyanzhu4',0,3],
+ ] }],
+ ['daofeng_4', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7], motions:/^login$/,
+  minOpacity:.25, reviewed:true }],
+ ['geliqiya_2', { drawable:'ArtMesh31', corners:[0,1,2,3], motions:/^login$/,
+  minOpacity:.25, reviewed:true }],
+ ['jiluofu_3', { reviewed:true, minOpacity:.9, motions:/^(?:home|login)$/, edges:[
+  ['ArtMesh394',2,3], ['ArtMesh393',2,3], ['ArtMesh395',2,3], ['ArtMesh389',2,3],
+ ] }],
+ ['kalvbudisi_2', { drawable:'ArtMesh348', corners:[4,5,6,7], motions:/^(?:home|login|main_3)$/,
+  minOpacity:.25, reviewed:true }],
+ ['lupuleixite_2', { drawable:'ArtMesh126', corners:[4,6,1,3], motions:/^(?:home|login)$/,
+  minOpacity:.25, reviewed:true }],
+ ['mojiaduoer_3', { drawable:'ArtMesh82', corners:[4,9,8,5], motions:/^(?:home|login|touch_idle10)$/,
+  minOpacity:.25, reviewed:true }],
+ ['liekexingdunii_2', { shots:[{
+  drawable:'ArtMesh674', corners:[4,5,6,7], minOpacity:.25, reviewed:true,
+  motions:/^(?:main_2|touch_idle(?:9|10|11|18|20|21|22|24))$/,
+  alternate:{ drawable:'ArtMesh501', corners:[4,5,6,7], minOpacity:.92 },
+ }] }],
  // Match the viewport encoded by the source matte. Rotating the camera here
  // would change the composition of close-ups and interaction moves.
  ['shuixinghao_2', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7],
@@ -673,7 +713,8 @@ const live2dSceneApertures = new Map([
  ['feiteliedadi_3', reviewedMatte('ArtMesh603', [4,9,8,5], /^(?:login|touch_idle8)$/)],
  ['guandao_2', reviewedMatte('ArtMesh224', [4,6,9,5], /^(?:login|wedding)$/)],
  ['guangrong_3', reviewedMatte('heikuang', [5,7,6,4], /^(?:home|login)$/)],
- ['hailunna_4', reviewedMatte('MB_blackbgjuxing', [4,5,6,7], /^(?:home|wedding)$/)],
+ ['hailunna_4', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7],
+  motions:/^(?:home|login|wedding|touch_special)$/, minOpacity:.25, reviewed:true }],
  ['junzhu_5', reviewedMatte('ArtMesh634', [4,5,6,7], /^(?:home|touch_idle3)$/)],
  ['qisheng_2', reviewedMatte('ArtMesh363', [1,3,2,0], /^(?:home|touch_idle(?:5|6|12))$/)],
  // The photo board is the whole authored shot, including its wooden edge.
@@ -738,6 +779,7 @@ export const authoredLive2DExportFrame = (id, motion) =>
  live2dOpeningFrames.get(id + ':' + motion)
  || (motion === 'idle' ? live2dIdleExportFrames.get(id) : live2dIdleExportVariants.get(id)?.get(motion))
  || authoredLive2DFrame(id, motion)
+ || (id === 'yuekechengii_3' ? defaultPortraitStageFrame(id) : null)
  || (id === 'kebensi_2' ? cowpensRoom : null)
  || (id === 'baifeng_3' ? live2dIdleExportFrames.get(id) : null);
 // These shutter bars cover the stage outside of the interactive close-up.
@@ -746,6 +788,7 @@ const magicStageCloseUps = new Set(['idle2', 'idle13', 'idle14', 'idle15', 'idle
 const mogadorInteractionCovers = Object.freeze(['ArtMesh1385', 'ArtMesh1410']);
 const pirateCarMatte = Object.freeze(['ArtMesh1072']);
 const pirateQueenPreviousCameraMatte = Object.freeze(['ArtMesh546']);
+const yorktownScreenEdges = Object.freeze(['ArtMesh315', 'ArtMesh458', 'ArtMesh459', 'ArtMesh460']);
 const dockEdge = ['MB_blackbgjuxing'];
 const live2dScreenEdges = new Map([
  ['ankeleiqi_2', dockEdge],
@@ -765,6 +808,9 @@ const live2dScreenEdges = new Map([
 ]);
 
 export function authoredLive2DScreenEdges(id, motion) {
+ // Keep the four screen bars available to aperture tracking. They only paint
+ // the frame around the artwork, so skip them in the draw pass.
+ if (id === 'yuekechengii_3') return yorktownScreenEdges;
  // The same drawable is used as a moving shutter during Bremerton's home motion.
  if (id === 'bulaimodun_4' && motion === 'login') return ['mask_black_16b11'];
  if (id === 'shuixinghao_2' && motion === 'idle') return dockEdge;
