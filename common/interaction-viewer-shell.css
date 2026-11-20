@@ -666,11 +666,12 @@ body.game-interaction-viewer #floatPanel .viewer-sound-volume input[type="range"
 .game-interaction-viewer .viewer-effect-timeline summary [data-effect-status] { margin-left: auto; color: var(--muted, #97a2b3); font-size: 11px; font-weight: 400; }
 .game-interaction-viewer .viewer-effect-body { padding: 0 12px 12px; }
 .game-interaction-viewer .viewer-effect-progress { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; font-size: 12px; }
-.game-interaction-viewer .viewer-effect-progress output { margin-left: auto; white-space: nowrap; color: var(--muted, #97a2b3); font-variant-numeric: tabular-nums; }
-body.game-interaction-viewer #floatPanel #effectProgress { display: block; width: 100%; min-width: 0; margin: 6px 0; padding: 0; height: 30px; min-height: 30px; background: transparent; border: 0; box-shadow: none; }
-body.game-interaction-viewer #floatPanel #effectProgress::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: var(--border2); }
-body.game-interaction-viewer #floatPanel #effectProgress::-webkit-slider-thumb { margin-top: -4.5px; }
-body.game-interaction-viewer #floatPanel #effectProgress::-moz-range-track { height: 4px; border-radius: 4px; background: var(--border2); }
+.game-interaction-viewer .viewer-effect-speed { display: grid; grid-template-columns: auto minmax(0, 1fr) 4ch; align-items: center; gap: 8px; font-size: 12px; }
+.game-interaction-viewer .viewer-effect-body output { margin-left: auto; white-space: nowrap; color: var(--muted, #97a2b3); font-variant-numeric: tabular-nums; }
+body.game-interaction-viewer #floatPanel :is(#effectProgress, #effectSpeed) { display: block; width: 100%; min-width: 0; margin: 0; padding: 0; height: 30px; min-height: 30px; background: transparent; border: 0; box-shadow: none; }
+body.game-interaction-viewer #floatPanel :is(#effectProgress, #effectSpeed)::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: var(--border2); }
+body.game-interaction-viewer #floatPanel :is(#effectProgress, #effectSpeed)::-webkit-slider-thumb { margin-top: -4.5px; }
+body.game-interaction-viewer #floatPanel :is(#effectProgress, #effectSpeed)::-moz-range-track { height: 4px; border-radius: 4px; background: var(--border2); }
 .game-interaction-viewer .viewer-effect-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .game-interaction-viewer .viewer-effect-actions label { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; font-size: 13px; cursor: pointer; }
 body.game-interaction-viewer #floatPanel #effectFixed { width: 16px; height: 16px; margin: 0; }
@@ -678,9 +679,11 @@ body.game-interaction-viewer #floatPanel #effectRestart { min-height: 32px; padd
 .game-interaction-viewer .viewer-effect-body p { color: var(--muted, #97a2b3); font-size: 11px; line-height: 1.5; margin: 6px 0 0; }
 @media (max-width: 480px) {
   .game-interaction-viewer .viewer-effect-timeline summary [data-effect-status] { display: none; }
-  .game-interaction-viewer .viewer-effect-actions { flex-direction: column; align-items: stretch; gap: 4px; }
-  .game-interaction-viewer .viewer-effect-actions label { white-space: nowrap; }
-  body.game-interaction-viewer #floatPanel #effectRestart { width: 100%; white-space: nowrap; }
+  .game-interaction-viewer .viewer-effect-speed { grid-template-columns: 1fr auto; gap: 0 8px; }
+  .game-interaction-viewer .viewer-effect-speed input { grid-column: 1 / -1; grid-row: 2; }
+  .game-interaction-viewer .viewer-effect-actions { flex-wrap: wrap; gap: 4px 6px; }
+  .game-interaction-viewer .viewer-effect-actions label { font-size: 12px; white-space: nowrap; }
+  body.game-interaction-viewer #floatPanel #effectRestart { padding-inline: 8px; white-space: nowrap; }
 }
 
 /* Phone tools use one compact bottom drawer, leaving the portrait visible. */

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
  authoredLive2DFrame as stage, authoredLive2DExportFrame as output,
- authoredLive2DInterfaceCovers, authoredLive2DExportHidden, authoredLive2DExportWindow, authoredSceneExportCrop, defaultPortraitStageFrame,
+ authoredLive2DInterfaceCovers, authoredLive2DScreenEdges, authoredLive2DExportHidden, authoredLive2DExportWindow, authoredSceneExportCrop, defaultPortraitStageFrame,
  authoredSpineFrame, authoredSpineExportFrame,
 } from '../azurlane-interaction/viewer/portrait-frame.mjs';
 for(const [id,names] of [['zhangwu_2',['idle','idle13','idle14','main_1']],['xinnong_6',['idle','idle2','touch_body']],['baifeng_3',['idle','idle11','touch_body']]])for(const name of names){assert(stage(id,name));assert.deepEqual(stage(id,name),output(id,name),`${id}/${name}: preview and export agree`)}
@@ -18,6 +18,10 @@ assert.equal(authoredSceneExportCrop('yingrui_4', 'normal', 'png'), null);
 assert.deepEqual(authoredLive2DInterfaceCovers('mojiaduoer_4'), ['ArtMesh1385', 'ArtMesh1410']);
 assert.deepEqual(authoredLive2DInterfaceCovers('mojiaduoer_4'), authoredLive2DExportHidden('mojiaduoer_4', 'idle7'));
 assert.deepEqual(authoredLive2DInterfaceCovers('mojiaduoer_5'), []);
+assert.deepEqual(authoredLive2DScreenEdges('guangrong_3', 'login'), ['heikuang']);
+assert(!authoredLive2DExportHidden('guangrong_3', 'login').includes('heikuang'), 'keep the crop anchor available during export');
+assert.deepEqual(authoredLive2DScreenEdges('bulaimodun_4', 'login'), ['mask_black_16b11']);
+assert.deepEqual(authoredLive2DScreenEdges('bulaimodun_4', 'home'), [], 'preserve the animated shutter in home');
 assert.deepEqual(defaultPortraitStageFrame('mojiaduoer_4'), stage('mojiaduoer_4', 'idle'));
 assert.equal(stage('mojiaduoer_4', 'idle').anchor.aperture, undefined);
 for (const motion of ['change_out', 'idle36', 'idle37', 'idle38', 'idle39', 'idle40', 'idle50', 'touch_idle25', 'touch_idle36', 'touch_special']) {

@@ -45,6 +45,8 @@ const mogadorWideShot = trackDrawable(mogadorSky, mogadorSky.anchor.drawable,
 const mogadorAircraft = frame(-1596, 53, 1963, 2074);
 const vicksburgNormalFrame = frame(-1515, -1835, 1841, 915);
 const vicksburgExFrame = frame(-1487, -1799, 1820, 876);
+// The small picture inset in the underwater scene is its own shot.
+const amagiInsetScene = frame(1506, 1302, 6260, 4396);
 // Match the scene inside the outer matte. Live2D uses a top-left origin.
 const live2dFrames = new Map([
  ['baerdimo_6', baltimoreScene], // Preserve the scene while fog drifts beyond its edges.
@@ -356,7 +358,7 @@ const reviewedIdleExportFrames = [
   [rotatedFrame(-9383, 746, 22765, 19712, 24.78), [5]],
  ]],
  ['tiancheng_cv_3', [
-  [frame(1506, 1302, 6260, 4396), [2, 15]],
+  [amagiInsetScene, [2, 15]],
   [rotatedFrame(-4388, -187, 10631, 9744, 12.02), [8]],
   [rotatedFrame(-4162, -737, 10816, 9174, 5.24), [10]],
   [rotatedFrame(-3326, 182, 9170, 8459, 12.02), [6]],
@@ -547,6 +549,7 @@ const janusSceneWindow = frame(-1520, -816, 11094, 6285);
 const hindenburgScroll = frame(1410, 640, 6593, 3715);
 // Use the reviewed picture area when a surrounding matte or effect dominates the preview.
 const live2dMotionStageFrames = new Map([
+ ...['idle2', 'idle15', 'touch_idle31'].map(motion => ['tiancheng_cv_3:' + motion, amagiInsetScene]),
  ['chaijun_5:home', openingMatte(frame(-720, -1300, 8200, 6830), 'ArtMesh771', [4, 9, 8, 5])],
  ['feiteliedadi_3:home', openingMatte(frame(-210, -298, 8260, 5890), 'ArtMesh603', [4, 9, 8, 5])],
  ['ougen_6:home', openingMatte(frame(340, 24, 8540, 9645), 'ArtMesh108', [4, 7, 6, 5])],
@@ -633,6 +636,94 @@ export const authoredLive2DFrame = (id, motion) =>
  || (cleanSceneFrame(id) && live2dIdleExportVariants.get(id)?.get(motion))
  || live2dIdleVariants.get(id)?.get(motion) || live2dFrames.get(id)
  || (motion === 'idle' ? live2dIdleFrames.get(id) : null) || cleanSceneFrame(id) || null;
+
+// The inner edges follow the game's camera. The enclosing mesh or four bars
+// are a screen mask and must never be counted as part of the artwork.
+const reviewedMatte = (drawable, corners, motions) =>
+ ({ drawable, corners, motions, minOpacity:.99, preserveAngle:true, reviewed:true });
+const live2dSceneApertures = new Map([
+ // Match the viewport encoded by the source matte. Rotating the camera here
+ // would change the composition of close-ups and interaction moves.
+ ['shuixinghao_2', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7],
+   minOpacity:.99, preserveAngle:true, reviewed:true }],
+ ['kebensi_2', { drawable:'ArtMesh619', corners:[4,5,6,7],
+   minOpacity:.99, preserveAngle:true, fallback:cowpensRoom, reviewed:true }],
+ ['zhenzhuhao_2', { edges:[['ArtMesh514',2,3],['ArtMesh512',0,2],['ArtMesh515',0,1],['ArtMesh513',1,3]],
+   preserveAngle:true, reviewed:true }],
+ ['luyijiushi_4', { drawable:'ArtMesh650', corners:[4,9,8,5],
+   minOpacity:.99, preserveAngle:true, reviewed:true }],
+ ['zengkehaijunshangjiang_2', { drawable:'ArtMesh463', corners:[6,7,8,5],
+   minOpacity:.99, preserveAngle:true, reviewed:true }],
+ ['ankeleiqi_4', { drawable:'ArtMesh44', corners:[4,5,6,7],
+   minOpacity:.99, preserveAngle:true, reviewed:true }],
+ ['aogusite_4', { drawable:'ArtMesh1077', corners:[4,5,6,7],
+   minOpacity:.99, preserveAngle:true, reviewed:true }],
+ ['xinnong_6', { drawable:'ArtMesh622', corners:[4,5,6,7],
+   minOpacity:.99, preserveAngle:true, reviewed:true }],
+ ['xinzexi_5', { edges:[['ArtMesh291',2,3],['ArtMesh294',2,3],['ArtMesh292',0,1],['ArtMesh293',0,1]],
+   preserveAngle:true, reviewed:true }],
+ ['jinluhao_3', { edges:[['ArtMesh876',2,3],['ArtMesh874',0,2],['ArtMesh877',0,1],['ArtMesh875',1,3]],
+   preserveAngle:true, reviewed:true }],
+ ['siwanshi_3', { drawable:'ArtMesh615', corners:[4,5,6,7], motions:/^(?:home|login)$/,
+   minOpacity:.99, preserveAngle:true, reviewed:true }],
+ ['aersasi_2', reviewedMatte('ArtMesh4', [14,15,12,13], /^(?:home|touch_idle[12])$/)],
+ ['bailong_3', reviewedMatte('ArtMesh160', [4,6,9,5], /^(?:home|login)$/)],
+ ['beianpudunii_2', reviewedMatte('ArtMesh209', [4,7,6,5], /^(?:home|login)$/)],
+ ['bunao_3', reviewedMatte('MB_blackbgjuxing', [4,5,6,7], /^wedding$/)],
+ ['feiteliedadi_3', reviewedMatte('ArtMesh603', [4,9,8,5], /^(?:login|touch_idle8)$/)],
+ ['guandao_2', reviewedMatte('ArtMesh224', [4,6,9,5], /^(?:login|wedding)$/)],
+ ['guangrong_3', reviewedMatte('heikuang', [5,7,6,4], /^(?:home|login)$/)],
+ ['hailunna_4', reviewedMatte('MB_blackbgjuxing', [4,5,6,7], /^(?:home|wedding)$/)],
+ ['junzhu_5', reviewedMatte('ArtMesh634', [4,5,6,7], /^(?:home|touch_idle3)$/)],
+ ['qisheng_2', reviewedMatte('ArtMesh363', [1,3,2,0], /^(?:home|touch_idle(?:5|6|12))$/)],
+ // The photo board is the whole authored shot, including its wooden edge.
+ ['wuqi_3', { ...reviewedMatte('ui_14', [1,3,2,0], /^idle11$/), includeCorners:true }],
+ ['yunxian_3', reviewedMatte('ArtMesh590', [4,6,9,5], /^(?:login|touch_idle6)$/)],
+ ['mingji_2', { drawable:'ArtMesh674', corners:[4,5,6,7] }],
+ ['naximofu_2', { drawable:'ArtMesh301', corners:[9,8,7,4], fallback:frame(0,0,13500,8000) }],
+ ['gaoxiong_7', { drawable:'ArtMesh531', corners:[4,5,6,7] }],
+ ['sailimiye_2', { drawable:'ArtMesh779', corners:[0,1,2,3] }],
+ ['wuzang_4', { drawable:'ArtMesh', corners:[4,5,6,7] }],
+ ['shi_3', { drawable:'ArtMesh3', corners:[8,9,10,11] }],
+ ['meikelunbao_2', { drawable:'ArtMesh444', corners:[4,6,9,5] }],
+ ['antu_2', { drawable:'ArtMesh408', corners:[4,5,6,7] }],
+ ['z13_2', { drawable:'ArtMesh2', corners:[4,5,6,7] }],
+ ['jinshi_2', { drawable:'ArtMesh24', corners:[4,5,6,7] }],
+ ['guandao_3', { drawable:'ArtMesh8', corners:[4,6,7,8],
+   fallback:frame(256,1387,9703,6755) }],
+ ['gangyishawa_3', { drawable:'ArtMesh408', corners:[4,5,6,7] }],
+ ['guanghui_9', { drawable:'ArtMesh546', corners:[4,5,6,7] }],
+ ['ougen_8', { edges:[['ArtMesh345',2,3],['ArtMesh343',0,2],['ArtMesh346',0,1],['ArtMesh344',1,3]],
+   inside:[{ edges:[['ArtMesh382',2,3],['ArtMesh384',0,2],['ArtMesh381',0,1],['ArtMesh383',1,3]], keepOpening:true }] }],
+ ['yuanchou_3', { points:[['MB_blackbgjuxing',3],['MB_blackbgjuxing',4],['MB_blackbgjuxing2',4],['MB_blackbgjuxing2',5]],
+   fallback:live2dIdleFrames.get('yuanchou_3') }],
+ ['u2501_2', { drawable:'ArtMesh932', corners:[4,5,6,7], fallback:live2dIdleFrames.get('u2501_2') }],
+ ['gezi_2', { edges:[['ArtMesh396',2,3],['ArtMesh354',0,2],['ArtMesh581',0,1],['ArtMesh395',1,3]] }],
+ ['xingdengbao_3', { edges:[['ArtMesh287',2,3],['ArtMesh290',0,3],['ArtMesh288',0,1],['ArtMesh289',0,3]] }],
+ ['beilaosenlin_2', { edges:[['ArtMesh294',2,3],['ArtMesh295',0,2],['ArtMesh293',0,1],['ArtMesh313',1,3]] }],
+ ['ankeleiqi_2', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7], motions:/^(?:home|login|effect|wedding)$/ }],
+ ['chaijun_5', { drawable:'ArtMesh771', corners:[4,9,8,5], motions:/^(?:home|login|wedding)$/ }],
+ ['dewenjun_2', { drawable:'ArtMesh446', corners:[8,9,10,11], motions:/^(?:login|touch_drag10|main_[34])$/ }],
+ ['jialisuoniye_3', { drawable:'MB_blackbgjuxing2', corners:[5,6,7,4], motions:/^(?:home|login|mail|main_1|touch_special)$/ }],
+ ['jiuyun_2', { drawable:'ArtMesh425', corners:[4,5,6,7], motions:/^(?:home|login)$/ }],
+ ['leigensibao_2', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7], motions:/^(?:home|login)$/ }],
+ ['lvzuofu_2', { drawable:'ArtMesh77', corners:[4,7,6,5], motions:/^(?:home|login|wedding)$/ }],
+ ['ougen_5', { drawable:'ArtMesh2', corners:[4,5,6,7], motions:/^(?:home|login)$/ }],
+ ['tianlangxing_5', { drawable:'ArtMesh38', corners:[7,11,10,6], motions:/^(?:home|login|idle10|touch_idle(?:10|18))$/ }],
+ ['xingdengbao_2', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7], motions:/^(?:home|login)$/ }],
+ ['bulaimodun_4', { drawable:'mask_black_16b11', corners:[1,3,2,0], motions:/^(?:home|login)$/ }],
+ ['edu_3', { drawable:'ArtMesh159', corners:[5,7,6,4], motions:/^(?:home|login)$/ }],
+ ['aerbien_3', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7], motions:/^(?:home|login|main_1)$/,
+   shots:[reviewedMatte('ArtMesh869', [4,5,6,7], /^touch_idle[3579]$/)] }],
+ ['daofeng_5', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7], motions:/^(?:home|login|main_3)$/ }],
+ ['kelaimengsuo_2', { drawable:'MB_blackbgjuxing', corners:[4,5,6,7], motions:/^(?:home|login)$/ }],
+ ['pinghai_6', { drawable:'mask_black_16b11', corners:[1,3,2,0], motions:/^(?:home|login)$/ }],
+ ['weiyan_6', { drawable:'ArtMesh44', corners:[4,5,6,7], motions:/^(?:home|login)$/ }],
+ ['luoen_4', { drawable:'ArtMesh348', corners:[8,9,10,11], motions:/^main_[13]$/ }],
+ ['ailunsamuna_2', { edges:[['ArtMesh229',2,3],['ArtMesh333',0,2],['ArtMesh332',0,1],['ArtMesh334',1,3]], motions:/^login$/ }],
+]);
+export const authoredLive2DSceneAperture = id => live2dSceneApertures.get(id) || null;
+
 const live2dOpeningFrames = new Map([
  ['aimudeng_2:home', frame(5, 5, 8360, 6498)],
  ['chaijun_4:home', frame(3048, 3015, 17854, 13202)],
@@ -654,16 +745,47 @@ const magicStageShutter = Object.freeze(['ArtMesh501', 'ArtMesh227']);
 const magicStageCloseUps = new Set(['idle2', 'idle13', 'idle14', 'idle15', 'idle16']);
 const mogadorInteractionCovers = Object.freeze(['ArtMesh1385', 'ArtMesh1410']);
 const pirateCarMatte = Object.freeze(['ArtMesh1072']);
+const pirateQueenPreviousCameraMatte = Object.freeze(['ArtMesh546']);
+const dockEdge = ['MB_blackbgjuxing'];
+const live2dScreenEdges = new Map([
+ ['ankeleiqi_2', dockEdge],
+ ['beianpudunii_2', ['ArtMesh276', 'ArtMesh277']],
+ ['daofeng_5', dockEdge],
+ ['edu_3', ['ArtMesh159']],
+ ['guangrong_3', ['heikuang']],
+ ['kelaimengsuo_2', dockEdge],
+ ['leigensibao_2', dockEdge],
+ ['ougen_5', ['ArtMesh2']],
+ ['pinghai_6', ['mask_black_16b11']],
+ ['sailimiye_2', ['ArtMesh779']],
+ ['shuixinghao_2', dockEdge],
+ ['tianlangxing_5', ['ArtMesh38']],
+ ['weiyan_6', ['ArtMesh44']],
+ ['xingdengbao_2', dockEdge],
+]);
+
+export function authoredLive2DScreenEdges(id, motion) {
+ // The same drawable is used as a moving shutter during Bremerton's home motion.
+ if (id === 'bulaimodun_4' && motion === 'login') return ['mask_black_16b11'];
+ if (id === 'shuixinghao_2' && motion === 'idle') return dockEdge;
+ return motion === 'home' || motion === 'login' ? live2dScreenEdges.get(id) ?? [] : [];
+}
+
 // Game interface backdrops can paint over the standalone artwork.
-export const authoredLive2DInterfaceCovers = id => id === 'mojiaduoer_4' ? mogadorInteractionCovers
- : id === 'mingji_2' ? pirateCarMatte : [];
+export function authoredLive2DInterfaceCovers(id, motion) {
+ if (id === 'mojiaduoer_4') return mogadorInteractionCovers;
+ if (id === 'mingji_2') return pirateCarMatte;
+ // The unrotated viewport cuts across the two corners of the tilted idle8 shot.
+ if (id === 'anninvwang_2' && motion === 'idle8') return pirateQueenPreviousCameraMatte;
+ return [];
+}
 const lionSceneMatte = Object.freeze(['ArtMesh222', 'ArtMesh226', 'ArtMesh229', 'ArtMesh231',
  'ArtMesh243', 'ArtMesh244', 'ArtMesh287', 'ArtMesh288', 'ArtMesh686']);
 const jianwuOpeningMatte = Object.freeze(['ArtMesh460', 'ArtMesh463', 'ArtMesh464', 'ArtMesh465']);
 export function authoredLive2DExportHidden(id, motion) {
  if (id === 'shi_2' && (motion === 'touch_idle1' || motion === 'effect')) return lionSceneMatte;
  if (id === 'jianwu_2' && motion === 'home') return jianwuOpeningMatte;
- return id === 'xinnong_5' && magicStageCloseUps.has(motion) ? magicStageShutter : authoredLive2DInterfaceCovers(id);
+ return id === 'xinnong_5' && magicStageCloseUps.has(motion) ? magicStageShutter : authoredLive2DInterfaceCovers(id, motion);
 }
 
 // The pool background's upper edge is at -2.16° in the uncorrected shot.
@@ -731,6 +853,10 @@ const spineMotionStageFrames = new Map([
  ['weikesibao_2:ex', vicksburgExFrame],
 ]);
 export const authoredSpineFrame = (id, motion) => spineMotionStageFrames.get(id + ':' + motion) || spineFrames.get(id) || null;
+const spineSceneApertures = new Map([
+ ['yunlong_2', { slot:'wlk', corners:[8,9,6,7], fallback:frame(-1578,12,1634,2014), hideMatte:true }],
+]);
+export const authoredSpineSceneAperture = id => spineSceneApertures.get(id) || null;
 
 // The visible scene inside the game's matte defines the picture in every export format.
 const sceneExportCrops = new Map([

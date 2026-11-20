@@ -1,11 +1,17 @@
 import { InteractionController, trackFor } from './controller.mjs?v=20261114-interaction-export-loading';
-import { SpineScene } from './scene.mjs?v=20261114-interaction-export-loading';
+import { SpineScene } from './scene.mjs?v=20261120-frame-edges';
 
 const $ = selector => document.querySelector(selector), SP = window.spine, K = window.SpineKit;
 const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint = overlay.getContext('2d');
 // The interaction prefab scales and offsets the same seashore artwork.
 const seashoreIdleFrame = { minX: -1334, minY: -679, maxX: 1346, maxY: 773 };
-const arpeggioIdleFrame = { minX: -1056, minY: -582, maxX: 1112, maxY: 644 };
+const { interactionFrame } = window.CrossCoreSceneFraming;
+const sceneApertures = new Map([
+  ['30180_skin_machairodus05b_spine', { slot: 'DQ_KKbb', corners: [4, 7, 5, 6] }],
+  ['70400_skin_lycorisradiata03b_spine', { slot: 'heikuang', corners: [7, 4, 5, 6], hideMatte: true }],
+]);
+const sceneAperture = () => sceneApertures.get(scene?.definition.name.toLowerCase());
+let artworkWindow = null;
 const loadingPreview = K.createLoadingPreview(stage);
 let previewSequence = 0, previewScene = null, previewPending = false;
 window.__crosscorePreviewFailure = reason => loadingPreview.fail(previewSequence, reason);
@@ -159,7 +165,11 @@ function updateZoomControls() {
 }
 function fit() {
  if (!scene) return;
- const bounds = scene.bounds, area = K.stageViewArea(canvas), rect = canvas.getBoundingClientRect();
+ const bounds = artworkWindow ? {
+   x: artworkWindow.minX, y: artworkWindow.minY,
+   width: artworkWindow.maxX - artworkWindow.minX, height: artworkWindow.maxY - artworkWindow.minY,
+ } : scene.bounds;
+ const area = K.stageViewArea(canvas), rect = canvas.getBoundingClientRect();
  const units = Math.max(bounds.width / area.width, bounds.height / area.height) * 1.08 / viewZoom;
  renderer.camera.viewportWidth = units * rect.width; renderer.camera.viewportHeight = units * rect.height;
  const offsetX = area.left + area.width / 2 - rect.left - rect.width / 2 + viewPan.x;
@@ -313,7 +323,8 @@ async function loadPrefab(key, ownerRequest) {
   if (ownerRequest !== requestId) { loaded.dispose(); return null; }
   viewerUI.tools.prepareLoad(); scene?.dispose(); scene = loaded; animationPreview = null; activeTrack = 0;
   editor = window.createInteractionSpineEditor({ layers: scene.layers, ns: SP, project: screenPoint, unproject: (x, y) => { const rect = stage.getBoundingClientRect(); return worldPoint(x + rect.left, y + rect.top); } });
-  viewerUI.refreshAnimations(); fit(); pendingFit = { scene: loaded, at: now() + 0.1, expires: now() + 2 }; return loaded;
+  artworkWindow = K.spineArtworkAperture(loaded.layers, SP, sceneAperture()) ?? interactionFrame(loaded.main, loaded.idle);
+  viewerUI.refreshAnimations(); fit(); pendingFit = artworkWindow ? null : { scene: loaded, at: now() + 0.1, expires: now() + 2 }; return loaded;
 }
 async function loadModel(identity) {
   stagePan.cancel(); stagePan.setMode('pan'); viewPan.x = viewPan.y = 0;
@@ -452,11 +463,13 @@ const viewerUI = window.createInteractionViewerUI({
     volume: () => volume, setVolume: value => { volume = value; audio.volume = value; $('#asmrPlayer').volume = value; localStorage.setItem('arthub:crosscore:volume', value); },
     capture: (animation, format) => {
       const captureScene = Object.create(scene);
+      const aperture = sceneAperture();
       return window.createInteractionSpineCapture({ layers: scene.layers, ns: SP, canvas, renderer, gl, editor, animation,
         fromSetupPose: !!animationPreview && (format === 'video' || format === 'gif'),
         setupRotation: layer => layer.def.render.rotation,
-        fixedFrame: scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame
-          : scene.definition.name === '20110_skin_Arpeggio07_spine' && animation.name === 'idle1' ? arpeggioIdleFrame : undefined,
+        artworkAperture: aperture,
+        fixedFrame: K.spineArtworkAperture(scene.layers, SP, aperture) ?? interactionFrame(scene.main, animation.name)
+          ?? (scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame : undefined),
         visible: layer => scene.visible(layer),
         extraBounds: () => {
           const result = [], drag = scene.objectDrag;
@@ -470,7 +483,7 @@ const viewerUI = window.createInteractionViewerUI({
         drawScene: (layers, size) => {
           captureScene.layers = layers; captureScene.main = layers[scene.layers.indexOf(scene.main)];
           const viewport = (x, y) => ({ x: (x - renderer.camera.position.x) / (renderer.camera.viewportWidth * renderer.camera.zoom) * size.width + size.width / 2, y: (y - renderer.camera.position.y) / (renderer.camera.viewportHeight * renderer.camera.zoom) * size.height + size.height / 2 });
-          captureScene.draw(renderer, viewport);
+          captureScene.draw(renderer, viewport, undefined, animation.name);
         }, restore: () => {} });
     },
   }
@@ -486,14 +499,36 @@ function render() {
     if (!animationPreview && playback.playing) controller?.tick(current);
     if (pointer && pointer.action.gesture === 6 && !pointer.started && performance.now() - pointer.wallAt >= 300) pointer.started = controller.beginDrag(pointer.action.index, current);
     if (animationPreview && scene) for (const layer of scene.layers) { const entry = layer.state.getCurrent(PREVIEW_TRACK); if (entry) entry.trackTime += step; }
-    scene?.update(animationPreview ? 0 : step, current); viewerUI.tools.after(); if (!animationPreview && playback.playing) for (const callback of callbacks.splice(0)) callback(); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-    const viewport = (x, y) => ({ x: (x - renderer.camera.position.x) / renderer.camera.viewportWidth * width + width / 2, y: (y - renderer.camera.position.y) / renderer.camera.viewportHeight * height + height / 2 });
-    scene?.draw(renderer, viewport);
-    if (pendingFit && pendingFit.scene === scene && current >= pendingFit.at && !pointer) {
-      if (fitVisiblePixels()) { pendingFit = null; gl.clear(gl.COLOR_BUFFER_BIT); scene.draw(renderer, viewport); }
-      else if (current >= pendingFit.expires) pendingFit = null;
+    scene?.update(animationPreview ? 0 : step, current); viewerUI.tools.after();
+    if (!animationPreview && playback.playing) for (const callback of callbacks.splice(0)) callback();
+    const aperture = sceneAperture(), animation = timelineEntry()?.animation?.name;
+    const nextWindow = scene && (K.spineArtworkAperture(scene.layers, SP, aperture) ?? interactionFrame(scene.main, animation));
+    if (nextWindow?.minX !== artworkWindow?.minX || nextWindow?.minY !== artworkWindow?.minY
+        || nextWindow?.maxX !== artworkWindow?.maxX || nextWindow?.maxY !== artworkWindow?.maxY) {
+      artworkWindow = nextWindow;
+      if (nextWindow) pendingFit = null;
+      fit();
     }
-    if (transition) { if (current >= transitionUntil) { transition.dispose(); transition = null; } else { transition.update(animationPreview ? 0 : step, current); transition.draw(renderer, viewport); } }
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    const viewport = (x, y) => ({ x: (x - renderer.camera.position.x) / renderer.camera.viewportWidth * width + width / 2, y: (y - renderer.camera.position.y) / renderer.camera.viewportHeight * height + height / 2 });
+    let clip;
+    if (artworkWindow) {
+      const lower = viewport(artworkWindow.minX, artworkWindow.minY);
+      const upper = viewport(artworkWindow.maxX, artworkWindow.maxY);
+      const x = Math.floor(lower.x), y = Math.floor(lower.y);
+      clip = [x, y, Math.ceil(upper.x) - x, Math.ceil(upper.y) - y];
+      gl.enable(gl.SCISSOR_TEST); gl.scissor(...clip);
+    }
+    try {
+      if (scene) K.drawSpineArtwork(scene.layers, nextWindow ? aperture : null, () => scene.draw(renderer, viewport, clip, animation));
+      if (pendingFit && pendingFit.scene === scene && current >= pendingFit.at && !pointer) {
+        if (fitVisiblePixels()) { pendingFit = null; gl.clear(gl.COLOR_BUFFER_BIT); scene.draw(renderer, viewport, undefined, animation); }
+        else if (current >= pendingFit.expires) pendingFit = null;
+      }
+      if (transition) { if (current >= transitionUntil) { transition.dispose(); transition = null; } else { transition.update(animationPreview ? 0 : step, current); transition.draw(renderer, viewport, clip); } }
+    } finally {
+      if (clip) gl.disable(gl.SCISSOR_TEST);
+    }
     if (previewPending && previewSequence === requestId && scene === previewScene && controller && !pendingFit && !gl.isContextLost() && canvas.width > 1 && canvas.height > 1) { loadingPreview.ready(previewSequence); previewPending = false; }
     drawRegions(); updateActions(); viewerUI.update();
   } catch (error) { if (lastFailure !== error.message) fail(error); }

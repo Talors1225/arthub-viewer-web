@@ -281,22 +281,21 @@
   .heading h1 { font-size: 18px; }
   #search { width: 100%; }
   #cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 12px; }
+  #stage:not([data-immersive], [data-video-recording]) #portrait {
+    height: calc(100% - var(--animation-bottom) - 148px);
+  }
   .controls {
     top: auto;
-    bottom: max(12px, env(safe-area-inset-bottom));
-    flex-direction: column;
-    align-items: flex-end;
+    bottom: calc(var(--animation-bottom) + 49px);
+    left: max(12px, env(safe-area-inset-left));
+    max-width: none;
   }
   .controls .action { min-width: 44px; min-height: 44px; }
-  #hint-status { max-width: calc(100% - 144px); }
+  #hint-status { bottom: calc(var(--animation-bottom) + 148px); max-width: calc(100% - 24px); }
   .stage-popup.fated-animation-popup { width: min(324px, calc(100vw - 144px)); }
   #stage[data-video-recording] ~ .fated-animation-popup .animation-results { max-height: min(300px, 32dvh); }
   #stage[data-video-recording] { --animation-bottom: calc(max(12px, env(safe-area-inset-bottom)) + 100px); }
-  #stage[data-video-recording] .controls {
-    left: max(12px, env(safe-area-inset-left));
-    flex-direction: row;
-    max-width: none;
-  }
+  #stage[data-video-recording] .controls { bottom: max(12px, env(safe-area-inset-bottom)); }
   .recording-bar .action { min-height: 44px; padding-inline: 8px; }
   .site-more-menu > button[role="menuitem"] { min-height: 44px; }
 }
@@ -312,7 +311,8 @@
 
 /* Keep mobile controls aligned while retaining room for the artwork. */
 @media (max-width:600px) and (orientation:portrait) {
- .controls > .action, .controls > select { box-sizing:border-box; width:96px; height:44px; min-height:44px; justify-content:center; }
+ .controls > .action { box-sizing:border-box; height:44px; min-height:44px; justify-content:center; }
+ .controls > select { width:96px; }
  #animation-browser, #next-animation { box-sizing:border-box; width:84px; height:44px; justify-content:center; }
  #next-animation { left:calc(max(12px, env(safe-area-inset-left)) + 90px); }
 }

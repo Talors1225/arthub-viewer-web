@@ -82,7 +82,36 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
     if(!bounds||![bounds.minX,bounds.minY,bounds.maxX,bounds.maxY].every(Number.isFinite))throw Error('模型没有可显示的部件');
     if(bounds.maxX-bounds.minX<1||bounds.maxY-bounds.minY<1)throw Error('模型的显示范围为空');
     const layer={skeleton,data,state,atlas},layers=[layer];
-    function world(x,y){const f=lastFrame||stageFrame(canvas),unit=Math.max((bounds.maxX-bounds.minX)/f.width,(bounds.maxY-bounds.minY)/f.height)*1.06/lastView.zoom;return {x:(bounds.minX+bounds.maxX)/2+(x-(f.left+f.width/2)-lastView.x)*unit,y:(bounds.minY+bounds.maxY)/2-(y-(f.top+f.height/2)-lastView.y)*unit};}
+    // The two camera positions share the b_37 backdrop. The transition
+    // overlay stays in the upper shot's coordinates in the source skeleton.
+    const pairedShot=model.remote&&model.id==='spine_1003004__ferngjian-sp-jingtou'
+      ? {minX:-1,minY:-780,maxX:6806,maxY:4497} : null;
+    const upperShotAnchorY=420.08;
+    const shotOffset=target=>pairedShot ? (target.findSlot('b_37')?.bone.worldY ?? upperShotAnchorY)-upperShotAnchorY : 0;
+    const shotFrame=offset=>({...pairedShot,minY:pairedShot.minY+offset,maxY:pairedShot.maxY+offset});
+    function drawPicture(target,pma,offset){
+      const draw=()=>{renderer.begin();renderer.drawSkeleton(target,pma);renderer.end();};
+      if(Math.abs(offset)<1){draw();return;}
+      const order=target.drawOrder,overlay=order.filter(slot=>slot.data.name==='bb'||slot.data.name==='bb2');
+      if(!overlay.some(slot=>slot.color.a>0)){draw();return;}
+      const camera=renderer.camera,y=camera.position.y;
+      try{
+        target.drawOrder=order.filter(slot=>!overlay.includes(slot));
+        draw();
+        target.drawOrder=overlay;
+        camera.position.y=y-offset;camera.update();
+        draw();
+      }finally{
+        target.drawOrder=order;
+        camera.position.y=y;camera.update();
+      }
+    }
+    function world(x,y){
+      const f=lastFrame||stageFrame(canvas),frame=pairedShot?shotFrame(shotOffset(skeleton)):bounds;
+      const unit=Math.max((frame.maxX-frame.minX)/f.width,(frame.maxY-frame.minY)/f.height)*1.06/lastView.zoom;
+      return {x:(frame.minX+frame.maxX)/2+(x-(f.left+f.width/2)-lastView.x)*unit,
+        y:(frame.minY+frame.maxY)/2-(y-(f.top+f.height/2)-lastView.y)*unit};
+    }
     function project(x,y){const a=world(0,0),b=world(canvas.clientWidth,canvas.clientHeight);return {x:(x-a.x)/(b.x-a.x)*canvas.clientWidth,y:(y-a.y)/(b.y-a.y)*canvas.clientHeight};}
     const editor=window.createInteractionSpineEditor({layers,ns,project,unproject:world});
     const api={type:'spine',canvas,editor,animations,skins:data.skins.map(s=>s.name),warnings:[],
@@ -115,9 +144,19 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       skin(name){skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);const next=stageBounds||modelBounds(skeleton,ns,model.visibleBounds);if(next&&next.maxX>next.minX&&next.maxY>next.minY&&[next.minX,next.minY,next.maxX,next.maxY].every(Number.isFinite))bounds=next;},
       playback(){const t=state.getCurrent(0),d=t?.animation.duration||0;return {name:t?.animation.name||'',duration:d,time:d?(t.loop?t.trackTime%d:Math.min(d,t.trackTime)):0,loop:t?.loop??true};},
       render(dt,view){if(disposed)return;lastView=view;const {w,h,density}=resize(canvas);lastFrame=stageFrame(canvas);gl.viewport(0,0,canvas.width,canvas.height);tools?.before();if(view.playing){state.update(dt*view.speed);skeleton.update?.(dt*view.speed);}state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.update);tools?.after();
-        const a=world(w/2,h/2),b=world(w/2+1,h/2);renderer.camera.setViewport(canvas.width,canvas.height);renderer.camera.zoom=(b.x-a.x)/density;renderer.camera.position.set(a.x,a.y,0);renderer.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);renderer.begin();renderer.drawSkeleton(skeleton,!!atlas.pages[0]?.pma);renderer.end();},
+        const a=world(w/2,h/2),b=world(w/2+1,h/2);renderer.camera.setViewport(canvas.width,canvas.height);renderer.camera.zoom=(b.x-a.x)/density;renderer.camera.position.set(a.x,a.y,0);renderer.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);drawPicture(skeleton,!!atlas.pages[0]?.pma,shotOffset(skeleton));},
       capture(animation){
-        const session=window.createInteractionSpineCapture({layers,ns,canvas,renderer,gl,editor,animation,restore:()=>api.render(0,lastView)});
+        const offset=shotOffset(skeleton);
+        const fixedFrame=pairedShot ? shotFrame(offset) : undefined;
+        const drawScene=pairedShot ? ([picture],size)=>{
+          const current=shotOffset(picture.skeleton);
+          if(size.fullFrame&&!size.tile){
+            renderer.camera.position.y+=current-offset;
+            renderer.camera.update();
+          }
+          drawPicture(picture.skeleton,picture.pma,current);
+        } : undefined;
+        const session=window.createInteractionSpineCapture({layers,ns,canvas,renderer,gl,editor,animation,fixedFrame,drawScene,restore:()=>api.render(0,lastView)});
         if(model.remote&&model.id==='spine_1006603'&&animation.name.startsWith('1/')){
           // The second shot parks these two slots far offscreen in this shot.
           const slots=skeleton.slots.filter(slot=>slot.data.name!=='2_89'&&slot.data.name!=='2_90');

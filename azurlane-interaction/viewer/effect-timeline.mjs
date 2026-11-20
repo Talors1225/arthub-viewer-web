@@ -7,14 +7,17 @@ export class EffectTimeline {
   this.parameterIds=Object.freeze([...new Set((motion._motionData?.curves||[]).filter(curve=>curve.type===1).map(curve=>curve.id))]);
   motion.setIsLoop(true);motion.setIsLoopFadeIn?.(false);this.entry=manager.startMotion(motion,false,0);
   this.fade=Math.max(0,motion.getFadeInTime(),...(motion._motionData?.curves||[]).map(c=>c.fadeInTime||0))+1;
-  this.time=0;this.fixed=false;this.settled=false;
+  this.time=0;this.speed=1;this.fixed=false;this.settled=false;
  }
- state(){return {time:this.time,duration:this.duration,fps:this.fps,fixed:this.fixed};}
+ state(){return {time:this.time,duration:this.duration,fps:this.fps,speed:this.speed,fixed:this.fixed};}
  snapshot(){return {...this.state(),settled:this.settled};}
- restore(state){this.time=state.time;this.fixed=state.fixed;this.settled=state.settled;}
+ restore(state){this.time=state.time;this.speed=state.speed;this.fixed=state.fixed;this.settled=state.settled;}
+ setSpeed(speed){
+  if(Number.isFinite(speed))this.speed=Math.max(.25,Math.min(3,speed));
+ }
  advance(seconds){
   if(this.fixed||!Number.isFinite(seconds)||seconds<=0)return;
-  const next=this.time+seconds;this.settled||=next>=this.duration;this.time=next%this.duration;
+  const next=this.time+seconds*this.speed;this.settled||=next>=this.duration;this.time=next%this.duration;
  }
  seek(seconds){
   if(!Number.isFinite(seconds))return;
@@ -22,13 +25,13 @@ export class EffectTimeline {
  }
  setFixed(fixed){this.fixed=!!fixed;this.settled=true;}
  restart(){this.time=0;this.fixed=false;this.settled=true;}
- sample(model){
+ sample(model,time=this.time,settled=this.settled){
   // Cubism moves an entry's start time at loop boundaries. Rebase the entry
   // before sampling so backward seeks and a frozen frame remain repeatable.
-  const item=this.entry,time=this.time;
+  const item=this.entry;
   item.setIsAvailable(true);item.setIsFinished(false);item.setIsStarted(true);
   item.setStartTime(0);item.setEndTime(-1);
-  item.setFadeInStartTime(this.settled?time-this.fade:0);
+  item.setFadeInStartTime(settled?time-this.fade:0);
   // Seeking a visual layer must not replay historical sound/user events.
   item.setLastCheckEventSeconds(time);
   this.manager.doUpdateMotion(model,time);

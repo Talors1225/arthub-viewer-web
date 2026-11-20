@@ -416,6 +416,7 @@
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
+<script src="scene-framing.js?v=20261120-frame-edges"></script>
 <script>
 
 (() => {
@@ -474,7 +475,6 @@
   // These bounds are in model space. Each uses the scene inside the authored matte.
   const crosscoreFrames = new Map([
     ['70310_skin_Atum06b.json', { minX: -2940, minY: -980, maxX: 2680, maxY: 2640 }],
-    ['40230_skin_Scorching03b.json', { minX: -1930, minY: -1250, maxX: 1980, maxY: 1070 }],
     ['60310_skin_Tizona04a.json', { minX: -2050, minY: -1440, maxX: 2060, maxY: 1450 }],
     ['60310_skin_Tizona04b.json', { minX: -1420, minY: -1300, maxX: 1375, maxY: 1180 }],
     // The envelope and birds first appear after the opening fade.
@@ -482,8 +482,6 @@
     ['30180_skin_Machairodus05b.json', { minX: -4855, minY: -70, maxX: 2260, maxY: 4690 }],
     ['20140_skin_Capriccio04b.json', { minX: -2690, minY: -1770, maxX: 2680, maxY: 1290 }],
     ['70400_skin_LycorisRadiata03b.json', { minX: -2465, minY: 570, maxX: 2355, maxY: 3025 }],
-    ['30300_skin_Bluebuck03c.json', { minX: -2890, minY: -1740, maxX: 2740, maxY: 1690 }],
-    ['20030_skin_Pyrock03b.json', { minX: -2470, minY: -1740, maxX: 2860, maxY: 1430 }],
     ['78050_skin_Osiris03a.json', { minX: -2840, minY: -2150, maxX: 2760, maxY: 2240 }],
     ['78050_skin_Osiris03b.json', { minX: -2850, minY: -1790, maxX: 2840, maxY: 2300 }],
     ['78050_skin_Osiris03b_ASMR.json', { minX: -2940, minY: -1860, maxX: 2935, maxY: 2040 }],
@@ -495,11 +493,10 @@
     ['CG_seashore.json', { minX: -1905, minY: -82, maxX: 1922, maxY: 1990 }],
     ['60110_skin_Burtgang03.json', { minX: -591, minY: -148, maxX: 593, maxY: 1982 }],
   ]);
-  const tizonaCloseFrame = { minX: -1350, minY: -1050, maxX: 1130, maxY: 850 };
   function crosscoreFrame(skeletonFile, animation) {
     if (skeletonFile === '70030_skin_Poseidon05.json' && animation === 'idle1') return {"minX": -3155, "minY": -2112, "maxX": 3167, "maxY": 2013};
-    if (skeletonFile === '60310_skin_Tizona04b.json' && ['click6', 'idle2', 'idle3'].includes(animation)) return tizonaCloseFrame;
-    return (animation === 'idle' && crosscoreIdleFrames.get(skeletonFile)) || crosscoreFrames.get(skeletonFile);
+    return window.CrossCoreSceneFraming.modelFrame(skeletonFile, animation)
+      || (animation === 'idle' && crosscoreIdleFrames.get(skeletonFile)) || crosscoreFrames.get(skeletonFile);
   }
   if (routeSource === 'nikki' || routeSource === 'crosscore') stage.dataset.clickMode = 'audio';
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
@@ -1568,7 +1565,7 @@
       }
       try {
         renderer.begin();
-        if (cut) for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        if (cut) for (const layer of cutLayers()) if (layer.active !== false) window.CrossCoreSceneFraming.drawLayer(renderer, layer, animSel.value);
         if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
         if (cut && K.debugActive(debugFlags)) {
           K.applyDebugFlags(renderer, debugFlags);
@@ -2387,7 +2384,7 @@
         size = K.animationFramingSize(reference, anim.duration, quality, kind, time => {
           applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
           raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
-          for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+          for (const L of exportLayers) if (L.active) window.CrossCoreSceneFraming.drawLayer(r2, L, animName);
           r2.end();
           return cv2;
         });
@@ -2414,7 +2411,7 @@
         applyExportFrame(time, scale, cx * scale, cy * scale);
         raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT);
         r2.begin();
-        for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+        for (const L of exportLayers) if (L.active) window.CrossCoreSceneFraming.drawLayer(r2, L, animName);
         r2.end();
         K.paintExportBackground(ctx2d, W, H, exportBackground === 'checker' && !video ? null : exportBackground);
         ctx2d.drawImage(cv2, 0, 0);
@@ -2537,7 +2534,7 @@
         }
         raw.clear(raw.COLOR_BUFFER_BIT);
         renderer.begin();
-        for (const layer of cutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        for (const layer of cutLayers()) if (layer.active !== false) window.CrossCoreSceneFraming.drawLayer(renderer, layer, animSel.value);
         renderer.end();
       },
       restore() {

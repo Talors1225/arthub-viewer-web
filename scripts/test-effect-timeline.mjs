@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { EffectTimeline } from '../azurlane-interaction/viewer/effect-timeline.mjs?v=20261114-interaction-export-loading';
+import { EffectTimeline } from '../azurlane-interaction/viewer/effect-timeline.mjs';
 
 const item = {};
 for (const key of ['IsAvailable', 'IsFinished', 'IsStarted', 'StartTime', 'EndTime', 'FadeInStartTime', 'LastCheckEventSeconds']) {
@@ -24,4 +24,17 @@ timeline.seek(6); const snapshot = timeline.snapshot();
 timeline.advance(10); assert.equal(timeline.time, 6, 'fixed effect does not advance');
 timeline.setFixed(false); timeline.advance(.25); assert.equal(timeline.time, 6.25);
 timeline.restore(snapshot); assert.equal(timeline.time, 6); assert.equal(timeline.fixed, true);
-console.log('Effect loop, overshoot, freeze and restoration checks passed');
+timeline.setSpeed(2);
+assert.equal(timeline.time, 6, 'changing speed preserves the current phase');
+timeline.advance(1); assert.equal(timeline.time, 6, 'changing speed does not unfreeze a fixed effect');
+timeline.restart(); timeline.advance(.75);
+assert.equal(timeline.time, 1.5, 'restart retains the selected effect speed');
+const playing = timeline.snapshot();
+timeline.sample({}, 11.5, true);
+assert.equal(samples.at(-1).time, 11.5);
+assert.deepEqual(timeline.snapshot(), playing, 'export sampling leaves the preview clock intact');
+timeline.setSpeed(.5);
+timeline.advance(1); assert.equal(timeline.time, 2);
+timeline.restore(playing); assert.equal(timeline.speed, 2);
+timeline.setSpeed(NaN); assert.equal(timeline.speed, 2);
+console.log('Effect loop, playback rate, freeze and restoration checks passed');

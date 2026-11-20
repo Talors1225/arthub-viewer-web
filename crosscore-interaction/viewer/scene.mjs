@@ -234,7 +234,7 @@ export class SpineScene {
     const completed = this.completed.splice(0);
     for (const event of completed) this.onEvent(event);
   }
-  draw(renderer, viewport) {
+  draw(renderer, viewport, clip, animation) {
     for (const layer of this.layers) {
       if (!this.visible(layer)) continue;
       const drag = this.objectDrag;
@@ -244,10 +244,21 @@ export class SpineScene {
         const width = Math.abs(drag.lensNode.width || drag.area?.[2] || 300), height = Math.abs(drag.lensNode.height || drag.area?.[3] || 300);
         const x = (drag.lensNode.centerX ?? drag.lensNode.x) + drag.dx, y = (drag.lensNode.centerY ?? drag.lensNode.y) + drag.dy;
         const a = viewport(x - width / 2, y - height / 2), b = viewport(x + width / 2, y + height / 2);
-        gl.enable(gl.SCISSOR_TEST); gl.scissor(Math.round(a.x), Math.round(a.y), Math.round(b.x - a.x), Math.round(b.y - a.y));
+        let left = Math.round(a.x), bottom = Math.round(a.y);
+        let right = left + Math.round(b.x - a.x), top = bottom + Math.round(b.y - a.y);
+        if (clip) {
+          left = Math.max(left, clip[0]); bottom = Math.max(bottom, clip[1]);
+          right = Math.min(right, clip[0] + clip[2]); top = Math.min(top, clip[1] + clip[3]);
+        } else gl.enable(gl.SCISSOR_TEST);
+        gl.scissor(left, bottom, Math.max(0, right - left), Math.max(0, top - bottom));
       }
-      renderer.begin(); renderer.drawSkeleton(layer.skeleton, !!layer.atlas.pages[0].pma); renderer.end();
-      if (lens) this.context.gl.disable(this.context.gl.SCISSOR_TEST);
+      renderer.begin();
+      try { window.CrossCoreSceneFraming.drawLayer(renderer, layer, animation); }
+      finally { renderer.end(); }
+      if (lens) {
+        if (clip) this.context.gl.scissor(...clip);
+        else this.context.gl.disable(this.context.gl.SCISSOR_TEST);
+      }
     }
     if (this.objectDrag?.overlay) {
       const source = this.main.skeleton, target = this.objectDrag.overlay, selected = new Set(this.objectDrag.drag.slots || []);

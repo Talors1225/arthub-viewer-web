@@ -1,8 +1,9 @@
 import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
-import {EffectTimeline} from './effect-timeline.mjs?v=20261114-interaction-export-loading';
-import {hasEffectControls} from './effect-controls.mjs?v=20261114-interaction-export-loading';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop} from './portrait-frame.mjs?v=20261120-ward-shutter-frame';
+import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-speed';
+import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261120-frame-edges';
+import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261120-frame-validation';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261120-plymouth-arm-seam';
@@ -36,8 +37,8 @@ function stageFrame(){
 const loadingPreview=K.createLoadingPreview(stage);
 const arromanchesPortrait = 'aluomangshi_2';
 const portraitsWithSkinOne = new Set([arromanchesPortrait, 'feiteliedadi_5', 'yuekechengii_4']);
-const loopedEffectVideoPortraits = new Set([
- 'pulimaosi_3', 'xingdengbao_3', 'xinnong_5', 'xinnong_6', 'dafeng_7',
+const loopedEffectPortraits = new Set([
+ 'kebensi_2', 'pulimaosi_3', 'xingdengbao_3', 'xinnong_5', 'xinnong_6', 'dafeng_7',
  'yanusi_7', 'aogusite_4', 'adaerbote_3', 'bailong_3', 'jian_3',
 ]);
 // Reviewed default motions whose independent effects do not close with the character's cycle.
@@ -531,6 +532,7 @@ const viewerUI=window.createInteractionViewerUI({
  seek:time=>{if(!view.ready||exporting)return;adapter?.seek?.(time);if(controller){controller.state.actionTime=time;controller.state.normalizedTime=time/Math.max(.001,controller.duration||adapter?.timeline?.().duration||1);for(const event of controller.events||[])event.fired=event.time<=time;controller.pendingVoicePlayed=true;}stopAudio();},
  effectPlayback:()=>view.ready&&adapter?.effectTimeline?{...adapter.effectTimeline.state(),ready:!exporting}:null,
  seekEffect:time=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.seek(time);adapter?.refreshEffect?.();},
+ setEffectSpeed:speed=>{if(view.ready&&!exporting)adapter?.effectTimeline?.setSpeed(speed);},
  setEffectFixed:fixed=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.setFixed(fixed);adapter?.refreshEffect?.();},
  restartEffect:()=>{if(!view.ready||exporting)return;adapter?.effectTimeline?.restart();adapter?.refreshEffect?.();},
  canvas:()=>canvas,onError:fail,
@@ -616,12 +618,13 @@ function intersectMatteEdges([a, b], [c, d]) {
  const t = ((c.x - a.x) * by - (c.y - a.y) * bx) / determinant;
  return new PIXI.Point(a.x + ax * t, a.y + ay * t);
 }
-function matteAperture(edges, internal, minOpacity = .99) {
- const opacity = internal.coreModel.getModel().drawables.opacities;
+function matteAperture(edges, internal, minOpacity = .99, requireVisible = false) {
+ const model = internal.coreModel, opacity = model.getModel().drawables.opacities;
  const lines = [];
  for (const [id, start, end] of edges) {
   const index = internal.getDrawableIndex(id);
-  if (index < 0 || opacity[index] < minOpacity || editor?.hidden.has(id)) return null;
+  if (index < 0 || opacity[index] < minOpacity || editor?.hidden.has(id)
+      || (requireVisible && !model.getDrawableDynamicFlagIsVisible(index))) return null;
   const vertices = internal.getDrawableVertices(index);
   if (!vertices || Math.max(start, end) * 2 + 1 >= vertices.length) return null;
   lines.push([start, end].map(position => internal.localTransform.apply(
@@ -637,11 +640,28 @@ function matteAperture(edges, internal, minOpacity = .99) {
  if ((q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y) < 100000) return null;
  return corners;
 }
+function mattePoints(points, internal, minOpacity = .2, requireVisible = false) {
+ const corners = [];
+ const model = internal.coreModel, {opacities} = model.getModel().drawables;
+ for (const [id, point] of points) {
+  const index = internal.getDrawableIndex(id);
+  if (index < 0 || opacities[index] < minOpacity || editor?.hidden.has(id)
+      || (requireVisible && !model.getDrawableDynamicFlagIsVisible(index))) return null;
+  const vertices = internal.getDrawableVertices(index);
+  if (!vertices || point * 2 + 1 >= vertices.length) return null;
+  corners.push(internal.localTransform.apply(new PIXI.Point(vertices[point * 2], vertices[point * 2 + 1])));
+ }
+ return corners;
+}
 function live2DFrameAtPose(frame, internal) {
  const anchor = frame?.anchor;
  if (!anchor) return frame;
+ if (anchor.points) {
+  const corners = mattePoints(anchor.points, internal, anchor.minOpacity, anchor.minOpacity !== undefined);
+  return corners ? cropAtMatteCorners(frame, anchor, corners, 1) : frame;
+ }
  if (anchor.edges) {
-  const corners = matteAperture(anchor.edges, internal);
+  const corners = matteAperture(anchor.edges, internal, anchor.minOpacity, anchor.reviewed);
   return corners ? cropAtMatteCorners(frame, anchor, corners, 1) : frame;
  }
  const index = internal.getDrawableIndex(anchor.drawable);
@@ -650,11 +670,13 @@ function live2DFrameAtPose(frame, internal) {
  if (anchor.whenVisible || anchor.fadeToFrame) {
   const model = internal.coreModel;
   const opacity = model.getModel().drawables.opacities[index];
-  if (editor?.hidden.has(anchor.drawable) || !model.getDrawableDynamicFlagIsVisible(index) || opacity < (anchor.fadeToFrame ? .001 : .2)) return frame;
+  if (editor?.hidden.has(anchor.drawable) || !model.getDrawableDynamicFlagIsVisible(index)
+      || opacity < (anchor.minOpacity ?? (anchor.fadeToFrame ? .001 : .2))) return frame;
   if (anchor.fadeToFrame) weight = Math.min(1, opacity);
  }
  const vertices = internal.getDrawableVertices(index);
- if (!vertices || (!anchor.corners && vertices.length !== 8)) return frame;
+ if (!vertices || (anchor.vertexCount && vertices.length !== anchor.vertexCount * 2)
+  || (!anchor.corners && vertices.length !== 8)) return frame;
  const indices = anchor.corners ?? [0, 1, 2, 3];
  if (indices.some(i => i * 2 + 1 >= vertices.length)) return frame;
  const matrix = internal.localTransform;
@@ -670,7 +692,7 @@ function live2DFrameAtPose(frame, internal) {
  const aperture = anchor.aperture && matteAperture(anchor.aperture, internal, .12);
  return aperture ? cropInsideAperture(crop, aperture) : crop;
 }
-function cropInsideAperture(crop, corners) {
+function cropInsideAperture(crop, corners, keepOpening = false) {
  const cos = Math.cos(crop.rotation ?? 0), sin = Math.sin(crop.rotation ?? 0);
  const [topLeft, bottomLeft, bottomRight, topRight] = corners.map(({ x, y }) => ({
   x: x * cos - y * sin, y: x * sin + y * cos,
@@ -680,6 +702,7 @@ function cropInsideAperture(crop, corners) {
  const minY = Math.max(crop.minY, topLeft.y, topRight.y);
  const maxY = Math.min(crop.maxY, bottomLeft.y, bottomRight.y);
  if (minX === crop.minX && maxX === crop.maxX && minY === crop.minY && maxY === crop.maxY) return crop;
+ if (keepOpening && maxX > minX && maxY > minY) return {minX,minY,maxX,maxY,rotation:crop.rotation};
  // Keep the opening inside the underlying artwork, including while the bars move.
  const aspect = (crop.maxX - crop.minX) / (crop.maxY - crop.minY);
  const height = Math.min(maxY - minY, (maxX - minX) / aspect) * .99;
@@ -689,9 +712,10 @@ function cropInsideAperture(crop, corners) {
   maxX: x + width / 2, maxY: y + height / 2, rotation: crop.rotation };
 }
 function cropAtMatteCorners(frame, anchor, points, weight) {
- const rotation = anchor.align ? -Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x) : frame.rotation ?? 0;
+ const edge = anchor.alignTop ? points[3] : anchor.align ? points[1] : null;
+ const rotation = edge ? -Math.atan2(edge.y - points[0].y, edge.x - points[0].x) : frame.rotation ?? 0;
  const cos = Math.cos(rotation), sin = Math.sin(rotation);
- const corners = anchor.align ? points.map(({ x, y }) => ({ x: x * cos - y * sin, y: x * sin + y * cos })) : points;
+ const corners = edge ? points.map(({ x, y }) => ({ x: x * cos - y * sin, y: x * sin + y * cos })) : points;
  let centerX = 0, centerY = 0;
  for (const corner of corners) {
   centerX += corner.x / 4;
@@ -717,6 +741,7 @@ function cropAtMatteCorners(frame, anchor, points, weight) {
  }
  if (!Number.isFinite(halfHeight) || halfHeight < 1) return frame;
  halfHeight = Math.max(halfHeight, (anchor.minWidth ?? 0) / (2 * aspect));
+ if (anchor.outset > 0) halfHeight *= 1 + 2 * Math.min(.15, anchor.outset);
  const halfWidth = halfHeight * aspect;
  const crop = { minX: centerX - halfWidth, minY: centerY - halfHeight * (1 + 2 * (anchor.headroom ?? 0)),
   maxX: centerX + halfWidth, maxY: centerY + halfHeight, rotation };
@@ -773,13 +798,38 @@ async function live2dPortrait(model,generation){
  app.stage.addChild(live);live.anchor.set(.5,.5);const natural={width:live.internalModel.width,height:live.internalModel.height},internal=live.internalModel,core=internal.coreModel.getModel(),indexes=new Map(core.parameters.ids.map((id,i)=>[id,i]));
  const defaultStageFrame = defaultPortraitStageFrame(model.id);
  const baseFrame = authoredLive2DFrame(model.id) || defaultStageFrame, portraitSurrounds = portraitSurroundNames(model.id);
+ const aperture = authoredLive2DSceneAperture(model.id);
+ const apertureRule = motion => {
+  const shot=aperture?.shots?.find(rule=>rule.motions.test(motion));
+  if (shot) return shot;
+  const generated = automaticSceneAperture(model.id,motion);
+  if (!aperture?.reviewed) return generated ?? aperture;
+  return !aperture.motions || aperture.motions.test(motion) ? aperture : generated;
+ };
+ const hasApertureFallback = motion => !!aperture && (!aperture.reviewed || !!aperture.fallback)
+  && (!aperture.motions || aperture.motions.test(motion));
+ const apertureAtPose = (motion = activeMotion) => {
+  const rule = apertureRule(motion);
+  const apertureProbe = rule && { anchor:{...rule,nativeAspect:true,alignTop:!rule.preserveAngle,whenVisible:true} };
+  if (!apertureProbe) return null;
+  let frame = live2DFrameAtPose(apertureProbe, internal);
+  if (frame === apertureProbe) return null;
+  for (const limit of rule.inside ?? []) {
+   const corners = limit.edges ? matteAperture(limit.edges, internal) : mattePoints(limit.points, internal);
+   if (corners) frame = cropInsideAperture(frame, corners, limit.keepOpening);
+  }
+  return frame;
+ };
+ const apertureFallback = aperture && (aperture.fallback || baseFrame ||
+  { minX:0, minY:0, maxX:natural.width, maxY:natural.height });
  const pivotX = natural.width / 2, pivotY = natural.height / 2;
  evidence.model=live;evidence.app=app;editor=window.createInteractionLive2DEditor({live,core,hitAreas:model.interaction.hitAreas});const mouthIds=internal.settings.json.Groups?.find(g=>g.Name==='LipSync')?.Ids||[];
- let effectManager,effectMotion,effectTimeline,effectTime=0,sampleExportEffect=null;const renderedParameters=core.parameters.values.slice();
+ let effectTimeline, effectBaseParameters, sampleExportEffect;
+ const renderedParameters=core.parameters.values.slice(), effectParameterIndices=new Set();
  const dragCover = model.id === 'wuqi_3' ? core.drawables.ids.indexOf('ArtMesh766') : -1;
  const coverDragParameter = indexes.get('touch_drag6');
- const interfaceCovers = authoredLive2DInterfaceCovers(model.id).map(id => internal.getDrawableIndex(id)).filter(index => index >= 0);
- const savedCoverOpacity = new Float32Array(interfaceCovers.length);
+ let activeMotion=model.defaultAnimation, coverMotion;
+ let interfaceCovers=[], savedCoverOpacity=new Float32Array(0);
  const hotspots = model.interaction.hitAreas.map(area => ({ ...area, index: internal.getDrawableIndex(area.id) })).filter(area => area.index >= 0);
  const hotspotVertices = ({ index }) => {
   const { drawables } = core;
@@ -791,6 +841,13 @@ async function live2dPortrait(model,generation){
  const nativeDraw = internal.draw.bind(internal);
  internal.draw = gl => {
   viewerUI.tools.after();
+  if (coverMotion !== activeMotion) {
+   coverMotion=activeMotion;
+   // Keep the drawable available to the camera's aperture calculation.
+   const covers = authoredLive2DInterfaceCovers(model.id, coverMotion).concat(authoredLive2DScreenEdges(model.id, coverMotion));
+   interfaceCovers=[...new Set(covers)].map(id => internal.getDrawableIndex(id)).filter(index => index >= 0);
+   savedCoverOpacity=new Float32Array(interfaceCovers.length);
+  }
   // The converted drag cover is opaque at rest and hides the entire room.
   const hideDragCover = dragCover >= 0 && coverDragParameter !== undefined && !(renderedParameters[coverDragParameter] > .001);
   if (!interfaceCovers.length && !hideDragCover) return nativeDraw(gl);
@@ -818,8 +875,7 @@ async function live2dPortrait(model,generation){
   const motion = await manager.loadMotion('effect', 0);
   if (generation !== loadGeneration) return;
   if (!motion) throw Error('背景特效暂时无法加载');
-  effectMotion = motion; effectManager = new queue.constructor();
-  effectTimeline = new EffectTimeline(effectManager, effectMotion);
+  effectTimeline = new EffectTimeline(new queue.constructor(), motion);
   effectBaseParameters = core.parameters.values.slice();
   for (const id of effectTimeline.parameterIds) if (indexes.has(id)) effectParameterIndices.add(indexes.get(id));
   api.effectTimeline = hasEffectControls(model.id) ? effectTimeline : null;
@@ -827,12 +883,11 @@ async function live2dPortrait(model,generation){
   viewerUI.refreshAnimations(); viewerUI.update(true);
  })().catch(error => { effectLoad = null; if (generation === loadGeneration) evidence.effectLayerError = String(error); throw error; });
  if(generation!==loadGeneration){dispose();return null;}
- let effectBaseParameters=null;const effectParameterIndices=new Set((effectTimeline?.parameterIds||[]).map(id=>indexes.get(id)).filter(index=>index!==undefined));
  internal.on('beforeModelUpdate',()=>{
   const parameters=core.parameters;
   effectBaseParameters?.set(parameters.values);
   if(sampleExportEffect)sampleExportEffect();
-  else if(effectManager){try{if(effectTimeline)effectTimeline.sample(internal.coreModel);else effectManager.doUpdateMotion(internal.coreModel,effectTime);}catch(e){evidence.effectLayerError=String(e);effectManager=null;effectTimeline=null;api.effectTimeline=null;}}
+  else if(effectTimeline){try{effectTimeline.sample(internal.coreModel);}catch(e){evidence.effectLayerError=String(e);effectTimeline=null;api.effectTimeline=null;}}
   const ignoreLook=controller?.states?.some(s=>s.active&&s.config.ignore_react===1);
   if(!ignoreLook)for(const p of lookParams){const i=indexes.get(p.id),rates=model.skinConfig.l2d_drag_rate,rate=Array.isArray(rates)?rates[p.axis]??1:1,value=p.factor*(p.axis===0?look.x:p.axis===1?look.y:look.x*look.y)*rate,range=model.skinConfig.l2d_para_range?.[p.id]||[parameters.minimumValues[i],parameters.maximumValues[i]];parameters.values[i]=Math.max(range[0],Math.min(range[1],parameters.values[i]+value));}
   const applied={};for(const p of controller?.parameters?.()||[]){const i=indexes.get(p.id);if(i===undefined)continue;let value=p.mode===2?parameters.values[i]+p.value:p.mode===3?parameters.values[i]*p.value:p.value;value=Math.max(parameters.minimumValues[i],Math.min(parameters.maximumValues[i],value));parameters.values[i]=value;applied[p.id]=value;}evidence.interaction.appliedParameters=applied;
@@ -841,15 +896,15 @@ async function live2dPortrait(model,generation){
   for(const id of mouthIds){const i=indexes.get(id);if(i!==undefined&&evidence.audio.state==='playing')parameters.values[i]=Math.max(parameters.values[i],Math.min(1,mouth*gain));}
   evidence.audio.mouthValues=Object.fromEntries(mouthIds.map(id=>[id,parameters.values[indexes.get(id)]]));editor?.applyParameters?.();renderedParameters.set(parameters.values);
  });
- let playSerial=0, activeMotion=model.defaultAnimation;
+ let playSerial=0;
  let stageCrop = authoredLive2DFrame(model.id, activeMotion) || defaultStageFrame;
  let displayedStageCrop, renderedStageMotion, stageCropFixed = false;
  let stageClip = null;
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
   prepareExport:async()=>{await loadEffect();if(generation===loadGeneration)api.refreshEffect();},
-  setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&!stageCrop?.anchor&&displayedStageCrop!==undefined;},
+  setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&!apertureAtPose()&&!stageCrop?.anchor&&displayedStageCrop!==undefined;},
   refit:()=>{refitPending=true;},
-  effectTimeline: hasEffectControls(model.id) ? effectTimeline : null,
+  effectTimeline:null,
   refreshEffect:()=>{
    if(!effectTimeline)return;
    // A paused background seek must not rerun character fades or physics.
@@ -905,39 +960,40 @@ async function live2dPortrait(model,generation){
   seek:(seconds,delta=0,draw=true,settleFade=false)=>{const item=[...(queue?._motions||[])].reverse().find(item=>!item.isFinished()&&item._motion);if(!item)return;const duration=model.motionDurations?.[activeMotion]||item._motion.getLoopDuration(),time=Math.max(0,Math.min(duration-.0001,seconds)),clock=live.elapsedTime/1000;const fade=settleFade?Math.max(0,item._motion.getFadeInTime(),...item._motion._motionData.curves.map(curve=>curve.fadeInTime||0)):0;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time-fade);item.setEndTime(item._motion.isLoop()?-1:clock-time+duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;if(draw)app.render();},
   polygons:()=>hotspots.map(h=>{const vertices=hotspotVertices(h);if(!vertices?.length)return null;const pts=[];for(let j=0;j<vertices.length;j+=2){const p=new PIXI.Point(vertices[j],vertices[j+1]);internal.localTransform.apply(p,p);live.worldTransform.apply(p,p);pts.push([p.x,p.y]);}return {id:h.id,vertices:pts};}).filter(Boolean)
  };
- function videoLoopPlan(playback) {
-  const motionDuration = playback.duration;
-  if (!playback.loop || !/^idle\d*$/.test(playback.name) || !Number.isFinite(motionDuration) || motionDuration <= 0) return null;
-  const item = [...(queue?._motions || [])].reverse().find(entry => !entry.isFinished() && entry._motion?.isLoop());
-  if (!item) return null;
-  const legacyEffect = !effectTimeline ? effectManager?._motions?.[0] : null;
-  const effectDuration = effectTimeline?.fixed ? 0 : effectTimeline?.duration ?? legacyEffect?._motion?.getLoopDuration?.() ?? 0;
-  const plan = { item, legacyEffect, motionDuration, duration: motionDuration, effectDuration: 0, transition: 0 };
-  if (!Number.isFinite(effectDuration) || effectDuration <= 0) return plan;
-  if (loopedEffectVideoPortraits.has(model.id)) {
-   // The selected action defines the file duration. A longer background cycle
-   // must not repeat the action just to reach a common loop boundary.
-   const cycles = Math.round(motionDuration / effectDuration);
-   const closes = cycles > 0 && Math.abs(motionDuration - cycles * effectDuration) < .0001;
-   return { ...plan, effectDuration, transition: closes ? 0 : Math.min(2, motionDuration / 3) };
-  }
-  if (blendedVideoPortraits.has(model.id) &&
-      (playback.name === model.defaultAnimation || model.id === 'wuerlixi_3' && playback.name === 'idle1')) {
-   // These backgrounds have a much longer cycle than the action. Blend only their
-   // parameters near the join, keeping the motion at its original speed and length.
-   return { ...plan, effectDuration, transition: Math.min(2, motionDuration / 3) };
-  }
-  return plan;
+ function exportLoopPlan(playback, captureMotion, effect) {
+  const {duration,name} = playback;
+  if (!playback.loop || !/^idle\d*$/.test(name) || !Number.isFinite(duration) || duration <= 0 ||
+      !captureMotion?._motion?.isLoop()) return null;
+  const reviewedDefault = blendedVideoPortraits.has(model.id) &&
+   (name === model.defaultAnimation || model.id === 'wuerlixi_3' && name === 'idle1');
+  const alignEffect = !!effect && !effect.fixed && (loopedEffectPortraits.has(model.id) || reviewedDefault);
+  if (!alignEffect) return {duration,alignEffect,transition:0};
+  const effectElapsed = duration * effect.speed;
+  const cycles = Math.round(effectElapsed / effect.duration);
+  const closes = cycles > 0 && Math.abs(effectElapsed - cycles * effect.duration) < .0001;
+  // Keep the character's original cycle. Ease only the effect's animated
+  // values into the phase they would have just before the first frame.
+  return {duration,alignEffect,transition:closes ? 0 : Math.min(2, duration / 3)};
  }
  api.videoDuration = playback => playback.duration;
  api.capture=(playback={},format,quality)=>{
   const motion = playback.name || activeMotion;
   const levelFrame = api.levelExport ? authoredLive2DLevelFrame(model.id, motion) : null;
   const safeCrop = sceneExportCrop(model, motion, format);
+  const rule = apertureRule(motion);
+  const useAperture = !!rule && !levelFrame;
+  const followReviewedScene = useAperture && rule.reviewed;
   const motionFrame = levelFrame ?? (safeCrop?.inset ? null : safeCrop) ?? authoredLive2DExportFrame(model.id, motion)
-   ?? live2DExportWindowAtPose(model.id, motion, internal);
-  const captureFrameAtPose = () => insetLive2DFrame(live2DFrameAtPose(motionFrame, internal), safeCrop?.inset);
-  const animatedMatte = motionFrame?.anchor?.fadeToFrame && (format === 'video' || format === 'gif');
+   ?? live2DExportWindowAtPose(model.id, motion, internal) ?? (hasApertureFallback(motion) ? apertureFallback : null);
+  // When a separate screen matte goes away, return to the camera the preview
+  // was using for the full scene. The previous inset would clip the reveal.
+  const fallback = followReviewedScene && fittingBounds ? {
+   minX:fittingBounds.x-fittingBounds.width/2, minY:fittingBounds.y-fittingBounds.height/2,
+   maxX:fittingBounds.x+fittingBounds.width/2, maxY:fittingBounds.y+fittingBounds.height/2,
+  } : null;
+  const captureFrameAtPose = () => useAperture && apertureAtPose(motion)
+   || insetLive2DFrame(live2DFrameAtPose(motionFrame || fallback, internal), safeCrop?.inset);
+  const animatedMatte = !useAperture && motionFrame?.anchor?.fadeToFrame && (format === 'video' || format === 'gif');
   const authoredFrame = animatedMatte ? motionFrame : captureFrameAtPose();
   let exportRotation = authoredFrame?.rotation ?? 0;
   if (api.levelExport && model.id === 'xinnong_5' && playback.name === 'idle18') {
@@ -969,17 +1025,16 @@ async function live2dPortrait(model,generation){
   const parameters=core.parameters.values.slice(),renderedFrame=renderedParameters.slice(),effectBaseFrame=effectBaseParameters?.slice(),parts=core.parts.opacities.slice(),nativeSaved=internal.coreModel._savedParameters.slice(),resolution=app.renderer.resolution;
   const originalQueue = queue?._motions;
   const captureMotion = [...(originalQueue || [])].reverse().find(item => !item.isFinished() && item._motion);
-  const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectManager),entries=[...(originalQueue||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot(),savedEffectTime=effectTime;
-  const loop = format === 'video' ? videoLoopPlan(playback) : null;
+  const restorePhysics=preserveSimulation(internal.physics),restoreEffect=preserveSimulation(effectTimeline?.manager),entries=[...(originalQueue||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,savedEffect=effectTimeline?.snapshot();
+  const video = format === 'video', animated = video || format === 'gif';
+  const loop = video || format === 'gif' && effectControlPortraits[model.id] === 'curtains'
+   ? exportLoopPlan(playback, captureMotion, savedEffect) : null;
   const breath = loop ? internal.breath : null;
   const breathTime = breath?._currentTime;
-  const loopTimeline = loop && K.exportTimeline(loop.duration, quality, 'video');
+  const loopTimeline = loop && K.exportTimeline(loop.duration, quality, format);
   const step = loopTimeline ? loopTimeline.duration / loopTimeline.frames : 0;
-  const warmFrames = loop ? Math.ceil(Math.min(2, loop.motionDuration) / step) : 0;
+  const warmFrames = loop ? Math.ceil(Math.min(2, loop.duration) / step) : 0;
   const warmTime = warmFrames * step;
-  const effectStart = savedEffect?.time ?? (loop?.legacyEffect ? savedEffectTime - Math.max(0, loop.legacyEffect.getStartTime()) : 0);
-  const effectFade = loop?.effectDuration && loop.legacyEffect
-   ? Math.max(0, effectMotion.getFadeInTime(), ...effectMotion._motionData.curves.map(curve => curve.fadeInTime || 0)) + 1 : 0;
   const effectChannels = loop?.transition ? [core.parameters.values, core.parts.opacities].map(values => ({
    values, original: values.slice(), alternate: values.slice(),
   })) : [];
@@ -993,7 +1048,6 @@ async function live2dPortrait(model,generation){
    for (const {item, values} of entries) Object.assign(item, values);
    if (savedEffect) effectTimeline.restore(savedEffect);
    if (effectBaseFrame) effectBaseParameters.set(effectBaseFrame);
-   effectTime = savedEffectTime;
    live.elapsedTime = elapsed; live.deltaTime = delta;
    core.parameters.values.set(renderedFrame); core.parts.opacities.set(parts);
    internal.coreModel.update();
@@ -1002,25 +1056,17 @@ async function live2dPortrait(model,generation){
    lastTime = 0; warmed = false;
   };
   const sampleEffect = time => {
-   const phase = loopPhase(effectStart + time, loop.effectDuration);
-   if (savedEffect) {
-    effectTimeline.restore({ ...savedEffect, time: phase, settled: true });
-    effectTimeline.sample(internal.coreModel);
-   } else {
-    const item = loop.legacyEffect;
-    effectTime = phase;
-    item.setIsStarted(true); item.setIsFinished(false);
-    item.setStartTime(0); item.setEndTime(-1); item.setFadeInStartTime(phase - effectFade);
-    item.setLastCheckEventSeconds(effectTime);
-    effectManager.doUpdateMotion(internal.coreModel, effectTime);
-   }
+   const elapsed = loop?.alignEffect ? time : Math.max(0,time);
+   const clock = savedEffect.time + elapsed * savedEffect.speed;
+   const phase = savedEffect.fixed ? savedEffect.time : loopPhase(clock, savedEffect.duration);
+   effectTimeline.sample(internal.coreModel, phase, loop?.alignEffect || savedEffect.settled || clock >= savedEffect.duration);
   };
   const sample = (time, draw) => {
    live.elapsedTime = elapsed + (warmTime + time) * 1000;
-   if (loop?.effectDuration) {
+   if (loop?.transition) {
     sampleExportEffect = () => {
      const blendStart = loop.duration - loop.transition;
-     if (!loop.transition || time <= blendStart) { sampleEffect(time); return; }
+     if (time <= blendStart) { sampleEffect(time); return; }
      const fraction = Math.min(1, (time - blendStart) / loop.transition);
      const blend = fraction * fraction * (3 - 2 * fraction);
      for (const {values, original} of effectChannels) original.set(values);
@@ -1034,9 +1080,7 @@ async function live2dPortrait(model,generation){
       for (let i = 0; i < values.length; i++) values[i] += (alternate[i] - values[i]) * blend;
      }
     };
-   } else if (savedEffect) {
-    effectTimeline.restore(savedEffect); effectTimeline.advance(time);
-   } else effectTime = savedEffectTime + Math.max(0, time);
+   } else if (animated && savedEffect) sampleExportEffect = () => sampleEffect(time);
    const deltaTime = Math.max(0, time - lastTime);
    // Cubism adds a separate breathing oscillator before the authored effect layer.
    // Keep its phase constant so it does not change across the exported seam.
@@ -1044,15 +1088,15 @@ async function live2dPortrait(model,generation){
    try {
     // Export the selected clip's actual pose, not the live preview's fade-in
     // from whichever animation happened to be playing before it.
-    api.seek(loop ? loopPhase(time, loop.motionDuration) : time, deltaTime, draw, format === 'video');
+    api.seek(loop ? loopPhase(time, loop.duration) : time, deltaTime, draw, video || !!loop);
    } finally {
     sampleExportEffect = null;
    }
    lastTime = time;
   };
   const advance = (time, draw = true) => {
-   if (format === 'video' && !warmed) {
-    // Every video isolates its active clip, including touch/main motions.
+   if ((video || loop) && !warmed) {
+    // Isolate the active clip, including touch/main motions in video exports.
     // Keep the original array untouched so rewind restores outgoing fades too.
     queue._motions = captureMotion ? [captureMotion] : [];
     if (loop) {
@@ -1080,17 +1124,19 @@ async function live2dPortrait(model,generation){
    measure:time=>{editor.before();advance(time);return measure();},rewind,
    draw:(time,size,background)=>{const added=[...surrounds].filter(id=>!editor.hidden.has(id));for(const id of added)editor.hidden.add(id);try{editor.before();
     if(size.fullFrame&&size.tiled!==false)return K.renderTiledPNG(size,tile=>{editor.before();resizeCapture(tile.width,tile.height,1);setCaptureFrame(size,tile);live.deltaTime=0;app.render();return canvas;},background);
-    const followArtwork = size.fullFrame && motionFrame?.anchor && time !== null;
+    const followArtwork = size.fullFrame && (useAperture || motionFrame?.anchor) && time !== null;
     if(size.fullFrame){
      resizeCapture(size.width,size.height,1);
      if (followArtwork) {
       advance(time, false);
       const poseFrame = captureFrameAtPose();
-      const fit = stageBoundsForFrame(poseFrame);
-      const widthFit = (authoredFrame.maxX - authoredFrame.minX) / fit.width;
-      const heightFit = (authoredFrame.maxY - authoredFrame.minY) / fit.height;
-      const scale = size.scale * (animatedMatte ? Math.min(widthFit, heightFit) : widthFit);
-      setCaptureFrame({ ...size, scale, centerX: fit.x, centerY: fit.y }, null, poseFrame.rotation);
+      if (poseFrame) {
+       const fit = stageBoundsForFrame(poseFrame);
+       const widthFit = size.width / fit.width, heightFit = size.height / fit.height;
+       const contain = animatedMatte || followReviewedScene && Math.max(widthFit, heightFit)>Math.min(widthFit, heightFit)*1.02;
+       const scale = contain ? Math.min(widthFit, heightFit) : useAperture ? Math.max(widthFit, heightFit) : widthFit;
+       setCaptureFrame({ ...size, scale, centerX: fit.x, centerY: fit.y }, null, poseFrame.rotation);
+      } else setCaptureFrame(size);
      } else setCaptureFrame(size);
     }
     else resizeCapture(stage.clientWidth,stage.clientHeight,size.width/stage.clientWidth);
@@ -1104,11 +1150,11 @@ async function live2dPortrait(model,generation){
   const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
   if (app.renderer.screen.width !== w || app.renderer.screen.height !== h) app.renderer.resize(w, h);
   const frame = stageFrame();
+  const useApertureFallback = hasApertureFallback(activeMotion);
   if (view.playing) {
-   if (effectTimeline) effectTimeline.advance(dt * view.speed);
-   else effectTime += dt * view.speed;
+   effectTimeline?.advance(dt * (api.effectTimeline ? 1 : view.speed));
    live.update(dt * 1000 * view.speed);
-   if ((stageCrop?.anchor?.aperture || stageCrop?.anchor?.syncPose) && live.deltaTime) {
+   if ((apertureRule(activeMotion) || stageCrop?.anchor?.aperture || stageCrop?.anchor?.syncPose) && live.deltaTime) {
     // Measure the same pose that will be drawn so a moving matte cannot outrun its crop.
     internal.update(live.deltaTime, live.elapsedTime);
     live.deltaTime = 0;
@@ -1120,9 +1166,10 @@ async function live2dPortrait(model,generation){
    stageCropFixed=false;refitPending=false;
   }
   // Fixed interaction preserves the viewer transform. A drawn scene window can still move inside it.
-  if (!stageCropFixed || stageCrop?.anchor) {
-   displayedStageCrop = live2DFrameAtPose(stageCrop, internal) ?? null;
-   stageCropFixed = !stageCrop?.anchor && fixedView.checked && stage.dataset.panMode === 'interact'
+  const activeAperture = apertureAtPose();
+  if (!stageCropFixed || stageCrop?.anchor || activeAperture || useApertureFallback) {
+   displayedStageCrop = activeAperture || live2DFrameAtPose(stageCrop || (useApertureFallback ? apertureFallback : null), internal);
+   stageCropFixed = !activeAperture && !useApertureFallback && !stageCrop?.anchor && fixedView.checked && stage.dataset.panMode === 'interact'
     && !controller.state.motionPending && renderedStageMotion === activeMotion;
   }
   const crop = displayedStageCrop;
@@ -1189,6 +1236,8 @@ async function spinePortrait(model,generation){
   throw error;
  }
  evidence.layers=layers;evidence.renderer=scene;
+ const aperture = authoredSpineSceneAperture(model.id);
+ const apertureAtPose = sceneLayers => K.spineArtworkAperture(sceneLayers, spine, aperture);
  const mogadorAircraft = model.id === 'mojiaduoer_5';
  model.animations=[...new Set(layers.flatMap(layer=>layer.data.animations.map(animation=>animation.name)))].sort();
  // This auxiliary scene's one-second normal track contains no renderable
@@ -1257,7 +1306,7 @@ async function spinePortrait(model,generation){
  };
  for(const l of layers){const a=l.data.findAnimation(l.spec.defaultAnimation||model.defaultAnimation)||l.data.animations[0];if(a)l.state.setAnimation(0,a.name,true);l.state.apply(l.skeleton);l.skeleton.updateWorldTransform();}
  const authoredFrame = authoredSpineFrame(model.id);
- const baseStageFrame = authoredFrame || defaultPortraitStageFrame(model.id);
+ const baseStageFrame = authoredFrame || defaultPortraitStageFrame(model.id) || aperture?.fallback;
  let stageFrameCrop = authoredSpineFrame(model.id, model.defaultAnimation) || baseStageFrame;
  const rectangles=[];
  if (!authoredFrame) for(const l of layers)for(const slot of l.skeleton.drawOrder){const a=slot.attachment;let vertices;if(a instanceof spine.RegionAttachment){vertices=new Float32Array(8);a.computeWorldVertices(slot.bone,vertices,0,2);}else if(a instanceof spine.MeshAttachment){vertices=new Float32Array(a.worldVerticesLength);a.computeWorldVertices(slot,0,a.worldVerticesLength,vertices,0,2);}if(!vertices?.length)continue;let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(let i=0;i<vertices.length;i+=2){minX=Math.min(minX,vertices[i]);maxX=Math.max(maxX,vertices[i]);minY=Math.min(minY,vertices[i+1]);maxY=Math.max(maxY,vertices[i+1]);}rectangles.push({name:slot.data.name,bounds:[minX,minY,maxX,maxY]});}
@@ -1271,8 +1320,9 @@ async function spinePortrait(model,generation){
    for (const slot of layer.skeleton.slots) if (surrounds.has(slot.data.name)) hidden.add(i + ':' + slot.data.name);
   });
   const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
-   editor:{...editor, hidden}, animation, fromSetupPose:format !== 'png', restore:()=>render(0) });
-  const exportFrame = sceneExportCrop(model, animation.name, format) ?? authoredSpineExportFrame(model.id, animation.name);
+   editor:{...editor, hidden}, animation, fromSetupPose:format !== 'png', artworkAperture:aperture,
+   restore:()=>render(0) });
+  const exportFrame = apertureAtPose(layers) ?? sceneExportCrop(model, animation.name, format) ?? authoredSpineExportFrame(model.id, animation.name);
   // This shot's alternate scene is positioned by the selected track. Sample
   // its current time for PNG too, even while the preview is still mixing in.
   if (format === 'png' && model.id === 'siwanshi_4' && animation.name === 'touch_special_normal') {
@@ -1341,6 +1391,15 @@ async function spinePortrait(model,generation){
   const density = Math.min(Math.max(2, devicePixelRatio || 1), maxBuffer / Math.max(w, h));
   const bw = Math.round(w * density), bh = Math.round(h * density);
   if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
+  if (view.playing) for (const layer of layers) {
+   layer.state.update(dt * view.speed);
+   layer.state.apply(layer.skeleton);
+   layer.skeleton.updateWorldTransform();
+  }
+  if (aperture) {
+   stageFrameCrop = apertureAtPose(layers);
+   bounds = stageBoundsForFrame(stageFrameCrop);
+  }
   gl.viewport(0, 0, bw, bh);
   const camera = scene.camera, frame = stageFrame();
   const units = Math.max(bounds.width / frame.width, bounds.height / frame.height) * 1.1 / view.zoom;
@@ -1351,13 +1410,6 @@ async function spinePortrait(model,generation){
   camera.update();
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT);
-  for (const layer of layers) {
-   if (view.playing) {
-    layer.state.update(dt * view.speed);
-    layer.state.apply(layer.skeleton);
-    layer.skeleton.updateWorldTransform();
-   }
-  }
   viewerUI.tools.after();
   if (stageFrameCrop) {
    const scale = density / units;
@@ -1369,9 +1421,11 @@ async function spinePortrait(model,generation){
    gl.scissor(left, bottom, right - left, top - bottom);
   }
   try {
-   scene.begin();
-   for (const layer of layers) scene.drawSkeleton(layer.skeleton, true);
-   scene.end();
+   K.drawSpineArtwork(layers, aperture, () => {
+    scene.begin();
+    for (const layer of layers) scene.drawSkeleton(layer.skeleton, true);
+    scene.end();
+   });
   } finally {
    if (stageFrameCrop) gl.disable(gl.SCISSOR_TEST);
   }

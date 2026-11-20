@@ -173,9 +173,37 @@
     };
   };
 
+  K.spineArtworkAperture = (layers, ns, aperture) => {
+    if (!aperture) return null;
+    for (const { skeleton } of layers) {
+      const slot = skeleton.findSlot(aperture.slot);
+      const mesh = slot?.attachment;
+      if (!(mesh instanceof ns.MeshAttachment) || slot.color.a < .2 || !slot.bone.active) continue;
+      const vertices = new Float32Array(mesh.worldVerticesLength);
+      mesh.computeWorldVertices(slot, 0, vertices.length, vertices, 0, 2);
+      const [tl, bl, br, tr] = aperture.corners.map(i => ({ x: vertices[2 * i], y: vertices[2 * i + 1] }));
+      const minX = Math.max(tl.x, bl.x), maxX = Math.min(tr.x, br.x);
+      const minY = Math.max(bl.y, br.y), maxY = Math.min(tl.y, tr.y);
+      if (!(maxX - minX > 10 && maxY - minY > 10)) continue;
+      const inset = Math.min(maxX - minX, maxY - minY) * .012;
+      return { minX: minX + inset, minY: minY + inset, maxX: maxX - inset, maxY: maxY - inset };
+    }
+    return aperture.fallback ?? null;
+  };
+
+  K.drawSpineArtwork = (layers, aperture, draw) => {
+    if (!aperture?.hideMatte) return draw();
+    const matte = layers.map(({ skeleton }) => skeleton.findSlot(aperture.slot)).find(Boolean);
+    if (!matte) return draw();
+    const opacity = matte.color.a;
+    matte.color.a = 0;
+    try { return draw(); }
+    finally { matte.color.a = opacity; }
+  };
+
   // Reuse the current GL textures, but animate independent skeleton/state
   // objects. Export cannot trigger the portrait controller's events or phases.
-  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, fixedFrame, fromSetupPose = false, setupRotation = layer => layer.spec?.rotation, visible = () => true, extraBounds = () => [] }) => {
+  window.createInteractionSpineCapture = ({ layers, ns, canvas, renderer, gl, editor, animation, restore, drawScene, fixedFrame, artworkAperture, fromSetupPose = false, setupRotation = layer => layer.spec?.rotation, visible = () => true, extraBounds = () => [] }) => {
     const width = canvas.width, height = canvas.height, camera = renderer.camera;
     const saved = { up: camera.up && { ...camera.up }, width: camera.viewportWidth, height: camera.viewportHeight, zoom: camera.zoom, x: camera.position.x, y: camera.position.y, z: camera.position.z };
     const copies = layers.map((layer, index) => {
@@ -268,18 +296,24 @@
         if (canvas.width !== size.width) canvas.width = size.width;
         if (canvas.height !== size.height) canvas.height = size.height;
         gl.viewport(0, 0, size.width, size.height);
-        camera.setViewport(size.width, size.height); camera.zoom = size.fullFrame ? 1 / size.scale : saved.width * saved.zoom / size.width;
+        pose(time);
+        const apertureFrame = K.spineArtworkAperture(copies, ns, artworkAperture);
+        const shot = size.fullFrame && !size.tile && time !== null ? apertureFrame : null;
+        camera.setViewport(size.width, size.height);
+        camera.zoom = shot ? Math.min((shot.maxX - shot.minX) / size.width, (shot.maxY - shot.minY) / size.height)
+          : size.fullFrame ? 1 / size.scale : saved.width * saved.zoom / size.width;
         const rotation = size.fullFrame ? this.fixedFrame?.rotation || 0 : 0;
         const cos = Math.cos(rotation), sin = Math.sin(rotation);
         if (camera.up && saved.up) camera.up.set(-sin, cos, saved.up.z);
-        camera.position.set(size.fullFrame ? size.centerX * cos - size.centerY * sin : saved.x,
-          size.fullFrame ? size.centerX * sin + size.centerY * cos : saved.y, saved.z); camera.update();
+        camera.position.set(shot ? (shot.minX + shot.maxX) / 2 : size.fullFrame ? size.centerX * cos - size.centerY * sin : saved.x,
+          shot ? (shot.minY + shot.maxY) / 2 : size.fullFrame ? size.centerX * sin + size.centerY * cos : saved.y, saved.z); camera.update();
         const solidBackground = background && background !== 'checker';
         const color = K.parseColor(solidBackground ? background : '#000000', [0, 0, 0]);
         gl.clearColor(...color, solidBackground ? 1 : 0); gl.clear(gl.COLOR_BUFFER_BIT);
-        pose(time);
-        if (drawScene) drawScene(copies, size);
-        else { renderer.begin(); for (const item of copies) renderer.drawSkeleton(item.skeleton, item.pma); renderer.end(); }
+        K.drawSpineArtwork(copies, apertureFrame ? artworkAperture : null, () => {
+          if (drawScene) drawScene(copies, size);
+          else { renderer.begin(); for (const item of copies) renderer.drawSkeleton(item.skeleton, item.pma); renderer.end(); }
+        });
         return canvas;
       },
       dispose() {

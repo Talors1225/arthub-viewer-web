@@ -22,6 +22,57 @@ import { FatedGestures } from './gestures.mjs?v=20261117-resources';
 import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
 import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261120-recording-surface';
 
+const backgroundMattes = { B_BG_black: ['B_BG_black', 'B_BG_black2', 'B_BG_black3', 'B_BG_black4'] };
+const frameMattes = {
+  dating6: { Black: ['Black'] },
+  dating9: { 'BK _type2': ['BK _type2'], white: ['black', 'black2', 'black3', 'black4'] },
+  dating11: { 'fr (1013)': ['fr (1013)'] },
+  dating12: { BK: ['BK'] },
+  dating13: { BK: ['BK'], BK2: ['BK2'], BK3: ['BK3'], BK4: ['BK4'] },
+  dating14: backgroundMattes,
+  dating15: { FR: ['FR'] },
+  dating16: { ...backgroundMattes, 'ID1_fr)Bk glow': ['ID1_fr)Bk glow'] },
+  dating17: backgroundMattes,
+  dating18: backgroundMattes,
+  dating19: { 'black glow side_re': ['black glow side_re', 'black glow side_re2', 'black glow side_re3', 'black glow side_re4'] },
+  dating20: backgroundMattes,
+  dating21: { Black_blur: ['Black_blur'] },
+  dating22: { BK_side: ['BK_side', 'BK_side2'], BK_ud: ['BK_ud', 'BK_ud2'] },
+};
+const matteTransitions = {
+  dating16: ['motion1_15', 'motion1_16', 'motion1_17'],
+  dating18: ['mix6_32_1', 'mix6_33_1'],
+};
+
+function findFrameMattes(model, skeleton) {
+  const mattes = [];
+  for (const [region, names] of Object.entries(frameMattes[model.id] ?? {})) {
+    for (const name of names) {
+      const slot = skeleton.findSlot(name);
+      if (slot) mattes.push({ region, slot });
+    }
+  }
+  return mattes;
+}
+
+function muteFrameMattes({ model, mattes, state }) {
+  const transitions = matteTransitions[model.id];
+  if (transitions) {
+    for (const track of state.tracks) {
+      for (let entry = track; entry; entry = entry.mixingFrom) {
+        if (transitions.includes(entry.animation.name)) return [];
+      }
+    }
+  }
+  const muted = [];
+  for (const { region, slot } of mattes) {
+    if (slot.attachment?.region?.name !== region || slot.color.a <= 0) continue;
+    muted.push([slot, slot.color.a]);
+    slot.color.a = 0;
+  }
+  return muted;
+}
+
 const K = window.SpineKit;
 const $ = id => document.getElementById(id);
 const library = $('library'), stage = $('stage'), canvas = $('portrait');
@@ -155,15 +206,27 @@ function resize() {
   fit();
 }
 
-function fit() {
+function portraitFrame({ model, bounds, gestures, state }, forExport = false) {
+  const group = model.groupFrames?.[gestures.group.id];
+  // These clips reveal a second scene beyond the first shot's vignette.
+  if (group && !group.fullFrameClips.includes(state.getCurrent(0)?.animation.name)) return group.frame;
+  return model.displayFrame || (forExport && model.exportFrame) || bounds;
+}
+
+function fit(frame = scene && portraitFrame(scene), preserveView = false) {
   if (!scene || videoRecording?.capturing) return;
-  const { skeleton, bounds } = scene;
-  const width = bounds.maxX - bounds.minX, height = bounds.maxY - bounds.minY;
+  const { skeleton, displayFrame, fitScale } = scene;
+  const width = frame.maxX - frame.minX, height = frame.maxY - frame.minY;
   const scale = Math.min(canvas.width * 0.93 / width, canvas.height * 0.91 / height);
+  const keep = preserveView && displayFrame && fitScale;
+  const zoom = keep ? skeleton.scaleX / fitScale : 1;
+  const panX = keep ? skeleton.x + (displayFrame.minX + displayFrame.maxX) * skeleton.scaleX / 2 : 0;
+  const panY = keep ? skeleton.y + (displayFrame.minY + displayFrame.maxY) * skeleton.scaleY / 2 : 0;
   scene.fitScale = scale;
-  skeleton.scaleX = skeleton.scaleY = scale;
-  skeleton.x = -(bounds.minX + bounds.maxX) * scale / 2;
-  skeleton.y = -(bounds.minY + bounds.maxY) * scale / 2;
+  scene.displayFrame = frame;
+  skeleton.scaleX = skeleton.scaleY = scale * zoom;
+  skeleton.x = panX - (frame.minX + frame.maxX) * skeleton.scaleX / 2;
+  skeleton.y = panY - (frame.minY + frame.maxY) * skeleton.scaleY / 2;
 }
 
 function toWorld(clientX, clientY) {
@@ -288,13 +351,16 @@ async function showModel(model) {
     if (!bounds || bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) throw new Error('立绘没有可见画面');
     scene = {
       model, skeleton, state, gestures, bounds, atlas, sound, pma: Boolean(atlas.pages[0].pma),
+      mattes: findFrameMattes(model, skeleton),
       animationPicker: { group: '', query: '', scroll: 0 },
     };
     atlas = null;
     if (model.groupAssets) {
       const activeScene = scene;
       activeScene.loadingVariants = true;
-      const variants = new Map([[0, { skeleton, state, gestures, atlas: activeScene.atlas, pma: activeScene.pma }]]);
+      const variants = new Map([[0, {
+        skeleton, state, gestures, atlas: activeScene.atlas, pma: activeScene.pma, mattes: activeScene.mattes,
+      }]]);
       activeScene.extraAtlases = [activeScene.atlas];
       activeScene.variants = variants;
       for (let index = 1; index < profile.groups.length; index++) {
@@ -313,7 +379,7 @@ async function showModel(model) {
         const groupGestures = new FatedGestures(profile, groupSkeleton, groupState, groupData,
           SP.TranslateTimeline, spec.frame || model.frame, authoredRules[model.id], sound, index);
         variants.set(index, { skeleton: groupSkeleton, state: groupState, gestures: groupGestures,
-          atlas: groupFiles.atlas, pma: Boolean(groupFiles.atlas.pages[0].pma) });
+          atlas: groupFiles.atlas, pma: Boolean(groupFiles.atlas.pages[0].pma), mattes: findFrameMattes(model, groupSkeleton) });
       }
       for (const [index, variant] of variants) {
         variant.gestures.onGroupChange = (next, transition) => {
@@ -362,8 +428,8 @@ function drawPortrait(picture, cropPreview = false, clearColor = null) {
   else raw.clearColor(0, 0, 0, 0);
   raw.clear(raw.COLOR_BUFFER_BIT);
   if (!picture || picture.loadingVariants) return;
-  const { skeleton, model } = picture;
-  const frame = cropPreview && model.frame;
+  const { skeleton } = picture;
+  const frame = cropPreview && (picture.model.frame || picture.displayFrame !== picture.bounds) && picture.displayFrame;
   if (frame) {
     // Some portraits draw an opaque matte past the authored frame.
     const x = raw.drawingBufferWidth / 2 + skeleton.x;
@@ -375,11 +441,14 @@ function drawPortrait(picture, cropPreview = false, clearColor = null) {
     raw.scissor(left, bottom, right - left, top - bottom);
     raw.enable(raw.SCISSOR_TEST);
   }
+  // Edge textures are separate from the scene lights and can share slots with animation attachments.
+  const muted = muteFrameMattes(picture);
   try {
     renderer.begin();
     try { renderer.drawSkeleton(skeleton, picture.pma); }
     finally { renderer.end(); }
   } finally {
+    for (const [slot, opacity] of muted) slot.color.a = opacity;
     if (frame) raw.disable(raw.SCISSOR_TEST);
   }
 }
@@ -394,13 +463,18 @@ function renderFrame(t) {
   gestures.tick(t, dt);
   state.update(dt);
   state.apply(skeleton);
+  const recording = videoRecording?.capturing;
+  if (recording) syncVideoFrame(videoRecording);
+  else {
+    const frame = portraitFrame(scene);
+    if (scene.displayFrame !== frame) fit(frame, true);
+  }
   const updateWorld = () => K.updateWorldTransform(skeleton, runtime.Physics?.update);
   updateWorld();
   gestures.applyOverrides(updateWorld);
   gestures.updateDragDestination(t);
   if (!gestures.gesture?.dragging) delete canvas.dataset.gesture;
   if (!captureVideoFrame(t)) {
-    const recording = videoRecording?.capturing;
     drawPortrait(scene, !recording, recording ? videoRecording.clearColor : null);
   }
   updateTools();
@@ -426,8 +500,8 @@ function renderFrame(t) {
   updateGuide(t);
 }
 
-function portraitExportFrame({ model, bounds }) {
-  return model.exportFrame || bounds;
+function portraitExportFrame(picture) {
+  return portraitFrame(picture, true);
 }
 
 function pngPose(quality) {
@@ -507,6 +581,8 @@ function restoreVideoView(session) {
   K.syncRendererSize(canvas, gl.mgl, gl.renderer);
   if (canvas.width === session.view.width && canvas.height === session.view.height) {
     Object.assign(skeleton, session.view.transform);
+    const frame = portraitFrame(scene);
+    if (scene.displayFrame !== frame) fit(frame, true);
   } else fit();
   const updateWorld = () => K.updateWorldTransform(skeleton, runtime.Physics?.pose);
   updateWorld();
@@ -555,6 +631,18 @@ function captureVideoFrame(now) {
   return true;
 }
 
+function syncVideoFrame(session) {
+  const frame = portraitExportFrame(session.picture);
+  if (frame === session.frame) return;
+  const { skeleton } = session.picture;
+  // Recording keeps its canvas size when a transition opens the wider scene.
+  const scale = Math.min(canvas.width / (frame.maxX - frame.minX), canvas.height / (frame.maxY - frame.minY));
+  skeleton.scaleX = skeleton.scaleY = scale;
+  skeleton.x = -(frame.minX + frame.maxX) * scale / 2;
+  skeleton.y = -(frame.minY + frame.maxY) * scale / 2;
+  session.frame = frame;
+}
+
 async function recordPortrait(quality, withAudio) {
   if (!scene || !canvas.dataset.ready || K.pngExporting || videoRecording) return;
   const { skeleton } = scene;
@@ -563,11 +651,12 @@ async function recordPortrait(quality, withAudio) {
   const controller = new AbortController();
   const background = stageBackground.get();
   const clearColor = background === 'checker' ? null : K.parseColor(background, [0, 0, 0]);
-  const session = videoRecording = { picture: scene, view, controller, clearColor, capturing: true };
+  const frame = portraitExportFrame(scene);
+  const session = videoRecording = { picture: scene, frame, view, controller, clearColor, capturing: true };
   K.closeToolPopup();
   more.disabled = true;
   try {
-    const size = K.exportDimensions(portraitExportFrame(scene), quality, 'video', 0);
+    const size = K.exportDimensions(frame, quality, 'video', 0);
     const applyWorldPose = captureWorldPose(skeleton);
     cancelInput();
     stage.style.setProperty('--video-aspect', String(size.width / size.height));
@@ -899,7 +988,7 @@ async function start() {
     if (url.origin === location.origin || url.protocol === 'https:') audioRoot = url;
   }
   const [catalog, rules, sound] = await Promise.all([
-    K.fetchJSON('./catalog.json?v=20261120-covers'), K.fetchJSON('./rules.json'),
+    K.fetchJSON('./catalog.json?v=20261120-scene-framing'), K.fetchJSON('./rules.json'),
     audioRoot ? K.fetchJSON(new URL('manifest.json', audioRoot).href).catch(() => null) : null,
   ]);
   if (catalog.schemaVersion !== 1 || !catalog.models.length) throw new Error('资源目录为空或版本不匹配');

@@ -2188,7 +2188,7 @@
   }
   function loadOriginalSceneIndex() {
     if (!originalScenesRequest) {
-      originalScenesRequest = K.fetchJSON('../background-scenes.json?v=20261117-bd2-scenes', { timeout: 12000 })
+      originalScenesRequest = K.fetchJSON('../background-scenes.json?v=20261120-scene-aperture', { timeout: 12000 })
         .catch(() => { originalScenesRequest = null; return null; });
     }
     return originalScenesRequest;
@@ -2471,8 +2471,24 @@
 
   // The loop includes a separate shadow far from the portrait.
   const seirLoopFrame = { minX: -1460, minY: -2020, maxX: 1080, maxY: 940 };
+  // These original scenes have opaque strips outside the visible backdrop.
+  // Keep the composition layers and their transforms in source coordinates.
+  const originalSceneApertures = new Map([
+    ['002403:loop_2', { minX: -1540, minY: -4113.33317, maxX: 1854, maxY: 1219.99995 }],
+    ['003601:loop', { minX: -1625, minY: -1493.33338, maxX: 1667, maxY: 3200.00005 }],
+    ['003793:loop_2', { minX: -1507, minY: -1453.84627, maxX: 1434, maxY: 1795.38475 }],
+    ['021001:loop', { minX: -1400, minY: -1490, maxX: 1400, maxY: 1090 }],
+    ['060403:loop_2', { minX: -1094, minY: -956, maxX: 1094, maxY: 1356 }],
+    ['060804:A_loop', { minX: -1761.50536, minY: -1446, maxX: 1679.35482, maxY: 1414 }],
+    ['061103:loop', { minX: -1474, minY: -1870, maxX: 1374, maxY: 1330 }],
+    ['065193:loop', { minX: -1690, minY: -2163.748, maxX: 1808, maxY: 1815.748 }],
+  ]);
   function artworkExportFrame(animation) {
-    if (cut?.scene?.name === animation && cut.scene.frame) return cut.scene.frame;
+    if (cut?.scene?.name === animation && cut.scene.frame) {
+      const aperture = cut.originalScene?.frames?.[animation]
+        && originalSceneApertures.get(cut.sceneId + ':' + animation);
+      return aperture || cut.scene.frame;
+    }
     if (cut?.sourceVariant.backgroundFrames?.[animation]) return cut.sourceVariant.backgroundFrames[animation];
     if (cut?.sourceVariant.skel === 'cutscene_char101101.skel.bytes' && animation === 'loop') return seirLoopFrame;
   }
