@@ -68,7 +68,9 @@ export function createInteraction({model,engine,geometry,config,play,stop,enable
     let cfg=row[part];if(!cfg?.anim)return;
     const current=engine.playback().name;
     const when=(Array.isArray(cfg.when)?cfg.when:Object.values(cfg.when||{})).find(w=>w.cur===current);if(when)cfg={...cfg,...when};
-    const stage=/^(\d+)\//.exec(current)?.[0]||'',name=stage+cfg.anim,back=stage+(cfg.back||'Idle');
+    const stage=/^(\d+)\//.exec(current)?.[0]||'';
+    const qualify=motion=>/^\d+\//.test(motion)?motion:stage+motion;
+    const name=qualify(cfg.anim),back=qualify(cfg.back||'Idle');
     if(!engine.playOnce(name,back)){notify('当前立绘中未找到该热点的动作。');return;}
     if(cfg.sound)say(cfg.sound,cfg.subtitle===1);
     if(name!==back){level='action';action=name;}else {level=null;action=null;}

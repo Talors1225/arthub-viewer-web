@@ -282,8 +282,8 @@
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos-config.js?v=20261117-resources"></script>
-  <script src="../../arthub-cos.js?v=20261117-resources"></script>
+  <script src="../../arthub-cos-config.js?v=20261121-portraits"></script>
+  <script src="../../arthub-cos.js?v=20261121-portraits"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -430,8 +430,8 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261120-nikke-minigames"></script>
-<script src="../../common/asset-loader.js?v=20261121-spine-crops"></script>
+<script src="../../common/kit.js?v=20261121-portraits"></script>
+<script src="../../common/asset-loader.js?v=20261121-portraits"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -2190,7 +2190,7 @@
       snapshot: () => {
         const track = getTrack();
         if (!cut || cut.wallpaperActions || !cur || !track) return null;
-        return { id: cur.id, animation: track.animation.name, time: track.trackTime,
+        return { id: cur.portraitAudioId || cur.id, animation: track.animation.name, time: track.trackTime,
           duration: track.animation.duration, loop: track.loop, speed: Number(pbSpeed.value) || 1,
           playing, active: (embedded || stageMode) && !boneEditMode && !partEditMode && !burstSession,
           animations: cut.data.animations.map(a => a.name) };
@@ -2992,7 +2992,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261121-spine-crops' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261121-portraits' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));

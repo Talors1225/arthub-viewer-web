@@ -1,4 +1,4 @@
-import {skinId,voiceRoute,subtitleKey,createInteraction} from './interaction.mjs?v=20261117-resources';
+import {skinId,voiceRoute,subtitleKey,createInteraction} from './interaction.mjs?v=20261121-portraits';
 
 export function createVoicePanel(assetBase){
  const $=id=>document.getElementById(id),audio=$('riichiVoiceAudio'),groups=$('voiceGroup'),voices=$('voiceSelect'),message=$('voiceStatus'),search=$('voiceSearch'),bubble=$('riichiSubtitle'),toggle=$('voiceInteractive'),volume=$('voiceVolume');

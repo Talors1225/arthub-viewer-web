@@ -1,5 +1,5 @@
 import {LocalBundle} from './bundle.mjs?v=20261104-unified-final';
-import {createVoicePanel} from './voices.mjs?v=20261117-resources';
+import {createVoicePanel} from './voices.mjs?v=20261121-portraits';
 
 export async function fetchModelBundle(model,signal,assetBase='/riichicity/assets/'){
  const paths=[...new Set([model.path,model.atlas,...model.pages])];
@@ -30,8 +30,10 @@ export function paginationItems(page,total){
  const result=[];for(const n of [...pages].filter(n=>n>=1&&n<=total).sort((a,b)=>a-b)){if(result.length&&n-result.at(-1)>1)result.push(null);result.push(n);}return result;
 }
 export function modelPreviewPath(model,models,resolveThumbnail){
+ const own=resolveThumbnail?.(model)||model.thumbnail;
+ if(own)return own;
  const main=model.auxiliary?models.find(item=>item.skinKey===model.skinKey&&!item.auxiliary):null;
- return resolveThumbnail?.(main||model)||main?.thumbnail||model.thumbnail;
+ return main?(resolveThumbnail?.(main)||main.thumbnail):null;
 }
 
 // The chess-piece layer has no visible attachments without the game logic.
@@ -43,7 +45,8 @@ export async function createCatalog({selectModel,status}){
  const catalog=await K.fetchJSON('../characters.json',{timeout:20000});
  if(catalog.game!=='riichicity'||!Array.isArray(catalog.characters)||!catalog.characters.length)throw Error('麻雀一番街资源目录为空。');
  const $=id=>document.getElementById(id),characters=catalog.characters;
- const models=characters.flatMap(c=>c.variants).filter(model=>model.id!==chessLayerId&&model.id!=='spine_1003606__lengquanhuiyaziSP-shanyao2');
+ const importedModels=characters.flatMap(c=>c.variants);
+ const models=importedModels.filter(model=>model.id!==chessLayerId);
  const chessPortrait=models.find(model=>model.id===chessPortraitId);
  const chessLayerFavorite=K.favs.list().find(item=>item.k==='riichicity:'+chessLayerId);
  if(chessPortrait&&chessLayerFavorite){
@@ -99,7 +102,8 @@ export async function createCatalog({selectModel,status}){
   const pageSize=K.libraryPageSize?.()||120,totalPages=Math.max(1,Math.ceil(rows.length/pageSize));page=Math.max(1,Math.min(totalPages,page));
   for(const item of rows.slice((page-1)*pageSize,page*pageSize)){
    const groupCard=Array.isArray(item.variants);
-   const card=groupCard?imageCard(item,item.name,item.skinCount+' 套皮肤',()=>{role=item.id;mode='skins';page=1;render();},false,true):imageCard(item,role?item.skin:item.name,item.auxiliary?'附属层':item.animations.length+' 个动作',()=>choose(item),item.needsReview);
+   const subtitle=item.path?.startsWith('skills/')?'技能动画':item.auxiliary?'附属层':(item.animations?.length ?? 0)+' 个动作';
+   const card=groupCard?imageCard(item,item.name,item.skinCount+' 套皮肤',()=>{role=item.id;mode='skins';page=1;render();},false,true):imageCard(item,role?item.skin:item.name,subtitle,()=>choose(item),item.needsReview);
    card.dataset[groupCard?'role':'model']=item.id;card.classList.toggle('active',!groupCard&&selected?.id===item.id);fragment.append(card);
   }
   $('catalogSummary').textContent=rows.length+' 个资源 · 第 '+page+' / '+totalPages+' 页 · 麻雀一番街 · '+(role?characters.find(c=>c.id===role).name+' · ':'')+catalog.stats.characters+' 位角色 · '+catalog.stats.skins+' 套皮肤';
@@ -132,5 +136,5 @@ export async function createCatalog({selectModel,status}){
   loaded(model,engine){selected=navigationModel=model;render();voicePanel.setModel(model,engine,entryRequested);entryRequested=false;const url=new URL(location.href);if(role)url.searchParams.set('character',role);else url.searchParams.delete('character');url.searchParams.set('id',model.id);history.replaceState(null,'',url);},
   cancelNavigation(){navigationModel=selected;entryRequested=false;},
   step(delta){const choices=matchingRows().filter(m=>!m.auxiliary);const at=choices.findIndex(m=>m.id===(navigationModel||selected)?.id);if(choices.length)choose(choices[at<0?(delta<0?choices.length-1:0):(at+delta+choices.length)%choices.length]);},
-  initial:(initialId===chessLayerId?chessPortrait:models.find(m=>m.id===initialId))||null};
+  initial:(initialId===chessLayerId?chessPortrait:importedModels.find(m=>m.id===initialId))||null};
 }

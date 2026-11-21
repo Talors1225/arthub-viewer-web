@@ -624,12 +624,12 @@
   };
 
   // ---------- GL ----------
-  K.createGL = (canvas, ns) => {
+  K.createGL = (canvas, ns, { premultipliedAlpha = false } = {}) => {
     try {
       const sp = ns || window.spine;
       if (!sp) return null;
-      const raw = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true })
-        || canvas.getContext('experimental-webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true });
+      const attributes = { alpha: true, premultipliedAlpha, preserveDrawingBuffer: true };
+      const raw = canvas.getContext('webgl', attributes) || canvas.getContext('experimental-webgl', attributes);
       if (!raw) return null;
       if (sp.GLTexture) sp.GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = true;
       const mgl = new sp.ManagedWebGLRenderingContext(raw);
@@ -675,10 +675,12 @@
   // inactive bones too and their stale world matrices get multiplied again.
   K.updateWorldTransform = (skeleton, physics) => {
     const { x, y, scaleX, scaleY } = skeleton;
+    const runtimeVersion = String(skeleton.data?.version || '').match(/^\d+\.\d+/)?.[0];
+    const step = physics ?? K.spineNS[runtimeVersion]?.Physics?.update;
     try {
       skeleton.x = skeleton.y = 0;
       skeleton.scaleX = skeleton.scaleY = 1;
-      skeleton.updateWorldTransform(physics);
+      skeleton.updateWorldTransform(step);
     } finally {
       skeleton.x = x; skeleton.y = y;
       skeleton.scaleX = scaleX; skeleton.scaleY = scaleY;

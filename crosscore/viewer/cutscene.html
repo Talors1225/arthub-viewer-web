@@ -277,8 +277,8 @@
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos-config.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos.js?v=20261104-unified-final"></script>
+  <script src="../../arthub-cos-config.js?v=20261121-portraits"></script>
+  <script src="../../arthub-cos.js?v=20261121-portraits"></script>
 </head>
 <body class="crosscore-viewer">
   <div class="stage" id="stage">
@@ -297,7 +297,6 @@
     </div>
 
     <div class="top-pill" id="topPill">
-      <select id="variantSel" class="ctl" style="display:none"></select>
       <select id="animSel" class="ctl"><option>动作</option></select>
       <span class="tp-name" id="mName">未选择</span>
       <span class="tp-id" id="mId"></span>
@@ -376,6 +375,7 @@
       <button class="rp-panel-close" type="button" data-panel-close title="关闭面板" aria-label="关闭面板">×</button>
     </div>
     <div class="rp-page on" data-page="anim">
+      <label id="variantControl" hidden>形态 <select id="variantSel" class="ctl" aria-label="形态"></select></label>
       <div class="row"><input id="animFilter" type="text" class="text-input" placeholder="&#x8fc7;&#x6ee4;&#x52a8;&#x753b;&#x540d;"></div>
       <div id="animList" class="anim-list"></div>
     </div>
@@ -411,12 +411,12 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261119-transition-animations"></script>
-<script src="../../common/kit.js?v=20261120-delayed-framing"></script>
-<script src="../../common/asset-loader.js?v=20261120-framed-thumbs"></script>
+<script src="../../common/kit.js?v=20261121-portraits"></script>
+<script src="../../common/asset-loader.js?v=20261121-portraits"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
-<script src="scene-framing.js?v=20261121-scene-fit"></script>
+<script src="scene-framing.js?v=20261121-incremental-scene-fit"></script>
 <script>
 
 (() => {
@@ -474,6 +474,12 @@
   if (routeSource === 'crosscore') document.title = '交错战线 · Spine 动态查看器';
   // These bounds are in model space. Each uses the scene inside the authored matte.
   const crosscoreFrames = new Map([
+    ['10330_skin_KusanagiSP03.json', { minX: -2980, minY: -2110, maxX: 2990, maxY: 2140 }],
+    ['10331_skin_KusanagiSP03.json', { minX: -3060, minY: -1920, maxX: 2990, maxY: 2100 }],
+    ['30500_skin_KunlunSP04a.json', { minX: -1350, minY: -1715, maxX: 1370, maxY: 1555 }],
+    ['30500_skin_KunlunSP04b.json', { minX: -1750, minY: -765, maxX: 2040, maxY: 1400 }],
+    ['70440_skin_Sunrise04.json', { minX: -3620, minY: -2130, maxX: 3525, maxY: 2340 }],
+    ['70450_skin_Midnight04.json', { minX: -3260, minY: -2010, maxX: 2815, maxY: 2080 }],
     ['70310_skin_Atum06b.json', { minX: -2940, minY: -980, maxX: 2680, maxY: 2640 }],
     ['60310_skin_Tizona04a.json', { minX: -2050, minY: -1440, maxX: 2060, maxY: 1450 }],
     ['60310_skin_Tizona04b.json', { minX: -1420, minY: -1300, maxX: 1375, maxY: 1180 }],
@@ -494,6 +500,9 @@
     ['60110_skin_Burtgang03.json', { minX: -591, minY: -148, maxX: 593, maxY: 1982 }],
   ]);
   function crosscoreFrame(skeletonFile, animation) {
+    if (skeletonFile === '70450_skin_Midnight04.json' && /^(?:idle2|click[5-8]|guochang2?)$/.test(animation)) {
+      return { minX: -10350, minY: -5370, maxX: 3570, maxY: 3190 };
+    }
     if (skeletonFile === '70030_skin_Poseidon05.json' && animation === 'idle1') return {"minX": -3155, "minY": -2112, "maxX": 3167, "maxY": 2013};
     return window.CrossCoreSceneFraming.modelFrame(skeletonFile, animation)
       || (animation === 'idle' && crosscoreIdleFrames.get(skeletonFile)) || crosscoreFrames.get(skeletonFile);
@@ -502,7 +511,7 @@
   else { btnPartEdit.remove(); $('#partEditControls').remove(); }
   const isMod = routeSource !== 'bd2';
   const indexFile = isMod ? (routeSource + '_chars.json') : 'bd2_chars.json';
-  const indexUrl = '../' + indexFile + '?v=96baf99a9d3b';
+  const indexUrl = '../' + indexFile + '?v=20261121-portraits';
   const embedded = new URLSearchParams(location.search).get('embed') === '1';
   const store = K.Store(routeSource);
   const status = t => K.setStatus(statusEl, t);
@@ -1945,13 +1954,9 @@
     mName.textContent = alias || c.displayName || c.name || c.id;
     mId.textContent = routeSource === 'crosscore' ? '' : (alias ? ((chars.find(x => x.id === c.id) || {}).name + ' · ') : '') + c.id;
     $('#railStar').innerHTML = K.uiIcon('star', 18, store.get('stars', []).includes(c.id));
-    const rt = $('#railThumb');
-    rt.innerHTML = '';
-    const preview = webThumbs[routeSource + ':' + c.id + ':' + String(c.cutscenes?.[0]?.variant || '0')];
-    K.setPreview(rt, preview ? K.thumbnailURL(THUMB_PREFIX + preview) : null);
     const vs = variantSel;
     vs.innerHTML = c.cutscenes.map((v, i) => '<option value="' + i + '">' + K.esc(v.variant || '默认') + '</option>').join('');
-    vs.style.display = c.cutscenes.length > 1 ? '' : 'none';
+    $('#variantControl').hidden = c.cutscenes.length <= 1;
     vs.onchange = () => loadCutscene(Number(vs.value));
     updateCompareBtn();
     animSel.innerHTML = '<option>读取中…</option>';
@@ -1964,6 +1969,8 @@
     if (!cur) return;
     const p = new URLSearchParams(location.search);
     p.set('id', cur.id);
+    const variant = cur.cutscenes[Number(variantSel.value)]?.variant;
+    if (cur.cutscenes.length > 1 && variant != null) p.set('v', String(variant)); else p.delete('v');
     if (animName) p.set('anim', animName); else p.delete('anim');
     const q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
@@ -2159,6 +2166,12 @@
     return K.stagePosterPath(routeSource, cur.id, String(v.variant ?? '0'));
   }
 
+  function updateRailThumbnail(variant) {
+    const filename = webThumbs[routeSource + ':' + cur.id + ':' + String(variant.variant ?? '0')];
+    const path = filename ? K.thumbnailURL(THUMB_PREFIX + filename) : null;
+    K.setPreview($('#railThumb'), path);
+  }
+
   async function loadCutscene(idx, restoreAnim) {
     const seq = ++cutLoadSeq;
     cutRequest?.abort();
@@ -2170,6 +2183,7 @@
     highlightSlot = null;
     const v = cur.cutscenes[idx] || cur.cutscenes[0];
     if (!v) { loadingPreview.cancel(); status((cur.name || cur.id) + ' · 无过场'); return; }
+    updateRailThumbnail(v);
     loadingPreview.begin(seq, { path: stagePreviewPath(v), label: aliasOf(cur.id) || cur.name || cur.id, trimImage: routeSource === 'crosscore' });
     status('加载: ' + (cur.name || cur.id) + ' …');
     playerPost('state', { state: 'loading', message: '正在读取骨骼、Atlas 与贴图' });
@@ -2471,7 +2485,10 @@
       webThumbs = td.items || {};
       if (routeSource === 'crosscore' && cur) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
-        if (variant) loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
+        if (variant) {
+          updateRailThumbnail(variant);
+          loadingPreview.setImage(cutLoadSeq, stagePreviewPath(variant));
+        }
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
@@ -2485,7 +2502,11 @@
     const last = store.get('lastChar', {});
     if (byUrl || embedded) {
       const first = byUrl || chars.find(x => x.id === last.id) || chars[0];
-      if (first) { selectChar(first, byUrl ? { anim: params.get('anim') } : last); closeGrid(); }
+      if (first) {
+        const variant = first.cutscenes.findIndex(v => String(v.variant) === params.get('v'));
+        selectChar(first, byUrl ? { variant: Math.max(0, variant), anim: params.get('anim') } : last);
+        closeGrid();
+      }
       else status('没有可用资源');
     } else {
       openGrid();
@@ -2868,7 +2889,7 @@
 })();
 </script>
 <!-- Cloudflare Web Analytics -->
-<script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b9330a2dab31499f9b5d43b29554302c"}'></script>
+
 <!-- End Cloudflare Web Analytics -->
 </body>
 </html>

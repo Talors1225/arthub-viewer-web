@@ -277,8 +277,8 @@
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos-config.js?v=20261117-resources"></script>
-  <script src="../../arthub-cos.js?v=20261117-bd2-scenes"></script>
+  <script src="../../arthub-cos-config.js?v=20261121-portraits"></script>
+  <script src="../../arthub-cos.js?v=20261121-portraits"></script>
 <style>
   .bd2-voice-controls { position: fixed; z-index: 12; left: 16px; bottom: calc(66px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 5px; padding: 5px; border-radius: 12px; background: var(--panel); }
   .bd2-voice-controls[hidden], .bd2-voice-controls > [hidden] { display: none !important; }
@@ -416,8 +416,8 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261120-visible-effects"></script>
-<script src="../../common/asset-loader.js?v=20261121-spine-crops"></script>
+<script src="../../common/kit.js?v=20261121-portraits"></script>
+<script src="../../common/asset-loader.js?v=20261121-portraits"></script>
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -2694,7 +2694,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'bd2' ? '?v=20261121-spine-crops' : '';
+    const catalogRev = routeSource === 'bd2' ? '?v=20261121-portraits' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
     chars.sort((a, b) => a.id.localeCompare(b.id));

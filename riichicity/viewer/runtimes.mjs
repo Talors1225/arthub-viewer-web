@@ -41,27 +41,41 @@ function stageFrame(canvas){
 }
 export async function loadSpine(bundle,model,canvas,signal,onProgress){
   const ns=await spineRuntime(model.version);check(signal);
-  const context=K.createGL(canvas,ns);if(!context)throw Error('无法创建 WebGL，请开启浏览器硬件加速');
-  const {mgl,renderer}=context,gl=mgl.gl,atlasText=await bundle.files.get(model.atlas).text(),legacy=model.version.startsWith('3.8.');
+  const legacy=model.version.startsWith('3.8.');
+  const straightAlpha=legacy&&model.premultipliedAlpha===false;
+  const context=K.createGL(canvas,ns,{premultipliedAlpha:straightAlpha});if(!context)throw Error('无法创建 WebGL，请开启浏览器硬件加速');
+  const {mgl,renderer}=context,gl=mgl.gl,atlasText=await bundle.files.get(model.atlas).text();
   const declaredSizes=new Map();
   if(legacy&&model.atlasSizeMode==='declared'){
     const lines=atlasText.split(/\r?\n/);let pageNext=true;
     for(let i=0;i<lines.length;i++){const line=lines[i].trim();if(!line){pageNext=true;continue;}if(pageNext){pageNext=false;const size=/^size:\s*(\d+)\s*,\s*(\d+)/.exec(lines[i+1]||'');if(size&&+size[1]>0&&+size[2]>0)declaredSizes.set(line,{width:+size[1],height:+size[2]});}}
   }
   let atlas=legacy?new ns.TextureAtlas(atlasText,()=>({setFilters(){},setWraps(){},getImage:()=>({width:1,height:1})})):new ns.TextureAtlas(atlasText);
-  let disposed=false,tools,lastView,lastFrame;const textures=[];
-  const dispose=()=>{if(disposed)return;disposed=true;for(const texture of textures)texture.dispose();renderer.dispose();try{gl.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
+  let disposed=false,tools,lastView,lastFrame;
+  const textures=[],bitmaps=[];
+  const dispose=()=>{
+    if(disposed)return;disposed=true;
+    for(const texture of textures)texture.dispose();
+    for(const bitmap of bitmaps)bitmap.close();
+    renderer.dispose();try{gl.getExtension('WEBGL_lose_context')?.loseContext();}catch{}
+  };
   try{
     const pageTextures=new Map();for(let i=0;i<atlas.pages.length;i++){
       const page=atlas.pages[i],file=bundle.resolve(model.atlas,page.name);onProgress('正在读取贴图 '+(i+1)+' / '+atlas.pages.length);
-      const img=await image(bundle.url(file),signal);check(signal);
+      // These atlas pages store straight alpha. Premultiply before the GPU
+      // filters them so RGB in transparent pixels does not bleed into the pose.
+      const img=straightAlpha
+        ? await createImageBitmap(bundle.files.get(file),{premultiplyAlpha:'premultiply'})
+        : await image(bundle.url(file),signal);
+      if(straightAlpha)bitmaps.push(img);
+      check(signal);
       const texture=new ns.GLTexture(mgl,img);
       // Unity can resample a non-power-of-two atlas while keeping its original atlas coordinates.
       // Keep the uploaded bitmap intact and use the declared logical size for Spine's UV math.
       if(declaredSizes.has(page.name)){const logical=declaredSizes.get(page.name);texture.getImage=()=>logical;}
       textures.push(texture);pageTextures.set(page.name,texture);if(!legacy){page.texture=texture;page.setTexture(texture);}
     }
-    if(legacy){atlas=new ns.TextureAtlas(atlasText,name=>pageTextures.get(name));for(const page of atlas.pages)page.pma=model.premultipliedAlpha!==false;}
+    if(legacy){atlas=new ns.TextureAtlas(atlasText,name=>pageTextures.get(name));for(const page of atlas.pages)page.pma=true;}
     const loader=new ns.AtlasAttachmentLoader(atlas),reader=model.format==='json'?new ns.SkeletonJson(loader):new ns.SkeletonBinary(loader);
     const data=reader.readSkeletonData(model.format==='json'?model.json:new Uint8Array(await bundle.files.get(model.path).arrayBuffer()));check(signal);
     const skeleton=new ns.Skeleton(data);skeleton.setToSetupPose();
@@ -89,6 +103,7 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
     const upperShotAnchorY=420.08;
     const shotOffset=target=>pairedShot ? (target.findSlot('b_37')?.bone.worldY ?? upperShotAnchorY)-upperShotAnchorY : 0;
     const shotFrame=offset=>({...pairedShot,minY:pairedShot.minY+offset,maxY:pairedShot.maxY+offset});
+    const importedFrame=name=>model.previewFrameAnimations?.includes(name)&&validBounds(model.previewFrame)?model.previewFrame:null;
     function drawPicture(target,pma,offset){
       const draw=()=>{renderer.begin();renderer.drawSkeleton(target,pma);renderer.end();};
       if(Math.abs(offset)<1){draw();return;}
@@ -107,7 +122,8 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       }
     }
     function world(x,y){
-      const f=lastFrame||stageFrame(canvas),frame=pairedShot?shotFrame(shotOffset(skeleton)):bounds;
+      const f=lastFrame||stageFrame(canvas);
+      const frame=pairedShot?shotFrame(shotOffset(skeleton)):importedFrame(state.getCurrent(0)?.animation.name)||bounds;
       const unit=Math.max((frame.maxX-frame.minX)/f.width,(frame.maxY-frame.minY)/f.height)*1.06/lastView.zoom;
       return {x:(frame.minX+frame.maxX)/2+(x-(f.left+f.width/2)-lastView.x)*unit,
         y:(frame.minY+frame.maxY)/2-(y-(f.top+f.height/2)-lastView.y)*unit};
@@ -144,10 +160,24 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       skin(name){skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);const next=stageBounds||modelBounds(skeleton,ns,model.visibleBounds);if(next&&next.maxX>next.minX&&next.maxY>next.minY&&[next.minX,next.minY,next.maxX,next.maxY].every(Number.isFinite))bounds=next;},
       playback(){const t=state.getCurrent(0),d=t?.animation.duration||0;return {name:t?.animation.name||'',duration:d,time:d?(t.loop?t.trackTime%d:Math.min(d,t.trackTime)):0,loop:t?.loop??true};},
       render(dt,view){if(disposed)return;lastView=view;const {w,h,density}=resize(canvas);lastFrame=stageFrame(canvas);gl.viewport(0,0,canvas.width,canvas.height);tools?.before();if(view.playing){state.update(dt*view.speed);skeleton.update?.(dt*view.speed);}state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.update);tools?.after();
-        const a=world(w/2,h/2),b=world(w/2+1,h/2);renderer.camera.setViewport(canvas.width,canvas.height);renderer.camera.zoom=(b.x-a.x)/density;renderer.camera.position.set(a.x,a.y,0);renderer.camera.update();gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);drawPicture(skeleton,!!atlas.pages[0]?.pma,shotOffset(skeleton));},
+        const a=world(w/2,h/2),b=world(w/2+1,h/2),camera=renderer.camera;
+        camera.setViewport(canvas.width,canvas.height);camera.zoom=(b.x-a.x)/density;camera.position.set(a.x,a.y,0);camera.update();
+        gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+        const frame=importedFrame(state.getCurrent(0)?.animation.name);
+        if(frame){
+          const x=worldX=>canvas.width/2+(worldX-a.x)/camera.zoom;
+          const y=worldY=>canvas.height/2+(worldY-a.y)/camera.zoom;
+          const left=Math.max(0,Math.floor(x(frame.minX))),right=Math.min(canvas.width,Math.ceil(x(frame.maxX)));
+          const bottom=Math.max(0,Math.floor(y(frame.minY))),top=Math.min(canvas.height,Math.ceil(y(frame.maxY)));
+          gl.enable(gl.SCISSOR_TEST);
+          gl.scissor(left,bottom,Math.max(0,right-left),Math.max(0,top-bottom));
+        }
+        try{drawPicture(skeleton,!!atlas.pages[0]?.pma,shotOffset(skeleton));}
+        finally{if(frame)gl.disable(gl.SCISSOR_TEST);}
+      },
       capture(animation){
         const offset=shotOffset(skeleton);
-        const fixedFrame=pairedShot ? shotFrame(offset) : undefined;
+        const fixedFrame=pairedShot ? shotFrame(offset) : importedFrame(animation.name) || undefined;
         const drawScene=pairedShot ? ([picture],size)=>{
           const current=shotOffset(picture.skeleton);
           if(size.fullFrame&&!size.tile){

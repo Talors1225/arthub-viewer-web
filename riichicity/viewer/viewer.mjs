@@ -1,5 +1,5 @@
 import {importBundle,discoverModels} from './bundle.mjs?v=20261104-unified-final';
-import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261120-paired-shots';
+import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261121-portraits';
 const K=window.SpineKit,$=id=>document.getElementById(id),stage=$('stage');
 let canvas=$('canvas'),engine=null,activeBundle=null,bundle=null,models=[],selected=null,identity='',epoch=0,pending=null,exporting=false,renderFailed=false,gridPlaying=true;
 const catalogMode=true;
@@ -130,7 +130,7 @@ window.addEventListener('pagehide',()=>{pending?.abort();engine?.dispose();if(ac
 async function initializeCatalog(){
   busy(true);status('正在读取麻雀一番街角色目录…');
   $('catalogRetry').hidden=true;
-  try{const module=await import('./catalog.mjs?v=20261120-bundle-retry');
+  try{const module=await import('./catalog.mjs?v=20261121-portraits');
     catalog=await module.createCatalog({selectModel:loadModel,status});models=catalog.models;renderModels();busy(false);
     if(catalog.initial&&autoOpenInitial)await loadModel(catalog.initial);
     else if(requestedModel){loadingPreview.cancel();requestedModel=null;showLibrary(true);status('没有找到这个立绘，请从资源库重新选择。',true);}

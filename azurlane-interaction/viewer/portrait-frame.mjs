@@ -61,6 +61,7 @@ const plymouthWardWindow = trackDrawable(frame(-1350, -550, 10040, 6820), 'ArtMe
 const amagiInsetScene = frame(1506, 1302, 6260, 4396);
 // Match the scene inside the outer matte. Live2D uses a top-left origin.
 const live2dFrames = new Map([
+ ['nabulesi_3', frame(-2050, -1030, 14515, 8690)], // Inner scene, excluding the four fixed perimeter meshes.
  ['baerdimo_6', baltimoreScene], // Preserve the scene while fog drifts beyond its edges.
  ['shuixinghao_2', frame(0, 0, 8000, 5500)], // Authored canvas excludes the oversized MB_blackbgjuxing matte.
  ['feiteliekaer_4', frame(0, 0, 9449, 5570)], // Authored camera canvas; off-canvas scene cards are not presentation bounds.

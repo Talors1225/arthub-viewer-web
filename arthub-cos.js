@@ -65,9 +65,9 @@
     const source = input instanceof Request ? input.url : String(input);
     const url = new URL(source, location.href);
     // Additive release routes are restricted to this site and configured R2 origins.
-    const releaseOrigins = [location.origin, root, gameRoot, bd2Root, riichicityRoot].map(value => { try { return new URL(value).origin; } catch { return ''; } });
+    const releaseOrigins = [location.origin, root, gameRoot, bd2Root, riichicityRoot, crosscoreRoot].map(value => { try { return new URL(value).origin; } catch { return ''; } });
     if (releaseOrigins.includes(url.origin)) {
-      const path = decodeURI(url.pathname).match(/\/(?:nikki|bd2|riichicity|azurlane-interaction)\/.*/)?.[0];
+      const path = decodeURI(url.pathname).match(/\/(?:nikki|bd2|riichicity|azurlane-interaction|crosscore|thumbs)\/.*/)?.[0];
       for (const [from, to] of Object.entries(cfg.assetOverrides || {})) {
         if (path === from || (from.endsWith('/') && path?.startsWith(from))) {
           return to + path.slice(from.length) + url.search + url.hash;

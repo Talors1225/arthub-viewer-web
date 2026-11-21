@@ -1,5 +1,5 @@
 {
-  "version": "20261121-spine-crops",
+  "version": "20261121-portraits",
   "items": {
     "bd2:000101:0": "bd2/scenes-20261117/000101.webp",
     "bd2:000103:0": "bd2/scenes-20261117/000103.webp",
@@ -3958,6 +3958,31 @@
     "fated:dating21": "fated/dating21.webp",
     "fated:dating22": "fated/dating22.webp",
     "fated:dating6": "fated/dating6.webp",
-    "riichicity:spine_1003004__ferngjian-sp-jingtou": "riichicity/spine_1003004__ferngjian-sp-jingtou.webp"
+    "riichicity:spine_1003004__ferngjian-sp-jingtou": "riichicity/spine_1003004__ferngjian-sp-jingtou.webp",
+    "bd2:portrait_067203:0": "updates/20261121-portraits/bd2/bd2-portrait_067203-1280.webp",
+    "bd2:067203:0": "updates/20261121-portraits/bd2/bd2-067203-1280.webp",
+    "nikki:c9045_00:HD": "updates/20261121-portraits/nikki/nikki-c9045_00-1280.webp",
+    "nikki:c023_aim_01:HD": "updates/20261121-portraits/nikki/nikki-c023_aim_01-1280.webp",
+    "nikki:c023_cover_01:HD": "updates/20261121-portraits/nikki/nikki-c023_cover_01-1280.webp",
+    "nikki:c513_03_action:HD": "updates/20261121-portraits/nikki/nikki-c513_03-1280.webp",
+    "crosscore:10330_break_kusanagisp:默认": "updates/20261121-portraits/crosscore/crosscore-10330_break_kusanagisp-默认-1280.webp",
+    "crosscore:kusanagisp03:默认": "updates/20261121-portraits/crosscore/crosscore-kusanagisp03-默认-1280.webp",
+    "crosscore:kusanagisp03:同调": "updates/20261121-portraits/crosscore/crosscore-kusanagisp03-同调-1280.webp",
+    "crosscore:10331_synchro_kusanagisp:默认": "updates/20261121-portraits/crosscore/crosscore-10331_synchro_kusanagisp-默认-1280.webp",
+    "crosscore:kunlunsp04:A": "updates/20261121-portraits/crosscore/crosscore-kunlunsp04-A-1280.webp",
+    "crosscore:kunlunsp04:B": "updates/20261121-portraits/crosscore/crosscore-kunlunsp04-B-1280.webp",
+    "crosscore:70440_skin_sunrise04:默认": "updates/20261121-portraits/crosscore/crosscore-70440_skin_sunrise04-默认-1280.webp",
+    "crosscore:70450_skin_midnight04:默认": "updates/20261121-portraits/crosscore/crosscore-70450_skin_midnight04-默认-1280.webp",
+    "riichicity:spine_1002206": "updates/20261121-portraits/riichicity/riichicity-spine_1002206-1280.webp",
+    "riichicity:spine_1003606__lengquanhuiyaziSP-shanyao": "updates/20261121-portraits/riichicity/riichicity-spine_1003606__lengquanhuiyaziSP-shanyao-1280.webp",
+    "riichicity:spine_1003606__lengquanhuiyaziSP-shanyao2": "updates/20261121-portraits/riichicity/riichicity-spine_1003606__lengquanhuiyaziSP-shanyao2-1280.webp",
+    "riichicity:spine_1004104__shuangzi-sp-texie": "updates/20261121-portraits/riichicity/riichicity-spine_1004104__shuangzi-sp-texie-1280.webp",
+    "riichicity:spine_1004104__shuangzi-sp": "updates/20261121-portraits/riichicity/riichicity-spine_1004104__shuangzi-sp-1280.webp",
+    "riichicity:spine_1005005__URcuixiaolin": "updates/20261121-portraits/riichicity/riichicity-spine_1005005__URcuixiaolin-1280.webp",
+    "riichicity:spine_1005005__URcuixiaolin_shuijiao": "updates/20261121-portraits/riichicity/riichicity-spine_1005005__URcuixiaolin_shuijiao-1280.webp",
+    "riichicity:spine_skill_1005005__URcuixiaolin_bs": "updates/20261121-portraits/riichicity/riichicity-spine_skill_1005005__URcuixiaolin_bs-1280.webp",
+    "azurlane:banerwei_4": "azurlane/banerwei_4.webp",
+    "azurlane:nabulesi_3": "azurlane/nabulesi_3.webp",
+    "azurlane:xinaoerliang_3": "azurlane/xinaoerliang_3.webp"
   }
 }

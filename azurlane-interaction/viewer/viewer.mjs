@@ -2,7 +2,7 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-loop-catalog';
 import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261121-scene-fit';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261121-portraits';
 import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261121-scene-fit';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
@@ -402,6 +402,7 @@ function updateInteractionHint(){
  nextHintButton.hidden=candidates.length<2;
  hintNav.hidden=false;
 }
+const releasePortraits = new Set(['nabulesi_3', 'banerwei_4', 'xinaoerliang_3']);
 function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
 function cancelInteraction(){
  if(pointer)release(pointer.id,pointer,true);
@@ -438,7 +439,10 @@ const stagePan=K.createStagePan({stage,button:interactButton,modeSelect:$('point
    controller.end(p.x,p.y,false,hits);
   }else{
    const hit=hits[0];
-   if(hit&&!controller.touch(hit,{drag:false}))spineBasic(hit);
+   if(hit){
+    const baseTouch=releasePortraits.has(selected.id)&&!array(selected.interaction.spine?.hit_area).includes(hit);
+    if(baseTouch||!controller.touch(hit,{drag:false}))spineBasic(hit);
+   }
   }
  }
 });
@@ -459,7 +463,15 @@ stage.addEventListener('pointermove',e=>{
  else if(selected.type==='live2d'){
   controller.move(p.x,p.y,adapter.world(p.x,p.y));const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);look.targetX=Math.max(-1,Math.min(1,(p.x-pointer.startX)/w*(selected.interaction.settings.DragRateX||5)));look.targetY=Math.max(-1,Math.min(1,-(p.y-pointer.startY)/h*(selected.interaction.settings.DragRateY||3)));
  }
- else if(!pointer.triggered&&pointer.hits[0]&&(Math.abs(p.x-pointer.startX)>200||Math.abs(p.y-pointer.startY)>200)){pointer.triggered=controller.touch(pointer.hits[0],{drag:true});}
+ else if(!pointer.triggered&&pointer.hits[0]){
+  const hit=pointer.hits[0];
+  const nativeGesture=releasePortraits.has(selected.id)&&array(selected.interaction.spine?.hit_area).includes(hit);
+  const scale=nativeGesture?devicePixelRatio:1;
+  const distance=Math.max(Math.abs(p.x-pointer.startX),Math.abs(p.y-pointer.startY))*scale;
+  if(distance>200&&(!releasePortraits.has(selected.id)||nativeGesture)){
+   pointer.triggered=controller.touch(hit,{drag:true});
+  }
+ }
  pointer.x=p.x;pointer.y=p.y;
 });
 function release(id,p,cancel=false){if(pointer?.id!==id)return;const down=pointer;pointer=null;look.targetX=look.targetY=0;if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);if(down.pan)return;
@@ -470,7 +482,16 @@ function release(id,p,cancel=false){if(pointer?.id!==id)return;const down=pointe
   }
   controller.end(p.x,p.y,cancel,cancel?[]:adapter.hits(p.x,p.y),(performance.now()-down.at)/1000);
  }
- else if(!cancel&&!down.triggered&&!down.moved&&Math.hypot(p.x-down.startX,p.y-down.startY)<12&&performance.now()-down.at<500){const hit=down.hits[0];if(hit&&adapter.hits(p.x,p.y).includes(hit)&&!controller.touch(hit,{drag:false}))spineBasic(hit);}
+ else if(!cancel&&!down.triggered){
+  const hit=down.hits[0];
+  if(!hit)return;
+  if(releasePortraits.has(selected.id)&&array(selected.interaction.spine?.hit_area).includes(hit)){
+   const dx=Math.abs(p.x-down.startX)*devicePixelRatio,dy=Math.abs(p.y-down.startY)*devicePixelRatio;
+   if(dx<200||dy<200)controller.touch(hit,{drag:false});
+  }else if(!down.moved&&Math.hypot(p.x-down.startX,p.y-down.startY)<12&&performance.now()-down.at<500&&adapter.hits(p.x,p.y).includes(hit)){
+   if(releasePortraits.has(selected.id)||!controller.touch(hit,{drag:false}))spineBasic(hit);
+  }
+ }
 }
 stage.addEventListener('pointerup',e=>{
  if(pointer?.id===e.pointerId&&!pointer.pan)unlockAudio().catch(()=>{});
@@ -841,7 +862,7 @@ async function live2dPortrait(model,generation){
  const apertureFallback = aperture && (aperture.fallback || baseFrame ||
   { minX:0, minY:0, maxX:natural.width, maxY:natural.height });
  const pivotX = natural.width / 2, pivotY = natural.height / 2;
- evidence.model=live;evidence.app=app;editor=window.createInteractionLive2DEditor({live,core,hitAreas:model.interaction.hitAreas});const mouthIds=internal.settings.json.Groups?.find(g=>g.Name==='LipSync')?.Ids||[];
+ evidence.model=live;evidence.app=app;editor=window.createInteractionLive2DEditor({live,core,hitAreas:model.interaction.hitAreas});const mouthIds=internal.settings.json.Groups?.find(g=>g.Name==='LipSync')?.Ids||(model.id==='nabulesi_3'&&indexes.has('ParamMouthOpenY')?['ParamMouthOpenY']:[]);
  let effectTimeline, effectBaseParameters, sampleExportPose;
  const renderedParameters=core.parameters.values.slice(), effectParameterIndices=new Set();
  const dragCover = model.id === 'wuqi_3' ? core.drawables.ids.indexOf('ArtMesh766') : -1;
@@ -1538,6 +1559,9 @@ async function loadModel(id,{history=true,formToken=null,initialAction=null}={})
  setPanelOpen('interaction',false);
  interactButton.disabled=true;for(const key of ['reset-state','show-hint'])$(key).disabled=true;$('interaction-voice').hidden=true;clearHint();hintArea=null;hintAdvance=false;hintInteractionCount=0;K.clearToasts('azur-interaction');K.clearToasts('azur-audio');$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
+ const thumbnail=releasePortraits.has(id)?libraryThumbs['azurlane:'+id]:null;
+ if(thumbnail)K.setPreview($('railThumb'),K.thumbnailURL(THUMB_PREFIX+thumbnail));
+ else $('railThumb').replaceChildren();
  viewerUI.tools.prepareLoad();
  const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:previewPath(id),label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
  if (canvas.style.clipPath) stage.style.removeProperty('touch-action');
@@ -1554,7 +1578,7 @@ async function loadModel(id,{history=true,formToken=null,initialAction=null}={})
  let loaded;try{loaded=await (model.type==='live2d'?live2dPortrait(model,generation):spinePortrait(model,generation));}catch(e){if(generation!==loadGeneration)return false;throw e;}if(generation!==loadGeneration||!loaded)return false;adapter=loaded;
  const previousTrace=adapter.trace;adapter.trace=(type,data)=>{previousTrace?.call(adapter,type,data);recordHintVisit(type,data);};
  controller=model.type==='live2d'?new Live2DController(model,adapter,{storage:localStorage,favor:highestFavor(model)}):new SpineController(model,adapter,{storage:localStorage,favor:highestFavor(model)});evidence.controller=controller;evidence.adapter=adapter;controls();if(initialAction && model.animations.includes(initialAction))controller.action(initialAction,{force:true,manual:true,voice:false,onComplete:()=>{controller?.playIdle();formToken?.complete?.();}});else controller.playIdle();
- view.ready=evidence.ready=true;interactButton.disabled=!hasInteraction;zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
+ view.ready=evidence.ready=true;interactButton.disabled=!hasInteraction;if(hasInteraction&&releasePortraits.has(id))stagePan.setMode('interact');zoomTo(view.zoom);document.title=stageName(model)+' · ArtHub';$('status').textContent=stageName(model)+' · '+model.animations.length+' 个动作';K.setLibraryStageReady(true);populate();
  updateFormButton();
  if(history){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);K.history.push(entry(model));}return true;
 }
