@@ -282,8 +282,8 @@
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos-config.js?v=20261121-portraits"></script>
-  <script src="../../arthub-cos.js?v=20261121-portraits"></script>
+  <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
+  <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -432,7 +432,7 @@
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261121-portraits"></script>
 <script src="../../common/asset-loader.js?v=20261121-portraits"></script>
-<script src="../../common/portrait-audio.js?v=52d31805288c"></script>
+<script src="../../common/portrait-audio.js?v=20261121-voice-completion"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script src="favorite-wallpaper.js?v=20261118"></script>
@@ -2174,7 +2174,22 @@
       }
     };
     portraitAudio = new ArtHubPortraitAudio.Controller({
-      store, popup: makeStagePopup, status: text => {
+      store,
+      popup: (button, render) => makeStagePopup(button, popup => {
+        render(popup);
+        const res = portraitAudio.adapter.snapshot();
+        const set = ArtHubPortraitAudio.voiceSetFor(portraitAudio.index, res?.id);
+        if (!set?.set.battle?.normal?.length) return;
+        const text = popup.querySelector('.audio-availability');
+        if (text) text.textContent = '已匹配此角色的原版出战台词';
+        const playVoice = document.createElement('button');
+        playVoice.type = 'button';
+        playVoice.className = 'ctl';
+        playVoice.textContent = '试听战斗台词';
+        playVoice.onclick = () => portraitAudio.interact('battle');
+        popup.append(playVoice);
+      }),
+      status: text => {
         const message = /^角色台词/.test(text) ? (routeSource === 'crosscore' ? '正在播放角色语音' : '正在播放角色台词') : text;
         K.toast(message, /^角色声音加载失败/.test(text) ? 'error' : 'voice', 2600, 'voice');
       }, embedded,
@@ -2186,7 +2201,7 @@
         }
         syncTimeline();
       },
-      indexURL: new URL('../audio-logic.json', location.href).href,
+      indexURL: new URL('../audio-logic.json?v=20261121-voice-completion', location.href).href,
       snapshot: () => {
         const track = getTrack();
         if (!cut || cut.wallpaperActions || !cur || !track) return null;

@@ -340,6 +340,7 @@
       const snapshot = this.adapter.snapshot();
       if (!snapshot || !snapshot.active || !this.prefs.enabled || !this.index) return false;
       const voiceSet = voiceSetFor(this.index, snapshot.id);
+      if (category === 'touch' && voiceSet?.set.battle && !voiceSet.set.touch) return false;
       const hasReaction = !this.index.voiceOnly && snapshot.animations.includes('action');
       if (!hasReaction && !voiceSet) return false;
       if (this.loading || this.voice || this.reaction) return true;

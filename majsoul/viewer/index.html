@@ -270,8 +270,8 @@
   }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
-  <script src="../../arthub-cos-config.js?v=20261108-majsoul-r2"></script>
-  <script src="../../arthub-cos.js?v=20261108-majsoul-r2"></script>
+  <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
+  <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 </head>
 <body>
   <div class="stage" id="stage">
@@ -400,6 +400,7 @@
 <script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
+<script src="../../common/portrait-audio.js?v=20261121-voice-completion"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -562,6 +563,37 @@
   let loadSeq = 0;
   let highlightSlot = null;
   let curAnimName = null;
+  const portraitVoice = new ArtHubPortraitAudio.Controller({
+    store,
+    embedded,
+    indexURL: new URL('../audio-logic.json?v=20261121-voice-completion', location.href).href,
+    popup: (button, render) => makeStagePopup(button, popup => {
+      render(popup);
+      const voiceSet = portraitVoice.index?.voiceSets[curEntry?.group];
+      if (!voiceSet?.role?.normal?.length) return;
+      const text = popup.querySelector('.audio-availability');
+      if (text) text.textContent = voiceSet.click ? '点击立绘播放皮肤互动声音' : '点击立绘播放角色台词';
+      const playVoice = document.createElement('button');
+      playVoice.type = 'button';
+      playVoice.className = 'ctl';
+      playVoice.textContent = '播放角色配音';
+      playVoice.onclick = () => portraitVoice.interact('role');
+      popup.append(playVoice);
+    }),
+    snapshot: () => layers.length && curEntry && (embedded || stageMode) ? {
+      id: curEntry.group, active: !K.pngExporting, playing: true, animations: [],
+    } : null,
+    status: message => K.toast(message, 'info', 2400, 'voice'),
+    duration: () => 0,
+    talk: () => {},
+    play: () => {},
+  });
+  window.__arthubPortraitAudio = portraitVoice;
+  window.addEventListener('pagehide', event => {
+    if (event.persisted) portraitVoice.reset();
+    else portraitVoice.dispose();
+  });
+
 
 
   // ---------- 网格视图 ----------
@@ -726,6 +758,7 @@
       } catch {}
     }
     stageMode = false;
+    portraitVoice.reset();
     gridView.classList.add('open');
     setChrome(false);
     renderGrid();
@@ -1000,6 +1033,7 @@
   }
 
   async function loadSelection(entry) {
+    portraitVoice.reset();
     const seq = ++loadSeq;
     viewerUiReady = false; K.setLibraryStageReady?.(false); K.clearToasts?.();
     selectionRequest?.abort();
@@ -1055,6 +1089,7 @@
         if (saved?.length) { L.hiddenSlots = new Set(saved); K.applyHiddenSlots(L.skeleton, L.hiddenSlots); }
       }
       layers = loaded;
+      portraitVoice.syncResource();
 
       globalZoom = 1;
       stageFitMode = true;
@@ -1656,6 +1691,8 @@
     lastPos = null;
     if (wasTap && !panMode && e.button === 0 && layers.length && !isChrome(e.target)) {
       const i = hitTestLayer(e.clientX, e.clientY);
+      const editingLayers = rightPanel.classList.contains('open') && layersPage.classList.contains('on');
+      if (i >= 0 && !editingLayers) portraitVoice.interact();
       selIdx = i;
       syncAfterSelChange();
       status(selIdx >= 0 ? '已选中: ' + layers[selIdx].entry.label + '(拖拽可移动此层)' : '未选中(拖拽移动整组)');
