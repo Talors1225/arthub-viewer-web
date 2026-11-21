@@ -29,9 +29,11 @@ function largestOpaqueRectangle(mask, width, height) {
 function makeFrameProbe() {
  const scratch = document.createElement('canvas');
  const ctx = scratch.getContext('2d', { willReadFrequently:true });
- return (source, respectClip = false, transform = null) => {
+ return (source, respectClip = false, transform = null, viewport = null) => {
   let left = 0, top = 0, width = source.width, height = source.height;
-  if (respectClip) {
+  if (viewport) {
+   ({left,top,width,height}=viewport);
+  } else if (respectClip) {
    const inset = /^inset\((.+)\)$/.exec(source.style.clipPath)?.[1].match(/[\d.]+px/g)?.map(parseFloat);
    if (inset?.length) {
     const [t, r = t, b = t, l = r] = inset;
@@ -116,6 +118,8 @@ function makeFrameProbe() {
   return {
    density:rounded(density), coverage:rounded(painted/(w*h)), dark:rounded(nearBlack), content:rounded(content), sides:sides.map(rounded),
    artwork, sceneEdge, wedge:nearBlack>.08 && deepestCorner>.90,
+   compactScene:!!viewport && density>.97 && content>.42 && painted>=w*h*.09 && painted<=w*h*.52,
+   viewportStrip:!!viewport && density>.72 && content>.16 && edges.some(edge=>edge.strip),
    solidStrip:density>.72 && content>.16 && edges.filter(edge=>edge.strip).length>=2,
    suspect:density > .72 && nearBlack > .21 && nearBlack < .99 && content > .015 &&
      sides.filter(x => x > .91).length >= 2,

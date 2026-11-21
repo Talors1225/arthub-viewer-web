@@ -4,7 +4,7 @@
   const K = window.SpineKit;
   if (!K) return;
 
-  K.thumbnailURL = path => path ? path + (path.includes('?') ? '&' : '?') + 'art=20261121-scene-fit' : null;
+  K.thumbnailURL = path => path ? path + (path.includes('?') ? '&' : '?') + 'art=20261121-spine-crops' : null;
 
   K.siteRoot = () => {
     const parts = location.pathname.split('/').filter(Boolean);

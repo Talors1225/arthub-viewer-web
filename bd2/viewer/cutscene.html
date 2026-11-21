@@ -417,7 +417,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261120-visible-effects"></script>
-<script src="../../common/asset-loader.js?v=20261121-scene-fit"></script>
+<script src="../../common/asset-loader.js?v=20261121-spine-crops"></script>
 <script src="../../common/portrait-audio.js?v=20261104-unified-final"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -2493,6 +2493,8 @@
     ['065193:loop', { minX: -1690, minY: -2163.748, maxX: 1808, maxY: 1815.748 }],
   ]);
   function artworkExportFrame(animation) {
+    const cameraFrame = cut?.sourceVariant?.cameraFrames?.[animation];
+    if (cameraFrame) return cameraFrame;
     if (cut?.scene?.name === animation && cut.scene.frame) {
       const aperture = cut.originalScene?.frames?.[animation]
         && originalSceneApertures.get(cut.sceneId + ':' + animation);
@@ -2692,7 +2694,8 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const data = await K.fetchJSON('../' + indexFile);
+    const catalogRev = routeSource === 'bd2' ? '?v=20261121-spine-crops' : '';
+    const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
     chars.sort((a, b) => a.id.localeCompare(b.id));
     $('#gridSub').textContent = chars.length + ' 个资源';

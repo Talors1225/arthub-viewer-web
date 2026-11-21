@@ -86,8 +86,7 @@ async function discover(page, origin, games) {
      const retired=await SpineKit.fetchJSON('/azurlane-interaction/viewer/retired-models.json');
      models=models.filter(model=>!retired[model.id]);
     }
-    if (['nikki','bd2','cc'].includes(game)) models=models.filter(model=>model.cutscenes?.length && (game!=='nikki' ||
-      !SpineKit.shouldOmitNikkeViewerEntry(model) || model.cutscenes[0].nativeBurst));
+    if (['nikki','bd2','cc'].includes(game)) models=models.filter(model=>model.cutscenes?.length);
     if (game==='cci') models=models.filter(model=>model.available);
     if (game==='riichi') models=models.flatMap(ch=>ch.variants).filter(model=>
      !['spine_1000905__haixia-tunvlang2','spine_1003606__lengquanhuiyaziSP-shanyao2'].includes(model.id));
@@ -129,6 +128,8 @@ function standaloneProbe(game) {
   };
  `;
  const choose = game==='bd2' ? 'await changeAnimation(name,{resume:false});' : 'selectAnimation(name);';
+ const area = game==='bd2' ? ['stageFrame()', 'cut.view'] :
+  game==='nikki' ? ['cut.frame', '(cut.frameView || cut.skeleton)'] : null;
  return `
   window.__frameAudit = {
    ready: () => !!cut && !!window.__frameAuditReady,
@@ -140,6 +141,18 @@ function standaloneProbe(game) {
    },
    count: () => cur.cutscenes.length,
    variant: index => loadCutscene(index),
+   ${area ? `cameraArea: () => {
+     const frame = ${area[0]} || cut.bounds, view = ${area[1]};
+     if (!frame || !view) return null;
+     const scale = view.scaleX ?? view.scale;
+     const width = (frame.maxX - frame.minX) * scale;
+     const height = (frame.maxY - frame.minY) * scale;
+     const left = cv.width / 2 + view.x + frame.minX * scale;
+     const top = cv.height / 2 - view.y - frame.maxY * scale;
+     if (!(width > 2 && height > 2 && left >= -1 && top >= -1 &&
+        left + width <= cv.width + 1 && top + height <= cv.height + 1)) return null;
+     return {left:left+.3,top:top+.3,width:width-.6,height:height-.6};
+   },` : ''}
    ${game==='cc' ? 'framing: () => ({ motion:getTrack()?.animation.name, bounds:cut.bounds }),' : ''}
    actions: () => (${game==='nikki'?'sceneAnimations()':'cut.data.animations'}).map(clip=>clip.name),
    select: async name => { animSel.value=name;${choose} playing=false; },
@@ -479,6 +492,7 @@ async function inspect({game,id,phases,only,targets,apply,registeredRules=[],ver
      const enlargement=Math.sqrt(area(bounds)/area(reference.bounds));
      if (Number.isFinite(enlargement) && enlargement>=2.2) row.framingScale=+enlargement.toFixed(2);
     }
+    let compactFrames=0, viewportStrips=0;
     for(const fraction of frames){
      let drawn=false;
      if(driver){
@@ -487,13 +501,17 @@ async function inspect({game,id,phases,only,targets,apply,registeredRules=[],ver
      }
      else drawn=legacy.seek(fraction);
      if(!drawn)await nextFrame();
-     const metric=read(stage(),true);
+     const metric=read(stage(),true,null,legacy?.cameraArea?.());
      row.frames++;
      if(metric.empty)row.emptyFrames=(row.emptyFrames||0)+1;
      row.flags+=Number(!!metric.suspect);
      if(metric.solidStrip)row.stripFlags=(row.stripFlags||0)+1;
      if(metric.sceneEdge)row.sceneEdgeFrames=(row.sceneEdgeFrames||0)+1;
+     if(metric.compactScene)compactFrames++;
+     if(metric.viewportStrip)viewportStrips++;
     }
+    if(compactFrames>=Math.ceil(row.frames*.75))row.compactSceneFrames=compactFrames;
+    if(viewportStrips>=Math.ceil(row.frames*.75) && !row.stripFlags)row.stripFlags=viewportStrips;
    }catch(error){row.error=error.message;}
   }
  }
@@ -579,7 +597,7 @@ function summarize(scans, catalogs, mode) {
   reverted:scans.reduce((sum,row)=>sum+(row.actions||[]).filter(clip=>clip.removeRepair).length,0),
   ruleGroups:new Set(repaired.map(clip=>clip.id+'|'+JSON.stringify(clip.aperture))).size,
   repaired, review:scans.flatMap(row=>(row.actions||[]).filter(clip=>clip.error||clip.verifyError||clip.emptyFrames===clip.frames||
-   clip.removeRepair||clip.remainingWedge||clip.sceneEdgeFrames||clip.transitionFrames||clip.framingScale||(clip.flags||clip.stripFlags)&&!clip.aperture&&!clip.keepRepair).map(clip=>({game:row.game,id:row.id,...clip}))),
+   clip.removeRepair||clip.remainingWedge||clip.sceneEdgeFrames||clip.transitionFrames||clip.framingScale||clip.compactSceneFrames||(clip.flags||clip.stripFlags)&&!clip.aperture&&!clip.keepRepair).map(clip=>({game:row.game,id:row.id,...clip}))),
  };
 }
 
@@ -602,6 +620,7 @@ function writeReport(dir, summary, scans, origin) {
   if(record.emptyFrames===record.frames)return '没有可见画面';
   if(record.transitionFrames)return '转场期间露出矩形遮罩 ' + record.transitionFrames + '/' + record.frames + ' 帧';
   if(record.sceneEdgeFrames)return '疑似场景露边 ' + record.sceneEdgeFrames + '/' + record.frames + ' 帧';
+  if(record.compactSceneFrames)return '矩形场景占画幅过小 ' + record.compactSceneFrames + '/' + record.frames + ' 帧';
   const matches=Math.max(record.flags,record.stripFlags||0);
   return '疑似边框 ' + matches + '/' + record.frames + ' 帧';
  }
@@ -675,7 +694,8 @@ async function main() {
   const file=path.join(dir,'results.jsonl');
   const originalRegistry=autoApply ? fs.readFileSync(registered,'utf8') : null;
   const priorScope=path.join(dir,'scope.json'), scope=JSON.stringify({
-   version:selected.includes('azur')?4:selected.includes('cc')?3:2,site,url:args.get('--url')??null,games:selected,ids:[...ids],motions:only,
+   version:selected.some(game=>game==='nikki'||game==='bd2')?5:selected.includes('azur')?4:selected.includes('cc')?3:2,
+   site,url:args.get('--url')??null,games:selected,ids:[...ids],motions:only,
    apply:autoApply,reportHash:flagged?.hash,registryHash:originalRegistry && createHash('sha256').update(originalRegistry).digest('hex'),
   });
   if(args.has('--resume')&&fs.existsSync(file)){

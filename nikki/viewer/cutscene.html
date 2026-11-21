@@ -431,7 +431,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261120-nikke-minigames"></script>
-<script src="../../common/asset-loader.js?v=20261121-scene-fit"></script>
+<script src="../../common/asset-loader.js?v=20261121-spine-crops"></script>
 <script src="../../common/portrait-audio.js?v=52d31805288c"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -2101,6 +2101,11 @@
       cut.returnToIdle = !!options.returnToIdle;
       animSel.value = name;
       applyCutLayerStates();
+      const frame = cut.sourceVariant.cameraFrames?.[name] || wallpaper.frame;
+      if (cut.frame !== frame) {
+        cut.frame = frame;
+        if (fitMode && !options.keepView) refit();
+      }
       animCtl?.refresh();
       pbLoop.classList.toggle('active', loop);
       syncTimeline();
@@ -2143,7 +2148,7 @@
     if (bounds) cut.bounds = bounds;
     const variant = cut.sourceVariant;
     const previewFrame = name === variant.previewAnimation ? variant.previewFrame : null;
-    cut.frame = skillSceneFrames.get(variant.skel)?.[name] || previewFrame ||
+    cut.frame = variant.cameraFrames?.[name] || skillSceneFrames.get(variant.skel)?.[name] || previewFrame ||
       (name === 'idle' ? idleSceneFrames.get(variant.skel) : null);
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
@@ -2987,7 +2992,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261121-scene-fit' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261121-spine-crops' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));
