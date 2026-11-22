@@ -1,6 +1,8 @@
 import { InteractionController, trackFor } from './controller.mjs?v=20261114-interaction-export-loading';
 import { SpineScene } from './scene.mjs?v=20261120-frame-edges';
 
+import { createMediaVolume } from '../../common/media-volume.mjs?v=20261122-game-audio';
+
 const $ = selector => document.querySelector(selector), SP = window.spine, K = window.SpineKit;
 const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint = overlay.getContext('2d');
 // The interaction prefab scales and offsets the same seashore artwork.
@@ -26,7 +28,8 @@ if (!response.ok) throw new Error(`立绘目录读取失败（${response.status}
 const catalog = await response.json();
 const models = catalog.models.filter(model => model.available), modelById = new Map(models.map(model => [Number(model.id), model]));
 let model, scene, controller, transition, transitionUntil = 0, requestId = 0, last = performance.now() / 1000;
-let audio = new Audio(), audioResult = null, cueName = null, pointer = null, lastFailure = null, lastActionState = '';
+const audio = new Audio(), asmrPlayer = $('#asmrPlayer');
+let audioResult = null, cueName = null, pointer = null, lastFailure = null, lastActionState = '';
 let callbacks = [], specialMode = false, searchTimer, pendingFit = null, modelGroupFilter = 'all';
 let viewZoom = 1, hasInteraction = false;
 const viewPan = { x: 0, y: 0 };
@@ -45,8 +48,12 @@ const thumbnailFor = row => {
   return K.thumbnailURL(path);
 };
 
-let editor = null, exporting = false, volume = Number(localStorage.getItem('arthub:crosscore:volume') ?? .65);
-audio.volume = volume;
+let editor = null, exporting = false;
+const audioPrefs = K.Store('arthub:crosscore');
+const mediaVolume = createMediaVolume([audio, asmrPlayer], audioPrefs.get('volume', .65));
+window.addEventListener('storage', event => {
+  if (event.key === 'arthub:crosscore:volume') mediaVolume.set(audioPrefs.get('volume', .65));
+});
 const PREVIEW_TRACK = 50;
 const now = () => playback.time;
 const gestureNames = ['点击', '向左拖动', '向右拖动', '向上拖动', '向下拖动', '拖动', '按住拖动'];
@@ -244,18 +251,21 @@ function playAudio(ids, hideTxt) {
     setVoiceStatus(reason); return;
   }
   cueName = cue.cueName;
-  const current = new Audio(cue.path); audio = current; audio.volume = volume;
   const result = { id, cue: cueName, status: 'loading' }; audioResult = result;
   if (!hideTxt) { $('#subtitle').textContent = cue.script1 || cue.script2 || ''; $('#dialogue').textContent = cue.script1 || cue.script2 || ''; }
   if ([...$('#voice').options].some(option => option.value === String(id))) $('#voice').value = String(id);
   setVoiceStatus((cue.cueName || '语音') + ' 正在加载…');
-  current.addEventListener('ended', () => {
-    if (audio !== current) return;
+  audio.onended = () => {
+    if (audioResult !== result || !audio.ended) return;
     result.status = 'ended'; setVoiceStatus((cue.cueName || '语音') + ' 播放完毕');
-  });
-  current.play().then(() => { result.status = 'playing'; setVoiceStatus((cue.cueName || '语音') + ' 播放中'); }).catch(error => {
+  };
+  mediaVolume.play(audio, cue.path).then(() => {
+    if (audioResult !== result) return;
+    result.status = 'playing'; setVoiceStatus((cue.cueName || '语音') + ' 播放中');
+  }).catch(error => {
+    if (audioResult !== result) return;
     result.status = 'failed'; result.error = error.message;
-    if (audio === current) { $('#subtitle').textContent = '语音未能播放：' + error.message; setVoiceStatus('语音未能播放：' + error.message); }
+    $('#subtitle').textContent = '语音未能播放：' + error.message; setVoiceStatus('语音未能播放：' + error.message);
   });
 }
 function fillVoiceOptions() {
@@ -405,7 +415,7 @@ function openAsmr(identity) {
   for (const track of data.tracks || []) if (catalog.cues[String(track.id)]?.path) $('#asmrTrack').append(new Option(track.name, track.id));
   if (!$('#asmrTrack').options.length) $('#asmrInfo').textContent = '本地暂无可播放的音声文件。'; $('#asmrDialog').showModal(); playAsmr();
 }
-function playAsmr() { const player = $('#asmrPlayer'); player.pause(); if (!soundEnabled()) { setVoiceStatus('声音已关闭'); return; } const cue = catalog.cues[$('#asmrTrack').value]; if (cue?.path) { player.src = cue.path; player.play().catch(() => {}); } }
+function playAsmr() { asmrPlayer.pause(); if (!soundEnabled()) { setVoiceStatus('声音已关闭'); return; } const cue = catalog.cues[$('#asmrTrack').value]; if (cue?.path) mediaVolume.play(asmrPlayer, cue.path).catch(() => {}); }
 function drawRegions() {
   paint.clearRect(0, 0, overlay.width, overlay.height); if (!scene || !controller || !$('#regions').checked) return;
   const dpr = overlay.width / stage.clientWidth; paint.save(); paint.scale(dpr, dpr);
@@ -470,7 +480,7 @@ const viewerUI = window.createInteractionViewerUI({
     reload: () => model && loadModel(model.id), openPanel: open => setPanelOpen('interaction', open), stopAudio,
     setExporting: value => { exporting = value; }, setBackground: () => {},
     soundEnabled, setSoundEnabled, voiceTab: 'voice',
-    volume: () => volume, setVolume: value => { volume = value; audio.volume = value; $('#asmrPlayer').volume = value; localStorage.setItem('arthub:crosscore:volume', value); },
+    volume: () => mediaVolume.volume, setVolume: value => { mediaVolume.set(value); audioPrefs.set('volume', mediaVolume.volume); },
     capture: (animation, format) => {
       const captureScene = Object.create(scene);
       const aperture = sceneAperture();

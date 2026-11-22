@@ -117,7 +117,7 @@ const probe = initialParams.get('probe') === '1' && ['127.0.0.1', 'localhost'].i
 let models = [], libraryMatches = [], favoritesOnly = false, descending = store.get('descending', false);
 let page = 1, assetsRoot, request, activeModel, scene, gl, runtime, lastFrame = 0;
 let interactive = true, playing = true, playbackSpeed = 1;
-let pan = null, interactionTouch = null, partTap = null;
+let pan = null, interactionTouch = null, partTap = null, pendingPartPick = null;
 let routePending = false;
 let videoRecording = null;
 
@@ -250,6 +250,7 @@ function cancelInput(id) {
   if (id == null || pan?.id === id) pan = null;
   if (id == null || interactionTouch === id) interactionTouch = null;
   if (id == null || partTap?.id === id) partTap = null;
+  if (id == null) pendingPartPick = null;
   if (!scene?.gestures.gesture) delete canvas.dataset.gesture;
 }
 
@@ -533,6 +534,7 @@ async function showModel(model) {
     animationStage.hidden = groups.length < 2;
     $('status').textContent = model.name + ' · ' + scene.animationClips.size + ' 个动作';
     soundControl.value = soundMode;
+    soundControl.disabled = !sound;
     resize();
     updateTools();
     playbackUI.refreshAnimations();
@@ -897,6 +899,7 @@ const partsPanel = K.mountPartsPanel({
 
 function setPartPicking(enabled) {
   cancelInput();
+  if (!enabled) K.hideMenu();
   stage.toggleAttribute('data-picking-parts', enabled);
   pickButton.setAttribute('aria-pressed', String(enabled));
   pickButton.textContent = enabled ? '结束点选' : '画面点选';
@@ -916,7 +919,16 @@ function pickPart(clientX, clientY) {
     const drawOrder = skeleton.drawOrder.filter(slot => !partTarget.hidden.has(slot.data.name) &&
       isImageAttachment(slot.attachment, runtime));
     const name = K.hitTestSlot({ drawOrder, slots: drawOrder }, x, y, runtime);
-    if (name) partsPanel.focus(name);
+    if (name) {
+      partsPanel.focus(name);
+      K.showMenu([
+        { heading: name },
+        { label: '隐藏此部件', fn: () => {
+          if (scene?.partTarget === partTarget && stage.hasAttribute('data-picking-parts')) partsPanel.hide(name);
+        } },
+        { label: '取消' },
+      ], clientX, clientY);
+    }
   } finally {
     for (const [slot, opacity] of muted) slot.color.a = opacity;
   }
@@ -934,7 +946,7 @@ function setStageReady(ready) {
     anim: scene?.animationClips?.size,
     parts: scene?.partTarget.parts.length,
     interaction: Boolean(scene),
-    voice: Boolean(scene?.sound),
+    voice: Boolean(scene),
   };
   for (const tab of panelTabs) {
     tab.disabled = !ready || !available[tab.dataset.panelTab];
@@ -1163,6 +1175,8 @@ canvas.addEventListener('contextmenu', event => event.preventDefault());
 canvas.addEventListener('pointerdown', event => {
   if (!event.isPrimary || event.button !== 0 || !scene || !canvas.dataset.ready || K.pngExporting) return;
   if (stage.hasAttribute('data-picking-parts')) {
+    K.hideMenu();
+    pendingPartPick = null;
     partTap = { id: event.pointerId, x: event.clientX, y: event.clientY };
     canvas.setPointerCapture(event.pointerId);
     return;
@@ -1213,7 +1227,7 @@ canvas.addEventListener('pointerleave', () => { delete canvas.dataset.hotspot; }
 canvas.addEventListener('pointerup', event => {
   if (stage.hasAttribute('data-picking-parts')) {
     if (!pan && partTap?.id === event.pointerId && Math.hypot(event.clientX - partTap.x, event.clientY - partTap.y) <= 8) {
-      pickPart(event.clientX, event.clientY);
+      pendingPartPick = { x: event.clientX, y: event.clientY, target: scene?.partTarget };
     }
     cancelInput(event.pointerId);
     return;
@@ -1223,6 +1237,15 @@ canvas.addEventListener('pointerup', event => {
     scene.gestures.finish(event.pointerId, toWorld(event.clientX, event.clientY), performance.now());
   }
   cancelInput(event.pointerId);
+});
+// Open after the completed click so the same tap cannot dismiss its own menu.
+canvas.addEventListener('click', event => {
+  const pick = pendingPartPick;
+  pendingPartPick = null;
+  if (!pick || !stage.hasAttribute('data-picking-parts') || !scene || scene.partTarget !== pick.target || K.pngExporting) return;
+  event.preventDefault();
+  event.stopPropagation();
+  pickPart(pick.x, pick.y);
 });
 canvas.addEventListener('pointercancel', event => cancelInput(event.pointerId));
 canvas.addEventListener('lostpointercapture', event => cancelInput(event.pointerId));

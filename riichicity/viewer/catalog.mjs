@@ -1,5 +1,5 @@
 import {LocalBundle} from './bundle.mjs?v=20261104-unified-final';
-import {createVoicePanel} from './voices.mjs?v=20261121-portraits';
+import {createVoicePanel} from './voices.mjs?v=20261122-game-audio';
 
 export async function fetchModelBundle(model,signal,assetBase='/riichicity/assets/'){
  const paths=[...new Set([model.path,model.atlas,...model.pages])];

@@ -159,6 +159,9 @@ html[data-site-ui="1"] body .arthub-popup-close span { display:none; }
 html[data-site-ui="1"] body .stage-popup.arthub-tool-popup :is(.col,.row,.opt-row) { min-width:0; max-width:100%; gap:8px; }
 html[data-site-ui="1"] body .stage-popup.arthub-tool-popup .col-title { font-size:12px; line-height:1.5; }
 html[data-site-ui="1"] body .stage-popup.arthub-tool-popup label { display:flex; align-items:center; gap:7px; min-height:30px; margin:0; font-size:12px; line-height:1.5; }
+html[data-site-ui="1"] body .stage-popup.arthub-tool-popup label.portrait-audio-volume { display:grid; grid-template-columns:auto minmax(0,1fr) 4ch; width:100%; }
+html[data-site-ui="1"] body .portrait-audio-volume input { width:100%; min-width:0; accent-color:var(--accent); }
+html[data-site-ui="1"] body .portrait-audio-volume output { text-align:right; font-variant-numeric:tabular-nums; }
 html[data-site-ui="1"] body .stage-popup.arthub-tool-popup input[type="checkbox"] { flex:none; width:14px; height:14px; margin:0; accent-color:var(--accent); }
 html[data-site-ui="1"] body .stage-popup.arthub-tool-popup select { min-width:0; max-width:100%; padding:4px 7px; border:1px solid var(--border2); border-radius:6px; background:var(--panel2); color:var(--text); font-size:12px; }
 html[data-site-ui="1"] body .stage-popup.arthub-tool-popup :is(p,small,.muted) { margin:4px 0; font-size:11px; line-height:1.6; color:var(--text-dim); overflow-wrap:anywhere; }

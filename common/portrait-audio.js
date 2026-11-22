@@ -1,9 +1,10 @@
-/* Portrait audio playback for NIKKE event timing and CrossCore voice banks.
+/* Portrait audio playback for Spine viewers.
  * Audio stays outside Spine files. Unknown events/other resource kinds are silent.
  */
 (function (root) {
   'use strict';
   const EPS = 1e-7;
+  const volumeLevel = value => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
   function eventsBetween(events, from, to, duration, loop) {
     if (!(to >= from) || !(duration > 0)) return [];
     const out = [];
@@ -64,7 +65,15 @@
       this.timeline = null;
       this.wasPaused = true;
       this.disposed = false;
-      this.prefs = Object.assign({ enabled: true, voices: true, effects: true, affinity: 'normal', idle: false }, adapter.store.get('portraitAudio', {}));
+      this.prefs = Object.assign({ enabled: true, voices: true, effects: true, affinity: 'normal', idle: false, volume: 1 }, adapter.store.get('portraitAudio', {}));
+      this.volumeStore = adapter.volumeNamespace && root.SpineKit.Store(adapter.volumeNamespace);
+      this.prefs.volume = volumeLevel(this.volumeStore?.get('volume', this.prefs.volume) ?? this.prefs.volume);
+      if (this.volumeStore) {
+        this.onVolumeStorage = event => {
+          if (event.key === adapter.volumeNamespace + ':volume') this.applyVolume(this.volumeStore.get('volume', 1));
+        };
+        root.addEventListener('storage', this.onVolumeStorage);
+      }
       this.button = document.getElementById('btnVoice');
       if (!this.button) {
         this.button = document.createElement('button');
@@ -101,21 +110,28 @@
     }
     updateButton() {
       this.button.classList.toggle('on', this.prefs.enabled);
-      this.button.setAttribute('aria-pressed', String(this.prefs.enabled));
-      this.button.title = '角色声音设置（' + (this.prefs.enabled ? '开启' : '静音') + '）';
-      this.button.setAttribute('aria-label', this.button.title);
+      this.button.setAttribute('aria-haspopup', 'dialog');
+      this.button.title = '声音';
+      this.button.setAttribute('aria-label', '声音设置（' + (this.prefs.enabled ? '开启' : '静音') + '）');
       this.reportState();
+    }
+    get volume() { return this.prefs.volume; }
+    applyVolume(value) {
+      this.prefs.volume = volumeLevel(value);
+      if (this.output) this.output.gain.value = this.volume;
+      this.refreshVolumeControl?.();
+      this.adapter.onVolumeChange?.(this.volume);
     }
     menu(popup) {
       // This settings surface must be above the fixed mobile playback/toolbars.
       popup.style.zIndex = '250';
       popup.innerHTML = this.index?.voiceOnly
-        ? '<div class="col" style="min-width:220px;max-width:calc(100vw - 32px)"><strong>交错战线角色语音</strong>'
+        ? '<div class="col"><strong>交错战线角色语音</strong>'
           + '<label><input type="checkbox" data-pref="enabled"> 开启声音</label>'
           + '<label><input type="checkbox" data-pref="voices"> 点击立绘播放</label>'
           + '<small style="opacity:.65">点击角色立绘随机播放一条基础语音。</small>'
           + '<small class="audio-availability" style="opacity:.65"></small></div>'
-        : '<div class="col" style="min-width:220px;max-width:calc(100vw - 32px)"><strong>角色声音 · 日语</strong>'
+        : '<div class="col"><strong>角色声音 · 日语</strong>'
           + '<label><input type="checkbox" data-pref="enabled"> 开启声音</label>'
           + '<label><input type="checkbox" data-pref="voices"> 点击台词</label>'
           + '<label><input type="checkbox" data-pref="effects"> 动画音效</label>'
@@ -123,6 +139,22 @@
           + '<label><input type="checkbox" data-pref="idle"> 闲置台词（查看器每30秒）</label>'
           + '<small style="opacity:.65">同一时刻一句台词；点击会触发反应动画。<br>音效时间来自游戏；台词随机规则为查看器近似。</small>'
           + '<small class="audio-availability" style="opacity:.65"></small></div>';
+      const row = document.createElement('label');
+      row.className = 'portrait-audio-volume';
+      row.innerHTML = '音量 <input type="range" min="0" max="100" step="1" aria-label="音量"><output></output>';
+      const slider = row.querySelector('input'), value = row.querySelector('output');
+      this.refreshVolumeControl = () => {
+        slider.value = String(Math.round(this.volume * 100));
+        value.textContent = slider.value + '%';
+        slider.setAttribute('aria-valuetext', value.textContent);
+      };
+      this.refreshVolumeControl();
+      slider.oninput = () => {
+        this.applyVolume(slider.valueAsNumber / 100);
+        this.adapter.store.set('portraitAudio', this.prefs);
+        this.volumeStore?.set('volume', this.volume);
+      };
+      popup.querySelector('.col > strong').after(row);
       popup.querySelectorAll('[data-pref]').forEach(input => {
         const key = input.dataset.pref;
         if (input.type === 'checkbox') input.checked = !!this.prefs[key]; else input.value = this.prefs[key];
@@ -213,6 +245,9 @@
           const AudioContext = root.AudioContext || root.webkitAudioContext;
           if (!AudioContext) throw Error('浏览器不支持 Web Audio');
           this.context = new AudioContext();
+          this.output = this.context.createGain();
+          this.output.gain.value = this.volume;
+          this.output.connect(this.context.destination);
         }
         await this.context.resume();
         this.unlocked = this.context.state === 'running';
@@ -298,7 +333,7 @@
       const source = this.context.createBufferSource();
       source.buffer = buffer;
       source.playbackRate.value = kind === 'voice' ? 1 : rate;
-      source.connect(this.context.destination);
+      source.connect(this.output);
       this.sources.add(source);
       source.onended = () => {
         source.disconnect(); this.sources.delete(source);
@@ -310,7 +345,7 @@
       return source;
     }
     interactionHint() {
-      if (!this.prefs.enabled) return '声音已关闭，可在“更多 → 角色声音设置”中开启';
+      if (!this.prefs.enabled) return '声音已关闭，可在“更多 → 声音”中开启';
       if (!this.index) return this.indexError ? '音频索引加载失败，请重新加载资源后重试' : '角色音频索引加载中，请稍后再点击';
       const s = this.adapter.snapshot();
       if (!s) return '当前资源暂未匹配点击语音或音效';
@@ -458,6 +493,7 @@
       this.requests?.clear(); this.warmJob = null;
       document.getElementById('stage').removeEventListener('pointerdown', this.onGesture, { capture: true });
       document.removeEventListener('visibilitychange', this.onVisibility);
+      if (this.onVolumeStorage) root.removeEventListener('storage', this.onVolumeStorage);
       this.context?.close().catch(() => {});
     }
   }

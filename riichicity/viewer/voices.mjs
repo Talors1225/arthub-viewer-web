@@ -1,4 +1,5 @@
 import {skinId,voiceRoute,subtitleKey,createInteraction} from './interaction.mjs?v=20261121-portraits';
+import {createMediaVolume} from '../../common/media-volume.mjs?v=20261122-game-audio';
 
 export function createVoicePanel(assetBase){
  const $=id=>document.getElementById(id),audio=$('riichiVoiceAudio'),groups=$('voiceGroup'),voices=$('voiceSelect'),message=$('voiceStatus'),search=$('voiceSearch'),bubble=$('riichiSubtitle'),toggle=$('voiceInteractive'),volume=$('voiceVolume');
@@ -6,15 +7,15 @@ export function createVoicePanel(assetBase){
  const cache=new Map(),locales={default:'默认',chs:'中文',ko:'韩语',jp:'日语',en:'英语'};
  let configPromise;
  try{toggle.checked=localStorage.getItem('riichi-interaction')!=='off';volume.value=localStorage.getItem('riichi-volume')||'80';}catch{}
+ const mediaVolume=createMediaVolume([audio],Number(volume.value)/100);
  const stop=()=>{++playEpoch;audio.pause();audio.removeAttribute('src');audio.load();bubble.hidden=true;bubble.textContent='';};
  function form(){return Number($('voiceForm').value);}
  function current(){return clips.find(c=>c.id===voices.value);}
  function playClip(clip,subtitle='',label=clip?.label){
   if(!clip)return 0;stop();const ticket=playEpoch,modelEpoch=epoch;
-  audio.src=clip.url;audio.volume=Number(volume.value)/100;
   message.textContent='正在播放：'+(label||clip.id);
   if(subtitle){bubble.textContent=subtitle;bubble.hidden=false;}
-  audio.play().catch(error=>{if(ticket===playEpoch&&modelEpoch===epoch){bubble.hidden=true;message.textContent=error.name==='NotAllowedError'?'点击立绘即可开始语音互动。':'播放失败：'+error.message;}});
+  mediaVolume.play(audio,clip.url).catch(error=>{if(ticket===playEpoch&&modelEpoch===epoch){bubble.hidden=true;message.textContent=error.name==='NotAllowedError'?'点击立绘即可开始语音互动。':'播放失败：'+error.message;}});
   return clip.duration;
  }
  function eventVoice(id,subtitle=true){
@@ -37,7 +38,7 @@ export function createVoicePanel(assetBase){
  groups.onchange=renderClips;search.oninput=renderClips;
  $('voicePlay').onclick=()=>{interaction?.cancel();const clip=current();if(clip)playClip(clip);};
  $('voiceStop').onclick=()=>{interaction?.cancel();stop();message.textContent='已停止播放';};
- volume.oninput=()=>{audio.volume=Number(volume.value)/100;try{localStorage.setItem('riichi-volume',volume.value);}catch{}};
+ volume.oninput=()=>{mediaVolume.set(Number(volume.value)/100);try{localStorage.setItem('riichi-volume',volume.value);}catch{}};
  toggle.onchange=()=>{if(!toggle.checked)interaction?.cancel();try{localStorage.setItem('riichi-interaction',toggle.checked?'on':'off');}catch{}};
  $('voiceForm').onchange=()=>interaction?.cancel();
  audio.onended=()=>{bubble.hidden=true;message.textContent='播放结束';};

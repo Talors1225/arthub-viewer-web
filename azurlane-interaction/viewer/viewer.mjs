@@ -279,7 +279,6 @@ $('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'声音：关'
 function auditionVoice(clip){
  if(!clip||!view.ready||exporting)return;
  if(muted)$('sound').click();
- if(volume===0){setVolume(.7);const slider=document.querySelector('.viewer-sound-volume input');if(slider)slider.value=volume;}
  sound(selected.voiceBank,clip.name,{voice:true,exact:true});
 }
 $('voice-play').onclick=()=>auditionVoice(selected?.voice?.activeClips?.find(c=>c.name===$('voice').value));

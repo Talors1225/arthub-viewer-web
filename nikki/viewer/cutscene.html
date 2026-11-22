@@ -281,7 +281,7 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261122-game-audio"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
   <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
   <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 </head>
@@ -432,7 +432,7 @@
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261121-portraits"></script>
 <script src="../../common/asset-loader.js?v=20261121-portraits"></script>
-<script src="../../common/portrait-audio.js?v=20261121-voice-completion"></script>
+<script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script src="favorite-wallpaper.js?v=20261118"></script>
@@ -615,6 +615,7 @@
   const savedBurstVolume = store.get('burstVolume', .3);
   let burstVolume = Number.isFinite(savedBurstVolume) ? Math.max(0, Math.min(1, savedBurstVolume)) : .3;
   let burstMuted = !!store.get('burstMuted', false);
+  const burstOutputVolume = () => burstVolume * (portraitAudio?.volume ?? 1);
 
   function burstAssetsRoot() {
     const config = window.ARTHUB_COS_CONFIG;
@@ -771,7 +772,7 @@
     burstBackdrop = null;
     burstLoop = false;
     session.fit();
-    session.mix(burstVolume, burstMuted);
+    session.mix(burstOutputVolume(), burstMuted);
     session.setLoop(false);
     session.setSpeed(Number(pbSpeed.value) || 1);
     portraitAudio?.reset();
@@ -798,7 +799,7 @@
       signal.throwIfAborted();
       const session = await openSkillBurst({
         canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),
-        settings: { speed: Number(pbSpeed.value) || 1, volume: burstVolume, muted: burstMuted },
+        settings: { speed: Number(pbSpeed.value) || 1, volume: burstOutputVolume(), muted: burstMuted },
         hiddenSlots: cut.hiddenSlots, getAudio: unlockBurstAudio,
         changed: () => { setPlayBtn(); syncTimeline(); },
         finished: () => parkSkillBurst(true),
@@ -841,14 +842,14 @@
     burstMix.oninput = () => {
       burstVolume = Number(burstMix.value) / 100;
       store.set('burstVolume', burstVolume);
-      burstSession?.mix(burstVolume, burstMuted); syncBurstUI();
+      burstSession?.mix(burstOutputVolume(), burstMuted); syncBurstUI();
     };
     burstMute.onclick = () => {
       burstMuted = !burstMuted; store.set('burstMuted', burstMuted);
-      burstSession?.mix(burstVolume, burstMuted); syncBurstUI();
+      burstSession?.mix(burstOutputVolume(), burstMuted); syncBurstUI();
     };
     document.addEventListener('click', event => {
-      if (event.target.closest?.('#btnPng,#btnGif,#btnDebug,#btnBg,#btnBoneEdit,#poseEditToggle,#floatPanel [data-tab="pose"],#btnVoiceSettings,#btnVoice')) {
+      if (event.target.closest?.('#btnPng,#btnGif,#btnDebug,#btnBg,#btnBoneEdit,#poseEditToggle,#floatPanel [data-tab="pose"]')) {
         parkSkillBurst();
       }
     }, true);
@@ -2175,8 +2176,10 @@
     };
     portraitAudio = new ArtHubPortraitAudio.Controller({
       store,
+      onVolumeChange: volume => burstSession?.mix(burstVolume * volume, burstMuted),
       popup: (button, render) => makeStagePopup(button, popup => {
         render(popup);
+        if (burstSession) return;
         const res = portraitAudio.adapter.snapshot();
         const set = ArtHubPortraitAudio.voiceSetFor(portraitAudio.index, res?.id);
         if (!set?.set.battle?.normal?.length) return;

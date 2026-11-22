@@ -276,7 +276,7 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261122-game-audio"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
   <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
   <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 </head>
@@ -413,7 +413,7 @@
 <script src="../../common/asset-display-overrides.js?v=20261119-transition-animations"></script>
 <script src="../../common/kit.js?v=20261121-portraits"></script>
 <script src="../../common/asset-loader.js?v=20261121-portraits"></script>
-<script src="../../common/portrait-audio.js?v=20261121-voice-completion"></script>
+<script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script src="scene-framing.js?v=20261121-incremental-scene-fit"></script>
@@ -1775,6 +1775,7 @@
       }
     };
     portraitAudio = new ArtHubPortraitAudio.Controller({
+      volumeNamespace: routeSource === 'crosscore' ? 'arthub:crosscore' : null,
       store, popup: makeStagePopup, status: text => {
         const message = /^角色台词/.test(text) ? (routeSource === 'crosscore' ? '正在播放角色语音' : '正在播放角色台词') : text;
         K.toast(message, /^角色声音加载失败/.test(text) ? 'error' : 'voice', 2600, 'voice');

@@ -21,7 +21,7 @@
   <script defer src="../../common/interaction-viewer-ui.js?v=20261122-unified-viewer"></script>
   <script defer src="../../common/site-ui.js?v=20261117-interaction-menu"></script>
   <script defer src="../audio-volume.js?v=20261122-bd2-controls"></script>
-  <script type="module" src="./viewer.mjs?v=20261122-unified-viewer"></script>
+  <script type="module" src="./viewer.mjs?v=20261122-part-hide"></script>
 </head>
 <body class="game-interaction-viewer fated-viewer">
   <section class="stage" id="stage" aria-label="有缘之客互动立绘" hidden>
@@ -119,7 +119,7 @@
     <div class="rp-page parts-tool-panel" id="parts-dialog" data-panel-page="parts">
       <div class="row">
         <input id="fated-part-filter" class="text-input" type="search" aria-label="搜索部件名称" autocomplete="off" spellcheck="false">
-        <button id="exitPartEdit" type="button" aria-pressed="false" title="点按画面，在列表中定位部件">画面点选</button>
+        <button id="exitPartEdit" type="button" aria-pressed="false" title="点按画面，确认后隐藏部件">画面点选</button>
       </div>
       <div class="parts-tools">
         <button id="fated-parts-show" type="button">全部显示</button>
