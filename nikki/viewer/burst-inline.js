@@ -1,5 +1,5 @@
 import {clamp} from './burst-math.js';
-import {createBurst} from './burst_scene.js?v=20261122-q10-full';
+import {createBurst} from './burst_scene.js?v=20261122-skill-v3';
 import {clockAt} from './timelines.js';
 
 // Last visible composition before the closing flash on the authored timeline.
@@ -68,12 +68,11 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     return objectURL(object);
   };
   const engine=await createBurst(canvas,scene,root,progress,asset,signal);
-  if(signal.aborted){engine.dispose();throw signal.reason;}
+  signal.throwIfAborted();
   const partTargets=engine.bindPartState(hiddenSlots);
   const duration=scene.duration;
   const endingBackdrop=endingBackdrops[key];
   let time=0, playing=false, starting=false, disposed=false, revision=0, dirty=true;
-  let previewDrawn=false;
   let speed=settings.speed, loop=false, volume=settings.volume, muted=settings.muted;
   let audio=null, mix=null, analyser=null, clock=null, sources=[], cues=[], counts={};
   const decoded=new Map();
@@ -83,7 +82,6 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
 
   function draw(){
     counts=engine.render(time);
-    previewDrawn=engine.hasPreview();
     dirty=false;
   }
   function now(){
@@ -322,12 +320,12 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     get time(){return time;},
     get zoom(){return zoom;},
     tick(){
-      if(!playing){if(dirty || (previewDrawn && !engine.hasPreview())) draw(); return;}
+      if(!playing){if(dirty) draw(); return;}
       time=now(); draw();
       if(time>=duration){stop();changed();if(loop) void start(0);else finished();}
     },
     toggle(){if(playing||starting) pause(); else void start(time>=duration ? 0 : time);},
-    stop,pause,seek,buildBackdrop,buildComposition,hasPreview:engine.hasPreview,finishQuality:engine.finishQuality,
+    stop,pause,seek,buildBackdrop,buildComposition,
     get backdrop(){return backdrop;},
     replay(){void start(0);},
     step(direction){seek(time+direction/scene.fps,false);},
@@ -357,7 +355,6 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     dispose(){
       if(disposed) return;
       disposed=true; stop(); observer.disconnect();
-      engine.dispose();
       mix?.disconnect(); analyser?.disconnect();
     },
   };

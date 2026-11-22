@@ -397,8 +397,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261122-reviewed-frames"></script>
-<script src="../../common/texture-previews.js?v=20261122-q10-full"></script>
-<script src="../../common/asset-loader.js?v=20261122-q10-full"></script>
+<script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/stage-ui.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
@@ -867,7 +866,6 @@
     }
     renderer.end();
     if (layers.length && layers.some(layer => layer.visible) && canvas.width > 1 && canvas.height > 1 && !raw.isContextLost()) {
-      if (playerDrawnSeq !== loadSeq) for (const layer of layers) K.queueTextureUpgrade(layer.atlas);
       playerDrawnSeq = loadSeq;
       loadingPreview.ready(loadSeq);
       if (!viewerUiReady) { viewerUiReady = true; K.setLibraryStageReady?.(true); }
@@ -1023,7 +1021,6 @@
   let selectionRequest = null;
   async function loadLayerModel(entry, signal, context = gl, onProgress) {
     const files = await K.loadSpineFiles(spine, context, {
-      progressiveTexture: context === gl, autoUpgrade: false,
       atlasURL: '../' + entry.atlas, skeletonURL: '../' + entry.skel, signal,
       timeout: 120000, retryIdleMs: 15000, onProgress,
     });
@@ -1252,7 +1249,7 @@
   }
   function setupDesktopBridge() {
     if (!embedded) return;
-    window.addEventListener('message', async event => {
+    window.addEventListener('message', event => {
       if (event.origin !== location.origin || event.source !== window.parent) return;
       const msg = event.data;
       if (!msg || msg.protocol !== 'arthub-player' || msg.version !== 1 || msg.type !== 'command') return;
@@ -1292,7 +1289,6 @@
           playerPost('state', { state: 'ready', capabilities: playerCapabilities() }, msg.requestId);
         } else if (msg.command === 'capture') {
           const captureSeq = loadSeq;
-          await K.requireTextureQuality(layers.filter(layer => layer.visible).map(layer => layer.atlas));
           requestAnimationFrame(() => {
             if (captureSeq !== loadSeq || !layers.length) return;
             try { playerPost('capture-result', { dataUrl: canvas.toDataURL('image/png') }, msg.requestId); }
@@ -1975,9 +1971,6 @@
       onExport: async (quality, transparent) => {
         closePopups();
         try {
-          const seq = loadSeq;
-          await K.requireTextureQuality(layers.filter(layer => layer.visible).map(layer => layer.atlas));
-          if (seq !== loadSeq) return;
           const pose = poseFor(quality);
           const r = await K.exportPNG({
             canvas, size: pose.size, pose, transparent, background: getBg(),

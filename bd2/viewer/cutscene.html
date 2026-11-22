@@ -427,8 +427,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261122-framing-v4"></script>
-<script src="../../common/texture-previews.js?v=20261122-q10-full"></script>
-<script src="../../common/asset-loader.js?v=20261122-q10-full"></script>
+<script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/portrait-audio.js?v=20261121-voice-completion"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -1600,9 +1599,6 @@
       renderer.end();
       if (clip) raw.disable(raw.SCISSOR_TEST);
       if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
-        if (playerDrawnSeq !== cutLoadSeq) {
-          for (const layer of cutLayers(cut)) K.queueTextureUpgrade(layer.atlas);
-        }
         playerDrawnSeq = cutLoadSeq;
         loadingPreview.ready(cutLoadSeq);
         if (!viewerUiReady) {
@@ -1946,7 +1942,7 @@
   }
   function setupDesktopBridge() {
     if (!embedded) return;
-    window.addEventListener('message', async event => {
+    window.addEventListener('message', event => {
       if (event.origin !== location.origin || event.source !== window.parent) return;
       const msg = event.data;
       if (!msg || msg.protocol !== 'arthub-player' || msg.version !== 1 || msg.type !== 'command') return;
@@ -1993,7 +1989,6 @@
           playerPost('state', { state: 'ready', capabilities: playerCapabilities() }, msg.requestId);
         } else if (msg.command === 'capture') {
           const captureSeq = cutLoadSeq;
-          await K.requireTextureQuality(cutLayers().map(layer => layer.atlas));
           requestAnimationFrame(() => {
             if (captureSeq !== cutLoadSeq || !cut) return;
             try { playerPost('capture-result', { dataUrl: cv.toDataURL('image/png') }, msg.requestId); }
@@ -2263,7 +2258,6 @@
     let atlas = null;
     try {
       const files = reuse ? { atlas: baseLayer.atlas } : await K.loadSpineFiles(SP, mgl, {
-        progressiveTexture: true, autoUpgrade: false,
         atlasURL: '../' + entry.dir + entry.atlas,
         skeletonURL: '../' + entry.dir + encodeURIComponent(entry.skel), signal,
         timeout: entry.originalBackground ? 15000 : undefined,
@@ -2429,7 +2423,6 @@
       if (seq !== cutLoadSeq) return;
       if (!ensureGL()) throw new Error('WebGL 不可用');
       const files = await K.loadSpineFiles(SP, mgl, {
-        progressiveTexture: true, autoUpgrade: false,
         atlasURL: dir + v.atlas, skeletonURL: dir + encodeURIComponent(v.skel), signal: request.signal,
         onProgress: message => { if (seq === cutLoadSeq) status(message); },
       });
@@ -2846,18 +2839,7 @@
   });
 
   // ---------- PNG 导出 ----------
-  async function exportFrame(transparent, mode, done, quality = exportQuality) {
-    const exportCut = cut;
-    if (exportCut) {
-      const atlases = cutLayers(exportCut).map(layer => layer.atlas);
-      if (atlases.some(K.hasTexturePreview)) {
-        K.toast('正在准备原始贴图…', 'info');
-        try { await K.requireTextureQuality(atlases); }
-        catch (error) { if (exportCut === cut) K.toast(error.message, 'err'); return; }
-        if (exportCut !== cut) return;
-      }
-    }
-
+  function exportFrame(transparent, mode, done, quality = exportQuality) {
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     let pose;
     try { pose = pngPose(quality); }
@@ -3006,6 +2988,7 @@
     if (isChrome(e.target)) return;
     e.preventDefault();
     K.showMenu([
+      K.stageFramingMenuItem(),
       { label: '复制 PNG 到剪贴板', fn: () => exportFrame(true, 'copy') },
       { label: '导出 PNG', fn: () => btnPng.click() },
       { sep: true },

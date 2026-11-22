@@ -1,5 +1,5 @@
-import {importBundle,discoverModels} from './bundle.mjs?v=20261122-q10';
-import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261122-q10';
+import {importBundle,discoverModels} from './bundle.mjs?v=20261104-unified-final';
+import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261121-framing-modes';
 const K=window.SpineKit,$=id=>document.getElementById(id),stage=$('stage');
 let canvas=$('canvas'),engine=null,activeBundle=null,bundle=null,models=[],selected=null,identity='',epoch=0,pending=null,exporting=false,renderFailed=false,gridPlaying=true;
 const catalogMode=true;
@@ -37,7 +37,6 @@ const ui=window.createInteractionViewerUI({
   tools:{identity:()=>identity,editor:()=>!pending&&!renderFailed?engine?.editor||null:null,name:()=>selected?.name||'riichicity',reload:()=>selected&&loadModel(selected,activeBundle),openPanel,
     voiceTab:catalogMode?'voice':undefined,
     setExporting:value=>{exporting=value;if(value)catalog?.voicePanel.suspend();},capture:state=>engine.capture(state),setBackground:()=>{},soundEnabled:()=>catalog?.voicePanel.enabled??false,setSoundEnabled:value=>{if(catalog)catalog.voicePanel.enabled=value;},volume:()=>catalog?.voicePanel.volume??0,setVolume:value=>{if(catalog)catalog.voicePanel.volume=value;},
-    beforeExport:signal=>K.awaitExportTask(Promise.resolve(engine?.prepareExport?.()),signal),
     drawableOrder:part=>part.index||0,
   },
 });
@@ -141,7 +140,7 @@ window.addEventListener('pagehide',()=>{pending?.abort();engine?.dispose();if(ac
 async function initializeCatalog(){
   busy(true);status('正在读取麻雀一番街角色目录…');
   $('catalogRetry').hidden=true;
-  try{const module=await import('./catalog.mjs?v=20261122-q10-game-audio');
+  try{const module=await import('./catalog.mjs?v=20261122-game-audio');
     catalog=await module.createCatalog({selectModel:loadModel,status});models=catalog.models;renderModels();busy(false);
     if(catalog.initial&&autoOpenInitial)await loadModel(catalog.initial);
     else if(requestedModel){loadingPreview.cancel();requestedModel=null;showLibrary(true);status('没有找到这个立绘，请从资源库重新选择。',true);}

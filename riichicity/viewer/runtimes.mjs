@@ -1,4 +1,4 @@
-import {liveDefinition} from './bundle.mjs?v=20261122-q10';
+import {liveDefinition} from './bundle.mjs?v=20261104-unified-final';
 const K=window.SpineKit;
 let runtimeQueue=Promise.resolve();
 async function spineRuntime(version){
@@ -61,44 +61,29 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
     for(let i=0;i<lines.length;i++){const line=lines[i].trim();if(!line){pageNext=true;continue;}if(pageNext){pageNext=false;const size=/^size:\s*(\d+)\s*,\s*(\d+)/.exec(lines[i+1]||'');if(size&&+size[1]>0&&+size[2]>0)declaredSizes.set(line,{width:+size[1],height:+size[2]});}}
   }
   let atlas=legacy?new ns.TextureAtlas(atlasText,()=>({setFilters(){},setWraps(){},getImage:()=>({width:1,height:1})})):new ns.TextureAtlas(atlasText);
-  let disposed=false,tools,lastView,lastFrame,textureUpgradeQueued=false;
-  const textures=[],bitmaps=[],remoteTextures=new Set();
+  let disposed=false,tools,lastView,lastFrame;
+  const textures=[],bitmaps=[];
   const dispose=()=>{
     if(disposed)return;disposed=true;
-    for(const texture of textures){
-      if(remoteTextures.has(texture))K.disposeSceneTexture(texture);
-      else texture.dispose();
-    }
+    for(const texture of textures)texture.dispose();
     for(const bitmap of bitmaps)bitmap.close();
     renderer.dispose();try{gl.getExtension('WEBGL_lose_context')?.loseContext();}catch{}
   };
   try{
     const pageTextures=new Map();for(let i=0;i<atlas.pages.length;i++){
       const page=atlas.pages[i],file=bundle.resolve(model.atlas,page.name);onProgress('正在读取贴图 '+(i+1)+' / '+atlas.pages.length);
-      const remoteURL=bundle.textureURLs.get(file);
-      let texture;
-      if(remoteURL){
-        ({texture}=await K.loadSceneTexture(ns,mgl,remoteURL,{
-          signal,timeout:90000,retryIdleMs:15000,retryHTTP:true,pma:false,
-          ...(straightAlpha ? {premultiplyAlpha:true} : {}),
-          progressiveTexture:true,autoUpgrade:false,
-        }));
-        remoteTextures.add(texture);
-      }else{
-        // The legacy straight-alpha pages must be premultiplied before filtering.
-        const img=straightAlpha
-          ? await createImageBitmap(bundle.files.get(file),{premultiplyAlpha:'premultiply'})
-          : await image(bundle.url(file),signal);
-        if(straightAlpha)bitmaps.push(img);
-        check(signal);
-        texture=new ns.GLTexture(mgl,img);
-      }
-      textures.push(texture);
+      // These atlas pages store straight alpha. Premultiply before the GPU
+      // filters them so RGB in transparent pixels does not bleed into the pose.
+      const img=straightAlpha
+        ? await createImageBitmap(bundle.files.get(file),{premultiplyAlpha:'premultiply'})
+        : await image(bundle.url(file),signal);
+      if(straightAlpha)bitmaps.push(img);
       check(signal);
+      const texture=new ns.GLTexture(mgl,img);
       // Unity can resample a non-power-of-two atlas while keeping its original atlas coordinates.
       // Keep the uploaded bitmap intact and use the declared logical size for Spine's UV math.
       if(declaredSizes.has(page.name)){const logical=declaredSizes.get(page.name);texture.getImage=()=>logical;}
-      pageTextures.set(page.name,texture);if(!legacy){page.texture=texture;page.setTexture(texture);}
+      textures.push(texture);pageTextures.set(page.name,texture);if(!legacy){page.texture=texture;page.setTexture(texture);}
     }
     if(legacy){atlas=new ns.TextureAtlas(atlasText,name=>pageTextures.get(name));for(const page of atlas.pages)page.pma=true;}
     const loader=new ns.AtlasAttachmentLoader(atlas),reader=model.format==='json'?new ns.SkeletonJson(loader):new ns.SkeletonBinary(loader);
@@ -173,7 +158,6 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       expression(name){if(!data.findSkin(name))return false;skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);return true;},
       playOnce(name,back){if(!data.findAnimation(name))return false;state.setAnimation(0,name,name===back);if(back&&back!==name&&data.findAnimation(back))state.addAnimation(0,back,true,0);return true;},
       setTools(value){tools=value;},resetFraming(){originalFraming=null;},dispose,
-      prepareExport:()=>remoteTextures.size ? K.requireTextureQuality(remoteTextures) : undefined,
       play(name,loop=true){
         if(!data.findAnimation(name))throw Error('动画不存在');
         // The manual list can jump between separate shots. Restore their
@@ -205,9 +189,6 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
         }
         try{drawPicture(skeleton,!!atlas.pages[0]?.pma,shotOffset(skeleton));}
         finally{if(frame)gl.disable(gl.SCISSOR_TEST);}
-        if(!textureUpgradeQueued){
-          textureUpgradeQueued=true;remoteTextures.forEach(texture=>K.queueTextureUpgrade(texture));
-        }
       },
       capture(animation){
         const offset=shotOffset(skeleton);

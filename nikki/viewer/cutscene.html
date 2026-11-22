@@ -437,8 +437,7 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261122-framing-v4"></script>
-<script src="../../common/texture-previews.js?v=20261122-q10-full"></script>
-<script src="../../common/asset-loader.js?v=20261122-q10-full"></script>
+<script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -695,19 +694,8 @@
     try { renderer.drawSkeleton(skeleton, pma); }
     finally { slot.color.a = alpha; }
   }
-  async function renderSkillBackdrop(requireOriginal = false) {
+  function renderSkillBackdrop() {
     if (burstSession || burstPending?.intro || !cut) return;
-    if (useSkillBackdrop() && burstBackdrop?.hasPreview() && !skillBackdrop && cut.sourceVariant.skillBackdrop !== false) {
-      const pending = burstBackdrop, target = cut;
-      try { await pending.finishQuality(); }
-      catch (error) {
-        if (pending !== burstBackdrop || target !== cut) return;
-        if (requireOriginal) throw error;
-        K.toast(error.message, 'err');
-        return;
-      }
-      if (pending !== burstBackdrop || target !== cut) return;
-    }
     if (useSkillBackdrop() && cut.sourceVariant.skillBackdrop !== false && burstBackdrop && !skillBackdrop && burstBackdrop.backdrop?.time !== null) {
       const { minX, minY, maxX, maxY } = cut.frame || cut.bounds;
       const width = maxX - minX, height = maxY - minY;
@@ -819,7 +807,7 @@
     if (intro) stage.dataset.skillBurst = 'loading';
     syncBurstUI();
     try {
-      const {openSkillBurst} = await import('./burst-inline.js?v=20261122-q10-full');
+      const {openSkillBurst} = await import('./burst-inline.js?v=20261122-skill-v3');
       signal.throwIfAborted();
       const session = await openSkillBurst({
         canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),
@@ -1970,10 +1958,6 @@
         finally { if (clipped) raw.disable(raw.SCISSOR_TEST); }
       }
       if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
-        if (playerDrawnSeq !== cutLoadSeq) {
-          for (const layer of cutLayers(cut)) K.queueTextureUpgrade(layer.atlas);
-          K.queueTextureUpgrade(cut.artworkBackdrop?.texture);
-        }
         playerDrawnSeq = cutLoadSeq;
         loadingPreview.ready(cutLoadSeq);
         if (!viewerUiReady) {
@@ -2350,7 +2334,7 @@
   }
   function setupDesktopBridge() {
     if (!embedded) return;
-    window.addEventListener('message', async event => {
+    window.addEventListener('message', event => {
       if (event.origin !== location.origin || event.source !== window.parent) return;
       const msg = event.data;
       if (!msg || msg.protocol !== 'arthub-player' || msg.version !== 1 || msg.type !== 'command') return;
@@ -2393,9 +2377,6 @@
           playerPost('state', { state: 'ready', capabilities: playerCapabilities() }, msg.requestId);
         } else if (msg.command === 'capture') {
           const captureSeq = cutLoadSeq;
-          if (burstBackdrop && useSkillBackdrop() && !skillBackdrop) await renderSkillBackdrop(true);
-          if (captureSeq !== cutLoadSeq || !cut) return;
-          await K.requireTextureQuality([...cutLayers().map(layer => layer.atlas), cut?.artworkBackdrop?.texture]);
           requestAnimationFrame(() => {
             if (captureSeq !== cutLoadSeq || !cut) return;
             try { playerPost('capture-result', { dataUrl: cv.toDataURL('image/png') }, msg.requestId); }
@@ -2543,7 +2524,8 @@
   function disposeCut() {
     portraitAudio?.reset();
     if (cut) {
-      K.disposeSceneTexture(cut.artworkBackdrop?.texture);
+      cut.artworkBackdrop?.texture.dispose();
+      cut.artworkBackdrop?.image.close();
       for (const atlas of new Set(cutLayers(cut).map(layer => layer.atlas))) disposeAtlas(atlas);
       cut = null;
       if (partsCtl) partsCtl.refresh();
@@ -2665,7 +2647,6 @@
     let atlas = null;
     try {
       const files = reuse ? { atlas: baseLayer.atlas } : await K.loadSpineFiles(SP, mgl, {
-        progressiveTexture: true, autoUpgrade: false,
         ...variantFiles(entry), signal,
       });
       atlas = files.atlas;
@@ -2719,7 +2700,6 @@
       if (seq !== cutLoadSeq) return;
       if (!ensureGL()) throw new Error('WebGL 不可用');
       const files = await K.loadSpineFiles(SP, mgl, {
-        progressiveTexture: true, autoUpgrade: false,
         ...variantFiles(v),
         signal: request.signal,
         onProgress: message => { if (seq === cutLoadSeq) status(message); },
@@ -2827,14 +2807,15 @@
         target.frame = wallpaper.frame;
       }
       if (v.skel === nativeSkillBackdrop.skeleton) {
-        let texture;
+        let image;
         try {
-          ({texture} = await K.loadSceneTexture(SP, mgl, burstObjectURL(nativeSkillBackdrop.object), {signal: request.signal, autoUpgrade: false}));
+          const blob = await K.fetchAssetBlob(burstObjectURL(nativeSkillBackdrop.object), { signal: request.signal });
+          image = await createImageBitmap(blob);
           request.signal.throwIfAborted();
           if (seq !== cutLoadSeq) throw new DOMException('加载已取消', 'AbortError');
-          target.artworkBackdrop = { ...nativeSkillBackdrop, texture, get image() { return texture.getImage(); } };
+          target.artworkBackdrop = { ...nativeSkillBackdrop, image, texture: new SP.GLTexture(mgl, image) };
         } catch (error) {
-          K.disposeSceneTexture(texture);
+          image?.close();
           if (seq !== cutLoadSeq || K.isAbort(error)) throw error;
           K.toast('技能场景背景读取失败', 'err');
         }
@@ -2883,12 +2864,6 @@
     parkSkillBurst();
     if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
-    const exportCut = cut;
-    try {
-      if (burstBackdrop && useSkillBackdrop() && !skillBackdrop) await renderSkillBackdrop(true);
-      await K.requireTextureQuality([exportCut.artworkBackdrop?.texture]);
-    } catch (error) { if (exportCut === cut) K.toast(error.message, 'err'); return; }
-    if (exportCut !== cut || animationExportRunning) return;
     const animName = animSel.value;
     const anim = sceneAnimations().find(a => a.name === animName);
     if (!anim) { K.toast('动画不存在', 'err'); return; }
@@ -3124,23 +3099,8 @@
     const skeletons = cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
     return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), frame, cut.frameView);
   }
-  async function exportFrame(transparent, mode, done, quality = exportQuality) {
-    const exportCut = cut;
+  function exportFrame(transparent, mode, done, quality = exportQuality) {
     parkSkillBurst();
-    if (exportCut) {
-      const atlases = cutLayers(exportCut).map(layer => layer.atlas);
-      atlases.push(exportCut.artworkBackdrop?.texture);
-      try { if (burstBackdrop && useSkillBackdrop() && !skillBackdrop) await renderSkillBackdrop(true); }
-      catch (error) { if (exportCut === cut) K.toast(error.message, 'err'); return; }
-      if (exportCut !== cut) return;
-      if (atlases.some(K.hasTexturePreview)) {
-        K.toast('正在准备原始贴图…', 'info');
-        try { await K.requireTextureQuality(atlases); }
-        catch (error) { if (exportCut === cut) K.toast(error.message, 'err'); return; }
-        if (exportCut !== cut) return;
-      }
-    }
-
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     const backdrop = activeSkillBackdrop();
     let pose;
