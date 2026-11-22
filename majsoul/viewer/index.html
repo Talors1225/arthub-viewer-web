@@ -269,7 +269,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
 </style>
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261122-game-audio"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261122-game-audio"><script defer src="../../common/site-ui.js?v=20261122-reviewed-frames"></script>
   <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
   <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 </head>
@@ -396,9 +396,9 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261120-delayed-framing"></script>
-<script src="../../common/asset-loader.js?v=20261120-transparent-atlas"></script>
-<script src="../../common/stage-ui.js?v=93a59d25328a"></script>
+<script src="../../common/kit.js?v=20261122-reviewed-frames"></script>
+<script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
+<script src="../../common/stage-ui.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
 <script>
@@ -557,7 +557,7 @@
   let curEntry = null;
   let layers = [];
   let groupOX = 0, groupOY = 0, globalZoom = 1;
-  let stageFitMode = true, viewerUiReady = false;
+  let stageFitMode = true, viewerUiReady = false, originalFraming = null;
   let selIdx = -1;
   let lastManual = 0;
   let loadSeq = 0;
@@ -825,6 +825,7 @@
       updWT(L.skeleton);
       if (L.hiddenSlots.size) K.applyHiddenSlots(L.skeleton, L.hiddenSlots);
     }
+    if (K.framing.original && stageFitMode) refitOriginal(layers.filter(L => L.visible));
     const raw = gl.gl || gl;
     const c = K.parseColor(getBg(), [0.09, 0.1, 0.13]);
     raw.clearColor(c[0], c[1], c[2], getBg() === 'checker' ? 0 : 1);
@@ -870,7 +871,7 @@
       if (!viewerUiReady) { viewerUiReady = true; K.setLibraryStageReady?.(true); }
     }
     // 同步截取缩略图 (WebGL 需 flush 后才能 toDataURL)
-    if (capturePending && curEntry) {
+    if (capturePending && curEntry && !K.framing.original) {
       try {
         const raw2 = gl.gl || gl;
         raw2.flush();
@@ -927,7 +928,7 @@
       }
     }
     updWT(sk);
-    let b = K.measureBounds(sk);
+    let b = measureFramedArt([{ entry: L.entry, skeleton: sk }], () => K.measureBounds(sk));
     if (!b) {
       const off = new spine.Vector2();
       const size = new spine.Vector2();
@@ -941,10 +942,53 @@
     return b;
   }
 
+  function composedBounds(visible) {
+    const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    for (const L of visible) {
+      const b = K.measureBounds(L.skeleton, spine, false);
+      if (!b) continue;
+      bounds.minX = Math.min(bounds.minX, b.minX);
+      bounds.minY = Math.min(bounds.minY, b.minY);
+      bounds.maxX = Math.max(bounds.maxX, b.maxX);
+      bounds.maxY = Math.max(bounds.maxY, b.maxY);
+    }
+    return bounds.maxX > bounds.minX && bounds.maxY > bounds.minY ? bounds : null;
+  }
+
+  function refitOriginal(visible) {
+    const world = composedBounds(visible);
+    if (!world) return;
+    const anchor = visible[0], scale = Math.abs(anchor.skeleton.scaleX) || 1;
+    const offsetX = anchor.skeleton.x / scale - anchor.ox, offsetY = anchor.skeleton.y / scale - anchor.oy;
+    const frame = {
+      minX: world.minX / scale - offsetX, minY: world.minY / scale - offsetY,
+      maxX: world.maxX / scale - offsetX, maxY: world.maxY / scale - offsetY,
+    };
+    const shot = visible.map(L => [L.entry.id, L.skeleton.skin?.name, L.state.getCurrent(0)?.animation.name,
+      L.ox, L.oy, L.rot, L.opacity, ...L.hiddenSlots]);
+    const key = JSON.stringify(shot);
+    const previous = originalFraming?.key === key ? originalFraming.frame : null;
+    if (previous) {
+      if (frame.minX >= previous.minX - .5 && frame.minY >= previous.minY - .5 &&
+          frame.maxX <= previous.maxX + .5 && frame.maxY <= previous.maxY + .5) return;
+      frame.minX = Math.min(frame.minX, previous.minX); frame.minY = Math.min(frame.minY, previous.minY);
+      frame.maxX = Math.max(frame.maxX, previous.maxX); frame.maxY = Math.max(frame.maxY, previous.maxY);
+    }
+    originalFraming = { key, frame };
+    fitBounds(frame);
+    for (const L of visible) K.updateWorldTransform(L.skeleton, spine.Physics?.pose);
+  }
+
   function refitAll() {
     if (!layers.length) return;
     const visible = layers.filter(L => L.visible);
     if (!visible.length) return;
+    if (K.framing.original) {
+      originalFraming = null;
+      for (const L of visible) K.updateWorldTransform(L.skeleton, spine.Physics?.pose);
+      refitOriginal(visible);
+      return;
+    }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const L of layers) {
       if (!L.visible) continue;
@@ -954,6 +998,10 @@
       maxX = Math.max(maxX, b.maxX);
       maxY = Math.max(maxY, b.maxY);
     }
+    fitBounds({ minX, minY, maxX, maxY });
+  }
+
+  function fitBounds({ minX, minY, maxX, maxY }) {
     const w = maxX - minX, h = maxY - minY;
     const area = K.stageViewArea(canvas);
     let fit = (w > 0 && h > 0) ? Math.min((area.pixelWidth * 0.96) / w, (area.pixelHeight * 0.96) / h) : 1;
@@ -999,12 +1047,21 @@
   }
 
   function measureFramedArt(activeLayers, measure) {
-    // This scene sends the hand far offstage during its celebration.
+    if (K.framing.original) return measure();
+    const muted = [];
+    // 401305 sends the hand far offstage during its celebration.
     const hand = activeLayers.find(layer => layer.entry.group === '401305')?.skeleton.findSlot('i-hand');
-    if (!hand || Math.abs(hand.bone.x) < 1000000) return measure();
-    const opacity = hand.color.a;
-    hand.color.a = 0;
-    try { return measure(); } finally { hand.color.a = opacity; }
+    if (hand && Math.abs(hand.bone.x) >= 1000000) muted.push([hand, hand.color.a]);
+    // 405202/2 has huge low-alpha ambient smoke clouds (smoker1..6) that shrink the character to ~18%.
+    const smokeLayer = activeLayers.find(layer => layer.entry.group === '405202');
+    if (smokeLayer) {
+      for (const slot of smokeLayer.skeleton.slots) {
+        if (/^smoker\d+$/i.test(slot.data.name) && slot.color.a > 0) muted.push([slot, slot.color.a]);
+      }
+    }
+    if (!muted.length) return measure();
+    for (const [slot] of muted) slot.color.a = 0;
+    try { return measure(); } finally { for (const [slot, a] of muted) slot.color.a = a; }
   }
 
   function persistHidden() {
@@ -1109,7 +1166,7 @@
       $('#railStar').setAttribute('aria-pressed', String(starredNow));
       $('#railStar').title = starredNow ? '取消收藏 (S)' : '收藏 (S)';
       // 在下一帧渲染循环里截取缩略图 (WebGL 需同步截取)
-      capturePending = entry.id;
+      capturePending = K.framing.original ? null : entry.id;
       playerReady(seq);
     } catch (e) {
       request.abort(e);
@@ -1810,7 +1867,7 @@
       for (let k = 0; k < plan.frames; k++) {
         job.check(); pose(plan.timeAt(k));
         for (const L of models) {
-          const b = measureFramedArt([L], () => K.measureBounds(L.skeleton, spine)); if (!b) continue;
+          const b = measureFramedArt([L], () => K.measureBounds(L.skeleton, spine, !K.framing.original)); if (!b) continue;
           bounds.minX = Math.min(bounds.minX, b.minX); bounds.minY = Math.min(bounds.minY, b.minY);
           bounds.maxX = Math.max(bounds.maxX, b.maxX); bounds.maxY = Math.max(bounds.maxY, b.maxY);
         }
@@ -1821,7 +1878,7 @@
       const kind = video ? 'video' : 'gif';
       const celebration = models.length === 1 && models[0].entry.group === '401305'
         && /^celebrate(?:_idle)?$/.test(animationName);
-      const size = celebration
+      const size = K.framing.original || celebration
         ? K.exportDimensions(bounds, quality, kind, 0)
         : K.animationFramingSize(reference, plan.duration, quality, kind, time => {
           pose(time, reference.scale, reference.centerX, reference.centerY);
@@ -1896,7 +1953,15 @@
   makeStagePopup(btnPng, (pop) => {
     const poseFor = quality => {
       const visible = layers.filter(L => L.visible);
-      return measureFramedArt(visible, () => K.pngExportPose(visible.map(L => L.skeleton), quality, spine));
+      const skeletons = visible.map(L => L.skeleton);
+      if (K.framing.original) {
+        const bounds = composedBounds(visible);
+        if (!bounds) throw new Error('没有可导出的可见立绘');
+        const scaleX = Math.abs(skeletons[0].scaleX) || 1;
+        const frame = Object.fromEntries(Object.entries(bounds).map(([key, value]) => [key, value / scaleX]));
+        return K.pngExportPose(skeletons, quality, spine, frame, { scaleX, x: 0, y: 0 });
+      }
+      return measureFramedArt(visible, () => K.pngExportPose(skeletons, quality, spine));
     };
     K.mountExportOptions(pop, {
       kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: getBg() === 'checker',
@@ -1949,11 +2014,15 @@
   });
 
   // ---------- 角色数据 ----------
+  K.stageFramingMenuItem = () => K.framing.menuItem({
+    disabled: !viewerUiReady || !layers.some(L => L.visible) || K.pngExporting || animationExportRunning,
+    onChange: () => { closePopups(); capturePending = null; doFit(); },
+  });
   K.initStageUI({ canvas, refit: () => { if (stageFitMode) refitAll(); } });
   setupDesktopBridge();
   K.initSearchPalette();
   Promise.all([
-    K.fetchJSON('../../thumbs/index.json' + '?v=majsoul-rendered-20261016').catch(() => ({ items: {} })),
+    K.fetchJSON('../../thumbs/index.json?v=20261122-thumbs-v4').catch(() => ({ items: {} })),
     K.fetchJSON('../characters.json'),
   ]).then(([thumbData, data]) => {
     webThumbs = thumbData.items || {};

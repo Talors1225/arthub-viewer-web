@@ -2,11 +2,11 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-loop-catalog';
 import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261121-portraits';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DOriginalCanvas,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261122-framing-fixes';
 import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261121-scene-fit';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
-import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261120-plymouth-arm-seam';
+import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261122-plymouth-forearm';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage'),interactionHint=$('interaction-hint'),hintButton=$('show-hint');
 const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),nextHintButton=$('next-hint');
@@ -52,9 +52,11 @@ const blendedVideoPortraits = new Set([
  'xianghe_2', 'xingdengbao_2', 'xinnong_4', 'xuefeng_3', 'xukufu_3', 'yuekechengii_3',
  'zhala_2', 'zhenzhuhao_2',
 ]);
-const previewPath = id => {
+const thumbnailVersion = '?v=20261122-framing-fixes';
+const previewPath = (id, indexed) => {
  const coverId = id === 'wuqi_3_hx' ? 'wuqi_3' : id;
- return K.thumbnailURL(K.siteRoot()+'thumbs/azurlane/'+encodeURIComponent(coverId)+'.webp');
+ const fallback = 'azurlane/'+encodeURIComponent(coverId)+'.webp';
+ return K.thumbnailURL(K.siteRoot()+'thumbs/'+(indexed || fallback)+thumbnailVersion);
 };
 let previewPending=false,nextPreviewCheck=0;
 const previewSample=document.createElement('canvas');previewSample.width=previewSample.height=64;
@@ -164,7 +166,7 @@ $('thumbGrid').dataset.kitDensityReady='1';
 let retiredModels={};
 const canonicalModelId=id=>retiredModels[id]||id;
 const THUMB_PREFIX='../../thumbs/';
-const THUMB_INDEX=THUMB_PREFIX+'index.json?v=20261120-soviet-scene';
+const THUMB_INDEX=THUMB_PREFIX+'index.json'+thumbnailVersion;
 const enc=path=>path.split('/').map(encodeURIComponent).join('/');
 const labels={touch_1:'普通触摸',touch_2:'特殊触摸',touch_head:'摸头',login:'登录',home:'回港',task:'任务',mission_complete:'任务完成',main_1:'主界面 1',main_2:'主界面 2',main_3:'主界面 3',propose:'誓约'};
 function fail(error){const message=error.message||String(error);loadingPreview.fail(loadGeneration,message);$('status').textContent='加载失败：'+message;evidence.errors.push(message);}
@@ -251,7 +253,7 @@ function populate(){
  for(const m of pageItems){const card=document.createElement('div');card.className='thumb-card'+(m.id===selected?.id?' active':'');card.dataset.id=m.id;card.setAttribute('role','button');card.tabIndex=0;card.setAttribute('aria-label',portraitName(m));
   const preview=document.createElement('div');preview.className='ph';const text=document.createElement('div');text.className='tm';const name=document.createElement('div'),tag=document.createElement('span'),star=document.createElement('button');name.className='tn';tag.className='tt';star.className='tstar'+(K.favs.has(entry(m).k)?' on':'');name.textContent=portraitName(m);tag.textContent=m.type==='live2d'?'Live2D':'Spine';star.type='button';star.title=K.favs.has(entry(m).k)?'取消收藏':'收藏';star.setAttribute('aria-label',star.title);star.setAttribute('aria-pressed',String(K.favs.has(entry(m).k)));star.innerHTML=K.uiIcon('star',18,K.favs.has(entry(m).k));text.append(name);card.append(preview,text,tag,star);
   const thumb=libraryThumbs['azurlane:'+m.id];
-  K.setPreview(preview,thumb?K.thumbnailURL(THUMB_PREFIX+thumb):null);
+  K.setPreview(preview,thumb?previewPath(m.id,thumb):null);
   const variant=variantLabel(m);if(variant){const badge=document.createElement('span');badge.className='tv';badge.textContent=variant;badge.title=variant==='HX版'?'原游戏 HX 变体，模型或动作配置与标准版存在差异':variant;card.append(badge);}
   card.addEventListener('click',event=>{if(event.target.closest('.tstar'))return;setPanelOpen('library',false);loadModel(m.id).catch(fail);});card.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&!event.target.closest('.tstar')){event.preventDefault();setPanelOpen('library',false);loadModel(m.id).catch(fail);}});star.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();K.favs.toggle(entry(m));populate();});fragment.append(card);
  }
@@ -573,14 +575,24 @@ const viewerUI=window.createInteractionViewerUI({
    capture:(state,format,quality)=>adapter.capture(state,format,quality),
   beforeExport:signal=>K.awaitExportTask(Promise.resolve(adapter?.prepareExport?.()),signal),
   videoDuration:state=>adapter?.videoDuration?.(state)??state.duration,setBackground:()=>{},
-  cameraLevel:()=>cameraLevelActions.has(currentActionKey()) ? !!adapter.levelExport : null,
+  cameraLevel:()=>!K.framing.original && cameraLevelActions.has(currentActionKey()) ? !!adapter.levelExport : null,
   setCameraLevel:value=>{if(adapter)adapter.levelExport=value;},
-  cameraAngle:()=>currentActionKey()==='qisheng_3:normal_touch' ? adapter.levelAngle ?? 0 : null,
+  cameraAngle:()=>!K.framing.original && currentActionKey()==='qisheng_3:normal_touch' ? adapter.levelAngle ?? 0 : null,
   setCameraAngle:value=>{if(adapter)adapter.levelAngle=value;},
   soundEnabled:()=>!muted,setSoundEnabled:enabled=>{if(muted===enabled)$('sound').click();},volume:()=>volume,
   setVolume,voiceTab:'voice',
   drawableOrder:part=>evidence.model?.internalModel.coreModel.getModel().drawables.renderOrders[part.index]||0,
  }
+});
+K.stageFramingMenuItem = () => K.framing.menuItem({
+ disabled:!view.ready || exporting,
+ onChange() {
+  stagePan.cancel();
+  view.panX = view.panY = 0;
+  zoomTo(1);
+  adapter?.refit?.();
+  render?.(0);
+ },
 });
 K.initCleanChrome();
 function refreshVoiceControls(){
@@ -619,6 +631,14 @@ function stageBoundsForFrame(frame) {
   height: frame.maxY - frame.minY,
   x: (frame.minX + frame.maxX) / 2,
   y: (frame.minY + frame.maxY) / 2,
+ };
+}
+function extendFrame(previous, current) {
+ if (!current) return previous;
+ if (!previous) return current;
+ return {
+  minX:Math.min(previous.minX,current.minX),minY:Math.min(previous.minY,current.minY),
+  maxX:Math.max(previous.maxX,current.maxX),maxY:Math.max(previous.maxY,current.maxY),
  };
 }
 function sceneExportCrop(model, motion, format) {
@@ -824,6 +844,15 @@ async function live2dPortrait(model,generation){
  app.stage.addChild(live);live.anchor.set(.5,.5);const natural={width:live.internalModel.width,height:live.internalModel.height},internal=live.internalModel,core=internal.coreModel.getModel(),indexes=new Map(core.parameters.ids.map((id,i)=>[id,i]));
  const defaultStageFrame = defaultPortraitStageFrame(model.id);
  const baseFrame = authoredLive2DFrame(model.id) || defaultStageFrame, portraitSurrounds = portraitSurroundNames(model.id);
+ const hitMeshIds = model.interaction.hitAreas.map(area => area.id);
+ const declaredOriginalFrame = authoredLive2DOriginalCanvas(model.id, natural, id => internal.getDrawableIndex(id) >= 0);
+ // Some touch targets are parked far outside the declared canvas. Measure
+ // the artwork without those helpers, but keep all original drawables active.
+ const originalArtworkFrame = () => {
+  if (declaredOriginalFrame) return declaredOriginalFrame;
+  const {x,y,width,height} = K.live2DViewBounds(internal, natural, [...hitMeshIds, ...editor.hidden]);
+  return {minX:x-width/2,minY:y-height/2,maxX:x+width/2,maxY:y+height/2};
+ };
  const aperture = authoredLive2DSceneAperture(model.id);
  const apertureRule = motion => {
   const generated = automaticSceneAperture(model.id,motion);
@@ -866,7 +895,7 @@ async function live2dPortrait(model,generation){
  const renderedParameters=core.parameters.values.slice(), effectParameterIndices=new Set();
  const dragCover = model.id === 'wuqi_3' ? core.drawables.ids.indexOf('ArtMesh766') : -1;
  const coverDragParameter = indexes.get('touch_drag6');
- let activeMotion=model.defaultAnimation, coverMotion;
+ let activeMotion=model.defaultAnimation, coverMotion, originalFrame;
  let interfaceCovers=[], savedCoverOpacity=new Float32Array(0);
  const hotspots = model.interaction.hitAreas.map(area => ({ ...area, index: internal.getDrawableIndex(area.id) })).filter(area => area.index >= 0);
  const hotspotVertices = ({ index }) => {
@@ -879,6 +908,7 @@ async function live2dPortrait(model,generation){
  const nativeDraw = internal.draw.bind(internal);
  internal.draw = gl => {
   viewerUI.tools.after();
+  if (K.framing.original) return nativeDraw(gl);
   if (coverMotion !== activeMotion) {
    coverMotion=activeMotion;
    // Keep the drawable available to the camera's aperture calculation.
@@ -941,7 +971,7 @@ async function live2dPortrait(model,generation){
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
   prepareExport:async()=>{await loadEffect();if(generation===loadGeneration)api.refreshEffect();},
   setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&!apertureAtPose()&&!stageCrop?.anchor&&displayedStageCrop!==undefined;},
-  refit:()=>{refitPending=true;},
+  refit:()=>{refitPending=true;originalFrame=null;stageCropFixed=false;},
   effectTimeline:null,
   refreshEffect:()=>{
    if(!effectTimeline)return;
@@ -969,6 +999,7 @@ async function live2dPortrait(model,generation){
    if(generation!==loadGeneration||serial!==playSerial)return;
    if(!started)throw Error('动作未能开始 '+name);
    activeMotion=evidence.animation=name;
+   originalFrame=null;
    stageCrop = authoredLive2DFrame(model.id, name) || defaultStageFrame;
    $('animation').value=name;
    if (!view.playing) {
@@ -1017,14 +1048,15 @@ async function live2dPortrait(model,generation){
  }
  api.videoDuration = playback => playback.duration;
  api.capture=(playback={},format,quality)=>{
-  const motion = playback.name || activeMotion;
-  const levelFrame = api.levelExport ? authoredLive2DLevelFrame(model.id, motion) : null;
-  const safeCrop = sceneExportCrop(model, motion, format);
-  const rule = apertureRule(motion);
+  const motion = playback.name || activeMotion, original = K.framing.original;
+  const levelFrame = !original && api.levelExport ? authoredLive2DLevelFrame(model.id, motion) : null;
+  const safeCrop = original ? null : sceneExportCrop(model, motion, format);
+  const rule = original ? null : apertureRule(motion);
   const useAperture = !!rule && !levelFrame;
   const followReviewedScene = useAperture && rule.reviewed;
-  const motionFrame = levelFrame ?? (safeCrop?.inset ? null : safeCrop) ?? authoredLive2DExportFrame(model.id, motion)
-   ?? live2DExportWindowAtPose(model.id, motion, internal) ?? (hasApertureFallback(motion) ? apertureFallback : null);
+  const motionFrame = original ? null : (levelFrame ?? (safeCrop?.inset ? null : safeCrop) ?? authoredLive2DExportFrame(model.id, motion)
+   ?? live2DExportWindowAtPose(model.id, motion, internal) ?? (hasApertureFallback(motion) ? apertureFallback : null)
+   ?? authoredLive2DFrame(model.id, motion) ?? defaultStageFrame);
   // When a separate screen matte goes away, return to the camera the preview
   // was using for the full scene. The previous inset would clip the reveal.
   const fallback = followReviewedScene && fittingBounds ? {
@@ -1035,9 +1067,11 @@ async function live2dPortrait(model,generation){
   const captureFrameAtPose = (opening = captureAperture()) => opening
    || insetLive2DFrame(live2DFrameAtPose(motionFrame || fallback, internal), safeCrop?.inset);
   const animatedMatte = !useAperture && motionFrame?.anchor?.fadeToFrame && (format === 'video' || format === 'gif');
-  const authoredFrame = animatedMatte ? motionFrame : captureFrameAtPose();
+  const authoredFrame = original
+   ? declaredOriginalFrame || (format === 'png' ? originalFrame || originalArtworkFrame() : null)
+   : animatedMatte ? motionFrame : captureFrameAtPose();
   let exportRotation = authoredFrame?.rotation ?? 0;
-  if (api.levelExport && model.id === 'xinnong_5' && playback.name === 'idle18') {
+  if (!original && api.levelExport && model.id === 'xinnong_5' && playback.name === 'idle18') {
    const index = internal.getDrawableIndex('ArtMesh370');
    if (index >= 0) {
     const v = internal.getDrawableVertices(index), matrix = internal.localTransform;
@@ -1047,9 +1081,10 @@ async function live2dPortrait(model,generation){
   }
   const rotateExport = p => { const c=Math.cos(exportRotation),s=Math.sin(exportRotation);return {x:p.x*c-p.y*s,y:p.x*s+p.y*c}; };
 
-  const hitMeshes=new Set(model.interaction.hitAreas.map(area=>area.id));
-  const surrounds=new Set([...portraitSurrounds, ...authoredLive2DExportHidden(model.id, motion), ...(motionFrame?.hiddenDrawables ?? [])]);
+  const hitMeshes=new Set(hitMeshIds);
+  const surrounds=new Set(original ? [] : [...portraitSurrounds, ...authoredLive2DExportHidden(model.id, motion), ...(motionFrame?.hiddenDrawables ?? [])]);
   const measure=()=>{
+  if (original) return originalArtworkFrame();
   const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},rectangles=[];
   for(let i=0;i<core.drawables.ids.length;i++){
    if(hitMeshes.has(core.drawables.ids[i])||surrounds.has(core.drawables.ids[i])||!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
@@ -1263,38 +1298,39 @@ async function live2dPortrait(model,generation){
   viewerUI.tools.before();
   const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
   if (app.renderer.screen.width !== w || app.renderer.screen.height !== h) app.renderer.resize(w, h);
-  const frame = stageFrame();
-  const useApertureFallback = hasApertureFallback(activeMotion);
+  const frame = stageFrame(), original = K.framing.original;
+  const useApertureFallback = !original && hasApertureFallback(activeMotion);
   if (view.playing) {
    effectTimeline?.advance(dt * (api.effectTimeline ? 1 : view.speed));
    live.update(dt * 1000 * view.speed);
-   if ((apertureRule(activeMotion) || stageCrop?.anchor?.aperture || stageCrop?.anchor?.syncPose) && live.deltaTime) {
+   if ((original || apertureRule(activeMotion) || stageCrop?.anchor?.aperture || stageCrop?.anchor?.syncPose) && live.deltaTime) {
     // Measure the same pose that will be drawn so a moving matte cannot outrun its crop.
     internal.update(live.deltaTime, live.elapsedTime);
     live.deltaTime = 0;
    }
   }
-  fittingBounds ||= K.live2DViewBounds(internal, natural, [...model.interaction.hitAreas.map(a => a.id), ...portraitSurrounds]);
+  fittingBounds ||= K.live2DViewBounds(internal, natural, [...hitMeshIds, ...portraitSurrounds]);
   if(refitPending&&!controller.state.motionPending&&renderedStageMotion===activeMotion){
-   fittingBounds=baseFrame?stageBoundsForFrame(baseFrame):K.live2DViewBounds(internal,natural,[...model.interaction.hitAreas.map(a=>a.id),...portraitSurrounds]);
+   fittingBounds=baseFrame?stageBoundsForFrame(baseFrame):K.live2DViewBounds(internal,natural,[...hitMeshIds,...portraitSurrounds]);
    stageCropFixed=false;refitPending=false;
   }
   // Fixed interaction preserves the viewer transform. A drawn scene window can still move inside it.
-  const activeAperture = apertureAtPose();
-  if (!stageCropFixed || stageCrop?.anchor || activeAperture || useApertureFallback) {
+  const activeAperture = original ? null : apertureAtPose();
+  if (!original && (!stageCropFixed || stageCrop?.anchor || activeAperture || useApertureFallback)) {
    displayedStageCrop = activeAperture || live2DFrameAtPose(stageCrop || (useApertureFallback ? apertureFallback : null), internal);
    stageCropFixed = !activeAperture && !useApertureFallback && !stageCrop?.anchor && fixedView.checked && stage.dataset.panMode === 'interact'
     && !controller.state.motionPending && renderedStageMotion === activeMotion;
   }
-  const crop = displayedStageCrop;
-  const fit = crop ? stageBoundsForFrame(crop) : fittingBounds;
+  if (original) originalFrame = extendFrame(originalFrame, originalArtworkFrame());
+  const crop = original ? null : displayedStageCrop;
+  const fit = original ? stageBoundsForFrame(originalFrame) : crop ? stageBoundsForFrame(crop) : fittingBounds;
   const scale = Math.min(frame.width / fit.width, frame.height / fit.height) * .92 * view.zoom;
   const rotation = crop?.rotation ?? 0, cos = Math.cos(rotation), sin = Math.sin(rotation);
   live.rotation = rotation;
   live.scale.set(scale);
   live.position.set(frame.x + view.panX + (pivotX * cos - pivotY * sin - fit.x) * scale,
    frame.y + view.panY + (pivotX * sin + pivotY * cos - fit.y) * scale);
-  if (crop || portraitSurrounds.size) {
+  if (!original && (crop || portraitSurrounds.size)) {
    // Cubism manages its own WebGL scissor state. Clip only the displayed canvas.
    const halfWidth = fit.width * scale / 2, halfHeight = fit.height * scale / 2;
    const x = frame.x + view.panX, y = frame.y + view.panY;
@@ -1351,19 +1387,22 @@ async function spinePortrait(model,generation){
  }
  evidence.layers=layers;evidence.renderer=scene;
  const aperture = authoredSpineSceneAperture(model.id);
- const apertureAtPose = sceneLayers => K.spineArtworkAperture(sceneLayers, spine, aperture);
+ const apertureForMotion = motion => !aperture?.motions || aperture.motions.test(motion) ? aperture : null;
+ const originalCanvasForMotion = motion => aperture?.useStageCanvasInOriginal ? apertureForMotion(motion)?.fallback : null;
  const mogadorAircraft = model.id === 'mojiaduoer_5';
  model.animations=[...new Set(layers.flatMap(layer=>layer.data.animations.map(animation=>animation.name)))].sort();
  // This auxiliary scene's one-second normal track contains no renderable
  // attachments at any point. The visible stand2 track is its actual action.
  // The aircraft form's numbered tracks are still poses used by expressions.
  if (mogadorAircraft) model.animations = model.animations.filter(name => !/^[1-5]$/.test(name));
- let mainLayer=0,sequence=0;
+ let mainLayer=0,sequence=0,originalFrame;
  for(let i=0;i<layers.length;i++)layers[i].state.addListener({event:(entry,event)=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion)controller.event(event.data.name);},complete:entry=>{if(i===mainLayer&&entry.animation.name===controller?.state.motion&&controller.state.busy)controller.finish();}});
  const api={sound,stopAudio,fold,assistantEvent:area=>{if(basicActions[area])sound(model.voiceBank,motionCue(basicActions[area]),{voice:true});},skin:name=>{for(const l of layers){const skin=l.data.findSkin(name||l.spec.initialSkin||model.defaultSkin||'default');if(skin){l.skeleton.setSkin(skin);l.skeleton.setSlotsToSetupPose();}}},effects:visible=>{evidence.effectsVisible=visible;},alpha:data=>{evidence.alphaData=data;},
   expression:cue=>{if(!cue){for(const l of layers)l.state.setEmptyAnimation(1,.15);return;}if(controller?.state.busy)return;const field=({touch_1:'touch',touch_2:'touch2',touch_head:'headtouch',task:'mission',get:'unlock'})[cue]||cue;let name=model.expression?.base?.[field]||model.expression?.base?.default;const extra=model.expression?.extra?.[field];for(const row of array(extra))if(row[0]<=controller.state.favor)name=row[1];if(name===undefined||name===null||name==='')return;const multiple=model.interaction.spine?.multiple_face;if(array(multiple?.name).length&&Number.isFinite(Number(name))){const offset=array(multiple.data).find(r=>r[0]===controller.state.idle)?.[1]||0;name=String(Number(name)+offset);}name=String(name);for(const l of layers)if(l.data.findAnimation(name))l.state.setAnimation(1,name,true);evidence.expression={cue,name};},
+  refit:()=>{originalFrame=null;},
   play:async(name,loop,options={})=>{
    sequence++;
+   originalFrame=null;
    if (options.manual && (options.resetPose || mogadorAircraft || model.id === 'yuekegongjue_5')) {
     for (const layer of layers) {
      if (model.id === 'yuekegongjue_5') layer.state.clearTracks();
@@ -1429,14 +1468,17 @@ async function spinePortrait(model,generation){
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
  api.capture = (animation, format) => {
-  const hidden = new Set(editor.hidden), surrounds = portraitSurroundNames(model.id);
+  const original = K.framing.original;
+  const artworkAperture = original ? null : apertureForMotion(animation.name);
+  const hidden = new Set(editor.hidden), surrounds = original || aperture?.motions ? new Set() : portraitSurroundNames(model.id);
   layers.forEach((layer, i) => {
    for (const slot of layer.skeleton.slots) if (surrounds.has(slot.data.name)) hidden.add(i + ':' + slot.data.name);
   });
   const session = window.createInteractionSpineCapture({ layers, ns:spine, canvas, renderer:scene, gl,
-   editor:{...editor, hidden}, animation, fromSetupPose:format !== 'png', artworkAperture:aperture,
+   editor:{...editor, hidden}, animation, fromSetupPose:format !== 'png', artworkAperture,
    restore:()=>render(0) });
-  const exportFrame = apertureAtPose(layers) ?? sceneExportCrop(model, animation.name, format) ?? authoredSpineExportFrame(model.id, animation.name);
+  const exportFrame = original ? originalCanvasForMotion(animation.name) : (K.spineArtworkAperture(layers, spine, artworkAperture) ?? sceneExportCrop(model, animation.name, format)
+   ?? authoredSpineExportFrame(model.id, animation.name) ?? authoredSpineFrame(model.id, animation.name) ?? baseStageFrame);
   // This shot's alternate scene is positioned by the selected track. Sample
   // its current time for PNG too, even while the preview is still mixing in.
   if (format === 'png' && model.id === 'siwanshi_4' && animation.name === 'touch_special_normal') {
@@ -1445,7 +1487,7 @@ async function spinePortrait(model,generation){
   }
   let levelFrame;
   const qishengLevel = model.id === 'qisheng_3' && cameraLevelActions.has(model.id+':'+animation.name);
-  if (api.levelExport && (qishengLevel || (['tianjinfeng_2','tianjinfeng_3'].includes(model.id) && animation.name === 'normal'))) {
+  if (!original && api.levelExport && (qishengLevel || (['tianjinfeng_2','tianjinfeng_3'].includes(model.id) && animation.name === 'normal'))) {
    const name = model.id === 'qisheng_3' ? 'bj' : model.id === 'tianjinfeng_2' ? 'bj_a' : 'bj_b';
    // Measure the selected action independently of the outgoing preview pose.
    const levelLayers = qishengLevel ? layers.map(layer => {
@@ -1493,7 +1535,7 @@ async function spinePortrait(model,generation){
    }
   }
   if (levelFrame || exportFrame) session.fixedFrame = levelFrame || exportFrame;
-  else {
+  else if (!original) {
    const frame = spinePortraitFrameBounds(model.id, layers, spine, hidden);
    if (frame) session.pngSize = quality => ({ ...K.exportDimensions(frame, quality), fullFrame:true });
   }
@@ -1510,10 +1552,18 @@ async function spinePortrait(model,generation){
    layer.state.apply(layer.skeleton);
    layer.skeleton.updateWorldTransform();
   }
-  if (aperture) {
-   stageFrameCrop = apertureAtPose(layers);
-   bounds = stageBoundsForFrame(stageFrameCrop);
+  const original = K.framing.original;
+  const motion = layers[mainLayer]?.state.getCurrent(0)?.animation?.name;
+  const artworkAperture = original ? null : apertureForMotion(motion);
+  const declaredOriginalFrame = original ? originalCanvasForMotion(motion) : null;
+  viewerUI.tools.after();
+  if (original && !declaredOriginalFrame) for (const layer of layers) {
+   originalFrame = extendFrame(originalFrame, K.measureBounds(layer.skeleton, spine, false));
   }
+  if (artworkAperture) stageFrameCrop = K.spineArtworkAperture(layers, spine, artworkAperture);
+  const clipFrame = original ? null : stageFrameCrop;
+  const fullFrame = original ? declaredOriginalFrame || originalFrame : clipFrame;
+  bounds = fullFrame ? stageBoundsForFrame(fullFrame) : framing.bounds;
   gl.viewport(0, 0, bw, bh);
   const camera = scene.camera, frame = stageFrame();
   const units = Math.max(bounds.width / frame.width, bounds.height / frame.height) * 1.1 / view.zoom;
@@ -1524,24 +1574,23 @@ async function spinePortrait(model,generation){
   camera.update();
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT);
-  viewerUI.tools.after();
-  if (stageFrameCrop) {
+  if (clipFrame) {
    const scale = density / units;
-   const left = Math.floor(bw / 2 + (stageFrameCrop.minX - camera.position.x) * scale);
-   const right = Math.ceil(bw / 2 + (stageFrameCrop.maxX - camera.position.x) * scale);
-   const bottom = Math.floor(bh / 2 + (stageFrameCrop.minY - camera.position.y) * scale);
-   const top = Math.ceil(bh / 2 + (stageFrameCrop.maxY - camera.position.y) * scale);
+   const left = Math.floor(bw / 2 + (clipFrame.minX - camera.position.x) * scale);
+   const right = Math.ceil(bw / 2 + (clipFrame.maxX - camera.position.x) * scale);
+   const bottom = Math.floor(bh / 2 + (clipFrame.minY - camera.position.y) * scale);
+   const top = Math.ceil(bh / 2 + (clipFrame.maxY - camera.position.y) * scale);
    gl.enable(gl.SCISSOR_TEST);
    gl.scissor(left, bottom, right - left, top - bottom);
   }
   try {
-   K.drawSpineArtwork(layers, aperture, () => {
+   K.drawSpineArtwork(layers, artworkAperture, () => {
     scene.begin();
     for (const layer of layers) scene.drawSkeleton(layer.skeleton, true);
     scene.end();
    });
   } finally {
-   if (stageFrameCrop) gl.disable(gl.SCISSOR_TEST);
+   if (clipFrame) gl.disable(gl.SCISSOR_TEST);
   }
  };
  disposeRenderer=dispose;return api;
@@ -1559,10 +1608,10 @@ async function loadModel(id,{history=true,formToken=null,initialAction=null}={})
  interactButton.disabled=true;for(const key of ['reset-state','show-hint'])$(key).disabled=true;$('interaction-voice').hidden=true;clearHint();hintArea=null;hintAdvance=false;hintInteractionCount=0;K.clearToasts('azur-interaction');K.clearToasts('azur-audio');$('interaction-more').open=false;$('interaction-note').textContent='立绘正在加载，完成后可开启互动。';
  const requestedId=id;id=canonicalModelId(id);if(id!==requestedId){const url=new URL(location.href);url.searchParams.set('id',id);window.history.replaceState(null,'',url);}
  const thumbnail=releasePortraits.has(id)?libraryThumbs['azurlane:'+id]:null;
- if(thumbnail)K.setPreview($('railThumb'),K.thumbnailURL(THUMB_PREFIX+thumbnail));
+ if(thumbnail)K.setPreview($('railThumb'),previewPath(id,thumbnail));
  else $('railThumb').replaceChildren();
  viewerUI.tools.prepareLoad();
- const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:previewPath(id),label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
+ const generation=++loadGeneration;previewPending=true;nextPreviewCheck=0;loadingPreview.begin(generation,{path:previewPath(id,libraryThumbs['azurlane:'+id]),label:allModels.find(m=>m.id===id)?.name||id,trimImage:true});view.ready=evidence.ready=false;viewerUI.update(true);render=null;pointer=null;editor=null;controller?.dispose();controller=null;disposeRenderer?.();disposeRenderer=null;stopAudio();fold(false);delete evidence.model;delete evidence.app;delete evidence.layers;delete evidence.renderer;delete evidence.bounds;delete evidence.effect;delete evidence.effectLayerError;evidence.errors=[];evidence.interaction={};evidence.audio.missing=[];
  if (canvas.style.clipPath) stage.style.removeProperty('touch-action');
  const next=canvas.cloneNode(false);next.style.clipPath='';canvas.replaceWith(next);canvas=next;Object.assign(view,{zoom:1,panX:0,panY:0,playing:true,frames:0});look.x=look.y=look.targetX=look.targetY=0;portraitTime=0;zoomTo(1);$('status').textContent=id+' · 正在读取模型和交互…';
  const data=await Promise.all([getJson(BASE+'/catalog/'+encodeURIComponent(id)+'.json',true,loadAbort.signal),allModels.find(m=>m.id===id)?.type==='live2d'?getJson(BASE+'/animators/'+encodeURIComponent(id)+'.json',false,loadAbort.signal):null]).catch(e=>{if(generation!==loadGeneration)return null;loadAbort.abort(e);throw e;});

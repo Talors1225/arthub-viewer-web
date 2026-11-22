@@ -175,30 +175,62 @@
 
   K.spineArtworkAperture = (layers, ns, aperture) => {
     if (!aperture) return null;
+    if (!aperture.slot) return aperture.fallback ?? null;
     for (const { skeleton } of layers) {
       const slot = skeleton.findSlot(aperture.slot);
-      const mesh = slot?.attachment;
-      if (!(mesh instanceof ns.MeshAttachment) || slot.color.a < .2 || !slot.bone.active) continue;
-      const vertices = new Float32Array(mesh.worldVerticesLength);
-      mesh.computeWorldVertices(slot, 0, vertices.length, vertices, 0, 2);
-      const [tl, bl, br, tr] = aperture.corners.map(i => ({ x: vertices[2 * i], y: vertices[2 * i + 1] }));
-      const minX = Math.max(tl.x, bl.x), maxX = Math.min(tr.x, br.x);
-      const minY = Math.max(bl.y, br.y), maxY = Math.min(tl.y, tr.y);
+      const att = slot?.attachment;
+      if (!att || slot.color.a < .2 || !slot.bone.active) continue;
+      if (aperture.corners) {
+        if (!(att instanceof ns.MeshAttachment)) continue;
+        const vertices = new Float32Array(att.worldVerticesLength);
+        att.computeWorldVertices(slot, 0, vertices.length, vertices, 0, 2);
+        const [tl, bl, br, tr] = aperture.corners.map(i => ({ x: vertices[2 * i], y: vertices[2 * i + 1] }));
+        const minX = Math.max(tl.x, bl.x), maxX = Math.min(tr.x, br.x);
+        const minY = Math.max(bl.y, br.y), maxY = Math.min(tl.y, tr.y);
+        if (!(maxX - minX > 10 && maxY - minY > 10)) continue;
+        const inset = Math.min(maxX - minX, maxY - minY) * (aperture.inset ?? .012);
+        return { minX: minX + inset, minY: minY + inset, maxX: maxX - inset, maxY: maxY - inset };
+      }
+      let vertices;
+      if (att instanceof ns.MeshAttachment) {
+        vertices = new Float32Array(att.worldVerticesLength);
+        att.computeWorldVertices(slot, 0, vertices.length, vertices, 0, 2);
+      } else if (att instanceof ns.RegionAttachment) {
+        vertices = new Float32Array(8);
+        att.computeWorldVertices('sequence' in att ? slot : slot.bone, vertices, 0, 2);
+      } else continue;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let i = 0; i < vertices.length; i += 2) {
+        if (vertices[i] < minX) minX = vertices[i];
+        if (vertices[i] > maxX) maxX = vertices[i];
+        if (vertices[i + 1] < minY) minY = vertices[i + 1];
+        if (vertices[i + 1] > maxY) maxY = vertices[i + 1];
+      }
       if (!(maxX - minX > 10 && maxY - minY > 10)) continue;
-      const inset = Math.min(maxX - minX, maxY - minY) * .012;
+      const inset = Math.min(maxX - minX, maxY - minY) * (aperture.inset ?? .004);
       return { minX: minX + inset, minY: minY + inset, maxX: maxX - inset, maxY: maxY - inset };
     }
     return aperture.fallback ?? null;
   };
 
   K.drawSpineArtwork = (layers, aperture, draw) => {
-    if (!aperture?.hideMatte) return draw();
-    const matte = layers.map(({ skeleton }) => skeleton.findSlot(aperture.slot)).find(Boolean);
-    if (!matte) return draw();
-    const opacity = matte.color.a;
-    matte.color.a = 0;
+    const names = [];
+    if (aperture?.hideMatte && aperture.slot) names.push(aperture.slot);
+    if (aperture?.hideSlots?.length) names.push(...aperture.hideSlots);
+    if (!names.length) return draw();
+    const hidden = [];
+    for (const { skeleton } of layers) {
+      for (const name of names) {
+        const slot = skeleton.findSlot(name);
+        if (slot) {
+          hidden.push([slot, slot.color.a]);
+          slot.color.a = 0;
+        }
+      }
+    }
+    if (!hidden.length) return draw();
     try { return draw(); }
-    finally { matte.color.a = opacity; }
+    finally { for (const [slot, alpha] of hidden) slot.color.a = alpha; }
   };
 
   // Reuse the current GL textures, but animate independent skeleton/state

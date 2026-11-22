@@ -33,6 +33,16 @@ function modelBounds(skeleton,ns,visibleOnly){
   for(const b of boxes){if(b.area<largest*.01)continue;minX=Math.min(minX,b.left);maxX=Math.max(maxX,b.right);minY=Math.min(minY,b.bottom);maxY=Math.max(maxY,b.top);}
   return {minX,minY,maxX,maxY};
 }
+function validBounds(value){
+  return value&&[value.minX,value.minY,value.maxX,value.maxY].every(Number.isFinite)&&value.maxX-value.minX>=1&&value.maxY-value.minY>=1;
+}
+function expandOriginalBounds(previous,frame,key){
+  if(!validBounds(frame))return previous;
+  if(previous?.key!==key)return {key,frame};
+  const last=previous.frame;
+  return {key,frame:{minX:Math.min(last.minX,frame.minX),minY:Math.min(last.minY,frame.minY),
+    maxX:Math.max(last.maxX,frame.maxX),maxY:Math.max(last.maxY,frame.maxY)}};
+}
 function resize(canvas){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),density=Math.min(2,devicePixelRatio||1),pw=Math.round(w*density),ph=Math.round(h*density);if(canvas.width!==pw)canvas.width=pw;if(canvas.height!==ph)canvas.height=ph;return {w,h,density};}
 function stageFrame(canvas){
   const area=K.stageViewArea(canvas),rect=canvas.getBoundingClientRect(),pill=document.getElementById('status'),info=pill?.getBoundingClientRect(),bottom=area.top+area.height;
@@ -88,7 +98,7 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
     // Keep the browsing view on the visible illustration, independent of exports.
     const stageBounds=model.remote&&model.id==='spine_1001505'?{minX:-1380,minY:-1660,maxX:950,maxY:1340}:null;
     let bounds=stageBounds||modelBounds(skeleton,ns,model.visibleBounds);
-    const validBounds=value=>value&&[value.minX,value.minY,value.maxX,value.maxY].every(Number.isFinite)&&value.maxX-value.minX>=1&&value.maxY-value.minY>=1;
+    let originalFraming;
     if(model.remote&&!validBounds(bounds)){
       const box=model.json?.skeleton;
       if(box&&[box.x,box.y,box.width,box.height].every(Number.isFinite)&&box.width>0&&box.height>0)bounds={minX:box.x,minY:box.y,maxX:box.x+box.width,maxY:box.y+box.height};
@@ -101,9 +111,9 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
     const pairedShot=model.remote&&model.id==='spine_1003004__ferngjian-sp-jingtou'
       ? {minX:-1,minY:-780,maxX:6806,maxY:4497} : null;
     const upperShotAnchorY=420.08;
-    const shotOffset=target=>pairedShot ? (target.findSlot('b_37')?.bone.worldY ?? upperShotAnchorY)-upperShotAnchorY : 0;
+    const shotOffset=target=>!K.framing.original&&pairedShot ? (target.findSlot('b_37')?.bone.worldY ?? upperShotAnchorY)-upperShotAnchorY : 0;
     const shotFrame=offset=>({...pairedShot,minY:pairedShot.minY+offset,maxY:pairedShot.maxY+offset});
-    const importedFrame=name=>model.previewFrameAnimations?.includes(name)&&validBounds(model.previewFrame)?model.previewFrame:null;
+    const importedFrame=name=>!K.framing.original&&model.previewFrameAnimations?.includes(name)&&validBounds(model.previewFrame)?model.previewFrame:null;
     function drawPicture(target,pma,offset){
       const draw=()=>{renderer.begin();renderer.drawSkeleton(target,pma);renderer.end();};
       if(Math.abs(offset)<1){draw();return;}
@@ -123,7 +133,8 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
     }
     function world(x,y){
       const f=lastFrame||stageFrame(canvas);
-      const frame=pairedShot?shotFrame(shotOffset(skeleton)):importedFrame(state.getCurrent(0)?.animation.name)||bounds;
+      const frame=K.framing.original ? originalFraming?.frame||bounds
+        : pairedShot?shotFrame(shotOffset(skeleton)):importedFrame(state.getCurrent(0)?.animation.name)||bounds;
       const unit=Math.max((frame.maxX-frame.minX)/f.width,(frame.maxY-frame.minY)/f.height)*1.06/lastView.zoom;
       return {x:(frame.minX+frame.maxX)/2+(x-(f.left+f.width/2)-lastView.x)*unit,
         y:(frame.minY+frame.maxY)/2-(y-(f.top+f.height/2)-lastView.y)*unit};
@@ -146,7 +157,7 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       },
       expression(name){if(!data.findSkin(name))return false;skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);return true;},
       playOnce(name,back){if(!data.findAnimation(name))return false;state.setAnimation(0,name,name===back);if(back&&back!==name&&data.findAnimation(back))state.addAnimation(0,back,true,0);return true;},
-      setTools(value){tools=value;},dispose,
+      setTools(value){tools=value;},resetFraming(){originalFraming=null;},dispose,
       play(name,loop=true){
         if(!data.findAnimation(name))throw Error('动画不存在');
         // The manual list can jump between separate shots. Restore their
@@ -160,6 +171,10 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       skin(name){skeleton.setSkinByName(name);skeleton.setSlotsToSetupPose();state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.pose);const next=stageBounds||modelBounds(skeleton,ns,model.visibleBounds);if(next&&next.maxX>next.minX&&next.maxY>next.minY&&[next.minX,next.minY,next.maxX,next.maxY].every(Number.isFinite))bounds=next;},
       playback(){const t=state.getCurrent(0),d=t?.animation.duration||0;return {name:t?.animation.name||'',duration:d,time:d?(t.loop?t.trackTime%d:Math.min(d,t.trackTime)):0,loop:t?.loop??true};},
       render(dt,view){if(disposed)return;lastView=view;const {w,h,density}=resize(canvas);lastFrame=stageFrame(canvas);gl.viewport(0,0,canvas.width,canvas.height);tools?.before();if(view.playing){state.update(dt*view.speed);skeleton.update?.(dt*view.speed);}state.apply(skeleton);skeleton.updateWorldTransform(ns.Physics?.update);tools?.after();
+        if(K.framing.original){
+          const key=JSON.stringify([state.getCurrent(0)?.animation.name,state.getCurrent(1)?.animation.name,skeleton.skin?.name,...editor.hidden]);
+          originalFraming=expandOriginalBounds(originalFraming,K.measureBounds(skeleton,ns,false),key);
+        }
         const a=world(w/2,h/2),b=world(w/2+1,h/2),camera=renderer.camera;
         camera.setViewport(canvas.width,canvas.height);camera.zoom=(b.x-a.x)/density;camera.position.set(a.x,a.y,0);camera.update();
         gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
@@ -177,8 +192,8 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
       },
       capture(animation){
         const offset=shotOffset(skeleton);
-        const fixedFrame=pairedShot ? shotFrame(offset) : importedFrame(animation.name) || undefined;
-        const drawScene=pairedShot ? ([picture],size)=>{
+        const fixedFrame=!K.framing.original&&pairedShot ? shotFrame(offset) : importedFrame(animation.name) || undefined;
+        const drawScene=!K.framing.original&&pairedShot ? ([picture],size)=>{
           const current=shotOffset(picture.skeleton);
           if(size.fullFrame&&!size.tile){
             renderer.camera.position.y+=current-offset;
@@ -187,7 +202,7 @@ export async function loadSpine(bundle,model,canvas,signal,onProgress){
           drawPicture(picture.skeleton,picture.pma,current);
         } : undefined;
         const session=window.createInteractionSpineCapture({layers,ns,canvas,renderer,gl,editor,animation,fixedFrame,drawScene,restore:()=>api.render(0,lastView)});
-        if(model.remote&&model.id==='spine_1006603'&&animation.name.startsWith('1/')){
+        if(!K.framing.original&&model.remote&&model.id==='spine_1006603'&&animation.name.startsWith('1/')){
           // The second shot parks these two slots far offscreen in this shot.
           const slots=skeleton.slots.filter(slot=>slot.data.name!=='2_89'&&slot.data.name!=='2_90');
           const picture=K.measureBounds({slots,color:skeleton.color},ns,false);
@@ -211,7 +226,7 @@ export async function loadLive2D(bundle,model,canvas,signal,onProgress){
   // Local imports do not infer game voice rules or start sound on their own.
   for(const motions of Object.values(data.FileReferences.Motions||{}))for(const motion of motions)delete motion.Sound;
   const app=new PIXI.Application({view:canvas,width:1,height:1,autoStart:false,antialias:true,backgroundAlpha:0,resolution:1,autoDensity:false,preserveDrawingBuffer:true});
-  let live,disposed=false,tools,lastView,current='',loop=true,fittingBounds;
+  let live,disposed=false,tools,lastView,current='',loop=true,fittingBounds,originalFraming;
   // The bundled Cubism adapter releases its native Moc on internalModel destroy.
   const dispose=()=>{if(disposed)return;disposed=true;const gl=app.renderer?.gl;try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
   try{
@@ -222,7 +237,8 @@ export async function loadLive2D(bundle,model,canvas,signal,onProgress){
     live=await PIXI.live2d.Live2DModel.from(settings,{autoInteract:false,autoUpdate:false,motionPreload:PIXI.live2d.MotionPreloadStrategy.NONE});check(signal);
     app.stage.addChild(live);live.anchor.set(.5,.5);
     const internal=live.internalModel,core=internal.coreModel.getModel(),natural={width:internal.width,height:internal.height};
-    const editor=window.createInteractionLive2DEditor({live,core,hitAreas:data.HitAreas?.map(a=>({id:a.Id}))||[]});
+    const hitAreas=data.HitAreas?.map(a=>a.Id)||[],hit=new Set(hitAreas);
+    const editor=window.createInteractionLive2DEditor({live,core,hitAreas:hitAreas.map(id=>({id}))});
     internal.on('beforeModelUpdate',()=>editor.applyParameters());
     const nativeDraw=internal.draw.bind(internal);internal.draw=gl=>{tools?.after();nativeDraw(gl);};
     const manager=internal.motionManager,queue=manager.queueManager||manager.motionManager;
@@ -232,23 +248,42 @@ export async function loadLive2D(bundle,model,canvas,signal,onProgress){
       // Duration is learned when that motion is first requested, not by reading every clip at startup.
       animations.push({name,duration,lazy:true});mapping.set(name,{group,index:i});
     }
+    function measurePicture(original){
+      const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+      const {a,b,c,d,tx,ty}=internal.localTransform;
+      for(let i=0;i<core.drawables.ids.length;i++){
+        const id=core.drawables.ids[i];
+        if((!original&&hit.has(id))||!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(id)||!core.drawables.indices[i].length)continue;
+        const vertices=internal.getDrawableVertices(i),box={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+        for(let j=0;j<vertices.length;j+=2){
+          const x=a*vertices[j]+c*vertices[j+1]+tx,y=b*vertices[j]+d*vertices[j+1]+ty;
+          box.minX=Math.min(box.minX,x);box.maxX=Math.max(box.maxX,x);box.minY=Math.min(box.minY,y);box.maxY=Math.max(box.maxY,y);
+        }
+        if(!original&&(box.maxX-box.minX>natural.width*4||box.maxY-box.minY>natural.height*4)){
+          box.minX=Math.max(0,box.minX);box.maxX=Math.min(natural.width,box.maxX);
+          box.minY=Math.max(0,box.minY);box.maxY=Math.min(natural.height,box.maxY);
+        }
+        if(box.maxX>box.minX&&box.maxY>box.minY){
+          bounds.minX=Math.min(bounds.minX,box.minX);bounds.maxX=Math.max(bounds.maxX,box.maxX);
+          bounds.minY=Math.min(bounds.minY,box.minY);bounds.maxY=Math.max(bounds.maxY,box.maxY);
+        }
+      }
+      return bounds;
+    }
     let playSerial=0;
-    const api={type:'live2d',canvas,editor,animations,skins:[],warnings,setTools(value){tools=value;},dispose,
+    const api={type:'live2d',canvas,editor,animations,skins:[],warnings,setTools(value){tools=value;},resetFraming(){originalFraming=null;},dispose,
       async play(name,repeat=true){const item=mapping.get(name);if(!item)throw Error('动作不存在');const serial=++playSerial,motion=await manager.loadMotion(item.group,item.index);check(signal);if(serial!==playSerial)return;motion.setIsLoop(repeat);const listed=animations.find(a=>a.name===name);if(listed){listed.duration=motion.getLoopDuration?.()||0;listed.lazy=false;}await live.motion(item.group,item.index,3);if(serial!==playSerial)return;current=name;loop=repeat;},
       loop(value){loop=value;for(const item of queue?._motions||[])item._motion?.setIsLoop(value);},
       playback(){const item=[...(queue?._motions||[])].reverse().find(i=>!i.isFinished()&&i._motion),duration=animations.find(a=>a.name===current)?.duration||item?._motion?.getLoopDuration?.()||0,elapsed=item?.isStarted()?Math.max(0,item.getStateTime()-item.getStartTime()):0;return {name:current,duration,time:duration?(loop?elapsed%duration:Math.min(duration,elapsed)):0,loop};},
       seek(seconds,delta=0){const item=[...(queue?._motions||[])].reverse().find(i=>!i.isFinished()&&i._motion);if(!item)return;const time=Math.max(0,Math.min(api.playback().duration-.0001,seconds)),clock=live.elapsedTime/1000;item.setStartTime(clock-time);item.setFadeInStartTime(clock-time);item.setEndTime(loop?-1:clock-time+api.playback().duration);item.setIsFinished(false);item.setLastCheckEventSeconds(clock);internal.update(delta*1000,live.elapsedTime);live.deltaTime=0;app.render();},
-      render(dt,view){if(disposed)return;lastView=view;tools?.before();const {w,h}=resize(canvas);app.renderer.resolution=Math.min(2,devicePixelRatio||1);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const f=stageFrame(canvas),fit=fittingBounds||=K.live2DViewBounds(internal,natural,data.HitAreas?.map(a=>a.Id)||[]),scale=Math.min(f.width/fit.width,f.height/fit.height)*.92*view.zoom;live.scale.set(scale);live.position.set(f.left+f.width/2+view.x+(natural.width/2-fit.x)*scale,f.top+f.height/2+view.y+(natural.height/2-fit.y)*scale);editor.applyParameters();if(view.playing)live.update(dt*1000*view.speed);app.render();},
+      render(dt,view){if(disposed)return;lastView=view;tools?.before();const {w,h}=resize(canvas);app.renderer.resolution=Math.min(2,devicePixelRatio||1);if(app.renderer.screen.width!==w||app.renderer.screen.height!==h)app.renderer.resize(w,h);const f=stageFrame(canvas);
+        if(K.framing.original)originalFraming=expandOriginalBounds(originalFraming,measurePicture(true),JSON.stringify([current,...editor.hidden]));
+        const bounds=K.framing.original&&originalFraming?.frame;
+        const fit=bounds ? {x:(bounds.minX+bounds.maxX)/2,y:(bounds.minY+bounds.maxY)/2,width:bounds.maxX-bounds.minX,height:bounds.maxY-bounds.minY}
+          : (fittingBounds||=K.live2DViewBounds(internal,natural,hitAreas));
+        const scale=Math.min(f.width/fit.width,f.height/fit.height)*.92*view.zoom;live.scale.set(scale);live.position.set(f.left+f.width/2+view.x+(natural.width/2-fit.x)*scale,f.top+f.height/2+view.y+(natural.height/2-fit.y)*scale);editor.applyParameters();if(view.playing)live.update(dt*1000*view.speed);app.render();},
       capture(){
-        const hit=new Set(data.HitAreas?.map(a=>a.Id)||[]);
-        const measure=()=>{const bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
-        for(let i=0;i<core.drawables.ids.length;i++){
-          if(hit.has(core.drawables.ids[i])||!internal.coreModel.getDrawableDynamicFlagIsVisible(i)||core.drawables.opacities[i]<=.001||editor.hidden.has(core.drawables.ids[i])||!core.drawables.indices[i].length)continue;
-          const vertices=internal.getDrawableVertices(i),b={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};for(let j=0;j<vertices.length;j+=2){const p=internal.localTransform.apply(new PIXI.Point(vertices[j],vertices[j+1]));b.minX=Math.min(b.minX,p.x);b.maxX=Math.max(b.maxX,p.x);b.minY=Math.min(b.minY,p.y);b.maxY=Math.max(b.maxY,p.y);}
-          if(b.maxX-b.minX>natural.width*4||b.maxY-b.minY>natural.height*4){b.minX=Math.max(0,b.minX);b.maxX=Math.min(natural.width,b.maxX);b.minY=Math.max(0,b.minY);b.maxY=Math.min(natural.height,b.maxY);}
-          if(b.maxX>b.minX&&b.maxY>b.minY)for(const key of Object.keys(bounds))bounds[key]=key.startsWith('min')?Math.min(bounds[key],b[key]):Math.max(bounds[key],b[key]);
-        }
-        return bounds;};
+        const original=K.framing.original,measure=()=>measurePicture(original);
         const bounds=measure(),transform={x:live.x,y:live.y,sx:live.scale.x,sy:live.scale.y,px:live.pivot.x,py:live.pivot.y},parameters=core.parameters.values.slice(),parts=core.parts.opacities.slice(),saved=internal.coreModel._savedParameters.slice(),restorePhysics=preserveSimulation(internal.physics),entries=[...(queue?._motions||[])].map(item=>({item,values:{...item}})),elapsed=live.elapsedTime,delta=live.deltaTime,resolution=app.renderer.resolution;
         let lastTime=0;
         const rewind=()=>{restorePhysics();entries.forEach(({item,values})=>Object.assign(item,values));live.elapsedTime=elapsed;live.deltaTime=delta;core.parameters.values.set(parameters);core.parts.opacities.set(parts);internal.coreModel._savedParameters=saved.slice();internal.coreModel.update();lastTime=0;};

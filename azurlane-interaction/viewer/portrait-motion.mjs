@@ -1,12 +1,29 @@
 const curveOrder = { Model: 0, Parameter: 1, PartOpacity: 2 };
 const installed = new WeakSet();
+const plymouthShirtFold = [
+ [103, 37, .84], [102, 94, .81], [89, 94, .83], [90, 95, .74],
+ [91, 96, .26], [94, 37, .20], [95, 83, .13],
+];
 
 function smoothTaper(value) {
  const t = Math.max(0, Math.min(1, value));
  return t * t * (3 - 2 * t);
 }
 
-function closePlymouthArmSeam(vertices) {
+function tuckPlymouthShirt(vertices, original, riseX, riseY) {
+ // The shirt's overlapping shadow mesh extends below the seam by the badge.
+ // Tuck its last two rows toward the seam along the actual arm direction.
+ const lengthSquared = riseX * riseX + riseY * riseY;
+ for (const [vertex, seam, weight] of plymouthShirtFold) {
+  const i = vertex * 2, j = seam * 2;
+  const distance = (original[j] - original[i]) * riseX + (original[j + 1] - original[i + 1]) * riseY;
+  const lift = Math.max(0, distance) / lengthSquared * weight;
+  vertices[i] += riseX * lift;
+  vertices[i + 1] += riseY * lift;
+ }
+}
+
+function closePlymouthArmSeam(vertices, shirtFold, originalFold, overlap) {
  // The forearm's skin overlay starts below the upper arm in this pose.
  // Use its own vertices to extend the join towards the shoulder as it moves.
  const cuff = 63 * 2, shoulder = 82 * 2, innerSide = 4 * 2, outerSide = 56 * 2;
@@ -16,13 +33,14 @@ function closePlymouthArmSeam(vertices) {
  const widthX = innerX - vertices[outerSide], widthY = innerY - vertices[outerSide + 1];
  const area = widthX * riseY - widthY * riseX;
  if (!Number.isFinite(area) || Math.abs(area) < 1e-6) return;
+ if (shirtFold) tuckPlymouthShirt(shirtFold, originalFold, riseX, riseY);
  for (let i = 0; i < vertices.length; i += 2) {
   const x = vertices[i], y = vertices[i + 1];
   const along = (widthX * (y - baseY) - widthY * (x - baseX)) / area;
   const across = ((innerX - x) * riseY - (innerY - y) * riseX) / area;
   const joinWeight = smoothTaper(along + .03);
-  const lift = joinWeight * .65;
-  const slide = joinWeight * smoothTaper(1.55 * across) * .18;
+  const lift = joinWeight * (.65 - .53 * overlap);
+  const slide = joinWeight * smoothTaper(1.55 * across) * (.18 - .12 * overlap);
   vertices[i] += riseX * lift + widthX * slide;
   vertices[i + 1] += riseY * lift + widthY * slide;
  }
@@ -30,13 +48,17 @@ function closePlymouthArmSeam(vertices) {
 
 export function configurePortraitRendering(renderer, drawables, id) {
  if (id !== 'pulimaosi_3') return;
- const [elbow, shirt, hand, upperArm] = ['ArtMesh552', 'ArtMesh237', 'ArtMesh550', 'ArtMesh395']
+ const [elbow, shirt, hand, upperArm, fold, forearm, forearmUnderlay] = [
+  'ArtMesh552', 'ArtMesh237', 'ArtMesh550', 'ArtMesh395', 'ArtMesh231', 'ArtMesh392', 'ArtMesh242',
+ ]
   .map(name => drawables.ids.indexOf(name));
  if (elbow < 0 || shirt < 0 || hand < 0) return;
  const {renderOrders, opacities} = drawables;
  const savedOrders = renderOrders.slice();
  const elbowVertices = drawables.vertexPositions?.[elbow];
  const savedVertices = elbowVertices?.length === 120 * 2 ? elbowVertices.slice() : null;
+ const foldVertices = drawables.vertexPositions?.[fold];
+ const savedFold = foldVertices?.length === 185 * 2 ? foldVertices.slice() : null;
  const draw = renderer.doDrawModel;
  renderer.doDrawModel = function (...args) {
   const from = renderOrders[elbow], to = renderOrders[shirt];
@@ -46,17 +68,36 @@ export function configurePortraitRendering(renderer, drawables, id) {
   // shirt as well, while preserving the order of every other drawable.
   savedOrders.set(renderOrders);
   const joinVisible = savedVertices && upperArm >= 0 && opacities[upperArm] >= .001;
+  const foldVisible = joinVisible && savedFold && opacities[fold] >= .001
+   && to < renderOrders[fold] && renderOrders[fold] < renderOrders[hand];
+  const elbowOpacity = opacities[elbow], underlayOpacity = opacities[forearmUnderlay];
+  const forearmOverlap = joinVisible && forearm >= 0 && forearmUnderlay >= 0
+   && renderOrders[forearmUnderlay] < renderOrders[forearm] && renderOrders[forearm] < from
+   ? smoothTaper(Math.min(opacities[forearm], underlayOpacity) / .56) : 0;
   if (joinVisible) savedVertices.set(elbowVertices);
+  if (foldVisible) savedFold.set(foldVertices);
   try {
    for (let i = 0; i < renderOrders.length; i++) {
     if (renderOrders[i] > from && renderOrders[i] <= to) renderOrders[i]--;
    }
    renderOrders[elbow] = to;
-   if (joinVisible) closePlymouthArmSeam(elbowVertices);
+   if (joinVisible) closePlymouthArmSeam(elbowVertices, foldVisible ? foldVertices : null, savedFold, forearmOverlap);
+   if (forearmOverlap > 0) {
+    // The two forearm drawings overlap while the elbow swings out. Reduce the
+    // doubled edge as the replacement appears, and shorten the skin extension.
+    const underlayFade = smoothTaper((opacities[forearm] - .3) / .63);
+    opacities[forearmUnderlay] = underlayOpacity * (1 - forearmOverlap * underlayFade);
+    opacities[elbow] = elbowOpacity + .8 * (1 - elbowOpacity) * smoothTaper(elbowOpacity / .6) * forearmOverlap;
+   }
    return draw.apply(this, args);
   } finally {
    renderOrders.set(savedOrders);
    if (joinVisible) elbowVertices.set(savedVertices);
+   if (foldVisible) foldVertices.set(savedFold);
+   if (forearmOverlap > 0) {
+    opacities[forearmUnderlay] = underlayOpacity;
+    opacities[elbow] = elbowOpacity;
+   }
   }
  };
 }

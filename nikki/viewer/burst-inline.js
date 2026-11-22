@@ -1,12 +1,57 @@
 import {clamp} from './burst-math.js';
-import {createBurst} from './burst_scene.js?v=20261116-native-ending';
+import {createBurst} from './burst_scene.js?v=20261122-skill-v3';
 import {clockAt} from './timelines.js';
 
 // Last visible composition before the closing flash on the authored timeline.
 const endingBackdrops = {
+  'core-25956': { frame: 129 },
   'core-26015': { frame: 214, branch: 'c195_00_cut_scene/root/fx_root/back_loop/' },
   'core-26115': { frame: 223 },
 };
+
+function findEndingTime(scene) {
+  const fps = scene.fps || 60;
+  const master = (scene.timelines || []).find(t => t.id === scene.master) || scene.timelines?.[0];
+  if (!master) return Math.max(0.15, (scene.duration || 1) - 0.25);
+  const mode0 = (master.fades || []).filter(f => f.mode === 0);
+  const mode0End = mode0.length ? Math.max(...mode0.map(f => (f.start || 0) + (f.duration || 0))) : null;
+  const spineEnd = master.spine?.length ? Math.max(...master.spine.map(s => (s.start || 0) + (s.duration || 0))) : null;
+  let tEnd = (mode0End && spineEnd) ? Math.min(mode0End, spineEnd) : (mode0End ?? spineEnd ?? Math.max(0.2, (scene.duration || 1) - 0.22));
+  tEnd = Math.min(tEnd, (scene.duration || tEnd) - 1 / fps);
+  let tFlash = null;
+  for (const c of (master.controls || [])) {
+    const nm = c.name || '';
+    const cEnd = (c.start || 0) + (c.duration || 0);
+    if (/(?:white|black|fade|flash|blend_plane)/i.test(nm) && c.start >= tEnd - 0.65 && c.start <= tEnd + 0.05) {
+      if (tFlash === null || c.start < tFlash) tFlash = c.start;
+    }
+    // Catch explicit closing blackout planes that start earlier (e.g. Anchor c351 fx_blend_black 2.10-2.92).
+    if (/^(?:fx_)?blend(?:_plane)?_black$/i.test(nm) && cEnd >= tEnd - 0.15 && c.start >= tEnd * 0.45 && c.start <= tEnd - 0.05) {
+      if (tFlash === null || c.start < tFlash) tFlash = c.start;
+    }
+  }
+  const nodes = scene.nodes || {};
+  for (const clip of (master.curves || [])) {
+    for (const b of (clip.bindings || [])) {
+      const nodeName = nodes[b.node]?.name || '';
+      if (!/(?:white|black|fade|flash|blend)/i.test(nodeName)) continue;
+      if ((b.prop !== 'color' && b.prop !== 'matColor') || b.channel !== 3) continue;
+      for (const seg of (b.values || [])) {
+        const pts = Array.isArray(seg) && seg[0] === 'poly' ? seg[1] : null;
+        if (!Array.isArray(pts) || pts.length < 2) continue;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const [t0, , , , v0] = pts[i];
+          const [t1, , , , v1] = pts[i + 1];
+          if (t0 >= tEnd - 0.7 && t0 <= tEnd && v0 <= 0.12 && v1 >= 0.45 && t1 > t0) {
+            if (tFlash === null || t0 < tFlash) tFlash = t0;
+          }
+        }
+      }
+    }
+  }
+  const base = tFlash !== null ? Math.min(tFlash - 0.12, tEnd - 0.05) : (tEnd - 0.18);
+  return clamp(base, 0.15, Math.max(0.15, (scene.duration || 1) - 0.08));
+}
 
 export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hiddenSlots,getAudio,changed,finished,progress}){
   const root=new URL(assetsRoot.replace(/\/$/,'')+'/',location.href);
@@ -132,24 +177,86 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     else finished();
   }
   let backdrop=null, backdropImage=null;
-  function buildComposition(aspect, animation) {
-    if (!endingBackdrop) return null;
+  function buildComposition(aspect, animation, preferredModelName, compositeLayers) {
+    if (!animation || !/idle|loop|stand/i.test(animation)) return null;
     const frame={width:Math.round(1024*Math.min(1,aspect)),height:Math.round(1024/Math.max(1,aspect))};
+    let at = endingBackdrop ? endingBackdrop.frame / scene.fps : findEndingTime(scene);
+    if (!endingBackdrop) {
+      const probe = document.createElement('canvas');
+      probe.width = probe.height = 24;
+      const pctx = probe.getContext('2d', { willReadFrequently: true });
+      const candidates = [at, at - 0.15, at - 0.30, at - 0.45, at - 0.65, at - 0.90, at - 1.20].filter(v => v >= 0.1);
+      let chosen = null;
+      for (const cand of candidates) {
+        const res = engine.renderComposition(cand, animation, 0, { width: 96, height: 96 }, preferredModelName, compositeLayers);
+        if (!res || !res.spine) continue;
+        pctx.clearRect(0, 0, 24, 24);
+        pctx.drawImage(canvas, 0, 0, 24, 24);
+        const rgba = pctx.getImageData(0, 0, 24, 24).data;
+        let lit = 0, clipped = 0, dark = 0;
+        for (let i = 0; i < rgba.length; i += 4) {
+          const hi = Math.max(rgba[i], rgba[i + 1], rgba[i + 2]);
+          const lo = Math.min(rgba[i], rgba[i + 1], rgba[i + 2]);
+          if (hi > 14) lit++;
+          if (lo > 246) clipped++;
+          if (hi <= 14) dark++;
+        }
+        const total = rgba.length / 4;
+        if (clipped / total < 0.42 && dark / total < 0.85 && lit / total > 0.15) {
+          chosen = cand;
+          break;
+        }
+      }
+      if (chosen === null) return null;
+      at = chosen;
+    }
+    // Probe the rendered composition at requested aspect and trim pure-black outer pillarbox bars
+    // (Unity burst scenes use vertical FOV; narrowing aspect removes empty black side voids cleanly).
+    let effectiveAspect = aspect;
+    if (aspect > 0.72) {
+      const pw = Math.max(32, Math.round(160 * Math.min(1, aspect)));
+      const ph = Math.max(32, Math.round(160 / Math.max(1, aspect)));
+      if (engine.renderComposition(at, animation, 0, { width: pw, height: ph }, preferredModelName, compositeLayers)) {
+        const probeC = document.createElement('canvas');
+        probeC.width = pw; probeC.height = ph;
+        const pctx = probeC.getContext('2d', { willReadFrequently: true });
+        pctx.drawImage(canvas, 0, 0, pw, ph);
+        const rgba = pctx.getImageData(0, 0, pw, ph).data;
+        const colIsBlack = x => {
+          let blk = 0;
+          for (let y = 0; y < ph; y++) {
+            const i = (y * pw + x) * 4;
+            if (Math.max(rgba[i], rgba[i + 1], rgba[i + 2]) <= 12) blk++;
+          }
+          return blk / ph >= 0.96;
+        };
+        let leftBlk = 0, rightBlk = 0;
+        while (leftBlk < (pw >> 1) && colIsBlack(leftBlk)) leftBlk++;
+        while (rightBlk < (pw >> 1) && colIsBlack(pw - 1 - rightBlk)) rightBlk++;
+        const symPad = Math.min(leftBlk, rightBlk);
+        if (symPad >= Math.max(3, Math.floor(pw * 0.02))) {
+          // Trim symmetrically plus 2px safety margin to remove anti-aliased dark edge
+          const keepW = Math.max(Math.round(pw * 0.5), pw - (symPad + 2) * 2);
+          effectiveAspect = clamp(aspect * (keepW / pw), 0.65, aspect);
+        }
+      }
+    }
     const image=document.createElement('canvas');
+    frame.width=Math.max(2,Math.round(1024*Math.min(1,effectiveAspect)));
+    frame.height=Math.max(2,Math.round(1024/Math.max(1,effectiveAspect)));
     image.width=frame.width;image.height=frame.height;
     const ctx=image.getContext('2d');
-    const at=endingBackdrop.frame/scene.fps;
     const update=(name,time,edge=1024)=>{
-      frame.width=Math.max(2,Math.round(edge*Math.min(1,aspect)));
-      frame.height=Math.max(2,Math.round(edge/Math.max(1,aspect)));
+      frame.width=Math.max(2,Math.round(edge*Math.min(1,effectiveAspect)));
+      frame.height=Math.max(2,Math.round(edge/Math.max(1,effectiveAspect)));
       if(image.width!==frame.width || image.height!==frame.height){image.width=frame.width;image.height=frame.height;}
-      // The environment is the reviewed ending frame, not a fabricated loop.
+      // The environment is the clean ending frame, not a fabricated loop.
       // Character motion remains live and the same sampler serves exports.
-      if (!engine.renderComposition(at,name,time,frame)) return false;
+      if (!engine.renderComposition(at,name,time,frame,preferredModelName,compositeLayers)) return false;
       ctx.clearRect(0,0,image.width,image.height);ctx.drawImage(canvas,0,0);
       return true;
     };
-    return update(animation,0) ? {image,update} : null;
+    return update(animation,0) ? {image,update,at,aspect:effectiveAspect} : null;
   }
   function buildBackdrop(aspect){
     if(backdrop) return backdropImage;

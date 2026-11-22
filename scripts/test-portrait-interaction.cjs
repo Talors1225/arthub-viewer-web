@@ -15,6 +15,7 @@ const index = JSON.parse(fs.readFileSync(path.join(root, indexFile), 'utf8'));
 for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
 const pointerUp = /stage\.addEventListener\('pointerup', \(e\) => \{([\s\S]*?)\n  \}\);/;
 const tap = html.match(pointerUp);
+const artworkFrame = html.match(/function artworkFrame\(\) \{[^\n]+\}/)?.[0] || '';
 assert.ok(tap, 'test the real viewer pointerup handler');
 let checks = 0;
 function scenario(overrides = {}, handler = tap) {
@@ -24,14 +25,15 @@ function scenario(overrides = {}, handler = tap) {
     burstSession:null,panelUI:null,bd2Voice:{tap:()=>called.push(['bd2-voice'])},
     stage:{releasePointerCapture(){},classList:{remove(){}}},
     cv:{width:100,height:100,getBoundingClientRect:()=>({left:0,top:0})},
-    isChrome:()=>false,hitBoneAt:()=>null,
-    K:{getSpine(){},hitTestSlot:()=> 'body',toast:message=>called.push(['hint',message])},
+    isChrome:()=>false,hitBoneAt:()=>null,wpt:(x,y)=>[x-50,50-y],
+    K:{framing:{original:false},getSpine(){},hitTestSlot:()=> 'body',toast:message=>called.push(['hint',message])},
     status:message=>called.push(['status',message]),
     showPartPopup:()=>called.push(['parts']),hidePartPopup:()=>called.push(['hide']),
     portraitAudio:{interact:()=>{called.push(['audio']);return false;},interactionHint:()=> '暂无匹配音频'},
     ...overrides};
+  context.K.framing ||= {original:false};
   vm.createContext(context);
-  vm.runInContext('tap = (e) => {' + handler[1] + '\n};',context);
+  vm.runInContext(artworkFrame + '\ntap = (e) => {' + handler[1] + '\n};',context);
   context.tap({button:0,pointerId:1,clientX:50,clientY:50,target:{}});
   return called;
 }
@@ -67,6 +69,10 @@ if (tap[1].includes('burstSession')) {
   const cut = {frame:{minX:10,minY:10,maxX:20,maxY:20},skeleton:{x:0,y:0,scaleX:1,scaleY:1},drawLayers:[{skeleton:{}}]};
   events = scenario({cut,partEditMode:true});
   assert.ok(!events.some(e=>e[0]==='parts'), 'the authored frame clips hit testing'); checks++;
+  if (artworkFrame) {
+    events = scenario({cut,partEditMode:true,K:{framing:{original:true},getSpine(){},hitTestSlot:()=> 'body'}});
+    assert.ok(events.some(e=>e[0]==='parts'), 'original framing restores hit testing outside the crop'); checks++;
+  }
 }
 const state = {id:'c010_00',animation:'idle',animations:['idle','action']};
 const controller = Object.create(Controller.prototype);

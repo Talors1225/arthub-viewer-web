@@ -234,7 +234,7 @@ export class SpineScene {
     const completed = this.completed.splice(0);
     for (const event of completed) this.onEvent(event);
   }
-  draw(renderer, viewport, clip, animation) {
+  draw(renderer, viewport, clip, animation, original = false) {
     for (const layer of this.layers) {
       if (!this.visible(layer)) continue;
       const drag = this.objectDrag;
@@ -253,7 +253,10 @@ export class SpineScene {
         gl.scissor(left, bottom, Math.max(0, right - left), Math.max(0, top - bottom));
       }
       renderer.begin();
-      try { window.CrossCoreSceneFraming.drawLayer(renderer, layer, animation); }
+      try {
+        if (original) renderer.drawSkeleton(layer.skeleton, layer.pma ?? Boolean(layer.atlas.pages[0]?.pma));
+        else window.CrossCoreSceneFraming.drawLayer(renderer, layer, animation);
+      }
       finally { renderer.end(); }
       if (lens) {
         if (clip) this.context.gl.scissor(...clip);

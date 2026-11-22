@@ -143,7 +143,7 @@ for (const file of viewers) {
   const isMahjong = file.includes('majsoul');
   const ready = html.indexOf('loadingPreview.ready(');
   const start = html.lastIndexOf(isMahjong ? '    const raw = gl.gl || gl;' : '    if (mgl && renderer) {', ready);
-  const end = html.indexOf(isMahjong ? '    if (capturePending && curEntry)' : '    if (cut && playing) syncTimeline();', ready);
+  const end = html.indexOf(isMahjong ? '    // 同步截取缩略图' : '    if (cut && playing) syncTimeline();', ready);
   assert.ok(start >= 0 && ready > start && end > ready, file + ': test the actual first-draw boundary');
   const skillLayer = html.match(/function drawSkillLayer\([^)]*\) \{[\s\S]*?\n  \}/)?.[0] || '';
   const draw = new vm.Script(skillLayer + '\n' + html.slice(start, end), {filename: file});
@@ -154,8 +154,10 @@ for (const file of viewers) {
   const base = {cut: {drawLayers: [layer]}, cutLayers: () => [layer], drawCutLayers: () => [layer], layers: [layer], cv: size, canvas: size,
     mgl: raw, gl: raw, renderer, cutLoadSeq: 11, loadSeq: 11, playerDrawnSeq: -1, viewerUiReady: true,
     loadingPreview: preview, getBg: () => 'checker', debugFlags: {}, highlightSlot: null, cmpOn: false, boneEditMode: false,
+    embedded: true,
     K: {parseColor: (_color, fallback) => fallback, debugActive: () => false}, selIdx: -1, drawBoneMarker() {},
-    activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false, stageFrame: () => null};
+    activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false,
+    stageFrame: () => null, artworkFrame: () => null, setSceneCamera() {}};
   const render = overrides => draw.runInNewContext({...base, ...overrides});
   preview.begin(11, {path: '/draw.webp'});
   const lost = {...raw, isContextLost: () => true};

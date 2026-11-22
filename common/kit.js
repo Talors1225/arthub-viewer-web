@@ -6,6 +6,49 @@
 (() => {
   'use strict';
   const K = {};
+  const originalOnly = window.document?.documentElement?.dataset.framing === 'original';
+  const originalFromURL = () => originalOnly || new URLSearchParams(window.location?.search || '').get('framing') === 'original';
+  let originalFraming = originalFromURL();
+  let updateFraming;
+  const framingListeners = new Set();
+  const notifyFraming = (original) => {
+    for (const fn of framingListeners) {
+      try { fn(original); } catch {}
+    }
+  };
+  window.addEventListener('popstate', () => {
+    const original = originalFromURL();
+    if (original === originalFraming) return;
+    originalFraming = original;
+    updateFraming?.(original);
+    notifyFraming(original);
+  });
+  K.framing = {
+    get original() { return originalFraming; },
+    subscribe(fn) {
+      if (typeof fn !== 'function') return () => {};
+      framingListeners.add(fn);
+      return () => framingListeners.delete(fn);
+    },
+    menuItem({ onChange, disabled = false } = {}) {
+      if (originalOnly) return null;
+      updateFraming = onChange;
+      return {
+        label: '原始画面（未裁切）',
+        checked: originalFraming,
+        disabled,
+        fn() {
+          originalFraming = !originalFraming;
+          const url = new URL(window.location.href);
+          if (originalFraming) url.searchParams.set('framing', 'original');
+          else url.searchParams.delete('framing');
+          window.history.replaceState(window.history.state, '', url);
+          onChange?.(originalFraming);
+          notifyFraming(originalFraming);
+        },
+      };
+    },
+  };
   // One vector grid for navigation and playback; no platform-dependent glyphs.
   const uiIconPaths = {
     home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
@@ -1494,11 +1537,21 @@
     const y1 = reference.centerY + (yUp ? reference.height / 2 - crop.y - crop.height : crop.y - reference.height / 2) / reference.scale;
     return { minX: x, minY: y1, maxX: x + crop.width / reference.scale, maxY: y1 + crop.height / reference.scale };
   }
+  function originalIllustrationSize(reference, quality, kind) {
+    const halfWidth = reference.width / reference.scale / 2;
+    const halfHeight = reference.height / reference.scale / 2;
+    const { centerX, centerY } = reference;
+    const bounds = { minX: centerX - halfWidth, maxX: centerX + halfWidth,
+      minY: centerY - halfHeight, maxY: centerY + halfHeight };
+    return { ...K.exportDimensions(bounds, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
+  }
   K.refineIllustrationSize = (reference, source, quality, kind = 'png', yUp = true) => {
+    if (K.framing.original) return originalIllustrationSize(reference, quality, kind);
     const bounds = illustrationBoundsInReference(reference, source, yUp);
     return { ...K.exportDimensions(bounds, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
   };
   K.animationFramingSize = (reference, duration, quality, kind, draw, visibleTime) => {
+    if (K.framing.original) return originalIllustrationSize(reference, quality, kind);
     const sample = time => {
       try { return illustrationBoundsInReference(reference, draw(time)); }
       catch (error) {
@@ -1532,7 +1585,9 @@
     if (session.fixedFrame) {
       return { ...K.exportDimensions(session.fixedFrame, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
     }
-    const reference = session.pngSize('medium'), source = session.draw(null, reference, null);
+    const reference = session.pngSize('medium');
+    if (K.framing.original) return originalIllustrationSize(reference, quality, kind);
+    const source = session.draw(null, reference, null);
     return K.refineIllustrationSize(reference, source, quality, kind, session.pixelYUp !== false);
   };
   K.animationExportSize = async ({ session, duration, quality, kind, signal, onProgress }) => {
@@ -1542,7 +1597,29 @@
       check(); await onProgress?.(0); check();
       let size;
       try {
-        size = K.illustrationExportSize(session, quality, kind);
+        if (K.framing.original && !session.fixedFrame && session.measure && duration > 0) {
+          const timeline = K.exportTimeline(duration, quality, kind);
+          const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+          for (let index = 0; index < timeline.frames; index++) {
+            check();
+            try {
+              const frame = session.measure(timeline.timeAt(index));
+              if (frame && [frame.minX, frame.minY, frame.maxX, frame.maxY].every(Number.isFinite)) {
+                bounds.minX = Math.min(bounds.minX, frame.minX);
+                bounds.minY = Math.min(bounds.minY, frame.minY);
+                bounds.maxX = Math.max(bounds.maxX, frame.maxX);
+                bounds.maxY = Math.max(bounds.maxY, frame.maxY);
+              }
+            } catch (error) {
+              if (!noArtwork(error)) throw error;
+            }
+            if (index % 64 === 63) await onProgress?.((index + 1) / timeline.frames);
+          }
+          if (bounds.maxX > bounds.minX && bounds.maxY > bounds.minY) {
+            size = { ...K.exportDimensions(bounds, quality, kind, 0), fullFrame: true, tiled: false };
+          }
+        }
+        size ??= K.illustrationExportSize(session, quality, kind);
       } catch (error) {
         if (!session.measure || !(duration > 0) || !noArtwork(error)) throw error;
         // A fade-in may have a deliberately blank opening pose. Probe later
@@ -1762,7 +1839,8 @@
     signal?.addEventListener('abort', abort, { once: true });
     try {
       check();
-      const source = new CanvasSource(canvas, { codec: encoding.codec, quality: new Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality' });
+      const source = new CanvasSource(canvas, { codec: encoding.codec, quality: new Quality({ bitrate: preset.videoBitrate }),
+        latencyMode: 'quality', hardwareAcceleration: encoding.hardwareAcceleration });
       // Keep the sample timestamps. Snapping a fractional cycle to the nominal
       // frame rate can put two frames at the same timestamp.
       output.addVideoTrack(source); await output.start();
@@ -1789,10 +1867,13 @@
         // Only video export loads this locally bundled encoder/muxer adapter.
         codec = await K.awaitExportTask(import('./vendor/mediabunny-1.61.0.esm.js'), options.signal);
       } catch (error) { if (error.name === 'AbortError') throw error; console.warn('逐帧视频编码不可用，使用浏览器录制', error); }
-      if (codec) for (const encoding of K.canvasVideoEncodings) {
+      const encodings = options.preferSoftwareAvc ? K.canvasVideoEncodings.flatMap(encoding => encoding.codec === 'avc'
+        ? [{ ...encoding, hardwareAcceleration: 'prefer-software' }, encoding] : [encoding]) : K.canvasVideoEncodings;
+      if (codec) for (const encoding of encodings) {
         try {
           const supported = await K.awaitExportTask(codec.canEncodeVideo(encoding.codec, { width: options.canvas.width, height: options.canvas.height,
-            frameRate: preset.videoFps, quality: new codec.Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality' }), options.signal);
+            frameRate: preset.videoFps, quality: new codec.Quality({ bitrate: preset.videoBitrate }), latencyMode: 'quality',
+            hardwareAcceleration: encoding.hardwareAcceleration }), options.signal);
           if (!supported) continue;
           // Container support alone does not imply this resolution can encode.
           // Finalize a real frame using the exact export settings before moving
@@ -2043,7 +2124,7 @@
     K.pngExporting = true;
     try {
       await job.update(0, '正在识别立绘范围…');
-      if (o.pose && !o.pose.fixedFrame) {
+      if (o.pose && !o.pose.fixedFrame && !K.framing.original) {
         const probe = o.pose.probeSize(); o.pose.useSize(probe);
         canvas.width = probe.width; canvas.height = probe.height;
         o.resize?.(1, { x: 0, y: 0, width: probe.width, height: probe.height }); o.draw(true);
@@ -2384,6 +2465,8 @@
         for (const id of item.replaces || []) pending.delete(id);
         (buckets.get(item.group) || buckets.get('工具')).push(item);
       }
+      const framingItem = K.stageFramingMenuItem?.();
+      if (framingItem) buckets.get('画面').push(framingItem);
       const items = [], itemFor = button => ({ label: labelOf(button), disabled: button.disabled,
         ...(button.hasAttribute('aria-pressed') ? { checked: button.getAttribute('aria-pressed') === 'true' } : {}),
         fn: () => invokeSecondary(button),

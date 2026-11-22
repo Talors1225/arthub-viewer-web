@@ -1,5 +1,5 @@
 import { InteractionController, trackFor } from './controller.mjs?v=20261114-interaction-export-loading';
-import { SpineScene } from './scene.mjs?v=20261120-frame-edges';
+import { SpineScene } from './scene.mjs?v=20261122-reviewed-frames';
 
 import { createMediaVolume } from '../../common/media-volume.mjs?v=20261122-game-audio';
 
@@ -12,8 +12,8 @@ const sceneApertures = new Map([
   ['30180_skin_machairodus05b_spine', { slot: 'DQ_KKbb', corners: [4, 7, 5, 6] }],
   ['70400_skin_lycorisradiata03b_spine', { slot: 'heikuang', corners: [7, 4, 5, 6], hideMatte: true }],
 ]);
-const sceneAperture = () => sceneApertures.get(scene?.definition.name.toLowerCase());
-let artworkWindow = null;
+const sceneAperture = () => K.framing.original ? null : sceneApertures.get(scene?.definition.name.toLowerCase());
+let artworkWindow = null, originalView = null;
 const loadingPreview = K.createLoadingPreview(stage);
 let previewSequence = 0, previewScene = null, previewPending = false;
 window.__crosscorePreviewFailure = reason => loadingPreview.fail(previewSequence, reason);
@@ -175,7 +175,7 @@ function fit() {
  const bounds = artworkWindow ? {
    x: artworkWindow.minX, y: artworkWindow.minY,
    width: artworkWindow.maxX - artworkWindow.minX, height: artworkWindow.maxY - artworkWindow.minY,
- } : scene.bounds;
+ } : originalView?.bounds || scene.bounds;
  const area = K.stageViewArea(canvas), rect = canvas.getBoundingClientRect();
  const units = Math.max(bounds.width / area.width, bounds.height / area.height) * 1.08 / viewZoom;
  renderer.camera.viewportWidth = units * rect.width; renderer.camera.viewportHeight = units * rect.height;
@@ -183,6 +183,53 @@ function fit() {
  const offsetY = rect.top + rect.height / 2 - area.top - area.height / 2 - viewPan.y;
  renderer.camera.position.set(bounds.x + bounds.width / 2 - offsetX * units, bounds.y + bounds.height / 2 - offsetY * units, 0);
  renderer.camera.update(); updateZoomControls();
+}
+function dragArtworkBounds() {
+ const result = [], drag = scene.objectDrag;
+ if (drag?.overlay) result.push(K.measureBounds(drag.overlay, SP, false));
+ for (const { def } of drag?.sprites || []) {
+  const angle = (def.rotation || 0) * Math.PI / 180;
+  const w = (Math.abs(def.width * Math.cos(angle)) + Math.abs(def.height * Math.sin(angle))) / 2;
+  const h = (Math.abs(def.width * Math.sin(angle)) + Math.abs(def.height * Math.cos(angle))) / 2;
+  const x = def.centerX + drag.dx, y = def.centerY + drag.dy;
+  result.push({ minX: x - w, minY: y - h, maxX: x + w, maxY: y + h });
+ }
+ return result;
+}
+function updateOriginalView() {
+ const animation = timelineEntry()?.animation;
+ const previous = originalView?.animation === animation ? originalView?.bounds : null;
+ const extents = previous
+  ? { minX: previous.x, minY: previous.y, maxX: previous.x + previous.width, maxY: previous.y + previous.height }
+  : { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+ const include = bounds => {
+  if (!bounds) return;
+  extents.minX = Math.min(extents.minX, bounds.minX); extents.minY = Math.min(extents.minY, bounds.minY);
+  extents.maxX = Math.max(extents.maxX, bounds.maxX); extents.maxY = Math.max(extents.maxY, bounds.maxY);
+ };
+ for (const picture of [scene, transition]) {
+  if (!picture) continue;
+  for (const layer of picture.layers) if (picture.visible(layer)) include(K.measureBounds(layer.skeleton, SP, false));
+ }
+ for (const bounds of dragArtworkBounds()) include(bounds);
+ const bounds = { x: extents.minX, y: extents.minY, width: extents.maxX - extents.minX, height: extents.maxY - extents.minY };
+ if (!(bounds.width > 0 && bounds.height > 0)) return false;
+ if (previous && bounds.x === previous.x && bounds.y === previous.y && bounds.width === previous.width && bounds.height === previous.height) return false;
+ // Enlarge for newly visible artwork without zooming in and out every time an attachment moves.
+ originalView = { animation, bounds };
+ return true;
+}
+function artworkFrame(animation, aperture = sceneAperture()) {
+ if (!scene || K.framing.original) return null;
+ return K.spineArtworkAperture(scene.layers, SP, aperture) ?? interactionFrame(scene.main, animation);
+}
+function refitFraming(animation, at = now()) {
+ if (!scene) return;
+ originalView = null;
+ artworkWindow = artworkFrame(animation);
+ pendingFit = !K.framing.original && !artworkWindow ? { scene, at, expires: at + 2 } : null;
+ if (K.framing.original) updateOriginalView();
+ fit();
 }
 function setZoom(value, clientX, clientY) {
  if (!scene || !Number.isFinite(value)) return;
@@ -333,8 +380,7 @@ async function loadPrefab(key, ownerRequest) {
   if (ownerRequest !== requestId) { loaded.dispose(); return null; }
   viewerUI.tools.prepareLoad(); scene?.dispose(); scene = loaded; animationPreview = null; activeTrack = 0;
   editor = window.createInteractionSpineEditor({ layers: scene.layers, ns: SP, project: screenPoint, unproject: (x, y) => { const rect = stage.getBoundingClientRect(); return worldPoint(x + rect.left, y + rect.top); } });
-  artworkWindow = K.spineArtworkAperture(loaded.layers, SP, sceneAperture()) ?? interactionFrame(loaded.main, loaded.idle);
-  viewerUI.refreshAnimations(); fit(); pendingFit = artworkWindow ? null : { scene: loaded, at: now() + 0.1, expires: now() + 2 }; return loaded;
+  viewerUI.refreshAnimations(); refitFraming(loaded.idle, now() + 0.1); return loaded;
 }
 async function loadModel(identity) {
   stagePan.cancel(); stagePan.setMode('pan'); viewPan.x = viewPan.y = 0;
@@ -482,28 +528,21 @@ const viewerUI = window.createInteractionViewerUI({
     soundEnabled, setSoundEnabled, voiceTab: 'voice',
     volume: () => mediaVolume.volume, setVolume: value => { mediaVolume.set(value); audioPrefs.set('volume', mediaVolume.volume); },
     capture: (animation, format) => {
-      const captureScene = Object.create(scene);
+      const captureScene = Object.create(scene), original = K.framing.original;
       const aperture = sceneAperture();
+      const fixedFrame = original ? undefined : artworkFrame(animation.name, aperture)
+        ?? (scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame : undefined);
       return window.createInteractionSpineCapture({ layers: scene.layers, ns: SP, canvas, renderer, gl, editor, animation,
         fromSetupPose: !!animationPreview && (format === 'video' || format === 'gif'),
         setupRotation: layer => layer.def.render.rotation,
         artworkAperture: aperture,
-        fixedFrame: K.spineArtworkAperture(scene.layers, SP, aperture) ?? interactionFrame(scene.main, animation.name)
-          ?? (scene.definition.name === 'CG_seashore' && animation.name === 'idle' ? seashoreIdleFrame : undefined),
+        fixedFrame,
         visible: layer => scene.visible(layer),
-        extraBounds: () => {
-          const result = [], drag = scene.objectDrag;
-          if (drag?.overlay) result.push(K.measureBounds(drag.overlay, SP));
-          for (const { def } of drag?.sprites || []) {
-            const angle = (def.rotation || 0) * Math.PI / 180, w = (Math.abs(def.width * Math.cos(angle)) + Math.abs(def.height * Math.sin(angle))) / 2, h = (Math.abs(def.width * Math.sin(angle)) + Math.abs(def.height * Math.cos(angle))) / 2;
-            result.push({ minX: def.centerX + drag.dx - w, maxX: def.centerX + drag.dx + w, minY: def.centerY + drag.dy - h, maxY: def.centerY + drag.dy + h });
-          }
-          return result;
-        },
+        extraBounds: dragArtworkBounds,
         drawScene: (layers, size) => {
           captureScene.layers = layers; captureScene.main = layers[scene.layers.indexOf(scene.main)];
           const viewport = (x, y) => ({ x: (x - renderer.camera.position.x) / (renderer.camera.viewportWidth * renderer.camera.zoom) * size.width + size.width / 2, y: (y - renderer.camera.position.y) / (renderer.camera.viewportHeight * renderer.camera.zoom) * size.height + size.height / 2 });
-          captureScene.draw(renderer, viewport, undefined, animation.name);
+          captureScene.draw(renderer, viewport, undefined, animation.name, original);
         }, restore: () => {} });
     },
   }
@@ -521,14 +560,19 @@ function render() {
     if (animationPreview && scene) for (const layer of scene.layers) { const entry = layer.state.getCurrent(PREVIEW_TRACK); if (entry) entry.trackTime += step; }
     scene?.update(animationPreview ? 0 : step, current); viewerUI.tools.after();
     if (!animationPreview && playback.playing) for (const callback of callbacks.splice(0)) callback();
+    if (transition) {
+      if (current >= transitionUntil) { transition.dispose(); transition = null; }
+      else transition.update(animationPreview ? 0 : step, current);
+    }
     const aperture = sceneAperture(), animation = timelineEntry()?.animation?.name;
-    const nextWindow = scene && (K.spineArtworkAperture(scene.layers, SP, aperture) ?? interactionFrame(scene.main, animation));
+    const nextWindow = artworkFrame(animation, aperture);
     if (nextWindow?.minX !== artworkWindow?.minX || nextWindow?.minY !== artworkWindow?.minY
         || nextWindow?.maxX !== artworkWindow?.maxX || nextWindow?.maxY !== artworkWindow?.maxY) {
       artworkWindow = nextWindow;
       if (nextWindow) pendingFit = null;
       fit();
     }
+    if (scene && K.framing.original && !pointer && updateOriginalView()) fit();
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
     const viewport = (x, y) => ({ x: (x - renderer.camera.position.x) / renderer.camera.viewportWidth * width + width / 2, y: (y - renderer.camera.position.y) / renderer.camera.viewportHeight * height + height / 2 });
     let clip;
@@ -540,12 +584,12 @@ function render() {
       gl.enable(gl.SCISSOR_TEST); gl.scissor(...clip);
     }
     try {
-      if (scene) K.drawSpineArtwork(scene.layers, nextWindow ? aperture : null, () => scene.draw(renderer, viewport, clip, animation));
+      if (scene) K.drawSpineArtwork(scene.layers, nextWindow ? aperture : null, () => scene.draw(renderer, viewport, clip, animation, K.framing.original));
       if (pendingFit && pendingFit.scene === scene && current >= pendingFit.at && !pointer) {
         if (fitVisiblePixels()) { pendingFit = null; gl.clear(gl.COLOR_BUFFER_BIT); scene.draw(renderer, viewport, undefined, animation); }
         else if (current >= pendingFit.expires) pendingFit = null;
       }
-      if (transition) { if (current >= transitionUntil) { transition.dispose(); transition = null; } else { transition.update(animationPreview ? 0 : step, current); transition.draw(renderer, viewport, clip); } }
+      transition?.draw(renderer, viewport, clip, undefined, K.framing.original);
     } finally {
       if (clip) gl.disable(gl.SCISSOR_TEST);
     }
@@ -608,7 +652,7 @@ $('#gridSearch').addEventListener('input', () => {
 });
 $('#model').addEventListener('change', () => { clearTimeout(searchTimer); loadModel($('#model').value).catch(fail); });
 $('#btnPrev').addEventListener('click', () => step(-1)); $('#btnNext').addEventListener('click', () => step(1));
-$('#reset').addEventListener('click', () => model && loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { stagePan.cancel(); viewPan.x = viewPan.y = 0; viewZoom = 1; fit(); if (scene) pendingFit = { scene, at: now(), expires: now() + 2 }; });
+$('#reset').addEventListener('click', () => model && loadModel(model.id).catch(fail)); $('#fit').addEventListener('click', () => { stagePan.cancel(); viewPan.x = viewPan.y = 0; viewZoom = 1; refitFraming(timeline().name); });
 $('#resetInteraction').addEventListener('click', async () => {
   if (!model) return;
   const interacting = stage.dataset.panMode === 'interact';

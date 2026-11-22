@@ -10,6 +10,12 @@
 <link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
 <link rel="stylesheet" href="../../common/visual.css?v=20261104-unified-final">
 <style>
+  html[data-site-ui="1"] body #gridView.library-ui .thumb-card.nikke-burst-card .ph {
+    aspect-ratio: 1 / 1 !important;
+  }
+  html[data-site-ui="1"] body #gridView.library-ui .thumb-card.nikke-burst-card .ph img {
+    padding: 0 !important;
+  }
   .burst-card-badge {
     position:absolute; left:8px; top:8px; padding:3px 6px; border-radius:6px;
     background:#15131de6; color:var(--accent); font-size:11px; line-height:1.2; pointer-events:none;
@@ -281,7 +287,7 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261122-game-audio"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261122-game-audio"><script defer src="../../common/site-ui.js?v=20261122-framing-v4"></script>
   <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
   <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 </head>
@@ -430,8 +436,8 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261121-portraits"></script>
-<script src="../../common/asset-loader.js?v=20261121-portraits"></script>
+<script src="../../common/kit.js?v=20261122-framing-v4"></script>
+<script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -611,7 +617,7 @@
     object: 'nikki/bursts/objects/46685e74cbdeeee6555d7f52cecc0262565653e3b69c65e73f8418ebe8924436.png',
     bounds: { minX: -2017, minY: -396, maxX: 1744, maxY: 3365 },
   };
-  let showGameBackground = false, skillBackdrop = null;
+  let showGameBackground = false, manualSkillBackdrop = false, skillBackdrop = null;
   const savedBurstVolume = store.get('burstVolume', .3);
   let burstVolume = Number.isFinite(savedBurstVolume) ? Math.max(0, Math.min(1, savedBurstVolume)) : .3;
   let burstMuted = !!store.get('burstMuted', false);
@@ -655,9 +661,12 @@
     burstMute.textContent = burstMuted ? '已静音' : '静音';
   }
 
+  function useSkillBackdrop() {
+    return showGameBackground && (!K.framing.original || manualSkillBackdrop);
+  }
   function activeSkillBackdrop() {
     if (burstSession) return null;
-    if (showGameBackground && skillBackdrop) return skillBackdrop;
+    if (useSkillBackdrop() && skillBackdrop) return skillBackdrop;
     return cut?.artworkBackdrop?.motion === animSel.value ? cut.artworkBackdrop : null;
   }
   function drawSkillBackdrop(renderer, skeleton, backdrop, texture, animationTime) {
@@ -687,16 +696,19 @@
   }
   function renderSkillBackdrop() {
     if (burstSession || burstPending?.intro || !cut) return;
-    if (showGameBackground && cut.sourceVariant.skillBackdrop !== false && burstBackdrop && !skillBackdrop && burstBackdrop.backdrop?.time !== null) {
+    if (useSkillBackdrop() && cut.sourceVariant.skillBackdrop !== false && burstBackdrop && !skillBackdrop && burstBackdrop.backdrop?.time !== null) {
       const { minX, minY, maxX, maxY } = cut.frame || cut.bounds;
       const width = maxX - minX, height = maxY - minY;
-      const aspect = Math.max(.65, Math.min(1.6, width / height));
-      const composition = burstBackdrop.buildComposition?.(aspect, cut.state.getCurrent(0)?.animation?.name);
+      // NIKKE burst scenes are authored for <= 1:1 square/portrait stages; clamping
+      // aspect to <= 1.0 prevents wide floating particles/wings from exposing black
+      // side voids or clipped square backdrop seams.
+      const aspect = Math.max(.65, Math.min(1.0, width / height));
+      const composition = burstBackdrop.buildComposition?.(aspect, cut.state.getCurrent(0)?.animation?.name, cur?.id, cut.sourceVariant?.compositeLayers);
       const image = composition?.image || burstBackdrop.buildBackdrop(aspect);
       if (image) {
         // Store one composition in model coordinates for both the stage and exports.
         const ratio = image.width / image.height;
-        const halfW = Math.max(width, height * ratio) * .54;
+        const halfW = composition ? (height * ratio * 0.5) : (Math.max(width, height * ratio) * 0.54);
         const halfH = halfW / ratio;
         const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
         const SP = K.getSpine(cur && cur.spineVersion);
@@ -795,7 +807,7 @@
     if (intro) stage.dataset.skillBurst = 'loading';
     syncBurstUI();
     try {
-      const {openSkillBurst} = await import('./burst-inline.js?v=20261116-native-ending');
+      const {openSkillBurst} = await import('./burst-inline.js?v=20261122-skill-v3');
       signal.throwIfAborted();
       const session = await openSkillBurst({
         canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),
@@ -835,7 +847,8 @@
   if (burstEnabled) {
     burstToggle.onclick = burstInPanel.onclick = toggleSkillBurst;
     burstBgButton.onclick = () => {
-      showGameBackground = !showGameBackground;
+      showGameBackground = !useSkillBackdrop();
+      manualSkillBackdrop = true;
       renderSkillBackdrop(); syncBurstUI();
       if (showGameBackground && !skillBackdrop) K.toast('当前合播没有可用的独立背景，保留原生画面', 'info');
     };
@@ -1927,7 +1940,7 @@
       }
       raw.clear(raw.COLOR_BUFFER_BIT);
       const backdrop = activeSkillBackdrop();
-      const clipped = clipArtworkFrame(raw, cv, cut?.frameView || cut?.skeleton, cut?.frame);
+      const clipped = clipArtworkFrame(raw, cv, cut?.frameView || cut?.skeleton, artworkFrame());
       try {
         renderer.begin();
         if (backdrop && cut) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
@@ -1980,10 +1993,13 @@
     return true;
   }
 
+  function artworkFrame() { return K.framing.original ? undefined : cut?.frame; }
+
   // ---------- 视图 ----------
   function computeView() {
     if (!cut) return;
-    const b = cut.frame || mergeBounds(cut.bounds, activeSkillBackdrop()?.bounds);
+    const backdrop = activeSkillBackdrop();
+    const b = artworkFrame() || (backdrop?.composition ? backdrop.bounds : mergeBounds(cut.bounds, backdrop?.bounds));
     cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
     cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
     const area = K.stageViewArea(cv);
@@ -2089,6 +2105,25 @@
     store.set('lastChar', last);
   }
 
+  function measureWallpaperBounds(action) {
+    const SP = K.getSpine(cur && cur.spineVersion);
+    let bounds = null;
+    for (const layer of cutLayers()) {
+      if (layer.active === false) continue;
+      const skeleton = new SP.Skeleton(layer.data);
+      if (layer.skeleton.skin) skeleton.setSkin(layer.skeleton.skin);
+      const sample = { source: layer.source, data: layer.data, skeleton };
+      setLayerView(sample, 1, 0, 0);
+      for (const fraction of [0, .125, .25, .375, .5, .625, .75, .875, .99, 1]) {
+        wallpaper.sampleLayer(sample, cut.sourceVariant.wallpaperScene, action.name, action.duration * fraction, false, SP);
+        K.updateWorldTransform(skeleton);
+        K.applyHiddenSlots(skeleton, layer.hiddenSlots);
+        bounds = mergeBounds(bounds, K.measureBounds(skeleton, SP, false));
+      }
+    }
+    return bounds;
+  }
+
   function playAnimation(name, options = {}) {
     parkSkillBurst();
     if (!cut) return;
@@ -2103,7 +2138,11 @@
       animSel.value = name;
       applyCutLayerStates();
       const frame = cut.sourceVariant.cameraFrames?.[name] || wallpaper.frame;
-      if (cut.frame !== frame) {
+      if (K.framing.original) {
+        cut.frame = frame;
+        cut.bounds = measureWallpaperBounds(action) || cut.bounds;
+        if (fitMode && !options.keepView) refit();
+      } else if (cut.frame !== frame) {
         cut.frame = frame;
         if (fitMode && !options.keepView) refit();
       }
@@ -2356,7 +2395,8 @@
   // ---------- 资源选择 ----------
   function selectChar(c, restore) {
     leaveSkillBurst();
-    showGameBackground = reviewedSkillBackdrops.has(c.burst?.key);
+    showGameBackground = !!c.burst && c.cutscenes?.[0]?.skillBackdrop !== false;
+    manualSkillBackdrop = false;
     if (burstEnabled && c.burst && navigator.userActivation?.isActive) unlockBurstAudio();
     cur = c;
     cutLoadSeq++;
@@ -2394,6 +2434,8 @@
     if (!cur) return;
     const p = new URLSearchParams(location.search);
     p.set('id', cur.id);
+    const variant = cur.cutscenes[Number(variantSel.value)]?.variant;
+    if (cur.cutscenes.length > 1 && variant != null) p.set('v', String(variant)); else p.delete('v');
     if (animName) p.set('anim', animName); else p.delete('anim');
     const q = p.toString();
     history.replaceState(null, '', location.pathname + (q ? '?' + q : ''));
@@ -2802,8 +2844,8 @@
       syncBurstUI();
       if (burstEnabled && cur.burst) {
         burstIdle = savedAnim?.name || (v.legacyPreviewAnimation ? preferred?.name : null) || findSkillIdle(previewAnim?.name || def);
-        if (skipInitialBurst && animSel.value !== burstIdle) startSkillIdle();
-        void loadSkillBurst(!skipInitialBurst);
+        if (!K.framing.original && skipInitialBurst && animSel.value !== burstIdle) startSkillIdle();
+        void loadSkillBurst(!K.framing.original && !skipInitialBurst);
       }
     } catch (e) {
       request.abort(e);
@@ -2834,7 +2876,8 @@
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
     const backdrop = activeSkillBackdrop();
-    const frame = cut.frame;
+    const frame = artworkFrame();
+    const original = K.framing.original;
     const SP = K.getSpine(cur && cur.spineVersion);
     const exportAtlases = new Set();
     let exportGL = null, backdropTexture = null;
@@ -2897,7 +2940,8 @@
         }
       };
       const kind = video ? 'video' : 'gif';
-      let size = frame ? K.exportDimensions(frame, quality, kind, 0) : null;
+      const exportBounds = frame || (backdrop?.composition ? backdrop.bounds : null);
+      let size = exportBounds ? K.exportDimensions(exportBounds, quality, kind, 0) : null;
       if (!size) {
         // 第一遍: 推进并求动画全程包围盒
         let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
@@ -2906,7 +2950,7 @@
           applyExportFrame(timeline.timeAt(k));
           for (const L of exportLayers) {
             if (!L.active) continue;
-            const b = K.measureBounds(L.skeleton, SP);
+            const b = K.measureBounds(L.skeleton, SP, !original);
             if (b) {
               bMinX = Math.min(bMinX, b.minX); bMaxX = Math.max(bMaxX, b.maxX);
               bMinY = Math.min(bMinY, b.minY); bMaxY = Math.max(bMaxY, b.maxY);
@@ -2915,16 +2959,20 @@
           if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
         }
         if (!isFinite(bMinX)) throw new Error('空包围盒');
-        const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
-        cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
-        size = backdrop ? K.exportDimensions(mergeBounds({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, backdrop.bounds), quality, kind, 0) : null;
-        size ??= K.animationFramingSize(reference, anim.duration, quality, kind, time => {
-          applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
-          raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
-          for (const L of exportDrawLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
-          r2.end();
-          return cv2;
-        });
+        const animationBounds = { minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY };
+        if (original || backdrop) {
+          size = K.exportDimensions(mergeBounds(animationBounds, backdrop?.bounds), quality, kind, 0);
+        } else {
+          const reference = K.exportDimensions(animationBounds, 'medium');
+          cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
+          size = K.animationFramingSize(reference, anim.duration, quality, kind, time => {
+            applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
+            raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
+            for (const L of exportDrawLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+            r2.end();
+            return cv2;
+          });
+        }
       }
       if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;
@@ -3002,7 +3050,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json')).then(td => {
+    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json?v=20261122-square')).then(td => {
       webThumbs = td.items || {};
       const variant = cur?.cutscenes[Number(variantSel.value)];
       if (variant && (routeSource === 'crosscore' || variant.wallpaperId || variant.variant === 'HD')) {
@@ -3010,7 +3058,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'nikki' ? '?v=20261121-portraits' : '';
+    const catalogRev = routeSource === 'nikki' ? '?v=20261122-square' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes?.length && !(embedded && routeSource === 'nikki' && K.shouldOmitNikkeViewerEntry(c) && !c.cutscenes[0].nativeBurst));
     chars.sort((a, b) => a.id.localeCompare(b.id));
@@ -3022,8 +3070,10 @@
     const last = store.get('lastChar', {});
     if (byUrl || embedded) {
       const first = byUrl || chars.find(x => x.id === last.id) || chars[0];
-      if (first) selectChar(first, byUrl ? { anim: params.get('anim') } : last);
-      else status('没有可用资源');
+      if (first) {
+        const variant = byUrl && first.cutscenes.findIndex((entry, i) => String(entry.variant ?? i) === params.get('v'));
+        selectChar(first, byUrl ? { variant: Math.max(0, variant), anim: params.get('anim') } : last);
+      } else status('没有可用资源');
     } else {
       openGrid();
       if (params.get('id')) K.toast('没有找到该资源，请从目录重新选择', 'err');
@@ -3045,7 +3095,7 @@
 
   // ---------- PNG 导出 ----------
   function pngPose(quality, backdrop = activeSkillBackdrop()) {
-    const frame = cut.frame || (backdrop ? mergeBounds(cut.bounds, backdrop.bounds) : undefined);
+    const frame = artworkFrame() || (backdrop ? (backdrop.composition ? backdrop.bounds : mergeBounds(cut.bounds, backdrop.bounds)) : undefined);
     const skeletons = cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
     return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), frame, cut.frameView);
   }
@@ -3181,10 +3231,27 @@
   // ---------- 平移/缩放/点选 ----------
   let down = null, moved = false;
   const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit') || t.closest('#burstAccess') || t.closest('.stage-loading-preview')));
+  K.stageFramingMenuItem = () => K.framing.menuItem({
+    disabled: !cut || animationExportRunning || K.pngExporting,
+    onChange(original) {
+      if (!cut || animationExportRunning || K.pngExporting) return;
+      parkSkillBurst();
+      if (original && cut.wallpaperActions) {
+        const action = cut.wallpaperActions.find(item => item.name === animSel.value);
+        if (action) cut.bounds = measureWallpaperBounds(action) || cut.bounds;
+      }
+      renderSkillBackdrop();
+      syncBurstUI();
+      fitMode = true;
+      btnFit.classList.add('active'); btn100.classList.remove('active');
+      refit();
+    },
+  });
   stage.addEventListener('contextmenu', (e) => {
     if (isChrome(e.target)) return;
     e.preventDefault();
     K.showMenu([
+      K.stageFramingMenuItem(),
       { label: '复制 PNG 到剪贴板', fn: () => exportFrame(true, 'copy') },
       { label: '导出 PNG', fn: () => btnPng.click() },
       { sep: true },
@@ -3318,7 +3385,8 @@
       const wx = (tapX - rect.left) * dpr - cv.width / 2;
       const wy = cv.height / 2 - (tapY - rect.top) * dpr;
       const SP = K.getSpine(cur && cur.spineVersion);
-      const frame = cut.frame, anchor = cut.frameView || cut.skeleton;
+      const frame = artworkFrame() || (cut.wallpaperActions ? cut.bounds : null);
+      const anchor = cut.frameView || cut.skeleton;
       const x = (wx - anchor.x) / anchor.scaleX, y = (wy - anchor.y) / anchor.scaleY;
       const inFrame = !frame || (x >= frame.minX && x <= frame.maxX && y >= frame.minY && y <= frame.maxY);
       if (cut.wallpaperActions && !partEditMode) {

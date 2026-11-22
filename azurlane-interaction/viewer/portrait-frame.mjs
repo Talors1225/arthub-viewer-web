@@ -10,6 +10,20 @@ const rules = {
 };
 export const portraitSurroundNames=id=>new Set(rules[id]?.surrounds||[]);
 const frame = (minX, minY, maxX, maxY) => Object.freeze({ minX, minY, maxX, maxY });
+// These original rigs place perimeter mattes far outside their Cubism stage.
+const originalStageMattes = new Map([
+ ['luyijiushi_4', { drawable:'ArtMesh650' }],
+ ['anninvwang_2', { drawable:'ArtMesh545' }],
+ // The converted rig's four fixed plates define an offset viewport. Leave a
+ // small edge of the plates in the original view and draw its full effects.
+ ['nabulesi_3', { drawable:'ArtMesh1235', viewport:frame(-2130, -1100, 14610, 8770) }],
+]);
+export function authoredLive2DOriginalCanvas(id, natural, hasDrawable) {
+ const stage = originalStageMattes.get(id);
+ return stage && hasDrawable(stage.drawable)
+  ? stage.viewport || frame(0, 0, natural.width, natural.height)
+  : null;
+}
 const trackDrawable = (crop, drawable, options = {}) =>
  Object.freeze({ ...crop, anchor: Object.freeze({ drawable, ...options }) });
 const openingMatte = (crop, drawable, corners) => trackDrawable(crop, drawable,
@@ -68,7 +82,7 @@ const live2dFrames = new Map([
  ['jinjiang_2', frame(0, 0, 8000, 4712)],
  ['pulimaosi_3', plymouthWardWindow],
  ['suweiaitongmeng_3', frame(0, 0, 19310, 13260)],
- ['anninvwang_2', frame(-100, 220, 8160, 5060)],
+ ['anninvwang_2', frame(-11, 272, 8047, 4868)],
  ['guanghui_9', frame(-5050, -3100, 15070, 10385)],
  ['wuqi_3', frame(370, 185, 9240, 5300)],
 ]);
@@ -115,6 +129,9 @@ const rotatedFrame = (minX, minY, maxX, maxY, degrees) =>
  Object.freeze({ ...frame(minX, minY, maxX, maxY), rotation: degrees * Math.PI / 180 });
 const groupedIdleFrames = groups => new Map(groups.flatMap(([crop, numbers]) =>
  numbers.map(number => [`idle${number}`, crop])));
+// The close-up exposes a cutout at the upper left of the room. Keep the native
+// camera angle and move the edge past the cutout without cropping the hair.
+const naplesCurtainCloseUp = frame(1530, -1055, 13460, 8690);
 const poolTableFront = frame(2770, 405, 12810, 8080);
 // The tiled floor moves with the overhead camera. Use it to keep that shot in frame.
 const poolTableOverhead = trackDrawable(live2dIdleFrames.get('dafeng_7'), 'jiezhihuan13');
@@ -151,6 +168,9 @@ const live2dIdleVariants = new Map([
   ]),
   ['touch_drag9', mogadorSkyWithCard],
   ['touch_drag10', mogadorSkyWithCard],
+ ])],
+ ['nabulesi_3', groupedIdleFrames([
+  [naplesCurtainCloseUp, [31]],
  ])],
  ['wuerlixi_3', groupedIdleFrames([[live2dIdleFrames.get('wuerlixi_3'), [1]]])],
  ['wuqi_3', groupedIdleFrames([
@@ -629,6 +649,11 @@ const live2dMotionStageFrames = new Map([
  ['pinghai_6:login', openingMatte(frame(590, -120, 5316, 5150), 'mask_black_16b11', [1, 3, 2, 0])],
  ['qianwei_2:home', frame(-1196, -508, 7316, 6098)],
  ['bulaimodun_4:home', openingMatte(frame(-1066, 67, 7134, 8254), 'mask_black_16b11', [1, 3, 2, 0])],
+ // Separate the curtain transition from the tilted chair close-up.
+ ['nabulesi_3:home', frame(-1600, -1030, 14515, 7600)],
+ ...[32, 39, 43].map(n => ['nabulesi_3:touch_idle' + n, frame(-350, -1030, 14515, 8690)]),
+ ['nabulesi_3:touch_idle37', naplesCurtainCloseUp],
+ ['nabulesi_3:touch_idle38', naplesCurtainCloseUp],
  ['ougen_5:idle', frame(126, 1520, 8447, 8151)],
 ]);
 export const authoredLive2DFrame = (id, motion) =>
@@ -835,8 +860,11 @@ export function authoredLive2DScreenEdges(id, motion) {
 export function authoredLive2DInterfaceCovers(id, motion) {
  if (id === 'mojiaduoer_4') return mogadorInteractionCovers;
  if (id === 'mingji_2') return pirateCarMatte;
- // The unrotated viewport cuts across the two corners of the tilted idle8 shot.
- if (id === 'anninvwang_2' && motion === 'idle8') return pirateQueenPreviousCameraMatte;
+ if (id === 'anninvwang_2') {
+  // Keep the iris transition. These two oversized rings surround the artwork.
+  const outerRings = ['ArtMesh545', 'ArtMesh546'];
+  return motion === 'idle8' ? [...outerRings, ...pirateQueenPreviousCameraMatte] : outerRings;
+ }
  return [];
 }
 const lionSceneMatte = Object.freeze(['ArtMesh222', 'ArtMesh226', 'ArtMesh229', 'ArtMesh231',
@@ -915,6 +943,12 @@ const spineMotionStageFrames = new Map([
 export const authoredSpineFrame = (id, motion) => spineMotionStageFrames.get(id + ':' + motion) || spineFrames.get(id) || null;
 const spineSceneApertures = new Map([
  ['yunlong_2', { slot:'wlk', corners:[8,9,6,7], fallback:frame(-1578,12,1634,2014), hideMatte:true }],
+ // The four surround slots mask the idle city view. The outfit transition
+ // also uses them to contain the fade, so keep them during the other actions.
+ ['yunlong_3', { motions:/^normal$/, hideSlots:rules.yunlong_3.surrounds,
+   fallback:spineFrames.get('yunlong_3'), useStageCanvasInOriginal:true }],
+ ['suweiaitongmeng_4', { slot:'bj_20', hideSlots:['1heidi', '1heidi4'],
+   fallback:spineFrames.get('suweiaitongmeng_4'), useStageCanvasInOriginal:true }],
 ]);
 export const authoredSpineSceneAperture = id => spineSceneApertures.get(id) || null;
 

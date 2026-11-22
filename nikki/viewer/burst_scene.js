@@ -237,7 +237,9 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     const {model,pose}=entry,context=model.context;
     const skeleton=model.instance;
     const c=timeline.spineClip(model,time);
-    const name=override?.animation||c?.animation||model.defaultAnimation;
+    const overrideAnim=override?.map ? override.map.get(model) : (override && (!override.model || override.model===model) ? override.animation : null);
+    const useOverride=Boolean(overrideAnim);
+    const name=(useOverride ? overrideAnim : null)||c?.animation||model.defaultAnimation;
     const animation=name ? model.data.findAnimation(name) : null;
     if(!animation && timeline.hasSpineTrack(model.node) && !model.defaultAnimation) return false;
     const center=camera.project(pose.position);
@@ -245,8 +247,8 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     skeleton.setToSetupPose();
     skeleton.x=0;skeleton.y=0;skeleton.scaleX=1;skeleton.scaleY=1;
     if(animation){
-      animation.apply(skeleton,-1,override ? override.time : c?clockAt(c,time):time-pose.activatedAt,
-        override ? true : c?c.loop:model.loop,null,override ? 1 : c?.alpha??1,0,0);
+      animation.apply(skeleton,-1,useOverride ? override.time : c?clockAt(c,time):time-pose.activatedAt,
+        useOverride ? true : c?c.loop:model.loop,null,useOverride ? 1 : c?.alpha??1,0,0);
     }
     const modern=model.modern;
     if(!modern){
@@ -330,7 +332,9 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       }
     }
     for(const item of queue) item.depth=camera.depth(item.position);
-    queue.sort((a,b)=>Number(!!b.backdrop)-Number(!!a.backdrop) || a.layer-b.layer || a.order-b.order || b.depth-a.depth);
+    const isLiveChar=override?.promoteCharacter ? (item=>Boolean(item.model && override.map?.has(item.model))) : null;
+    queue.sort((a,b)=>(isLiveChar ? Number(isLiveChar(a))-Number(isLiveChar(b)) : 0)
+      || Number(!!b.backdrop)-Number(!!a.backdrop) || a.layer-b.layer || a.order-b.order || b.depth-a.depth);
     post.start(width,height,backdropOnly);
     const counts={spine:0,background:0,effect:0,nodes:[]};
     for(const item of backdropOnly ? backdropItems(queue,extraBranch) : queue){
@@ -355,12 +359,72 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       return {skeleton:model.instance,hiddenSlots:hidden,data:{slots:model.parts}};
     });
   }
-  // A reviewed single-character ending can retain the scene's camera, foreground
-  // light, particles and post processing while its idle skeleton keeps playing.
-  // Multi-character timelines cannot safely replace every track with one idle.
-  function renderComposition(time, animation, animationTime, frame) {
-    if (models.length !== 1 || failedModels.length || !models[0].data.findAnimation(animation)) return null;
-    return render(time,true,true,false,frame,null,{animation,time:animationTime});
+  // A reviewed or ending composition retains the scene's camera, backdrop and
+  // environment lighting while the active character skeleton(s) keep playing
+  // cleanly on top (including multi-model and compositeLayer scenes).
+  function resolveIdleForModel(model, clipAnim, requestedAnim, compositeLayers) {
+    const has = name => Boolean(name && model.data.findAnimation(name));
+    if (Array.isArray(compositeLayers) && compositeLayers.length && clipAnim) {
+      for (const layer of compositeLayers) {
+        const amap = layer?.animationMap;
+        if (!amap) continue;
+        // If this Spine model plays the composite layer's skillcut clip, play its paired idle!
+        const pairedSkill = Object.values(amap).includes(clipAnim);
+        if (pairedSkill && has(amap[requestedAnim])) return amap[requestedAnim];
+      }
+    }
+    if (clipAnim && requestedAnim) {
+      // Match numeric suffix between skillcut_N and idle_N / idleN when distinct layers share one skeleton.
+      const mClip = /(?:^|_)skill_?cut_?(\d+)$/i.exec(clipAnim);
+      const mReq = /^(idle)(_?)(\d+)$/i.exec(requestedAnim);
+      if (mClip && mReq && mClip[1] !== mReq[3]) {
+        const cand1 = mReq[1] + mReq[2] + mClip[1];
+        const cand2 = mReq[1] + (mReq[2] ? '' : '_') + mClip[1];
+        if (has(cand1)) return cand1;
+        if (has(cand2)) return cand2;
+      }
+      if (/(?:^|_)bg(?:_|$)/i.test(clipAnim)) {
+        if (has('bg_idle')) return 'bg_idle';
+        if (has('idle_bg')) return 'idle_bg';
+      }
+    }
+    return has(requestedAnim) ? requestedAnim : null;
+  }
+  function renderComposition(time, animation, animationTime, frame, preferredModelName, compositeLayers) {
+    if (failedModels.length || !models.length) return null;
+    const t = clamp(time, 0, Math.max(0, scene.duration - 1e-6));
+    const poses = timeline.sampleScene(t);
+    const activeModels = models.filter(m => {
+      const pose = poses.get(m.node);
+      return pose?.active && (pose.edit.enabled?.[0] ?? m.enabled);
+    });
+    if (!activeModels.length) return null;
+    const pool = activeModels;
+    const clean = String(preferredModelName || '').replace(/\.skel(?:\.bytes)?$|\.json$/i, '').toLowerCase();
+    let targets = [];
+    if (pool.length === 1) {
+      targets = pool;
+    } else {
+      targets = clean ? pool.filter(m => String(m.name || '').toLowerCase() === clean) : [];
+      if (!targets.length && clean) {
+        targets = pool.filter(m => {
+          const n = String(m.name || '').toLowerCase();
+          return n.includes(clean) || clean.includes(n);
+        });
+      }
+      if (!targets.length) {
+        const withAnim = pool.filter(m => m.data.findAnimation(animation));
+        if (withAnim.length) targets = withAnim;
+      }
+    }
+    const map = new Map();
+    for (const m of targets) {
+      const clip = timeline.spineClip(m, t);
+      const anim = resolveIdleForModel(m, clip?.animation, animation, compositeLayers);
+      if (anim) map.set(m, anim);
+    }
+    if (!map.size) return null;
+    return render(time, true, true, false, frame, null, { map, animation, time: animationTime, promoteCharacter: true });
   }
   return {render,renderComposition,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
 }

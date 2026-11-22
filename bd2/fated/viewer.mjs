@@ -56,6 +56,7 @@ function findFrameMattes(model, skeleton) {
 }
 
 function muteFrameMattes({ model, mattes, state }) {
+  if (K.framing.original) return [];
   const transition = matteTransitions[model.id];
   const preserveFade = transition && state.tracks.some(track => {
     for (let entry = track; entry; entry = entry.mixingFrom) {
@@ -328,10 +329,25 @@ function resize() {
   fit(undefined, true);
 }
 
-function portraitFrame({ model, bounds, gestures, state }, forExport = false) {
+function portraitFrame(picture, forExport = false) {
+  // Fit and export use the game's stage rectangle. Original preview still draws
+  // all source layers, including the parts outside this stage.
+  if (K.framing.original) return picture.nativeFrame;
+  const { model, bounds, gestures, state } = picture;
+  const clip = state.getCurrent(0)?.animation.name;
+  let reviewedClip = clip;
+  for (let overlay = state.getCurrent(1); overlay; overlay = overlay.mixingFrom) {
+    if (overlay.animation.name === '<empty>') continue;
+    reviewedClip = overlay.animation.name;
+    break;
+  }
   const group = model.groupFrames?.[gestures.group.id];
+  const fullFrame = Boolean(group?.fullFrameClips?.includes(clip));
+  const reviewedGroup = model.reviewedFrames?.[String(gestures.groupIndex)];
+  const reviewedFrame = reviewedGroup?.[reviewedClip] || (!fullFrame && reviewedGroup?.['*']);
+  if (reviewedFrame) return reviewedFrame;
   // These clips reveal a second scene beyond the first shot's vignette.
-  if (group && !group.fullFrameClips.includes(state.getCurrent(0)?.animation.name)) return group.frame;
+  if (group && !fullFrame) return group.frame;
   return model.displayFrame || (forExport && model.exportFrame) || bounds;
 }
 
@@ -480,6 +496,7 @@ async function showModel(model) {
     if (!bounds || bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) throw new Error('立绘没有可见画面');
     scene = {
       model, skeleton, state, gestures, bounds, atlas, sound, pma: Boolean(atlas.pages[0].pma),
+      nativeFrame: bounds,
       mattes: findFrameMattes(model, skeleton),
       partTarget: createPartTarget(skeleton, SP),
     };
@@ -489,6 +506,7 @@ async function showModel(model) {
       activeScene.loadingVariants = true;
       const variants = new Map([[0, {
         skeleton, state, gestures, atlas: activeScene.atlas, pma: activeScene.pma, mattes: activeScene.mattes,
+        nativeFrame: activeScene.nativeFrame,
         partTarget: activeScene.partTarget,
       }]]);
       activeScene.extraAtlases = [activeScene.atlas];
@@ -510,6 +528,7 @@ async function showModel(model) {
           SP.TranslateTimeline, spec.frame || model.frame, authoredRules[model.id], sound, index);
         variants.set(index, { skeleton: groupSkeleton, state: groupState, gestures: groupGestures,
           atlas: groupFiles.atlas, pma: Boolean(groupFiles.atlas.pages[0].pma), mattes: findFrameMattes(model, groupSkeleton),
+          nativeFrame: spec.frame || bounds,
           partTarget: createPartTarget(groupSkeleton, SP) });
       }
       for (const [index, variant] of variants) {
@@ -567,7 +586,7 @@ function navigate(id) {
 }
 
 function previewFrame(picture) {
-  return (picture.model.frame || picture.displayFrame !== picture.bounds) && picture.displayFrame;
+  return !K.framing.original && (picture.model.frame || picture.displayFrame !== picture.bounds) && picture.displayFrame;
 }
 
 function drawPortrait(picture, cropPreview = false, clearColor = null) {
@@ -787,8 +806,7 @@ function captureVideoFrame(now) {
   return true;
 }
 
-function syncVideoFrame(session) {
-  const frame = portraitExportFrame(session.picture);
+function syncVideoFrame(session, frame = portraitExportFrame(session.picture)) {
   if (frame === session.frame) return;
   const { skeleton } = session.picture;
   // Recording keeps its canvas size when a transition opens the wider scene.
@@ -1142,6 +1160,16 @@ $('video-cancel').onclick = () => stopVideoRecording(false);
 K.initTheme(store);
 K.bindThemePalette($('btnTheme'), store);
 cards.dataset.density = store.get('density', 'standard');
+K.stageFramingMenuItem = () => K.framing.menuItem({
+  disabled: !scene || !canvas.dataset.ready || K.pngExporting || Boolean(videoRecording),
+  onChange() {
+    if (!scene || K.pngExporting || videoRecording) return;
+    const restoreWorld = captureWorldPose(scene.skeleton);
+    fit();
+    restoreWorld();
+    drawPortrait(scene, true);
+  },
+});
 K.initStageUI({ canvas, refit: () => { if (!stage.hidden) resize(); } });
 matchMedia('(max-width: 720px)').addEventListener('change', () => { if (models.length) renderLibrary(); });
 window.addEventListener('popstate', renderRoute);
@@ -1268,7 +1296,7 @@ async function start() {
     if (url.origin === location.origin || url.protocol === 'https:') audioRoot = url;
   }
   const [catalog, rules, sound] = await Promise.all([
-    K.fetchJSON('./catalog.json?v=20261120-framed-thumbs'), K.fetchJSON('./rules.json'),
+    K.fetchJSON('./catalog.json?v=20261122-reviewed-frames'), K.fetchJSON('./rules.json'),
     audioRoot ? K.fetchJSON(new URL('manifest.json', audioRoot).href).catch(() => null) : null,
   ]);
   if (catalog.schemaVersion !== 1 || !catalog.models.length) throw new Error('资源目录为空或版本不匹配');

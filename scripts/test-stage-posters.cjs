@@ -66,6 +66,11 @@ for (const {game, catalog, source, viewer, sourceViewer} of routes) {
         check(relative === 'nikki/burst-covers/' + character.burst.key + '.webp', key + ': matching skill cover');
         checkWebp(path.join(root, relative), key);
         previewCounts.burst++;
+      } else if (game === 'bd2' && variant.stagePoster) {
+        check(variant.stagePoster.startsWith('updates/') && relative === 'thumbs/' + variant.stagePoster,
+          key + ': matching dedicated update poster');
+        checkWebp(path.join(root, relative), key);
+        previewCounts.dedicated++;
       } else if (game === 'bd2' && character.thumbnail) {
         check(character.thumbnail === 'bd2/portraits/' + character.id + '.webp' && relative === 'thumbs/' + character.thumbnail,
           key + ': matching catalog portrait cover');

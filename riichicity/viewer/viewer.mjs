@@ -1,5 +1,5 @@
 import {importBundle,discoverModels} from './bundle.mjs?v=20261104-unified-final';
-import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261121-portraits';
+import {loadSpine,loadLive2D} from './runtimes.mjs?v=20261121-framing-modes';
 const K=window.SpineKit,$=id=>document.getElementById(id),stage=$('stage');
 let canvas=$('canvas'),engine=null,activeBundle=null,bundle=null,models=[],selected=null,identity='',epoch=0,pending=null,exporting=false,renderFailed=false,gridPlaying=true;
 const catalogMode=true;
@@ -42,6 +42,16 @@ const ui=window.createInteractionViewerUI({
 });
 // Game voice mappings and cloud catalog search do not describe local MOD files.
 if(!catalogMode)$('btnVoiceSettings').remove();$('btnGlobalSearch').remove();
+K.stageFramingMenuItem=()=>K.framing.menuItem({
+  disabled:!engine||!!pending||renderFailed||exporting,
+  onChange:()=>{
+    K.closeToolPopup();
+    if(!engine||pending||renderFailed||exporting)return;
+    engine.resetFraming();
+    $('fit').click();
+    engine.render(0,view);
+  },
+});
 K.initStageUI({canvas,refit:()=>{}});
 $('btnStagePan').hidden=true;
 stage.addEventListener('wheel',event=>{if(event.target!==canvas||exporting)return;event.preventDefault();zoom(view.zoom*Math.exp(-event.deltaY*.0015));},{passive:false});

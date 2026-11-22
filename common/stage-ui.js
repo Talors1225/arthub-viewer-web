@@ -139,7 +139,7 @@
   };
   // Authored Live2D canvases can have asymmetric padding or art outside their
   // nominal dimensions. Fit actual visible geometry once, without per-frame jitter.
-  K.live2DViewBounds = (internal, natural, hitIds = []) => {
+  K.live2DViewBounds = (internal, natural, hitIds = [], complete = false) => {
     const core = internal.coreModel.getModel(), excluded = new Set(hitIds);
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for (let i=0;i<core.drawables.ids.length;i++) {
@@ -150,7 +150,7 @@
         x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);
       }
       // Infinite backdrop meshes use the same authored-canvas clipping as export.
-      if(x1-x0>natural.width*4 || y1-y0>natural.height*4) { x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(natural.width,x1);y1=Math.min(natural.height,y1); }
+      if(!complete && (x1-x0>natural.width*4 || y1-y0>natural.height*4)) { x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(natural.width,x1);y1=Math.min(natural.height,y1); }
       if(x1>x0 && y1>y0) { minX=Math.min(minX,x0);minY=Math.min(minY,y0);maxX=Math.max(maxX,x1);maxY=Math.max(maxY,y1); }
     }
     if(!(maxX>minX && maxY>minY))return {width:natural.width,height:natural.height,x:natural.width/2,y:natural.height/2};

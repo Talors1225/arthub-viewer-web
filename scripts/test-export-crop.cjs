@@ -9,7 +9,7 @@ const source = fs.readFileSync(path.join(__dirname, '../common/kit.js'), 'utf8')
 const start = source.indexOf('  K.illustrationPixelBounds =');
 const end = source.indexOf('  K.canvasIllustrationBounds =', start);
 assert.ok(start >= 0 && end > start);
-const context = vm.createContext({ K: {} });
+const context = vm.createContext({ K: { framing: { original: false } } });
 vm.runInContext(source.slice(start, end), context);
 const width = 640, height = 320;
 const image = () => new Uint8ClampedArray(width * height * 4);
@@ -66,4 +66,46 @@ assert.deepEqual(context.K.animationFramingSize(reference, 12, 'medium', 'video'
   { minX: -161, minY: -81, maxX: 161, maxY: 81 });
 assert.deepEqual(context.K.animationFramingSize(reference, 12, 'medium', 'video', () => centered),
   { minX: -161, minY: -81, maxX: 161, maxY: 81 });
+context.K.framing.original = true;
+const uncropped = { minX: -320, minY: -160, maxX: 320, maxY: 160, fullFrame: true };
+assert.deepEqual(JSON.parse(JSON.stringify(context.K.animationFramingSize(reference, 12, 'medium', 'video', delayed))),
+  { ...uncropped, tiled: false });
+assert.deepEqual(JSON.parse(JSON.stringify(context.K.refineIllustrationSize(reference, centered, 'medium'))),
+  { ...uncropped, tiled: true });
+for (const entry of ['crosscore/viewer/cutscene.html', 'crosscore-interaction/viewer/index.html']) {
+  const page = fs.readFileSync(path.join(__dirname, '..', entry), 'utf8');
+  const mode = page.match(/<html\b[^>]*\bdata-framing="([^"]+)"/)?.[1];
+  assert.equal(mode, 'original', entry);
+  const listeners = {};
+  const window = {
+    document: { documentElement: { dataset: { framing: mode } } },
+    location: { search: '' },
+    addEventListener: (name, fn) => { listeners[name] = fn; },
+  };
+  const api = { K: {}, window, URLSearchParams };
+  const framing = source.slice(source.indexOf('  const originalOnly'), source.indexOf('  const uiIconPaths'));
+  vm.runInNewContext(framing, api);
+  assert.equal(api.K.framing.original, true, entry);
+  window.location.search = '?framing=clean';
+  listeners.popstate();
+  assert.equal(api.K.framing.original, true, entry);
+  assert.equal(api.K.framing.menuItem(), null, entry);
+}
+// Justia's winter backdrop is a 480,000-unit plane around a 3,840-unit scene.
+const bd2Page = fs.readFileSync(path.join(__dirname, '../bd2/viewer/cutscene.html'), 'utf8');
+const nativeScenes = JSON.parse(fs.readFileSync(path.join(__dirname, '../bd2/background-scenes.json'), 'utf8'));
+const native = nativeScenes['000201'].frames.loop_2;
+const crop = { minX: -1500, minY: -1600, maxX: 1500, maxY: 1500 };
+const originalWorld = { minX: -240000, minY: -240000, maxX: 240000, maxY: 240000 };
+const shot = { K: { framing: { original: true } }, cut: { bounds: originalWorld,
+  originalScene: { nativeFrames: { loop_2: native }, frames: { loop_2: crop } },
+  sourceVariant: { cameraFrames: { loop_2: crop } } } };
+const functions = bd2Page.slice(bd2Page.indexOf('  function nativeBackdropFrame('), bd2Page.indexOf('  function pngPose('));
+vm.runInNewContext(functions, shot);
+assert.equal(shot.artworkExportFrame('loop_2'), native);
+assert.equal(shot.artworkExportFrame('absent'), undefined);
+shot.cut.bounds = native;
+assert.equal(shot.artworkExportFrame('loop_2'), undefined);
+shot.K.framing.original = false;
+assert.equal(shot.artworkExportFrame('loop_2'), crop);
 console.log('Export crop and delayed framing checks passed');

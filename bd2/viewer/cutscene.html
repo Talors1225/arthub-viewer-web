@@ -230,6 +230,12 @@
     width: auto; height: auto; max-width: 100%; max-height: 100%;
     object-fit: contain; display: block; flex: 0 0 auto;
   }
+  html[data-site-ui="1"] body #gridView.library-ui .thumb-card[data-bd2-skill] .ph {
+    aspect-ratio: 1 / 1 !important;
+  }
+  html[data-site-ui="1"] body #gridView.library-ui .thumb-card[data-bd2-skill] .ph img {
+    padding: 0 !important;
+  }
   .thumb-card .spin {
     width: 18px; height: 18px; border-radius: 50%;
     border: 2px solid var(--border2); border-top-color: var(--accent);
@@ -276,7 +282,7 @@
   }
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
-<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261104-unified-final"></script>
+<link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261122-framing-v4"></script>
   <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
   <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 <style>
@@ -420,8 +426,8 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261121-portraits"></script>
-<script src="../../common/asset-loader.js?v=20261121-portraits"></script>
+<script src="../../common/kit.js?v=20261122-framing-v4"></script>
+<script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/portrait-audio.js?v=20261121-voice-completion"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -604,7 +610,7 @@
 
   const aliasMap = store.get('aliasMap', {});
   const aliasOf = id => aliasMap[id] || '';
-  const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: routeSource === 'bd2' ? '普通立绘' : '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
+  const TYPE_LABEL = { cutscene: routeSource === 'bd2' ? '技能' : '过场', skill: '技能', lobby: routeSource === 'bd2' ? '普通立绘' : '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
   const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, other: 9, store: 10, catalog: 10, unknown: 9 };
   function displayType(c) {
     const type = String(c && (c.resourceType || c.type) || 'unknown').toLowerCase();
@@ -925,6 +931,7 @@
     const alias = aliasOf(c.id);
     const card = document.createElement('div');
     card.className = 'thumb-card' + (cur && cur.id === c.id ? ' active' : '');
+    if (routeSource === 'bd2' && c.resourceType === 'cutscene') card.dataset.bd2Skill = '';
     card.dataset.id = c.id;
     card.style.setProperty('--i', Math.min(gridShown % GRID_PAGE, 16));
     card.innerHTML = '<div class="ph">预览暂缺</div>'
@@ -1002,7 +1009,8 @@
     if (q) arr = arr.filter(c => {
       const alias = aliasOf(c.id);
       return (alias || c.name || '').toLowerCase().includes(q)
-        || (c.source || '').toLowerCase().includes(q) || c.id.toLowerCase().includes(q);
+        || (c.source || '').toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
+        || (routeSource === 'bd2' && TYPE_LABEL[displayType(c)]?.includes(q));
     });
     grid.innerHTML = '';
     const starred = new Set(store.get('stars', []));
@@ -1245,7 +1253,13 @@
   const wpt = (cx, cy) => {
     const rect = cv.getBoundingClientRect();
     const dpr = devicePixelRatio || 1;
-    return [(cx - rect.left) * dpr - cv.width / 2, cv.height / 2 - (cy - rect.top) * dpr];
+    const x = (cx - rect.left) * dpr - cv.width / 2;
+    const y = cv.height / 2 - (cy - rect.top) * dpr;
+    const angle = stageFrame()?.rotation;
+    if (!angle) return [x, y];
+    const view = cut.view, cos = Math.cos(angle), sin = Math.sin(angle);
+    return [view.x + (x - view.x) * cos - (y - view.y) * sin,
+      view.y + (x - view.x) * sin + (y - view.y) * cos];
   };
 
   function hitBoneAt(clientX, clientY) {
@@ -1571,6 +1585,7 @@
         raw.enable(raw.SCISSOR_TEST);
         raw.scissor(left, bottom, right - left, top - bottom);
       }
+      setSceneCamera(renderer, clip, cut?.view?.x, cut?.view?.y);
       renderer.begin();
       if (cut) for (const layer of drawCutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
       if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
@@ -1614,13 +1629,27 @@
     ['067491', { minX: -1430, minY: -1730, maxX: 1400, maxY: 750 }],
   ]);
   function stageFrame() {
-    return !cmpOn && (artworkExportFrame(animSel.value) || (animSel.value === 'loop' && loopStageFrames.get(cur?.id)));
+    return !K.framing.original && !cmpOn && (artworkExportFrame(animSel.value) || (animSel.value === 'loop' && loopStageFrames.get(cur?.id)));
+  }
+
+  function setSceneCamera(target, frame, x = 0, y = 0) {
+    const camera = target.camera;
+    const angle = frame?.rotation || 0;
+    const sin = Math.sin(angle), cos = Math.cos(angle);
+    // Rotate around the artwork origin, keeping the screen-space fit and pan.
+    const cameraX = x - x * cos + y * sin;
+    const cameraY = y - x * sin - y * cos;
+    if (camera.up.x === -sin && camera.up.y === cos &&
+        camera.position.x === cameraX && camera.position.y === cameraY) return;
+    camera.up.set(-sin, cos, 0);
+    camera.position.set(cameraX, cameraY, camera.position.z);
+    camera.update();
   }
 
   // ---------- 视图 ----------
   function computeView() {
     if (!cut) return;
-    const b = stageFrame() || cut.bounds;
+    const b = stageFrame() || (K.framing.original && nativeBackdropFrame(animSel.value)) || cut.bounds;
     cut.centerX = -(b.minX + (b.maxX - b.minX) / 2);
     cut.centerY = -(b.minY + (b.maxY - b.minY) / 2);
     const area = K.stageViewArea(cv);
@@ -1699,12 +1728,12 @@
   }
 
   // Sample the active animation so transitions cannot grow beyond a fit based on its first frame.
-  function measureAnimationBounds(target, name) {
-    if (!target || !target.data || !name) return target && target.bounds ? target.bounds : null;
+  function measureAnimationBounds(target, name, { includeSetup = false, primaryMotion } = {}) {
+    if (!target?.data || (!name && !includeSetup)) return target?.bounds || null;
     const SP = K.getSpine(cur && cur.spineVersion);
-    const anim = target.data.animations && target.data.animations.find(a => a.name === name);
-    if (!SP || !anim || !SP.AnimationState || !SP.AnimationStateData) return target.bounds || null;
-    const duration = Math.max(0, Number(anim.duration) || 0);
+    const anim = target.data.animations?.find(a => a.name === name);
+    if (!SP || (!anim && !includeSetup) || !SP.AnimationState || !SP.AnimationStateData) return target.bounds || null;
+    const duration = Math.max(0, Number(anim?.duration) || 0);
     const times = duration > 0
       ? [0, duration * 0.125, duration * 0.25, duration * 0.375, duration * 0.5,
         duration * 0.625, duration * 0.75, duration * 0.875, duration * 0.99, duration]
@@ -1713,21 +1742,40 @@
     try {
       const sample = new SP.Skeleton(target.data);
       if (target.skeleton?.skin) sample.setSkin(target.skeleton.skin);
-      placeSceneLayer({ source: target.source, skeleton: sample }, 1, 0, 0);
+      const layer = { source: target.source, skeleton: sample };
       for (const time of times) {
         sample.setToSetupPose();
-        const stateData = new SP.AnimationStateData(target.data);
-        stateData.defaultMix = 0;
-        const state = new SP.AnimationState(stateData);
-        state.setAnimation(0, anim.name, false);
-        state.update(time);
-        state.apply(sample);
+        if (anim) {
+          const stateData = new SP.AnimationStateData(target.data);
+          stateData.defaultMix = 0;
+          const state = new SP.AnimationState(stateData);
+          state.setAnimation(0, anim.name, false);
+          state.update(time);
+          state.apply(sample);
+        }
+        placeSceneLayer(layer, 1, 0, 0, placementAt(primaryMotion, time));
         K.updateWorldTransform(sample);
         K.applyHiddenSlots(sample, target.hiddenSlots);
         bounds = mergeBounds(bounds, K.measureBounds(sample, SP, false));
       }
     } catch {}
     return bounds || target.bounds || null;
+  }
+
+  function updateAnimationBounds(name) {
+    const original = K.framing.original;
+    if (!original && cut.scene?.frame && !cmpOn) return;
+    let bounds = null;
+    for (const layer of cutLayers()) {
+      if (layer.active === false) continue;
+      const mapped = layerAnimationName(layer, name);
+      const primaryMotion = layer.skeleton === cut.skeleton ? cut.scene?.primaryMotion : undefined;
+      const layerBounds = original
+        ? measureAnimationBounds(layer, mapped, { includeSetup: true, primaryMotion })
+        : mapped ? measureAnimationBounds(layer, mapped) : layer.bounds;
+      bounds = mergeBounds(bounds, layerBounds);
+    }
+    if (bounds) cut.bounds = bounds;
   }
 
   function playAnimation(name, options = {}) {
@@ -1738,7 +1786,6 @@
     if (cut.scene?.skill && !cut.scene.frame) {
       cut.scene.frame = measureAnimationBounds(cut.baseLayers[0], name);
     }
-    let bounds = null;
     for (const layer of cutLayers()) {
       const layerName = layerAnimationName(layer, name);
       layer.active = layerIsActive(layer, name);
@@ -1755,13 +1802,9 @@
       if (layer.active) {
         K.updateWorldTransform(layer.skeleton);
         K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
-        if (cut.scene?.frame && !cmpOn) continue;
-        const layerBounds = layer.source && layer.source.static
-          ? layer.bounds
-          : (layerName ? measureAnimationBounds(layer, layerName) : layer.bounds);
-        bounds = mergeBounds(bounds, layerBounds);
       }
     }
+    updateAnimationBounds(name);
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       cmp.state.clearTracks();
       cmp.skeleton.setToSetupPose();
@@ -1771,7 +1814,6 @@
       cmp.state.apply(cmp.skeleton);
       K.updateWorldTransform(cmp.skeleton);
     }
-    if (bounds) cut.bounds = bounds;
     syncBackgroundButton();
     if (cmpOn && cmp && cmp.data.animations.some(a => a.name === name)) {
       const cmpBounds = measureAnimationBounds(cmp, name);
@@ -2199,7 +2241,11 @@
       ]).then(([scenes, cameraFrames]) => {
         // The same scene frame feeds the preview, PNG and animation exporters.
         for (const [id, frames] of Object.entries(cameraFrames || {})) {
-          if (Object.hasOwn(scenes, id)) Object.assign(scenes[id].frames, frames);
+          const scene = scenes[id];
+          if (scene) {
+            scene.nativeFrames = scene.frames;
+            scene.frames = { ...scene.frames, ...frames };
+          }
         }
         return scenes;
       })
@@ -2344,6 +2390,7 @@
   }
 
   function stagePreviewPath(v) {
+    if (routeSource === 'bd2' && v.stagePoster) return K.thumbnailURL(THUMB_PREFIX + v.stagePoster);
     if (routeSource === 'bd2' && cur.thumbnail) return K.thumbnailURL(THUMB_PREFIX + cur.thumbnail);
     if (routeSource === 'crosscore' || (routeSource === 'bd2' && cur.resourceType === 'lobby')) {
       const thumbnail = webThumbs[routeSource + ':' + cur.id + ':' + String(v.variant ?? '0')];
@@ -2497,7 +2544,19 @@
     ['061103:loop', { minX: -1474, minY: -1870, maxX: 1374, maxY: 1330 }],
     ['065193:loop', { minX: -1690, minY: -2163.748, maxX: 1808, maxY: 1815.748 }],
   ]);
+  function nativeBackdropFrame(animation) {
+    const scene = cut?.originalScene;
+    const frame = (scene?.nativeFrames || scene?.frames)?.[animation];
+    const bounds = cut?.bounds;
+    if (!frame || !bounds) return;
+    const width = frame.maxX - frame.minX, height = frame.maxY - frame.minY;
+    if (!(width > 0 && height > 0)) return;
+    // Unity backdrop planes can cover hundreds of thousands of units. Keep them
+    // drawable in the original view, but fit the camera to the actual scene.
+    if (bounds.maxX - bounds.minX > 10 * width && bounds.maxY - bounds.minY > 10 * height) return frame;
+  }
   function artworkExportFrame(animation) {
+    if (K.framing.original) return nativeBackdropFrame(animation);
     const cameraFrame = cut?.sourceVariant?.cameraFrames?.[animation];
     if (cameraFrame) return cameraFrame;
     if (cut?.scene?.name === animation && cut.scene.frame) {
@@ -2531,6 +2590,7 @@
     const primarySource = cut.sourceVariant;
     const primaryMotion = cut.scene?.primaryMotion;
     const frame = artworkExportFrame(animName);
+    const original = K.framing.original;
     const kind = video ? 'video' : 'gif';
     const hiddenSlots = new Set(cut.hiddenSlots);
     const exportName = cur.name || cur.id;
@@ -2607,21 +2667,27 @@
           if (k % 8 === 0 || k === frames - 1) await job.update(.25 * (k + 1) / frames, `计算完整画面 ${k + 1} / ${frames}`);
         }
         if (!isFinite(bMinX)) throw new Error('空包围盒');
-        const reference = K.exportDimensions({ minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY }, 'medium');
-        cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
-        size = K.animationFramingSize(reference, anim.duration, quality, kind, time => {
-          applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
-          raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
-          for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
-          r2.end();
-          return cv2;
-        }, visibleTime);
+        const animationBounds = { minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY };
+        if (original) {
+          size = K.exportDimensions(animationBounds, quality, kind, 0);
+        } else {
+          const reference = K.exportDimensions(animationBounds, 'medium');
+          cv2.width = reference.width; cv2.height = reference.height; K.syncRendererSize(cv2, mgl2, r2);
+          size = K.animationFramingSize(reference, anim.duration, quality, kind, time => {
+            applyExportFrame(time, reference.scale, -reference.centerX * reference.scale, -reference.centerY * reference.scale);
+            raw2.clearColor(0, 0, 0, 0); raw2.clear(raw2.COLOR_BUFFER_BIT); r2.begin();
+            for (const L of exportLayers) if (L.active) r2.drawSkeleton(L.skeleton, !!L.atlas.pages[0]?.pma);
+            r2.end();
+            return cv2;
+          }, visibleTime);
+        }
       }
       if (!size) throw new Error('没有可导出的可见立绘');
       const W = size.width, H = size.height, scale = size.scale;
       if (Math.max(W, H) > raw2.getParameter(raw2.MAX_TEXTURE_SIZE)) throw new Error('原始尺寸超过设备支持，请选择高等质量');
       cv2.width = W; cv2.height = H; K.syncRendererSize(cv2, mgl2, r2);
       const cx = -size.centerX, cy = -size.centerY;
+      setSceneCamera(r2, frame, cx * scale, cy * scale);
       // 第二遍: 逐帧渲染
       for (const L of exportLayers) {
         L.state.clearTracks(); L.skeleton.setToSetupPose();
@@ -2642,7 +2708,13 @@
       };
       let blob, extension = 'gif', label = 'GIF';
       if (video) {
-        const output = await K.encodeCanvasVideo({ canvas: cvRgb, duration: timeline.duration, quality, draw: drawFrame, signal: job.signal,
+        // Windows Chrome can introduce a green H.264 edge at widths such as 1266 px.
+        // Prefer software encoding for those widths so the authored frame keeps its size.
+        const browser = navigator.userAgentData;
+        const preferSoftwareAvc = W % 4 === 2 && browser?.platform === 'Windows'
+          && browser.brands.some(({ brand }) => brand === 'Google Chrome');
+        const output = await K.encodeCanvasVideo({ canvas: cvRgb, duration: timeline.duration, quality, draw: drawFrame,
+          signal: job.signal, preferSoftwareAvc,
           onProgress: (progress, time) => job.update(.25 + .75 * progress, `已编码 ${Math.round(progress * timeline.frames)} / ${timeline.frames} 帧 · 成片 ${timeline.duration.toFixed(1)} 秒 · ${W}×${H}`) });
         ({ blob, extension, label } = output);
       } else {
@@ -2691,7 +2763,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json')).then(td => {
+    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json?v=20261122-square-skills')).then(td => {
       webThumbs = td.items || {};
       if (cur && (routeSource === 'crosscore' || cur.resourceType === 'lobby')) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
@@ -2699,7 +2771,7 @@
       }
       if (gridView.classList.contains('open')) renderGrid();
     }).catch(() => {});
-    const catalogRev = routeSource === 'bd2' ? '?v=20261121-portraits' : '';
+    const catalogRev = routeSource === 'bd2' ? '?v=20261122-reviewed-frames' : '';
     const data = await K.fetchJSON('../' + indexFile + catalogRev);
     chars = (data.characters || []).filter(c => c.cutscenes && c.cutscenes.length);
     chars.sort((a, b) => a.id.localeCompare(b.id));
@@ -2778,6 +2850,15 @@
       resize(k, tile) {
         K.syncRendererSize(cv, mgl, renderer);
         pose.apply(tile);
+        const frame = pose.fixedFrame;
+        if (frame?.rotation) {
+          const { width, height, scale } = pose.size;
+          const x = -(frame.minX + frame.maxX) / 2 * scale;
+          const y = -(frame.minY + frame.maxY) / 2 * scale;
+          setSceneCamera(renderer, frame,
+            x + (tile ? (width - tile.width) / 2 - tile.x : 0),
+            y + (tile ? tile.y - (height - tile.height) / 2 : 0));
+        } else setSceneCamera(renderer, frame);
       },
       draw(tr) {
         for (const layer of cutLayers()) {
@@ -2798,6 +2879,7 @@
         pose.restore();
         K.resizeCanvas(cv, renderer);
         applyView();
+        setSceneCamera(renderer, stageFrame(), cut?.view?.x, cut?.view?.y);
       },
     }).then(r => {
       if (mode === 'copy') K.toast('已复制到剪贴板: ' + r.w + '×' + r.h + 'px', 'ok');
@@ -2893,10 +2975,20 @@
   // ---------- 平移/缩放/点选 ----------
   let down = null, moved = false;
   const isChrome = (t) => !!(t.closest && (t.closest('.playbar') || t.closest('.zoom-bar') || t.closest('.rail') || t.closest('.tool-strip') || t.closest('.top-pill') || t.closest('.status') || t.closest('.immersive-exit') || t.closest('.stage-loading-preview')));
+  K.stageFramingMenuItem = () => K.framing.menuItem({
+    disabled: !cut || animationExportRunning || K.pngExporting,
+    onChange() {
+      updateAnimationBounds(animSel.value);
+      fitMode = true;
+      btnFit.classList.add('active'); btn100.classList.remove('active');
+      refit();
+    },
+  });
   stage.addEventListener('contextmenu', (e) => {
     if (isChrome(e.target)) return;
     e.preventDefault();
     K.showMenu([
+      K.stageFramingMenuItem(),
       { label: '复制 PNG 到剪贴板', fn: () => exportFrame(true, 'copy') },
       { label: '导出 PNG', fn: () => btnPng.click() },
       { sep: true },
@@ -3012,9 +3104,8 @@
         panelUI?.refresh();
         return;
       }
-      const rect = cv.getBoundingClientRect();
-      const dpr = devicePixelRatio || 1;
-      const name = K.hitTestSlot(cut.skeleton, (tapX - rect.left) * dpr - cv.width / 2, cv.height / 2 - (tapY - rect.top) * dpr, K.getSpine(cur && cur.spineVersion));
+      const [wx, wy] = wpt(tapX, tapY);
+      const name = K.hitTestSlot(cut.skeleton, wx, wy, K.getSpine(cur && cur.spineVersion));
       if (name) {
         if (partEditMode) showPartPopup(name, tapX, tapY);
         else if (routeSource === 'nikki' || routeSource === 'crosscore') {
