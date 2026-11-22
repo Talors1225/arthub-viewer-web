@@ -5,6 +5,7 @@ export class FatedSound {
     this.loops = new Set(manifest.loops || []);
     this.root = root;
     this.mode = mode;
+    this.volume = 1;
     this.debug = debug;
     this.controller = new AbortController();
     this.buffers = new Map();
@@ -21,6 +22,7 @@ export class FatedSound {
       if (!this.context) {
         this.context = new Audio();
         this.output = this.context.createGain();
+        this.output.gain.value = this.volume;
         this.output.connect(this.context.destination);
       }
       this.ready = (this.context.state === 'running' ? Promise.resolve() : this.context.resume())
@@ -37,6 +39,11 @@ export class FatedSound {
     this.stopReaction();
     if (mode === 'off') this.stopAmbient();
     else this.unlock();
+  }
+
+  setVolume(value) {
+    this.volume = value;
+    if (this.output) this.output.gain.value = value;
   }
 
   buffer(event) {

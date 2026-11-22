@@ -901,7 +901,8 @@
     const undoButton = makeButton('撤销', '撤销上一次部件显隐操作'); undoButton.className = 'parts-undo'; undoButton.setAttribute('aria-label', '撤销部件操作');
     filters.append(allFilter, hiddenFilter);
     const moreButton = makeButton('更多', '部件批量操作'); moreButton.className = 'parts-more'; moreButton.setAttribute('aria-label', '更多部件操作'); moreButton.setAttribute('aria-haspopup', 'menu'); moreButton.setAttribute('aria-expanded', 'false'); moreButton.innerHTML = '<span>更多</span>' + K.uiIcon('chevronDown', 13);
-    const toolbar = document.createElement('div'); toolbar.className = 'parts-toolbar'; toolbar.append(filters, undoButton, moreButton);
+    const toolbar = document.createElement('div'); toolbar.className = 'parts-toolbar'; toolbar.append(filters, undoButton);
+    if (!o.inlineActions) toolbar.append(moreButton);
     const actions = o.allEl.parentNode; actions.classList.add('parts-actions');
     const restoreButton = makeButton('恢复全部', '恢复当前资源的所有手动隐藏部件，不受搜索和筛选限制');
     restoreButton.setAttribute('aria-label', '恢复所有部件'); actions.append(restoreButton);
@@ -2188,7 +2189,7 @@
   // One dismissible surface at a time. Native viewer handlers still own content.
   let toolPopupDismiss = null;
   K.closeToolPopup = () => toolPopupDismiss?.();
-  K.attachPopupChrome = (pop, { button, title, close }) => {
+  K.attachPopupChrome = (pop, { button, title, close, keepOpenOnPointer }) => {
     K.closeToolPopup(); K.hideMenu(); K.closeThemePalette?.();
     const owner = button?._kitMenuAnchor || (button?.classList.contains('kit-secondary-tool') || button?.getBoundingClientRect().width < 2
       ? document.querySelector('.kit-more-tool') || button : button);
@@ -2225,7 +2226,7 @@
       close();
       if (restoreFocus && owner?.isConnected) owner.focus();
     };
-    const outside = event => { if (!pop.contains(event.target)) finish(); };
+    const outside = event => { if (!pop.contains(event.target) && !keepOpenOnPointer?.(event.target)) finish(); };
     const escape = event => {
       if (event.key !== 'Escape') return;
       event.preventDefault(); event.stopImmediatePropagation(); finish(true);

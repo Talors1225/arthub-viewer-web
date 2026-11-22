@@ -74,7 +74,7 @@
   background: #000;
   touch-action: none;
 }
-#stage[data-immersive] > :is(#back, .controls, #animation-browser, #next-animation, #gesture-hints, #hint-status, #score-meter) { display: none; }
+#stage[data-immersive] > :is(#back, .controls, .portrait-tools, #gesture-hints, #hint-status, #score-meter) { display: none; }
 #portrait {
   display: block;
   width: 100%;
@@ -92,7 +92,9 @@
   height: auto;
   transform: translate(-50%, -50%);
 }
-#stage[data-video-recording] :is(#zoom-out, #fit, #zoom-in, #more) { display: none; }
+#stage[data-video-recording] :is(#zoom-out, #fit, #zoom-in, #more, #parts-button) { display: none; }
+#stage[data-picking-parts] #portrait { cursor: crosshair; }
+#stage[data-picking-parts] > :is(#gesture-hints, #hint-status) { visibility: hidden; }
 #portrait[data-hotspot="true"] { cursor: pointer; }
 #portrait[data-gesture="drag"] { cursor: grabbing; }
 #hints[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
@@ -168,16 +170,20 @@
 }
 #more { gap: 5px; }
 #more[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
-#animation-browser {
+.portrait-tools {
   position: absolute;
   left: max(12px, env(safe-area-inset-left));
   bottom: var(--animation-bottom);
+  gap: 6px;
+  display: flex;
+}
+.portrait-tools .action {
   gap: 6px;
   min-height: 44px;
   background: var(--panel);
   color: var(--accent);
 }
-#animation-browser[aria-expanded="true"] { border-color: var(--accent); }
+.portrait-tools .action[aria-expanded="true"] { border-color: var(--accent); }
 .stage-popup.fated-animation-popup {
   position: fixed;
   flex-direction: column;
@@ -225,7 +231,23 @@
 .animation-option .animation-name { min-width: 0; }
 .animation-option .animation-kind { flex: none; color: var(--text-dim); font-size: 11px; }
 .animation-empty { padding: 9px 5px; color: var(--text-dim); }
+.stage-popup.fated-parts-popup {
+  position: fixed;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(324px, calc(100vw - 16px));
+  height: min(440px, 56dvh);
+  overflow: hidden;
+  background: var(--panel);
+}
+.fated-parts-popup .rp-page { padding: 5px 2px 0; }
+.fated-parts-popup .parts-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
+.fated-parts-popup .parts-actions button { padding-inline: 0; }
+.fated-parts-popup .parts-list { touch-action: pan-y; }
 .fated-tool-popup { position: fixed; }
+.fated-tool-popup .bd2-volume { width: min(280px, calc(100vw - 44px)); gap: 10px; min-height: 40px; }
+.fated-tool-popup .bd2-volume input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.fated-tool-popup .bd2-volume span { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
 .fated-tool-popup .video-options { gap: 12px; align-items: stretch; }
 .video-options select { width: 100%; }
 .video-options p { color: var(--text-dim); white-space: normal; }
@@ -293,6 +315,7 @@
   .controls .action { min-width: 44px; min-height: 44px; }
   #hint-status { bottom: calc(var(--animation-bottom) + 148px); max-width: calc(100% - 24px); }
   .stage-popup.fated-animation-popup { width: min(324px, calc(100vw - 144px)); }
+  .stage-popup.fated-parts-popup { height: min(360px, 46dvh); }
   #stage[data-video-recording] ~ .fated-animation-popup .animation-results { max-height: min(300px, 32dvh); }
   #stage[data-video-recording] { --animation-bottom: calc(max(12px, env(safe-area-inset-bottom)) + 100px); }
   #stage[data-video-recording] .controls { bottom: max(12px, env(safe-area-inset-bottom)); }
@@ -302,22 +325,20 @@
 @media (max-width: 600px), (pointer: coarse) {
   .animation-filters .action { font-size: 16px; }
   .animation-group .animation-option { min-height: 44px; }
+  #parts-dialog .parts-search-row .text-input { font-size: 16px; }
 }
 @media (max-width: 360px) {
   .animation-filters { grid-template-columns: minmax(0, 1fr); }
 }
 
-#next-animation { position:absolute; left:calc(max(12px, env(safe-area-inset-left)) + 86px); bottom:var(--animation-bottom); min-height:44px; gap:5px; background:var(--panel); color:var(--accent); }
-
 /* Keep mobile controls aligned while retaining room for the artwork. */
 @media (max-width:600px) and (orientation:portrait) {
  .controls > .action { box-sizing:border-box; height:44px; min-height:44px; justify-content:center; }
  .controls > select { width:96px; }
- #animation-browser, #next-animation { box-sizing:border-box; width:84px; height:44px; justify-content:center; }
- #next-animation { left:calc(max(12px, env(safe-area-inset-left)) + 90px); }
+ .portrait-tools .action { box-sizing:border-box; width:84px; height:44px; justify-content:center; }
 }
 
-#stage .controls > .action, #animation-browser, #next-animation {
+#stage .controls > .action, .portrait-tools .action {
  text-align:center; text-align-last:center; justify-content:center;
  padding:5px 8px; border-radius:8px; font-size:13px;
 }

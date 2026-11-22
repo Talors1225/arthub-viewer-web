@@ -19,7 +19,7 @@ function animationGroupsFor(picture) {
   return groups;
 }
 import { FatedGestures } from './gestures.mjs?v=20261117-resources';
-import { FatedSound } from './sounds.mjs?v=20261109-fated-video';
+import { FatedSound } from './sounds.mjs?v=20261122-bd2-controls';
 import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261120-recording-surface';
 
 const backgroundMattes = { B_BG_black: ['B_BG_black', 'B_BG_black2', 'B_BG_black3', 'B_BG_black4'] };
@@ -74,6 +74,20 @@ function muteFrameMattes({ model, mattes, state }) {
   return muted;
 }
 
+const isImageAttachment = (attachment, spine) =>
+  attachment instanceof spine.RegionAttachment || attachment instanceof spine.MeshAttachment;
+
+function createPartTarget(skeleton, spine) {
+  const indices = new Set();
+  for (const skin of skeleton.data.skins) {
+    for (const { slotIndex, attachment } of skin.getAttachments()) {
+      if (isImageAttachment(attachment, spine)) indices.add(slotIndex);
+    }
+  }
+  const slots = new Map(skeleton.slots.filter(slot => indices.has(slot.data.index)).map(slot => [slot.data.name, slot]));
+  return { slots, hidden: new Set(), parts: [...slots.keys()].map(name => ({ id: name, name })) };
+}
+
 const K = window.SpineKit;
 const $ = id => document.getElementById(id);
 const library = $('library'), stage = $('stage'), canvas = $('portrait');
@@ -84,8 +98,10 @@ const scoreMeter = $('score-meter'), scoreBar = scoreMeter.querySelector('progre
 const controls = stage.querySelector('.controls');
 const more = $('more'), exitImmersive = $('exit-immersive');
 const animationBrowser = $('animation-browser'), nextAnimation = $('next-animation');
+const partsButton = $('parts-button'), partsDialog = $('parts-dialog'), pickButton = $('exitPartEdit');
 const recordingBar = $('recording-bar'), recordingTime = $('recording-time');
 const store = K.Store('bd2-fated');
+const volume = window.ArtHubBd2Volume;
 const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: color => store.set('bg', color) });
 const markers = new Map();
 let guideOn = false, lastGuideFrame = -Infinity;
@@ -95,7 +111,7 @@ const initialParams = new URLSearchParams(location.search);
 const probe = initialParams.get('probe') === '1' && ['127.0.0.1', 'localhost'].includes(location.hostname);
 const pageSize = 12;
 let models = [], page = 1, assetsRoot, request, scene, gl, runtime, lastFrame = 0;
-let pan = null, interactionTouch = null;
+let pan = null, interactionTouch = null, partTap = null;
 let routePending = false;
 let videoRecording = null;
 
@@ -153,6 +169,7 @@ function cancelInput(id) {
   scene?.gestures.cancel(id);
   if (id == null || pan?.id === id) pan = null;
   if (id == null || interactionTouch === id) interactionTouch = null;
+  if (id == null || partTap?.id === id) partTap = null;
   if (!scene?.gestures.gesture) delete canvas.dataset.gesture;
 }
 
@@ -174,6 +191,7 @@ function dispose() {
   more.disabled = true;
   animationBrowser.hidden = true;
   nextAnimation.hidden = true;
+  partsButton.hidden = true;
   clearGuide();
   delete canvas.dataset.ready;
 }
@@ -345,6 +363,7 @@ async function showModel(model) {
     const state = new SP.AnimationState(stateData);
     const audioModel = audioManifest?.models[model.id];
     const sound = audioModel ? new FatedSound(audioModel, audioManifest, audioRoot, soundMode, probe) : null;
+    sound?.setVolume(volume.read());
     const gestures = new FatedGestures(profile, skeleton, state, data, SP.TranslateTimeline, model.frame, authoredRules[model.id], sound);
     state.apply(skeleton);
     K.updateWorldTransform(skeleton, SP.Physics?.pose);
@@ -353,6 +372,7 @@ async function showModel(model) {
     scene = {
       model, skeleton, state, gestures, bounds, atlas, sound, pma: Boolean(atlas.pages[0].pma),
       mattes: findFrameMattes(model, skeleton),
+      partTarget: createPartTarget(skeleton, SP),
       animationPicker: { group: '', query: '', scroll: 0 },
     };
     atlas = null;
@@ -361,6 +381,7 @@ async function showModel(model) {
       activeScene.loadingVariants = true;
       const variants = new Map([[0, {
         skeleton, state, gestures, atlas: activeScene.atlas, pma: activeScene.pma, mattes: activeScene.mattes,
+        partTarget: activeScene.partTarget,
       }]]);
       activeScene.extraAtlases = [activeScene.atlas];
       activeScene.variants = variants;
@@ -380,7 +401,8 @@ async function showModel(model) {
         const groupGestures = new FatedGestures(profile, groupSkeleton, groupState, groupData,
           SP.TranslateTimeline, spec.frame || model.frame, authoredRules[model.id], sound, index);
         variants.set(index, { skeleton: groupSkeleton, state: groupState, gestures: groupGestures,
-          atlas: groupFiles.atlas, pma: Boolean(groupFiles.atlas.pages[0].pma), mattes: findFrameMattes(model, groupSkeleton) });
+          atlas: groupFiles.atlas, pma: Boolean(groupFiles.atlas.pages[0].pma), mattes: findFrameMattes(model, groupSkeleton),
+          partTarget: createPartTarget(groupSkeleton, SP) });
       }
       for (const [index, variant] of variants) {
         variant.gestures.onGroupChange = (next, transition) => {
@@ -389,11 +411,13 @@ async function showModel(model) {
           for (const key of ['x','y','scaleX','scaleY']) target.skeleton[key] = activeScene.skeleton[key];
           target.gestures.enterGroup(next, transition);
           Object.assign(activeScene, target);
+          if (!partsDialog.hidden) partsPanel.refresh();
           return true;
         };
       }
     }
     scene.loadingVariants = false;
+    partsButton.hidden = !scene.partTarget.parts.length;
     soundControl.hidden = !sound;
     soundControl.value = soundMode;
     resize();
@@ -422,6 +446,10 @@ function navigate(id) {
   renderRoute();
 }
 
+function previewFrame(picture) {
+  return (picture.model.frame || picture.displayFrame !== picture.bounds) && picture.displayFrame;
+}
+
 function drawPortrait(picture, cropPreview = false, clearColor = null) {
   const { mgl, renderer } = gl;
   const raw = mgl.gl;
@@ -430,7 +458,7 @@ function drawPortrait(picture, cropPreview = false, clearColor = null) {
   raw.clear(raw.COLOR_BUFFER_BIT);
   if (!picture || picture.loadingVariants) return;
   const { skeleton } = picture;
-  const frame = cropPreview && (picture.model.frame || picture.displayFrame !== picture.bounds) && picture.displayFrame;
+  const frame = cropPreview && previewFrame(picture);
   if (frame) {
     // Some portraits draw an opaque matte past the authored frame.
     const x = raw.drawingBufferWidth / 2 + skeleton.x;
@@ -444,11 +472,21 @@ function drawPortrait(picture, cropPreview = false, clearColor = null) {
   }
   // Edge textures are separate from the scene lights and can share slots with animation attachments.
   const muted = muteFrameMattes(picture);
+  const hiddenAttachments = [];
   try {
+    for (const name of picture.partTarget.hidden) {
+      const slot = picture.partTarget.slots.get(name);
+      const attachment = slot.attachment;
+      if (!isImageAttachment(attachment, runtime)) continue;
+      // A temporary draw override preserves the current attachment, deform and timeline state.
+      hiddenAttachments.push([slot, attachment]);
+      slot.attachment = null;
+    }
     renderer.begin();
     try { renderer.drawSkeleton(skeleton, picture.pma); }
     finally { renderer.end(); }
   } finally {
+    for (const [slot, attachment] of hiddenAttachments) slot.attachment = attachment;
     for (const [slot, opacity] of muted) slot.color.a = opacity;
     if (frame) raw.disable(raw.SCISSOR_TEST);
   }
@@ -742,6 +780,62 @@ function openToolPanel(title, mount) {
   K.attachPopupChrome(panel, { button: more, title, close: () => panel.remove() });
 }
 
+const partsPanel = K.mountPartsPanel({
+  listEl: $('fated-parts-list'),
+  filterEl: $('fated-part-filter'),
+  allEl: $('fated-parts-show'),
+  noneEl: $('fated-parts-hide'),
+  invEl: $('fated-parts-invert'),
+  inlineActions: true,
+  getTargets: () => scene ? [scene.partTarget] : [],
+});
+
+function setPartPicking(enabled) {
+  cancelInput();
+  stage.toggleAttribute('data-picking-parts', enabled);
+  pickButton.setAttribute('aria-pressed', String(enabled));
+  pickButton.textContent = enabled ? '结束点选' : '画面点选';
+}
+
+function pickPart(clientX, clientY) {
+  const { x, y } = toWorld(clientX, clientY);
+  const { skeleton, partTarget } = scene;
+  const frame = previewFrame(scene);
+  if (frame) {
+    const localX = (x - skeleton.x) / skeleton.scaleX;
+    const localY = (y - skeleton.y) / skeleton.scaleY;
+    if (localX < frame.minX || localX > frame.maxX || localY < frame.minY || localY > frame.maxY) return;
+  }
+  const muted = muteFrameMattes(scene);
+  try {
+    const drawOrder = skeleton.drawOrder.filter(slot => !partTarget.hidden.has(slot.data.name) &&
+      isImageAttachment(slot.attachment, runtime));
+    const name = K.hitTestSlot({ drawOrder, slots: drawOrder }, x, y, runtime);
+    if (name) partsPanel.focus(name);
+  } finally {
+    for (const [slot, opacity] of muted) slot.color.a = opacity;
+  }
+}
+
+function openPartsPanel() {
+  if (!scene || !canvas.dataset.ready || scene.loadingVariants || K.pngExporting || videoRecording) return;
+  if (!partsDialog.hidden) { K.closeToolPopup(); return; }
+  partsPanel.refresh();
+  partsDialog.hidden = false;
+  partsButton.setAttribute('aria-expanded', 'true');
+  K.attachPopupChrome(partsDialog, {
+    button: partsButton,
+    title: '部件',
+    keepOpenOnPointer: target => partsButton.contains(target) || target === canvas && stage.hasAttribute('data-picking-parts'),
+    close() {
+      setPartPicking(false);
+      partsButton.setAttribute('aria-expanded', 'false');
+      partsDialog.hidden = true;
+      partsDialog.querySelector('.arthub-popup-head')?.remove();
+    },
+  });
+}
+
 function openAnimationBrowser() {
   if (!scene || !canvas.dataset.ready || K.pngExporting) return;
   const picture = scene;
@@ -840,6 +934,9 @@ function setImmersive(enabled) {
 K.setUiIcon(more, 'more', '更多');
 K.setUiIcon(animationBrowser, 'anim', '动画');
 animationBrowser.onclick = openAnimationBrowser;
+K.setUiIcon(partsButton, 'panel', '部件');
+partsButton.onclick = openPartsPanel;
+pickButton.onclick = () => setPartPicking(pickButton.getAttribute('aria-pressed') !== 'true');
 K.setUiIcon(nextAnimation, 'chevR', '下一动作');
 nextAnimation.onclick = () => {
   if (!scene || !canvas.dataset.ready || K.pngExporting) return;
@@ -870,6 +967,8 @@ more.onclick = () => {
       onCopy: (quality, transparent) => exportPortrait(quality, transparent, true),
     })) },
     { label: '录制互动视频', fn: () => openToolPanel('录制互动视频', mountVideoOptions) },
+    { label: '音量调节', disabled: !scene?.sound, fn: () => openToolPanel('音量调节', panel =>
+      volume.mount(panel, value => scene?.sound?.setVolume(value))) },
     { heading: '画面' },
     { label: '背景颜色 / 预设', fn: () => openToolPanel('背景颜色 / 预设', mountBackgroundOptions) },
     { label: '沉浸模式', fn: () => { setImmersive(true); exitImmersive.focus(); } },
@@ -933,6 +1032,11 @@ canvas.addEventListener('wheel', event => {
 canvas.addEventListener('contextmenu', event => event.preventDefault());
 canvas.addEventListener('pointerdown', event => {
   if (!event.isPrimary || event.button !== 0 || !scene || !canvas.dataset.ready || K.pngExporting) return;
+  if (stage.hasAttribute('data-picking-parts')) {
+    partTap = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    canvas.setPointerCapture(event.pointerId);
+    return;
+  }
   scene.sound?.unlock();
   if (scene.gestures.inputLocked) return;
   const { pointerId, clientX, clientY } = event;
@@ -949,14 +1053,22 @@ canvas.addEventListener('pointerdown', event => {
 canvas.addEventListener('pointermove', event => {
   if (!scene) return;
   const { pointerId, clientX, clientY } = event;
+  const picking = stage.hasAttribute('data-picking-parts');
+  if (picking) {
+    if (partTap?.id !== pointerId) return;
+    if (!pan && Math.hypot(clientX - partTap.x, clientY - partTap.y) > 8) {
+      pan = { id: pointerId, world: toWorld(partTap.x, partTap.y) };
+    }
+  }
   const world = toWorld(clientX, clientY);
   if (pan?.id === pointerId) {
     scene.skeleton.x += world.x - pan.world.x;
     scene.skeleton.y += world.y - pan.world.y;
     pan.world = world;
-  } else {
+  } else if (!picking) {
     scene.gestures.move(pointerId, { x: clientX, y: clientY }, world, performance.now());
   }
+  if (picking) return;
   if (scene.gestures.gesture?.dragging) canvas.dataset.gesture = 'drag';
   if (event.pointerType === 'mouse' && !event.buttons) {
     canvas.dataset.hotspot = String(!scene.gestures.inputLocked && scene.gestures.match(world).length > 0);
@@ -964,6 +1076,13 @@ canvas.addEventListener('pointermove', event => {
 });
 canvas.addEventListener('pointerleave', () => { delete canvas.dataset.hotspot; });
 canvas.addEventListener('pointerup', event => {
+  if (stage.hasAttribute('data-picking-parts')) {
+    if (!pan && partTap?.id === event.pointerId && Math.hypot(event.clientX - partTap.x, event.clientY - partTap.y) <= 8) {
+      pickPart(event.clientX, event.clientY);
+    }
+    cancelInput(event.pointerId);
+    return;
+  }
   if (event.isPrimary) scene?.sound?.unlock();
   scene?.gestures.finish(event.pointerId, toWorld(event.clientX, event.clientY), performance.now());
   cancelInput(event.pointerId);

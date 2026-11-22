@@ -10,6 +10,7 @@
       this.last = new Map();
       this.buffers = new Map();
       this.index = null;
+      this.volume = window.ArtHubBd2Volume.read();
       const panel = document.createElement('div');
       panel.className = 'bd2-voice-controls';
       panel.hidden = true;
@@ -24,6 +25,10 @@
       button.className = 'ctl';
       button.onclick = () => this.job ? this.stop() : this.play();
       panel.append(choose, button);
+      window.ArtHubBd2Volume.mount(panel, volume => {
+        this.volume = volume;
+        if (this.output) this.output.gain.value = volume;
+      });
       document.body.append(panel);
       this.panel = panel;
       this.choose = choose;
@@ -106,7 +111,12 @@
       this.update();
       try {
         const Context = window.AudioContext || window.webkitAudioContext;
-        this.context ||= new Context();
+        if (!this.context) {
+          this.context = new Context();
+          this.output = this.context.createGain();
+          this.output.gain.value = this.volume;
+          this.output.connect(this.context.destination);
+        }
         await this.context.resume();
         if (job !== this.job) return;
         const scene = this.portrait ? null : this.scenes[Number(this.choose.value || 0)];
@@ -130,7 +140,7 @@
           const available = buffer.duration - offset;
           const length = Math.min(available, cue.length == null ? available : cue.length * node.playbackRate.value);
           if (!(length > 0)) continue;
-          node.connect(this.context.destination);
+          node.connect(this.output);
           job.nodes.push(node);
           node.start(job.start + cue.start, offset, length);
         }
