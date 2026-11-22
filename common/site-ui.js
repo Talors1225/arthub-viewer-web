@@ -154,34 +154,6 @@
       toolbar?.insertBefore(button,toolbar.querySelector('.kit-more-tool'));
       primary.push({name,button});
     }
-    const framingBtn = document.createElement('button');
-    framingBtn.type = 'button';
-    framingBtn.id = 'siteFraming';
-    framingBtn.className = 'site-primary-action';
-    framingBtn.setAttribute('data-stage-primary', '1');
-    framingBtn.textContent = '未裁切';
-    const syncFramingBtn = () => {
-      const item = K.stageFramingMenuItem?.();
-      const supported = Boolean(item);
-      framingBtn.hidden = !supported;
-      if (!supported) return;
-      const on = Boolean(K.framing?.original);
-      framingBtn.disabled = Boolean(item.disabled);
-      framingBtn.classList.toggle('on', on);
-      framingBtn.setAttribute('aria-pressed', String(on));
-      const tip = on ? '当前：未裁切原始画面（点击恢复默认裁切）' : '当前：裁切画面（点击切换未裁切原始画面）';
-      framingBtn.title = tip;
-      framingBtn.setAttribute('aria-label', tip);
-    };
-    framingBtn.addEventListener('click', () => {
-      const item = K.stageFramingMenuItem?.();
-      if (!item || item.disabled) return;
-      K.hideMenu?.();
-      item.fn();
-      syncFramingBtn();
-    });
-    toolbar?.insertBefore(framingBtn, toolbar.querySelector('.kit-more-tool'));
-    K.framing?.subscribe?.(syncFramingBtn);
     const phoneLayout = window.matchMedia?.('(max-width: 720px)');
     const dock = document.createElement('nav'); dock.id = 'siteMobileDock';
     dock.setAttribute('aria-label','常用功能'); dock.hidden = true; document.body.append(dock);
@@ -323,7 +295,6 @@
         button.classList.toggle('on',selected);
         button.setAttribute('aria-expanded',String(selected));
       }
-      syncFramingBtn();
     }
     let queued = false;
     const queue = () => {

@@ -155,7 +155,7 @@ for (const file of viewers) {
     mgl: raw, gl: raw, renderer, cutLoadSeq: 11, loadSeq: 11, playerDrawnSeq: -1, viewerUiReady: true,
     loadingPreview: preview, getBg: () => 'checker', debugFlags: {}, highlightSlot: null, cmpOn: false, boneEditMode: false,
     embedded: true,
-    K: {parseColor: (_color, fallback) => fallback, debugActive: () => false}, selIdx: -1, drawBoneMarker() {},
+    K: {parseColor: (_color, fallback) => fallback, debugActive: () => false, queueTextureUpgrade() {}}, selIdx: -1, drawBoneMarker() {},
     activeSkillBackdrop: () => null, clipSkillFrame: () => false, clipArtworkFrame: () => false,
     stageFrame: () => null, artworkFrame: () => null, setSceneCamera() {}};
   const render = overrides => draw.runInNewContext({...base, ...overrides});

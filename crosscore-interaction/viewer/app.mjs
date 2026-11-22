@@ -1,5 +1,5 @@
 import { InteractionController, trackFor } from './controller.mjs?v=20261114-interaction-export-loading';
-import { SpineScene } from './scene.mjs?v=20261122-reviewed-frames';
+import { SpineScene } from './scene.mjs?v=20261122-cc-framing-q10';
 
 import { createMediaVolume } from '../../common/media-volume.mjs?v=20261122-game-audio';
 
@@ -527,6 +527,11 @@ const viewerUI = window.createInteractionViewerUI({
     setExporting: value => { exporting = value; }, setBackground: () => {},
     soundEnabled, setSoundEnabled, voiceTab: 'voice',
     volume: () => mediaVolume.volume, setVolume: value => { mediaVolume.set(value); audioPrefs.set('volume', mediaVolume.volume); },
+    async beforeExport(signal) {
+      const exportScene = scene, ownerRequest = requestId;
+      await K.awaitExportTask(K.requireTextureQuality(exportScene.textureResources()), signal);
+      if (scene !== exportScene || requestId !== ownerRequest) throw new DOMException('立绘已切换', 'AbortError');
+    },
     capture: (animation, format) => {
       const captureScene = Object.create(scene), original = K.framing.original;
       const aperture = sceneAperture();
@@ -593,6 +598,8 @@ function render() {
     } finally {
       if (clip) gl.disable(gl.SCISSOR_TEST);
     }
+    scene?.queueTextureUpgrades();
+    transition?.queueTextureUpgrades();
     if (previewPending && previewSequence === requestId && scene === previewScene && controller && !pendingFit && !gl.isContextLost() && canvas.width > 1 && canvas.height > 1) { loadingPreview.ready(previewSequence); previewPending = false; }
     drawRegions(); updateActions(); viewerUI.update();
   } catch (error) { if (lastFailure !== error.message) fail(error); }
@@ -722,6 +729,10 @@ window.__crosscoreTest = {
   select: id => loadModel(id),
   selectPrefab: async key => { const loaded = await loadPrefab(key, requestId); if (loaded) { controller.roleLoaded(now(), loaded.idle); $('#loading').hidden = true; } },
 };
+K.stageFramingMenuItem = () => K.framing.menuItem({
+  onChange: () => refitFraming(timeline().name),
+  disabled: !scene || !controller || previewPending || !!pointer || controller.switching || exporting,
+});
 fillModels(); K.initStageUI({ canvas, refit: () => { if (scene) fit(); } }); requestAnimationFrame(render);
 K.setLibraryStageReady(false);
 const initial = new URL(location.href).searchParams.get('model');

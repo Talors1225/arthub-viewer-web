@@ -1,4 +1,4 @@
-const SP = window.spine;
+const SP = window.spine, K = window.SpineKit;
 SP.GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = true;
 const assets = new URL('../../', import.meta.url).pathname.replace(/\/$/, '');
 const resolve = value => value.startsWith('/') ? value : `${assets}/${value}`;
@@ -9,7 +9,7 @@ export class SpineScene {
     try {
       for (const layer of definition.layers) scene.layers.push(await scene.loadLayer(layer));
       for (const def of definition.spriteLayers || []) {
-        const texture = await new Promise((accept, reject) => scene.manager.loadTexture(resolve(def.image), (_, value) => accept(value), (_, error) => reject(new Error(`${def.image}：${error}`))));
+        const { texture } = await K.loadSceneTexture(SP, context, resolve(def.image), { pma: false, autoUpgrade: false });
         scene.sprites.push({ def, texture });
       }
       scene.main = scene.layers[definition.mainLayer] || scene.layers[0];
@@ -31,20 +31,20 @@ export class SpineScene {
     this.hiddenSlots = new Set();
     this.slotAlphas = new Map();
     this.completed = [];
-    this.manager = new SP.AssetManager(context, '');
+    this.qualityQueued = false;
   }
   async loadLayer(def) {
     if (!def.atlas || !def.skeleton) throw new Error(`资源不完整：${def.name}`);
-    const atlas = await new Promise((accept, reject) => this.manager.loadTextureAtlas(resolve(def.atlas), (_, value) => accept(value), (_, error) => reject(new Error(`${def.atlas}：${error}`))));
-    let skeleton;
+    const { atlas, bytes } = await K.loadSpineFiles(SP, this.context, {
+      atlasURL: resolve(def.atlas), skeletonURL: resolve(def.skeleton),
+      progressiveTexture: true, fitAtlasPage: false, autoUpgrade: false,
+    });
     try {
-      const response = await fetch(resolve(def.skeleton));
-      if (!response.ok) throw new Error(`${response.status} ${def.skeleton}`);
       const loader = new SP.AtlasAttachmentLoader(atlas);
       const data = def.format === 'binary'
-        ? new SP.SkeletonBinary(loader).readSkeletonData(new Uint8Array(await response.arrayBuffer()))
-        : new SP.SkeletonJson(loader).readSkeletonData(await response.json());
-      skeleton = new SP.Skeleton(data);
+        ? new SP.SkeletonBinary(loader).readSkeletonData(bytes)
+        : new SP.SkeletonJson(loader).readSkeletonData(JSON.parse(new TextDecoder().decode(bytes)));
+      const skeleton = new SP.Skeleton(data);
       const transform = def.render;
       skeleton.x = transform.x; skeleton.y = transform.y;
       skeleton.scaleX = transform.scaleX; skeleton.scaleY = transform.scaleY;
@@ -58,7 +58,15 @@ export class SpineScene {
       state.apply(skeleton);
       skeleton.updateWorldTransform(SP.Physics.update);
       return { def, atlas, skeleton, state, idle };
-    } catch (error) { atlas.dispose(); throw error; }
+    } catch (error) { K.disposeAtlas(atlas); throw error; }
+  }
+  textureResources() {
+    return new Set([...this.layers.map(layer => layer.atlas), ...this.sprites.map(sprite => sprite.texture)]);
+  }
+  queueTextureUpgrades() {
+    if (this.qualityQueued) return;
+    this.qualityQueued = true;
+    for (const resource of this.textureResources()) K.queueTextureUpgrade(resource);
   }
   visible(layer) {
     let active = layer === this.main || layer.def.active;
@@ -290,8 +298,8 @@ export class SpineScene {
     }
   }
   dispose() {
-    for (const atlas of new Set(this.layers.map(layer => layer.atlas))) atlas.dispose();
-    for (const texture of new Set(this.sprites.map(sprite => sprite.texture))) texture.dispose();
+    for (const atlas of new Set(this.layers.map(layer => layer.atlas))) K.disposeAtlas(atlas);
+    for (const texture of new Set(this.sprites.map(sprite => sprite.texture))) K.disposeSceneTexture(texture);
     this.layers = [];
     this.sprites = [];
   }

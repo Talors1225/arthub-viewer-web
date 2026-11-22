@@ -476,7 +476,7 @@ async function showModel(model) {
       runtime = SP;
     }
     const files = await K.loadSpineFiles(SP, gl.mgl, {
-      atlasURL: asset(dir + model.atlas), skeletonURL: asset(dir + model.skel), signal,
+      progressiveTexture: true, autoUpgrade: false, atlasURL: asset(dir + model.atlas), skeletonURL: asset(dir + model.skel), signal,
       onProgress: text => { if (!signal.aborted) setMessage(text); },
     });
     atlas = files.atlas;
@@ -515,7 +515,7 @@ async function showModel(model) {
         const spec = model.groupAssets[profile.groups[index].id];
         if (!spec || spec.skel === model.skel) continue;
         const groupFiles = await K.loadSpineFiles(SP, gl.mgl, {
-          atlasURL: asset(dir + spec.atlas), skeletonURL: asset(dir + spec.skel), signal,
+          progressiveTexture: true, autoUpgrade: false, atlasURL: asset(dir + spec.atlas), skeletonURL: asset(dir + spec.skel), signal,
         });
         activeScene.extraAtlases.push(groupFiles.atlas);
         signal.throwIfAborted();
@@ -667,6 +667,7 @@ function renderFrame(t) {
     }
   }
   if (!canvas.dataset.ready) {
+    for (const atlas of new Set([scene.atlas, ...(scene.extraAtlases || [])])) K.queueTextureUpgrade(atlas);
     canvas.dataset.ready = 'true';
     setStageReady(true);
     setMessage('');
@@ -711,6 +712,8 @@ async function exportPortrait(quality, transparent, copy = false) {
   K.closeToolPopup();
   moreButton()?.focus({ preventScroll: true });
   try {
+    await K.requireTextureQuality([picture.atlas, ...(picture.extraAtlases || [])]);
+    if (scene !== picture || K.pngExporting || videoRecording) return;
     const applyWorldPose = captureWorldPose(picture.skeleton);
     const pose = pngPose(quality);
     cancelInput();
@@ -819,16 +822,20 @@ function syncVideoFrame(session, frame = portraitExportFrame(session.picture)) {
 
 async function recordPortrait(quality, withAudio) {
   if (!scene || !canvas.dataset.ready || K.pngExporting || videoRecording) return;
-  const { skeleton } = scene;
-  const { x, y, scaleX, scaleY } = skeleton;
-  const view = { width: canvas.width, height: canvas.height, transform: { x, y, scaleX, scaleY } };
   const controller = new AbortController();
   const background = stageBackground.get();
   const clearColor = background === 'checker' ? null : K.parseColor(background, [0, 0, 0]);
-  const frame = portraitExportFrame(scene);
-  const session = videoRecording = { picture: scene, frame, view, controller, clearColor, capturing: true };
+  const session = videoRecording = { picture: scene, controller, clearColor, capturing: false };
   K.closeToolPopup();
   try {
+    await K.requireTextureQuality([scene.atlas, ...(scene.extraAtlases || [])]);
+    controller.signal.throwIfAborted();
+    if (scene !== session.picture) throw new DOMException('已切换立绘', 'AbortError');
+    const { skeleton } = scene;
+    const { x, y, scaleX, scaleY } = skeleton;
+    const frame = session.frame = portraitExportFrame(scene);
+    session.view = { width: canvas.width, height: canvas.height, transform: { x, y, scaleX, scaleY } };
+    session.capturing = true;
     const size = K.exportDimensions(frame, quality, 'video', 0);
     const applyWorldPose = captureWorldPose(skeleton);
     cancelInput();

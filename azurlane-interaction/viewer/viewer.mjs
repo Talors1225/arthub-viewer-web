@@ -4,7 +4,7 @@ import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-loop-catal
 import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
 import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DOriginalCanvas,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261122-framing-fixes';
 import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261121-scene-fit';
-import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
+import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings,createLive2DTextureUpgrade} from './portrait-assets.mjs?v=20261122-q10';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
 import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261122-plymouth-forearm';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
@@ -815,22 +815,23 @@ function live2DExportWindowAtPose(id, motion, internal) {
 async function live2dPortrait(model,generation){
  installMotionCompatibility(PIXI.live2d);
  const app=new PIXI.Application({view:canvas,autoStart:false,antialias:true,backgroundAlpha:0,resolution:Math.max(2,devicePixelRatio||1),autoDensity:true,preserveDrawingBuffer:true});
- let live, preparedSettings;
- const dispose=()=>{const gl=app.renderer?.gl,core=live?.internalModel?.coreModel,native=core?.getModel(),moc=native&&mocOwners.get(native);try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}finally{preparedSettings?.release();}if(moc&&!core?.getModel()&&!releasedMocs.has(moc)){moc._release();releasedMocs.add(moc);releasedMocCount++;}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
+ let live, preparedSettings, textureUpgrade;
+ const dispose=()=>{const gl=app.renderer?.gl,core=live?.internalModel?.coreModel,native=core?.getModel(),moc=native&&mocOwners.get(native);textureUpgrade?.dispose();try{live?.destroy({children:true,texture:true,baseTexture:true});app.destroy(false,{children:true,texture:true,baseTexture:true});}catch{}finally{preparedSettings?.release();}if(moc&&!core?.getModel()&&!releasedMocs.has(moc)){moc._release();releasedMocs.add(moc);releasedMocCount++;}try{gl?.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
  try {
   let settings = model.modelUrl;
-  if (model.id === 'zhenzhuhao_2') {
+  const stageFiles=model.id==='zhenzhuhao_2';
+  if (stageFiles || K.texturePreviewFor) {
    let lastProgress = '';
    preparedSettings = await prepareLive2DSettings(model.modelUrl, {
-    signal: loadAbort.signal, motions: [model.defaultAnimation || 'idle'],
-    onProgress(text, metrics) {
+    signal: loadAbort.signal, motions: [model.defaultAnimation || 'idle'],stageFiles,progressiveTexture:true,
+    onProgress:stageFiles?(text, metrics)=>{
      if (generation !== loadGeneration || text === lastProgress) return;
      lastProgress = text;
      $('status').textContent = text;
      loadingPreview.progress(generation, text, metrics);
-    },
+    }:undefined,
    });
-   loadingPreview.progress(generation, '正在解码珍珠号立绘');
+   if(stageFiles)loadingPreview.progress(generation, '正在解码珍珠号立绘');
    settings = new PIXI.live2d.Cubism4ModelSettings(preparedSettings.settings);
    const resolveFile = settings.resolveURL.bind(settings);
    // The SDK's legacy URL resolver rewrites the scheme inside blob URLs.
@@ -840,6 +841,7 @@ async function live2dPortrait(model,generation){
    autoInteract: false, autoUpdate: false, motionPreload: PIXI.live2d.MotionPreloadStrategy.NONE,
   });
   if (generation !== loadGeneration) { dispose(); return null; }
+  if(preparedSettings?.previewTextures.size)textureUpgrade=createLive2DTextureUpgrade(PIXI,live,preparedSettings.previewTextures,loadAbort.signal);
  } catch (error) { dispose(); throw error; }
  app.stage.addChild(live);live.anchor.set(.5,.5);const natural={width:live.internalModel.width,height:live.internalModel.height},internal=live.internalModel,core=internal.coreModel.getModel(),indexes=new Map(core.parameters.ids.map((id,i)=>[id,i]));
  const defaultStageFrame = defaultPortraitStageFrame(model.id);
@@ -969,7 +971,11 @@ async function live2dPortrait(model,generation){
  let displayedStageCrop, renderedStageMotion, stageCropFixed = false;
  let stageClip = null;
  const api={sound,stopAudio,fold,look:()=>look,parameter:id=>{const i=indexes.get(id);return i===undefined?undefined:core.parameters.values[i];},
-  prepareExport:async()=>{await loadEffect();if(generation===loadGeneration)api.refreshEffect();},
+  prepareExport:async()=>{
+   const [ready]=await Promise.all([textureUpgrade?.finish(),loadEffect()]);
+   if(ready===false)throw Error('原始贴图加载失败，请重试');
+   if(generation===loadGeneration)api.refreshEffect();
+  },
   setInteractionViewFixed:fixed=>{stageCropFixed=fixed&&!apertureAtPose()&&!stageCrop?.anchor&&displayedStageCrop!==undefined;},
   refit:()=>{refitPending=true;originalFrame=null;stageCropFixed=false;},
   effectTimeline:null,
@@ -1349,6 +1355,7 @@ async function live2dPortrait(model,generation){
    stageClipPath = '';
   }
   app.render();
+  textureUpgrade?.queue();
   renderedStageMotion = activeMotion;
   evidence.effect = effectTimeline?.state() || null;
  };
@@ -1357,10 +1364,10 @@ async function live2dPortrait(model,generation){
 async function spinePortrait(model,generation){
  // The setup skin for these portraits omits body attachments supplied by skin 1.
  if (portraitsWithSkinOne.has(model.id)) model.defaultSkin ||= '1';
- const context=new spine.webgl.ManagedWebGLRenderingContext(canvas,{alpha:true,antialias:true,preserveDrawingBuffer:true}),gl=context.gl,scene=new spine.webgl.SceneRenderer(canvas,context,true);let assets;
+ const context=new spine.webgl.ManagedWebGLRenderingContext(canvas,{alpha:true,antialias:true,preserveDrawingBuffer:true}),gl=context.gl,scene=new spine.webgl.SceneRenderer(canvas,context,true);let assets,textureUpgradeQueued=false;
  const dispose=()=>{try{assets?.dispose();scene.dispose();gl.getExtension('WEBGL_lose_context')?.loseContext();}catch{}};
  for(const spec of model.layers){spec.skelUrl=BASE+'/assets/spinepainting/'+enc(spec.folder+spec.skeleton);spec.atlasUrl=BASE+'/assets/spinepainting/'+enc(spec.atlas);}
- try{assets=await loadPortraitSpineAssets(spine,context,model.layers,{base:BASE+'/assets/spinepainting/',signal:loadAbort.signal,onProgress:text=>{if(generation===loadGeneration){$('status').textContent=text;loadingPreview.progress(generation,text);}},onTransport:(file,kind)=>{if(generation===loadGeneration)(evidence.loadTransports||={})[file]=kind;}});}catch(e){dispose();throw e;}
+ try{assets=await loadPortraitSpineAssets(spine,context,model.layers,{base:BASE+'/assets/spinepainting/',signal:loadAbort.signal,progressiveTexture:true,onProgress:text=>{if(generation===loadGeneration){$('status').textContent=text;loadingPreview.progress(generation,text);}},onTransport:(file,kind)=>{if(generation===loadGeneration)(evidence.loadTransports||={})[file]=kind;}});}catch(e){dispose();throw e;}
  if(generation!==loadGeneration){dispose();return null;}
  let layers;
  try {
@@ -1400,6 +1407,7 @@ async function spinePortrait(model,generation){
  const api={sound,stopAudio,fold,assistantEvent:area=>{if(basicActions[area])sound(model.voiceBank,motionCue(basicActions[area]),{voice:true});},skin:name=>{for(const l of layers){const skin=l.data.findSkin(name||l.spec.initialSkin||model.defaultSkin||'default');if(skin){l.skeleton.setSkin(skin);l.skeleton.setSlotsToSetupPose();}}},effects:visible=>{evidence.effectsVisible=visible;},alpha:data=>{evidence.alphaData=data;},
   expression:cue=>{if(!cue){for(const l of layers)l.state.setEmptyAnimation(1,.15);return;}if(controller?.state.busy)return;const field=({touch_1:'touch',touch_2:'touch2',touch_head:'headtouch',task:'mission',get:'unlock'})[cue]||cue;let name=model.expression?.base?.[field]||model.expression?.base?.default;const extra=model.expression?.extra?.[field];for(const row of array(extra))if(row[0]<=controller.state.favor)name=row[1];if(name===undefined||name===null||name==='')return;const multiple=model.interaction.spine?.multiple_face;if(array(multiple?.name).length&&Number.isFinite(Number(name))){const offset=array(multiple.data).find(r=>r[0]===controller.state.idle)?.[1]||0;name=String(Number(name)+offset);}name=String(name);for(const l of layers)if(l.data.findAnimation(name))l.state.setAnimation(1,name,true);evidence.expression={cue,name};},
   refit:()=>{originalFrame=null;},
+  prepareExport:()=>assets.prepareExport(),
   play:async(name,loop,options={})=>{
    sequence++;
    originalFrame=null;
@@ -1592,6 +1600,7 @@ async function spinePortrait(model,generation){
   } finally {
    if (clipFrame) gl.disable(gl.SCISSOR_TEST);
   }
+  if(!textureUpgradeQueued){textureUpgradeQueued=true;assets.queueTextureUpgrade();}
  };
  disposeRenderer=dispose;return api;
 }

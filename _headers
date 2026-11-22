@@ -1,2 +1,4 @@
 /quality/20261122/*
   Cache-Control: public, max-age=31536000, immutable
+/quality/q10-20261122/maps/*
+  Cache-Control: public, max-age=31536000, immutable

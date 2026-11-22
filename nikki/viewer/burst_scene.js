@@ -1,5 +1,5 @@
 import {clamp,rotate,point,mulRotation} from './burst-math.js';
-import {makePostProcess,loadImage} from './burst-post.js?v=20261109-skill-background';
+import {makePostProcess} from './burst-post.js?v=20261109-skill-background';
 import {compileTimeline,clockAt} from './timelines.js';
 import {createParticles} from './burst_particles.js';
 import {spineParts,applyPartVisibility,pickSpinePart} from './burst-parts.js';
@@ -85,14 +85,26 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
   };
   const failedModels=[];
   const models=[];
+  const atlases=new Set(), standalone=new Set();
+  const qualityOwners=()=>[...atlases,...standalone];
+  let upgradesQueued=false;
+  function dispose() {
+    for(const atlas of atlases) Kit.disposeAtlas(atlas);
+    for(const texture of standalone) Kit.disposeSceneTexture(texture);
+    atlases.clear();
+    standalone.clear();
+  }
   for(const model of scene.models) {
+    let atlas;
     try {
       const context=await runtime(model.version);
       const api=context.SP;
       const files=await Kit.loadSpineFiles(api,context.mgl,{
+        progressiveTexture:true,autoUpgrade:false,
         atlasURL:asset(model.atlas),skeletonURL:asset(model.skel),
         atlasPageURL:page=>asset(model.atlas.slice(0,model.atlas.lastIndexOf('/')+1)+page),signal,
       });
+      atlas=files.atlas;
       const loader=new api.AtlasAttachmentLoader(files.atlas);
       const parser=model.format==='json' ? new api.SkeletonJson(loader) : new api.SkeletonBinary(loader);
       parser.scale=model.scale||.01;
@@ -104,8 +116,10 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       const modern=!model.version.startsWith('4.0');
       models.push({...model,context,data,instance,modern,hiddenSlots:new Set(),parts:spineParts(data,api),
         pma:!!files.atlas.pages[0]?.pma});
+      atlases.add(atlas);
     }catch(error){
-      if(signal?.aborted) throw signal.reason;
+      if(atlas) Kit.disposeAtlas(atlas);
+      if(signal?.aborted){dispose();throw signal.reason;}
       failedModels.push({name:model.name,message:error.message});
     }
   }
@@ -115,15 +129,9 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
   let loaded=0;
   const pairs=await parallel(needed,5,async file=>{
     try {
-      const image=await (async()=>{
-        if(!signal) return loadImage(asset(file));
-        const response=await fetch(asset(file),{signal});
-        if(!response.ok) throw new Error('读取贴图失败 ('+response.status+')');
-        const local=URL.createObjectURL(await response.blob());
-        try{return await loadImage(local);}finally{URL.revokeObjectURL(local);}
-      })();
-      const texture=new SP.GLTexture(baseGL.mgl,image);
-      return [file,{texture,size:[image.naturalWidth,image.naturalHeight]}];
+      const {texture,width,height}=await Kit.loadSceneTexture(SP,baseGL.mgl,asset(file),{signal,autoUpgrade:false});
+      standalone.add(texture);
+      return [file,{texture,size:[width,height]}];
     }catch(error){
       failedTextures.push(file);
       return [file,null];
@@ -131,7 +139,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       onProgress(++loaded,needed.length);
     }
   });
-  if(signal?.aborted) throw signal.reason;
+  if(signal?.aborted){dispose();throw signal.reason;}
   const textures=new Map(pairs);
   const unit=document.createElement('canvas');
   unit.width=unit.height=1;
@@ -351,6 +359,10 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     currentRenderer?.end();
     currentRenderer=null;
     post.end(backdropOnly);
+    if(!upgradesQueued){
+      upgradesQueued=true;
+      for(const owner of qualityOwners()) Kit.queueTextureUpgrade(owner);
+    }
     return counts;
   }
   function bindPartState(hidden){
@@ -426,5 +438,8 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     if (!map.size) return null;
     return render(time, true, true, false, frame, null, { map, animation, time: animationTime, promoteCharacter: true });
   }
-  return {render,renderComposition,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
+  return {render,renderComposition,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),
+    hasPreview:()=>qualityOwners().some(Kit.hasTexturePreview),
+    finishQuality:()=>Kit.requireTextureQuality(qualityOwners()),dispose,
+    timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
 }

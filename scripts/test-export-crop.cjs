@@ -75,21 +75,30 @@ assert.deepEqual(JSON.parse(JSON.stringify(context.K.refineIllustrationSize(refe
 for (const entry of ['crosscore/viewer/cutscene.html', 'crosscore-interaction/viewer/index.html']) {
   const page = fs.readFileSync(path.join(__dirname, '..', entry), 'utf8');
   const mode = page.match(/<html\b[^>]*\bdata-framing="([^"]+)"/)?.[1];
-  assert.equal(mode, 'original', entry);
+  assert.equal(mode, undefined, entry);
   const listeners = {};
+  const location = new URL('https://arthub.test/' + entry);
   const window = {
     document: { documentElement: { dataset: { framing: mode } } },
-    location: { search: '' },
+    location,
+    history: { replaceState: (_state, _title, url) => { location.href = String(url); } },
     addEventListener: (name, fn) => { listeners[name] = fn; },
   };
-  const api = { K: {}, window, URLSearchParams };
+  const api = { K: {}, window, URL, URLSearchParams };
   const framing = source.slice(source.indexOf('  const originalOnly'), source.indexOf('  const uiIconPaths'));
   vm.runInNewContext(framing, api);
+  assert.equal(api.K.framing.original, false, entry);
+  const toggle = api.K.framing.menuItem();
+  assert.equal(toggle.checked, false, entry);
+  toggle.fn();
   assert.equal(api.K.framing.original, true, entry);
-  window.location.search = '?framing=clean';
+  assert.equal(location.searchParams.get('framing'), 'original', entry);
+  api.K.framing.menuItem().fn();
+  assert.equal(api.K.framing.original, false, entry);
+  assert.equal(location.search, '', entry);
+  location.search = '?framing=original';
   listeners.popstate();
   assert.equal(api.K.framing.original, true, entry);
-  assert.equal(api.K.framing.menuItem(), null, entry);
 }
 // Justia's winter backdrop is a 480,000-unit plane around a 3,840-unit scene.
 const bd2Page = fs.readFileSync(path.join(__dirname, '../bd2/viewer/cutscene.html'), 'utf8');

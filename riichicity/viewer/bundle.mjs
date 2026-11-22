@@ -24,19 +24,20 @@ export function spineVersion(bytes) {
 }
 export class LocalBundle {
   constructor(records){
-    this.files=new Map();this.urls=new Map();this.folded=new Map();this.basenames=new Map();this.disposed=false;let total=0;
-    for(const {path:name,file} of records){
+    this.files=new Map();this.textureURLs=new Map();this.urls=new Map();this.folded=new Map();this.basenames=new Map();this.disposed=false;let total=0;
+    for(const {path:name,file,textureURL} of records){
       const key=normalizePath(name);if(/(^|\/)__MACOSX\//.test(key)||key.split('/').pop().startsWith('._'))continue;
-      if(this.files.has(key))throw Error('存在重复文件路径：'+key);
-      total+=file.size;if(total>MAX_BYTES||this.files.size>=MAX_FILES)throw Error('所选资源过多，请只导入当前立绘需要的文件（最多 512 MB / 4096 个文件）');
-      this.files.set(key,file);
+      if(this.files.has(key)||this.textureURLs.has(key))throw Error('存在重复文件路径：'+key);
+      total+=file?.size||0;if(total>MAX_BYTES||this.files.size+this.textureURLs.size>=MAX_FILES)throw Error('所选资源过多，请只导入当前立绘需要的文件（最多 512 MB / 4096 个文件）');
+      if(textureURL)this.textureURLs.set(key,textureURL);
+      else this.files.set(key,file);
       for(const [map,k]of [[this.folded,key.toLowerCase()],[this.basenames,key.split('/').pop().toLowerCase()]])map.set(k,[...(map.get(k)||[]),key]);
     }
     this.bytes=total;
   }
   resolve(owner,reference){
     const candidate=relativePath(owner,reference);
-    if(this.files.has(candidate))return candidate;
+    if(this.files.has(candidate)||this.textureURLs.has(candidate))return candidate;
     const near=this.folded.get(candidate.toLowerCase())||[];if(near.length===1)return near[0];
     const flat=this.basenames.get(candidate.split('/').pop().toLowerCase())||[];
     if(flat.length===1)return flat[0];

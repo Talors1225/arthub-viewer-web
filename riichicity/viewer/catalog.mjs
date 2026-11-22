@@ -1,4 +1,4 @@
-import {LocalBundle} from './bundle.mjs?v=20261104-unified-final';
+import {LocalBundle} from './bundle.mjs?v=20261122-q10';
 import {createVoicePanel} from './voices.mjs?v=20261122-game-audio';
 
 export async function fetchModelBundle(model,signal,assetBase='/riichicity/assets/'){
@@ -9,6 +9,9 @@ export async function fetchModelBundle(model,signal,assetBase='/riichicity/asset
  try{
   const records=await Promise.all(paths.map(async path=>{
    const url=assetBase+path.split('/').map(encodeURIComponent).join('/');
+   // The runtime loads atlas pages against their published URLs so it can
+   // choose the Q10 page and keep the original URL for export.
+   if(model.type==='spine'&&window.SpineKit.loadSceneTexture&&path!==model.path&&path!==model.atlas)return {path,textureURL:url};
    try{
     const file=await window.SpineKit.fetchAssetBlob(url,{
      signal:controller.signal,timeout:90000,retryIdleMs:15000,retryHTTP:true,
