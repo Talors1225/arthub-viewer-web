@@ -437,7 +437,8 @@
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
 <script src="../../common/kit.js?v=20261122-framing-v4"></script>
-<script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
+<script src="../../common/texture-previews.js?v=20261122-q10"></script>
+<script src="../../common/asset-loader.js?v=20261122-reviewed-frames-q10"></script>
 <script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -1958,6 +1959,7 @@
         finally { if (clipped) raw.disable(raw.SCISSOR_TEST); }
       }
       if (cut && cv.width > 1 && cv.height > 1 && !raw.isContextLost()) {
+        if (playerDrawnSeq !== cutLoadSeq) K.queueTextureUpgrade?.(cut.atlas);
         playerDrawnSeq = cutLoadSeq;
         loadingPreview.ready(cutLoadSeq);
         if (!viewerUiReady) {
@@ -2700,6 +2702,7 @@
       if (seq !== cutLoadSeq) return;
       if (!ensureGL()) throw new Error('WebGL 不可用');
       const files = await K.loadSpineFiles(SP, mgl, {
+        progressiveTexture: true,
         ...variantFiles(v),
         signal: request.signal,
         onProgress: message => { if (seq === cutLoadSeq) status(message); },
@@ -3099,7 +3102,15 @@
     const skeletons = cutLayers().filter(layer => layer.active !== false).map(layer => layer.skeleton);
     return K.pngExportPose(skeletons, quality, K.getSpine(cur && cur.spineVersion), frame, cut.frameView);
   }
-  function exportFrame(transparent, mode, done, quality = exportQuality) {
+  async function exportFrame(transparent, mode, done, quality = exportQuality) {
+    const exportCut = cut;
+    if (exportCut && K.hasTexturePreview(exportCut.atlas)) {
+      K.toast('正在准备无损贴图…', 'info');
+      const ready = await K.finishTextureQuality(exportCut.atlas);
+      if (exportCut !== cut) return;
+      if (!ready) { K.toast('无损贴图加载失败，请重试', 'err'); return; }
+    }
+
     parkSkillBurst();
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     const backdrop = activeSkillBackdrop();
