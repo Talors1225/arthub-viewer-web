@@ -186,7 +186,7 @@
     } };
   };
   const readResponse = async (url, signal, method, transfer) => {
-    const response = await fetch(url, transfer ? { signal, cache: transfer.cache } : { signal });
+    const response = await fetch(url, transfer ? { signal, cache: transfer.cache, priority: transfer.priority } : { signal });
     if (!response.ok) {
       const kind = response.status === 404 ? '资源不存在' : response.status === 403 ? '资源访问被拒绝' : '资源请求失败';
       const error = new Error(kind + ' (HTTP ' + response.status + ')');
@@ -235,11 +235,19 @@
     try { return await readSpineResponse(url, request.signal, 'blob', options); }
     finally { request.close(); }
   };
+  const textureUpgrades = new WeakMap();
   K.disposeAtlas = atlas => {
     if (!atlas) return;
+    const preview = textureUpgrades.get(atlas);
+    if (preview) {
+      clearTimeout(preview.timer);
+      preview.controller.abort();
+      textureUpgrades.delete(atlas);
+    }
     for (const page of atlas.pages || []) {
       if (page.texture) { try { page.texture.dispose(); } catch {} page.texture = null; }
     }
+    preview?.bitmap.close();
   };
   const decodeImage = (blob, signal) => new Promise((resolve, reject) => {
     const img = new Image();
@@ -260,8 +268,106 @@
     if (signal.aborted) onAbort(); else img.src = url;
   });
 
+  const transferBlob = async (url, signal, timeout, priority) => {
+    const transfer = scope(signal, timeout);
+    try {
+      return await readResponse(url, transfer.signal, 'blob', {
+        priority, cache: 'default', touch: transfer.touch,
+      });
+    } finally { transfer.close(); }
+  };
+
+  async function loadTexturePreview(url, page, SP, context, signal) {
+    if (location.hostname !== 'arthub.skin' || typeof createImageBitmap !== 'function' || !window.ARTHUB_TEXTURE_PREVIEWS) return null;
+    const raw = context.gl;
+    if (!raw || raw.isContextLost() || ![raw.NEAREST, raw.LINEAR].includes(page.minFilter)) return null;
+    const original = new URL(window.ARTHUB_COS_RESOLVE?.(url) || url, location.href);
+    const entry = window.ARTHUB_TEXTURE_PREVIEWS[original.origin + original.pathname];
+    if (!entry || entry.pma !== !!page.pma) return null;
+    // A full-size preview and original can both be decoded during the swap.
+    if (entry.width * entry.height >= 4096 * 4096 && navigator.deviceMemory <= 2) return null;
+    let bitmap, texture;
+    const premultiply = !SP.GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL &&
+      raw.getParameter(raw.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
+    try {
+      const preview = await transferBlob(new URL(entry.file, location.origin), signal, 4500, 'high');
+      if (preview.type !== 'image/webp') return null;
+      bitmap = await createImageBitmap(preview, {premultiplyAlpha: entry.pma || premultiply ? 'premultiply' : 'none'});
+      if (signal.aborted || bitmap.width !== entry.width || bitmap.height !== entry.height) return null;
+      texture = new SP.GLTexture(context, bitmap);
+      if (!texture.texture || texture.getImage() !== bitmap || !('_image' in texture) || raw.isContextLost() || raw.getError() !== raw.NO_ERROR) {
+        texture.dispose();
+        texture = null;
+        return null;
+      }
+      return {url, raw, premultiply, bitmap, texture, controller: new AbortController(), queued:false, work:null};
+    } catch {
+      try { texture?.dispose(); } catch {}
+      texture = null;
+      return null;
+    } finally {
+      if (!texture) bitmap?.close();
+    }
+  }
+
+  function commitTextureUpgrade(state, image) {
+    const {raw, texture, bitmap, premultiply} = state;
+    if (raw.isContextLost() || !texture.texture || image.naturalWidth !== bitmap.width || image.naturalHeight !== bitmap.height) return false;
+    const binding = raw.getParameter(raw.TEXTURE_BINDING_2D);
+    const unpack = raw.getParameter(raw.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
+    try {
+      raw.bindTexture(raw.TEXTURE_2D, texture.texture);
+      raw.pixelStorei(raw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, !!premultiply);
+      raw.texSubImage2D(raw.TEXTURE_2D, 0, 0, 0, raw.RGBA, raw.UNSIGNED_BYTE, image);
+      if (raw.isContextLost() || raw.getError() !== raw.NO_ERROR) return false;
+      // Keep the same GL texture and atlas references. The runtime also needs
+      // the full-resolution image if WebGL later restores the texture.
+      texture._image = image;
+      bitmap.close();
+      return true;
+    } finally {
+      raw.pixelStorei(raw.UNPACK_PREMULTIPLY_ALPHA_WEBGL, unpack);
+      raw.bindTexture(raw.TEXTURE_2D, binding);
+    }
+  }
+
+  K.hasTexturePreview = atlas => textureUpgrades.has(atlas);
+
+  K.finishTextureQuality = (atlas, priority = 'high') => {
+    const state = textureUpgrades.get(atlas);
+    if (!state) return Promise.resolve(true);
+    clearTimeout(state.timer);
+    if (state.work) return state.work;
+    state.work = (async () => {
+      const {signal} = state.controller;
+      try {
+        const blob = await transferBlob(state.url, signal, 12000, priority);
+        const image = await decodeImage(blob, signal);
+        if (signal.aborted || !commitTextureUpgrade(state, image)) return false;
+        textureUpgrades.delete(atlas);
+        state.controller.abort();
+        return true;
+      } catch { return false; }
+      finally { state.work = null; }
+    })();
+    return state.work;
+  };
+
+  K.queueTextureUpgrade = atlas => {
+    const state = textureUpgrades.get(atlas);
+    if (!state || state.queued || navigator.connection?.saveData) return;
+    state.queued = true;
+    const start = () => {
+      if (!state.controller.signal.aborted && document.visibilityState === 'visible') K.finishTextureQuality(atlas, 'low');
+    };
+    state.timer = setTimeout(() => {
+      if (document.visibilityState === 'visible') start();
+      else document.addEventListener('visibilitychange', start, {signal:state.controller.signal});
+    }, 2600);
+  };
+
   function fitSpineAtlasPage(atlas, page, image) {
-    const width = image.naturalWidth, height = image.naturalHeight;
+    const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
     if (!page.width || !page.height || !width || !height || (page.width === width && page.height === height)) return;
     // Extracted textures can be resampled to a different resolution. Mesh UVs
     // use the decoded image size, so the region offsets must use that scale too.
@@ -306,11 +412,13 @@
             if (signal.aborted) throw signal.reason || abortError();
             const page = atlas.pages[next++];
             const url = options.atlasPageURL?.(page.name) || new URL(page.name, new URL(options.atlasURL, location.href)).href;
-            const blob = await readSpineResponse(url, signal, 'blob', options);
-            const img = await decodeImage(blob, signal);
+            const fast = options.progressiveTexture && atlas.pages.length === 1
+              ? await loadTexturePreview(url, page, SP, gl, signal) : null;
+            if (fast) { page.texture = fast.texture; textureUpgrades.set(atlas, fast); }
+            const img = fast?.bitmap || await decodeImage(await readSpineResponse(url, signal, 'blob', options), signal);
             if (signal.aborted) throw signal.reason || abortError();
             fitSpineAtlasPage(atlas, page, img);
-            const texture = new SP.GLTexture(gl, img);
+            const texture = fast?.texture || new SP.GLTexture(gl, img);
             page.texture = texture;
             page.setTexture(texture);
             options.onProgress?.('正在读取贴图 ' + (++done) + '/' + atlas.pages.length);
