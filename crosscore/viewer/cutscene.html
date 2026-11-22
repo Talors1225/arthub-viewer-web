@@ -637,7 +637,17 @@
   const aliasOf = id => aliasMap[id] || '';
   const TYPE_LABEL = { cutscene: '过场', skill: '技能', lobby: '立绘', battle: '战斗', idle: '待机', store: '客户端提取', catalog: '目录提取', other: '其它', unknown: '其它' };
   const TYPE_ORDER = { cutscene: 0, skill: 1, battle: 2, lobby: 3, idle: 4, other: 9, store: 10, catalog: 10, unknown: 9 };
+  if (routeSource === 'crosscore') {
+    TYPE_LABEL.lobby = '角色动态';
+    TYPE_LABEL.cutscene = '剧情 CG';
+    TYPE_ORDER.lobby = -1;
+  }
   function displayType(c) {
+    // Older CrossCore entries use the same native categories but have no specific resourceType.
+    if (routeSource === 'crosscore') {
+      if (c?.category === '角色动态') return 'lobby';
+      if (c?.category === '剧情CG') return 'cutscene';
+    }
     const type = String(c && (c.resourceType || c.type) || 'unknown').toLowerCase();
     if (routeSource !== 'nikki') return type;
     return ['skill', 'battle', 'lobby'].includes(type) ? type : 'other';
