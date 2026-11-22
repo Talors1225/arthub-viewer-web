@@ -68,7 +68,7 @@
       } else if (key === 'g') action = () => activate(library?.classList.contains('open') && document.getElementById('gridClose') ? 'gridClose' : 'railGrid');
       else if (!library?.classList.contains('open')) {
         if (key === ' ' && !event.target.closest?.('button,a,[role="button"],[role="tab"]')) action = () => activate('pbPlay');
-        else if (key === 'f') action = () => activate('btnFit') || activate('zFit') || activate('fit') || activate('railThumb');
+        else if (key === 'f') action = () => activate('btnFit') || activate('zFit') || activate('fit') || activate('railThumb') || activate('zPct');
         else if (key === 's') action = () => activate('railStar');
         else if (key === 'i') action = () => document.body.classList.contains('immersive') || document.body.classList.contains('viewer-immersive') ? activate('immersiveExit') : activate('btnPresetImmersive');
         else if (key === '+' || key === '=') action = () => activate('zIn');

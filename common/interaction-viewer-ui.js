@@ -119,6 +119,7 @@
       for (const id of ['pbPlay', 'pbStepB', 'pbRange', 'pbStepF', 'pbLoop', 'pbSpeed']) controls[id].disabled = !state.ready;
       controls.pbRange.disabled = !state.ready || !duration || state.canSeek === false;
       controls.pbStepB.disabled = controls.pbStepF.disabled = controls.pbRange.disabled;
+      controls.pbLoop.disabled = !state.ready || state.canLoop === false;
       if (!scrubbing) controls.pbRange.value = duration ? String(Math.min(1000, time / duration * 1000)) : '0';
       controls.pbTime.textContent = `${time.toFixed(2)} / ${duration.toFixed(2)}s`;
       controls.pbSpeed.value = String(state.speed || 1); controls.pbSpeedVal.textContent = Number(state.speed || 1).toFixed(2).replace(/\.?0+$/, '') + 'x';

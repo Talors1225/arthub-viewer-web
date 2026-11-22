@@ -223,8 +223,9 @@
     const fullName = name.textContent.trim();
     setAttribute(name, 'title', fullName);
     const variant = card.querySelector('.tv')?.textContent.trim();
-    setAttribute(card, 'aria-label', fullName + (variant ? ' · ' + variant : ''));
-    if (card.tagName !== 'BUTTON' && card.tagName !== 'A') {
+    const link = card.querySelector(':scope > a[href]');
+    setAttribute(link || card, 'aria-label', fullName + (variant ? ' · ' + variant : ''));
+    if (!link && card.tagName !== 'BUTTON' && card.tagName !== 'A') {
       setAttribute(card, 'role', 'button');
       setAttribute(card, 'tabindex', '0');
       if (!card.dataset.libraryKeys) {

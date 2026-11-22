@@ -1,76 +1,124 @@
 <!doctype html>
-<html lang="zh-CN" data-accent="gold">
+<html lang="zh-CN" data-accent="gold" data-gav-ui="clean" data-site-ui="1">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>棕色尘埃 2 · 有缘之客 | ArtHub</title>
   <link rel="stylesheet" href="../../common/kit.css?v=20261122-bd2-controls">
   <link rel="stylesheet" href="../../common/stage-ui.css?v=93a59d25328a">
-  <link rel="stylesheet" href="./fated.css?v=20261122-bd2-controls">
+  <link rel="stylesheet" href="../../common/library-ui.css?v=20261104-unified-final">
+  <link rel="stylesheet" href="../../common/visual.css?v=dd26cfcbf3ab">
+  <link rel="stylesheet" href="../../common/interaction-viewer-shell.css?v=20261120-effect-speed-compact">
+  <link rel="stylesheet" href="../../common/site-ui.css?v=20261117-interaction-menu">
+  <link rel="stylesheet" href="../audio-volume.css?v=20261122-unified-viewer">
+  <link rel="stylesheet" href="./fated.css?v=20261122-unified-viewer">
   <script defer src="../../arthub-cos-config.js?v=20261117-resources"></script>
   <script defer src="../../arthub-cos.js?v=20261117-resources"></script>
   <script defer src="../../common/kit.js?v=20261122-bd2-controls"></script>
   <script defer src="../../common/asset-loader.js?v=20261120-framed-thumbs"></script>
-  <script defer src="../../common/stage-ui.js?v=93a59d25328a"></script>
+  <script defer src="../../common/stage-ui.js?v=20261122-unified-viewer"></script>
+  <script defer src="../../common/library-ui.js?v=20261122-unified-viewer"></script>
+  <script defer src="../../common/interaction-viewer-ui.js?v=20261122-unified-viewer"></script>
+  <script defer src="../../common/site-ui.js?v=20261117-interaction-menu"></script>
   <script defer src="../audio-volume.js?v=20261122-bd2-controls"></script>
-  <script type="module" src="./viewer.mjs?v=20261122-bd2-controls"></script>
+  <script type="module" src="./viewer.mjs?v=20261122-unified-viewer"></script>
 </head>
-<body>
-  <main id="library">
-    <header class="library-bar">
-      <a class="action" href="../viewer/cutscene.html">‹ 普通资源库</a>
-      <div class="heading"><h1>有缘之客</h1><p id="count" role="status"></p></div>
-      <a class="action sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer">♡ 爱发电</a>
-      <input id="search" type="search" aria-label="搜索有缘之客" placeholder="搜索名称或编号" autocomplete="off">
-    </header>
-    <section id="cards" aria-label="互动立绘"></section>
-    <nav id="pages" aria-label="资源库分页" hidden>
-      <button class="action" id="previous" type="button">上一页</button>
-      <span id="page-label"></span>
-      <button class="action" id="next" type="button">下一页</button>
-    </nav>
-  </main>
-  <section id="stage" aria-label="有缘之客互动立绘" hidden>
+<body class="game-interaction-viewer fated-viewer">
+  <section class="stage" id="stage" aria-label="有缘之客互动立绘" hidden>
     <canvas id="portrait" aria-label="可点按、长按和拖动的立绘"></canvas>
+    <div class="status" id="status" role="status" aria-live="off"></div>
     <div id="gesture-hints" aria-hidden="true" hidden></div>
     <label id="score-meter" hidden>互动计量 <progress max="100" value="0"></progress><span></span></label>
     <p id="hint-status" role="status" hidden></p>
-    <button class="action return" id="back" type="button">‹ 资源库</button>
-    <div class="controls" aria-label="立绘工具">
-      <select class="action" id="tool" aria-label="选择道具" hidden></select>
-      <select class="action" id="sound-mode" aria-label="互动声音" hidden>
-        <option value="all">韩语＋音效</option>
-        <option value="effects">仅音效</option>
-        <option value="off">静音</option>
-      </select>
-      <button class="action" id="hints" type="button" aria-label="互动提示" aria-pressed="false" disabled>提示</button>
-      <button class="action" id="zoom-out" type="button" aria-label="缩小">−</button>
-      <button class="action" id="fit" type="button" aria-label="适应窗口">适应</button>
-      <button class="action" id="zoom-in" type="button" aria-label="放大">＋</button>
-      <button class="action" id="restart" type="button" aria-label="重新开始互动">重来</button>
-      <button class="action" id="more" type="button" aria-haspopup="menu" aria-expanded="false" disabled>更多</button>
-    </div>
-    <div class="portrait-tools" aria-label="动画与部件">
-      <button class="action" id="animation-browser" type="button" aria-haspopup="dialog" aria-expanded="false" hidden>动画</button>
-      <button class="action" id="next-animation" type="button" aria-label="下一动作" hidden>下一动作</button>
-      <button class="action" id="parts-button" type="button" aria-haspopup="dialog" aria-controls="parts-dialog" aria-expanded="false" hidden>部件</button>
-    </div>
     <div class="recording-bar" id="recording-bar" aria-label="视频录制" hidden>
       <span class="recording-indicator" id="recording-state" role="status">录制中</span>
       <output id="recording-time" aria-label="已录制时长" aria-live="off">0:00</output>
-      <button class="action" id="video-save" type="button">停止并保存</button>
-      <button class="action" id="video-cancel" type="button" aria-label="取消录制">取消</button>
+      <button class="ctl" id="video-save" type="button">停止并保存</button>
+      <button class="ctl" id="video-cancel" type="button" aria-label="取消录制">取消</button>
     </div>
-    <button class="action return" id="exit-immersive" type="button" hidden>退出沉浸</button>
     <div class="load" id="load" role="status" hidden>
       <p id="message"></p>
-      <button class="action" id="retry" type="button" hidden>重试</button>
+      <button class="ctl" id="retry" type="button" hidden>重试</button>
     </div>
   </section>
-  <section id="parts-dialog" class="stage-popup fated-parts-popup parts-tool-panel" hidden>
-    <div class="rp-page on">
+
+  <nav class="rail" id="rail" aria-label="ArtHub 查看器导航">
+    <button id="railGrid" type="button" title="资源库 (G)" aria-label="资源库 (G)"></button>
+    <button id="btnPrev" type="button" title="上一个 (←)" aria-label="上一个 (←)" disabled></button>
+    <button id="btnNext" type="button" title="下一个 (→)" aria-label="下一个 (→)" disabled></button>
+    <button id="railThumb" class="rail-thumb" type="button" title="适应窗口 (F)" aria-label="适应窗口 (F)" hidden></button>
+    <button id="railStar" type="button" title="收藏 (S)" aria-label="收藏 (S)" aria-pressed="false" disabled>☆</button>
+  </nav>
+  <div id="toolStrip" class="tool-strip" aria-label="舞台工具">
+    <div class="zoom-bar tool-zoom" aria-label="视图缩放">
+      <button id="zOut" type="button" title="缩小" aria-label="缩小" disabled></button>
+      <button id="zPct" class="zoom-pct" type="button" title="适应窗口" disabled>适应</button>
+      <button id="zIn" type="button" title="放大" aria-label="放大" disabled></button>
+    </div>
+    <button id="btnAnimTab" type="button" hidden disabled></button>
+    <button id="btnStagePan" type="button" data-stage-primary data-action-label="互动" aria-label="互动" aria-pressed="true" disabled></button>
+    <button id="btnPng" type="button" title="导出 PNG 立绘" disabled></button>
+    <button id="btnGif" type="button" title="录制互动视频" disabled></button>
+    <button id="btnBg" type="button" title="背景颜色 / 预设"></button>
+    <button id="btnPresetImmersive" type="button" title="沉浸模式 (I)"></button>
+  </div>
+  <footer class="playbar collapsed" id="playbar" aria-label="播放控制">
+    <button id="playbarToggle" class="playbar-toggle" type="button" aria-expanded="false" title="展开播放控制"></button>
+    <div class="playbar-controls">
+      <button id="pbPlay" class="ctl" type="button" title="暂停" aria-label="暂停"></button>
+      <button id="pbStepB" class="ctl" type="button" title="后退 1 帧"></button>
+      <input id="pbRange" type="range" min="0" max="1000" value="0" aria-label="动画进度">
+      <button id="pbStepF" class="ctl" type="button" title="前进 1 帧"></button>
+      <span class="pb-time" id="pbTime">0.00 / 0.00s</span>
+      <button id="pbLoop" class="ctl" type="button" title="循环" aria-label="循环" aria-pressed="false"></button>
+      <input id="pbSpeed" class="pb-speed" type="range" min="0.05" max="3" step="0.05" value="1" aria-label="播放倍速">
+      <span class="pb-speed-val" id="pbSpeedVal">1x</span>
+    </div>
+  </footer>
+  <button class="ctl" id="immersiveExit" type="button" hidden>退出沉浸</button>
+
+  <main id="gridView" class="library-ui open" aria-label="棕色尘埃 2 · 有缘之客资源库">
+    <header class="grid-head">
+      <a class="kit-home-action" href="../../index.html" aria-label="返回 ArtHub 首页" title="ArtHub 首页"></a>
+      <span class="grid-title">棕色尘埃 2 · 资源库</span>
+      <span class="grid-sub" id="gridSub" role="status">正在读取资源</span>
+      <div id="filterChips" aria-label="资源类型筛选">
+        <button class="filter-chip on" id="fated-library-all" type="button" aria-pressed="true">有缘之客</button>
+        <a class="filter-chip" href="../viewer/cutscene.html">普通资源库</a>
+        <button class="filter-chip library-favorites" id="fated-library-stars" type="button" aria-pressed="false">☆ 收藏 <span class="n" id="fated-star-count">0</span></button>
+        <select id="fated-sort" class="sort-sel" aria-label="排序方式">
+          <option value="default">默认顺序</option>
+          <option value="name">名称</option>
+        </select>
+        <button id="fated-sort-direction" class="sort-dir-toggle" type="button" title="当前升序，点击切换为降序">↑</button>
+      </div>
+      <input id="gridSearch" class="text-input" type="search" aria-label="搜索有缘之客" placeholder="搜索名称或编号" autocomplete="off">
+      <button id="btnTheme" class="edit-btn" type="button" title="打开主题调色板" aria-label="主题调色板"></button>
+      <a class="grid-sponsor" href="https://afdian.com/a/talors" target="_blank" rel="noopener noreferrer">爱发电</a>
+      <button id="gridClose" class="ctl" type="button" hidden>返回舞台</button>
+    </header>
+    <div class="thumb-grid" id="thumbGrid"></div>
+    <nav id="gridPagination" class="grid-pagination" aria-label="资源库分页"></nav>
+  </main>
+
+  <aside id="floatPanel" aria-label="立绘编辑面板">
+    <div class="rp-panel-head">
+      <div class="rp-tabs" role="tablist" aria-label="编辑面板分类">
+        <button class="on" type="button" data-panel-tab="anim" disabled>动画</button>
+        <button type="button" data-panel-tab="parts" disabled>部件</button>
+        <button type="button" data-panel-tab="interaction" disabled>互动</button>
+        <button type="button" data-panel-tab="voice" disabled>声音</button>
+      </div>
+      <button class="rp-panel-close" id="panel-close" type="button" title="关闭面板" aria-label="关闭面板"></button>
+    </div>
+    <div class="rp-page on" data-panel-page="anim">
+      <div class="row"><input id="animFilter" class="text-input" type="search" placeholder="搜索动画" aria-label="搜索动画" autocomplete="off" spellcheck="false"></div>
+      <select id="animation-stage" class="ctl" aria-label="动画阶段" hidden></select>
+      <div id="animList" class="anim-list" role="region" aria-label="动画列表"></div>
+    </div>
+    <div class="rp-page parts-tool-panel" id="parts-dialog" data-panel-page="parts">
       <div class="row">
-        <input class="text-input" id="fated-part-filter" type="search" aria-label="搜索部件名称" autocomplete="off" spellcheck="false">
+        <input id="fated-part-filter" class="text-input" type="search" aria-label="搜索部件名称" autocomplete="off" spellcheck="false">
         <button id="exitPartEdit" type="button" aria-pressed="false" title="点按画面，在列表中定位部件">画面点选</button>
       </div>
       <div class="parts-tools">
@@ -80,15 +128,30 @@
       </div>
       <div id="fated-parts-list" class="slot-list" role="region" aria-label="部件列表" tabindex="0"></div>
     </div>
-  </section>
-  <template id="animation-browser-template">
-    <section class="stage-popup fated-animation-popup">
-      <div class="animation-filters">
-        <select class="action" aria-label="动画阶段"></select>
-        <input class="action" type="search" aria-label="搜索动画" placeholder="搜索动画" autocomplete="off" spellcheck="false">
+    <div class="rp-page" data-panel-page="interaction">
+      <div class="interaction-content" id="interaction-panel">
+        <label class="field-label" id="fated-tool-field" hidden>道具
+          <select id="tool" aria-label="选择道具"></select>
+        </label>
+        <div class="interaction-actions">
+          <button id="hints" type="button" aria-pressed="false">互动提示</button>
+          <button id="btnNextAnimation" class="next-animation" type="button" disabled>下一步</button>
+        </div>
+        <button id="restart" type="button">重置互动</button>
       </div>
-      <div class="animation-results" role="region" aria-label="动画列表"></div>
-    </section>
-  </template>
+    </div>
+    <div class="rp-page" data-panel-page="voice">
+      <div class="interaction-content">
+        <label class="field-label">互动声音
+          <select id="sound-mode" aria-label="互动声音">
+            <option value="all">韩语＋音效</option>
+            <option value="effects">仅音效</option>
+            <option value="off">静音</option>
+          </select>
+        </label>
+        <div id="fated-voice-volume"></div>
+      </div>
+    </div>
+  </aside>
 </body>
 </html>

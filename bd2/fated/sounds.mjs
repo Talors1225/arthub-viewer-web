@@ -33,12 +33,12 @@ export class FatedSound {
     }
   }
 
-  setMode(mode) {
+  setMode(mode, unlock = true) {
     if (mode === this.mode) return;
     this.mode = mode;
     this.stopReaction();
     if (mode === 'off') this.stopAmbient();
-    else this.unlock();
+    else if (unlock) this.unlock();
   }
 
   setVolume(value) {

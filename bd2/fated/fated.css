@@ -1,103 +1,33 @@
-[hidden] { display: none !important; }
-
-#library {
-  height: 100%;
-  overflow: auto;
-  background: var(--bg);
-}
-
-.library-bar {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+.fated-viewer .fated-card-link {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px clamp(12px, 3vw, 36px);
-  border-bottom: 1px solid var(--border2);
-  background: var(--panel);
-}
-
-.heading h1 { font-size: 22px; color: var(--accent); }
-.heading p { color: var(--text-dim); }
-.action, #search {
-  min-height: 40px;
-  padding: 8px 12px;
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  background: var(--panel2);
-  color: var(--text);
-  font: inherit;
-}
-.action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
+  flex: 1;
+  flex-direction: column;
+  color: inherit;
   text-decoration: none;
+}
+.fated-viewer #gridView .thumb-card { position: relative; }
+.fated-viewer #gridView .tstar {
+  position: absolute;
+  z-index: 1;
+  padding: 6px;
+  border: 0;
   cursor: pointer;
 }
-.action:hover { color: var(--accent); border-color: var(--accent); }
-.action:disabled { opacity: .4; cursor: default; }
-.sponsor { margin-left: auto; color: var(--accent); }
-#search { width: min(25vw, 260px); }
+#gridView .thumb-card:focus-within { outline: 2px solid var(--accent); }
+#gridView .filter-chip[href] { text-decoration: none; }
+#gridView .fated-library-empty { grid-column: 1 / -1; padding: 18px; color: var(--text-dim); }
 
-#cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 172px), 1fr));
-  gap: 14px;
-  padding: 20px clamp(12px, 3vw, 36px);
-}
-.card {
-  display: grid;
-  overflow: hidden;
-  border: 1px solid var(--border2);
-  border-radius: 14px;
-  background: var(--panel);
-  color: var(--text);
-  text-decoration: none;
-}
-.card:hover { border-color: var(--accent); color: var(--accent); }
-.card img {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: contain;
-  background: var(--panel2);
-}
-.card strong { padding: 10px 12px; font-size: 14px; }
-#pages { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 0 12px 24px; }
-
-#stage {
-  --animation-bottom: max(12px, env(safe-area-inset-bottom));
-  position: fixed;
-  inset: 0;
-  background: #000;
-  touch-action: none;
-}
-#stage[data-immersive] > :is(#back, .controls, .portrait-tools, #gesture-hints, #hint-status, #score-meter) { display: none; }
-#portrait {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
+.fated-viewer #portrait {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
-#stage[data-video-recording] #portrait {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(100%, calc(100dvh * var(--video-aspect)));
-  height: auto;
-  transform: translate(-50%, -50%);
-}
-#stage[data-video-recording] :is(#zoom-out, #fit, #zoom-in, #more, #parts-button) { display: none; }
-#stage[data-picking-parts] #portrait { cursor: crosshair; }
-#stage[data-picking-parts] > :is(#gesture-hints, #hint-status) { visibility: hidden; }
-#portrait[data-hotspot="true"] { cursor: pointer; }
-#portrait[data-gesture="drag"] { cursor: grabbing; }
+.fated-viewer #stage[data-picking-parts] #portrait { cursor: crosshair; }
+.fated-viewer #stage[data-picking-parts] > :is(#gesture-hints, #hint-status) { visibility: hidden; }
+.fated-viewer #portrait[data-hotspot="true"] { cursor: pointer; }
+.fated-viewer #portrait[data-gesture="drag"] { cursor: grabbing; }
 #hints[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
 #gesture-hints { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .gesture-marker, .drop-marker {
   position: absolute;
@@ -131,130 +61,52 @@
   white-space: nowrap;
 }
 .gesture-marker.label-left span, .drop-marker.label-left span { left: auto; right: 23px; }
-#hint-status {
+#hint-status, #score-meter {
   position: absolute;
-  bottom: calc(var(--animation-bottom) + 52px);
-  left: max(12px, env(safe-area-inset-left));
-  max-width: calc(100% - 120px);
-  padding: 8px 12px;
+  left: max(16px, env(safe-area-inset-left));
+  padding: 6px 9px;
+  border: 1px solid var(--border2);
   border-radius: 9px;
   color: var(--text);
-  background: #141922e8;
+  background: var(--panel);
+  font-size: 12px;
   pointer-events: none;
 }
+#hint-status {
+  bottom: var(--stage-panel-bottom, 76px);
+  max-width: min(440px, calc(100% - 32px));
+}
 #score-meter {
-  position: absolute;
-  left: max(12px, env(safe-area-inset-left));
-  top: calc(max(12px, env(safe-area-inset-top)) + 52px);
+  top: calc(max(16px, env(safe-area-inset-top)) + 110px);
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 9px;
-  border-radius: 9px;
-  color: var(--text);
-  background: #141922e8;
-  pointer-events: none;
 }
 #score-meter progress { width: 82px; accent-color: var(--accent); }
 #score-meter span { min-width: 45px; font-variant-numeric: tabular-nums; }
 .gesture-marker[data-priority="score"] { border-color: var(--accent); }
-.return, .controls { position: absolute; top: max(12px, env(safe-area-inset-top)); }
-.return { left: max(12px, env(safe-area-inset-left)); }
-.controls {
-  right: max(12px, env(safe-area-inset-right));
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-  max-width: calc(100% - 116px);
+.fated-viewer.viewer-immersive :is(#gesture-hints, #hint-status, #score-meter) { display: none; }
+
+#animation-stage { width: 100%; margin-bottom: 8px; }
+.fated-viewer #floatPanel #exitPartEdit { width: auto; margin: 0; }
+.fated-viewer #floatPanel #parts-dialog { min-height: 0; }
+.fated-viewer #floatPanel #fated-parts-list { touch-action: pan-y; }
+.fated-viewer #floatPanel .interaction-content .field-label select { margin-top: 4px; }
+
+/* The recording surface follows the encoded aspect ratio, including on phones. */
+html[data-site-ui="1"] body.fated-viewer #stage[data-video-recording] > #portrait {
+  inset: 50% auto auto 50%;
+  width: min(100%, calc(100dvh * var(--video-aspect))) !important;
+  height: auto !important;
+  transform: translate(-50%, -50%);
 }
-#more { gap: 5px; }
-#more[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
-.portrait-tools {
-  position: absolute;
-  left: max(12px, env(safe-area-inset-left));
-  bottom: var(--animation-bottom);
-  gap: 6px;
-  display: flex;
+.fated-viewer:has(#stage[data-video-recording]) :is(#rail, #toolStrip, #playbar, #siteMobileDock, #status, #siteTitleFavorite) {
+  display: none !important;
 }
-.portrait-tools .action {
-  gap: 6px;
-  min-height: 44px;
-  background: var(--panel);
-  color: var(--accent);
-}
-.portrait-tools .action[aria-expanded="true"] { border-color: var(--accent); }
-.stage-popup.fated-animation-popup {
-  position: fixed;
-  flex-direction: column;
-  align-items: stretch;
-  width: min(324px, calc(100vw - 16px));
-  background: var(--panel);
-}
-.animation-filters {
-  display: grid;
-  grid-template-columns: minmax(94px, 1fr) minmax(0, 1.2fr);
-  gap: 6px;
-}
-.animation-filters .action { width: 100%; min-width: 0; padding-inline: 8px; }
-.animation-filters input { cursor: text; }
-.animation-results {
-  max-height: min(340px, 42dvh);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-}
-.animation-group h3 {
-  position: sticky;
-  top: 0;
-  padding: 8px 5px 5px;
-  color: var(--text-dim);
-  background: var(--panel);
-  font-size: 12px;
-  font-weight: 600;
-}
-.animation-group .animation-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  width: 100%;
-  min-height: 36px;
-  margin-bottom: 3px;
-  padding-inline: 8px;
-  text-align: left;
-}
-.animation-option[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent-dim-bg);
-}
-.animation-option .animation-name { min-width: 0; }
-.animation-option .animation-kind { flex: none; color: var(--text-dim); font-size: 11px; }
-.animation-empty { padding: 9px 5px; color: var(--text-dim); }
-.stage-popup.fated-parts-popup {
-  position: fixed;
-  flex-direction: column;
-  align-items: stretch;
-  width: min(324px, calc(100vw - 16px));
-  height: min(440px, 56dvh);
-  overflow: hidden;
-  background: var(--panel);
-}
-.fated-parts-popup .rp-page { padding: 5px 2px 0; }
-.fated-parts-popup .parts-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
-.fated-parts-popup .parts-actions button { padding-inline: 0; }
-.fated-parts-popup .parts-list { touch-action: pan-y; }
-.fated-tool-popup { position: fixed; }
-.fated-tool-popup .bd2-volume { width: min(280px, calc(100vw - 44px)); gap: 10px; min-height: 40px; }
-.fated-tool-popup .bd2-volume input { flex: 1; min-width: 0; accent-color: var(--accent); }
-.fated-tool-popup .bd2-volume span { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
-.fated-tool-popup .video-options { gap: 12px; align-items: stretch; }
-.video-options select { width: 100%; }
-.video-options p { color: var(--text-dim); white-space: normal; }
-.video-options .record-start { min-height: 42px; color: var(--accent); }
 .recording-bar {
   position: absolute;
-  top: calc(max(12px, env(safe-area-inset-top)) + 52px);
+  z-index: 3;
+  top: max(16px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -280,9 +132,11 @@
   background: #f27676;
 }
 #recording-time { min-width: 2.4em; font-variant-numeric: tabular-nums; }
-.recording-bar .action { min-height: 36px; }
-.fated-background-note { color: var(--text-dim); font-size: 12px; line-height: 1.5; }
-.site-more-menu > button[role="menuitem"] { min-height: 38px; }
+.recording-bar .ctl { min-height: 36px; }
+.stage-popup .video-options { gap: 12px; align-items: stretch; }
+.video-options select { width: 100%; }
+.video-options p { color: var(--text-dim); white-space: normal; }
+.video-options .record-start { min-height: 42px; color: var(--accent); }
 .load {
   position: absolute;
   top: 50%;
@@ -298,48 +152,12 @@
 }
 .load button { margin-top: 8px; }
 
-@media (max-width: 600px) and (orientation: portrait) {
-  .library-bar { flex-wrap: wrap; gap: 8px; }
-  .heading h1 { font-size: 18px; }
-  #search { width: 100%; }
-  #cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 12px; }
-  #stage:not([data-immersive], [data-video-recording]) #portrait {
-    height: calc(100% - var(--animation-bottom) - 148px);
+@media (max-width: 720px) {
+  #score-meter { top: calc(max(10px, env(safe-area-inset-top)) + 34px); }
+  .recording-bar .ctl { min-height: 44px; }
+  html[data-site-ui="1"] body.fated-viewer #siteMobileDock #btnStagePan {
+    flex-direction: column;
+    gap: 1px;
   }
-  .controls {
-    top: auto;
-    bottom: calc(var(--animation-bottom) + 49px);
-    left: max(12px, env(safe-area-inset-left));
-    max-width: none;
-  }
-  .controls .action { min-width: 44px; min-height: 44px; }
-  #hint-status { bottom: calc(var(--animation-bottom) + 148px); max-width: calc(100% - 24px); }
-  .stage-popup.fated-animation-popup { width: min(324px, calc(100vw - 144px)); }
-  .stage-popup.fated-parts-popup { height: min(360px, 46dvh); }
-  #stage[data-video-recording] ~ .fated-animation-popup .animation-results { max-height: min(300px, 32dvh); }
-  #stage[data-video-recording] { --animation-bottom: calc(max(12px, env(safe-area-inset-bottom)) + 100px); }
-  #stage[data-video-recording] .controls { bottom: max(12px, env(safe-area-inset-bottom)); }
-  .recording-bar .action { min-height: 44px; padding-inline: 8px; }
-  .site-more-menu > button[role="menuitem"] { min-height: 44px; }
+  .fated-viewer #siteMobileDock #btnStagePan .arthub-action-label { font-size: 10px; line-height: 12px; }
 }
-@media (max-width: 600px), (pointer: coarse) {
-  .animation-filters .action { font-size: 16px; }
-  .animation-group .animation-option { min-height: 44px; }
-  #parts-dialog .parts-search-row .text-input { font-size: 16px; }
-}
-@media (max-width: 360px) {
-  .animation-filters { grid-template-columns: minmax(0, 1fr); }
-}
-
-/* Keep mobile controls aligned while retaining room for the artwork. */
-@media (max-width:600px) and (orientation:portrait) {
- .controls > .action { box-sizing:border-box; height:44px; min-height:44px; justify-content:center; }
- .controls > select { width:96px; }
- .portrait-tools .action { box-sizing:border-box; width:84px; height:44px; justify-content:center; }
-}
-
-#stage .controls > .action, .portrait-tools .action {
- text-align:center; text-align-last:center; justify-content:center;
- padding:5px 8px; border-radius:8px; font-size:13px;
-}
-@media (max-width:600px) and (orientation:portrait) { #stage .controls {gap:5px;} }

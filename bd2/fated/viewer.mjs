@@ -18,8 +18,8 @@ function animationGroupsFor(picture) {
   const groups = [...grouped.values()].sort((a, b) => Number(a.key === 'other') - Number(b.key === 'other') || a.key.localeCompare(b.key, 'en', { numeric: true }));
   return groups;
 }
-import { FatedGestures } from './gestures.mjs?v=20261117-resources';
-import { FatedSound } from './sounds.mjs?v=20261122-bd2-controls';
+import { FatedGestures } from './gestures.mjs?v=20261122-unified-viewer';
+import { FatedSound } from './sounds.mjs?v=20261122-unified-viewer';
 import { startVideoCapture, VIDEO_FPS, VIDEO_LIMIT } from './video.mjs?v=20261120-recording-surface';
 
 const backgroundMattes = { B_BG_black: ['B_BG_black', 'B_BG_black2', 'B_BG_black3', 'B_BG_black4'] };
@@ -90,27 +90,33 @@ function createPartTarget(skeleton, spine) {
 
 const K = window.SpineKit;
 const $ = id => document.getElementById(id);
-const library = $('library'), stage = $('stage'), canvas = $('portrait');
-const search = $('search'), cards = $('cards'), tool = $('tool');
+const library = $('gridView'), stage = $('stage'), canvas = $('portrait');
+const search = $('gridSearch'), cards = $('thumbGrid'), tool = $('tool');
+const sort = $('fated-sort'), sortDirection = $('fated-sort-direction');
+const libraryAll = $('fated-library-all'), libraryStars = $('fated-library-stars');
 const soundControl = $('sound-mode');
 const hints = $('hints'), hintLayer = $('gesture-hints'), hintStatus = $('hint-status');
 const scoreMeter = $('score-meter'), scoreBar = scoreMeter.querySelector('progress'), scoreText = scoreMeter.querySelector('span');
-const controls = stage.querySelector('.controls');
-const more = $('more'), exitImmersive = $('exit-immersive');
-const animationBrowser = $('animation-browser'), nextAnimation = $('next-animation');
-const partsButton = $('parts-button'), partsDialog = $('parts-dialog'), pickButton = $('exitPartEdit');
+const panel = $('floatPanel'), panelTabs = [...panel.querySelectorAll('[data-panel-tab]')];
+const animationStage = $('animation-stage'), partsDialog = $('parts-dialog'), pickButton = $('exitPartEdit');
+const interactButton = $('btnStagePan'), immersiveExit = $('immersiveExit'), starButton = $('railStar');
+const zoomButtons = [$('zOut'), $('zPct'), $('zIn')];
+const exportButtons = [$('btnPng'), $('btnGif')];
 const recordingBar = $('recording-bar'), recordingTime = $('recording-time');
 const store = K.Store('bd2-fated');
 const volume = window.ArtHubBd2Volume;
 const stageBackground = K.createStageBackground({ stage, read: () => store.get('bg', '#000000'), write: color => store.set('bg', color) });
 const markers = new Map();
+const nameOrder = new Intl.Collator('zh-CN', { numeric: true });
+const moreButton = () => document.querySelector('.kit-more-tool');
 let guideOn = false, lastGuideFrame = -Infinity;
 let authoredRules;
 let audioRoot, audioManifest, soundMode = 'all';
 const initialParams = new URLSearchParams(location.search);
 const probe = initialParams.get('probe') === '1' && ['127.0.0.1', 'localhost'].includes(location.hostname);
-const pageSize = 12;
-let models = [], page = 1, assetsRoot, request, scene, gl, runtime, lastFrame = 0;
+let models = [], libraryMatches = [], favoritesOnly = false, descending = store.get('descending', false);
+let page = 1, assetsRoot, request, activeModel, scene, gl, runtime, lastFrame = 0;
+let interactive = true, playing = true, playbackSpeed = 1;
 let pan = null, interactionTouch = null, partTap = null;
 let routePending = false;
 let videoRecording = null;
@@ -126,36 +132,110 @@ function asset(path) {
   return new URL(path, assetsRoot).href;
 }
 
+function starredIds() {
+  return new Set(store.get('stars', []));
+}
+
+function updateResourceNavigation() {
+  const starred = starredIds().has(activeModel?.id);
+  starButton.setAttribute('aria-pressed', String(starred));
+  starButton.classList.toggle('on', starred);
+  starButton.innerHTML = K.uiIcon('star', 18, starred);
+  starButton.disabled = !activeModel;
+  const list = libraryMatches.includes(activeModel) ? libraryMatches : models;
+  const index = list.indexOf(activeModel);
+  for (const [id, model] of [['btnPrev', list[index - 1]], ['btnNext', list[index + 1]]]) {
+    const button = $(id);
+    button.disabled = index < 0 || !model;
+    button.onclick = model ? () => navigate(model.id) : null;
+  }
+}
+
+function toggleFavorite(id) {
+  const stars = starredIds();
+  if (!stars.delete(id)) stars.add(id);
+  store.set('stars', [...stars]);
+  renderLibrary();
+  K.refreshStageUI?.();
+}
+
+function libraryCard(model, starred) {
+  const card = document.createElement('article');
+  card.className = 'thumb-card';
+  card.classList.toggle('selected', model === activeModel);
+  const link = document.createElement('a');
+  link.className = 'fated-card-link';
+  link.href = modelURL(model.id);
+  const image = document.createElement('div');
+  image.className = 'ph';
+  K.setPreview(image, K.thumbnailURL(model.thumbnail ? K.siteRoot() + 'thumbs/' + model.thumbnail : asset('thumbs/' + model.id + '.webp')));
+  const meta = document.createElement('div'), name = document.createElement('div');
+  meta.className = 'tm';
+  name.className = 'tn';
+  name.textContent = model.name;
+  meta.append(name);
+  link.append(image, meta);
+  link.onclick = event => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    navigate(model.id);
+  };
+  const star = document.createElement('button');
+  star.type = 'button';
+  star.className = 'tstar' + (starred ? ' on' : '');
+  star.innerHTML = K.uiIcon('star', 18, starred);
+  star.onclick = () => toggleFavorite(model.id);
+  card.append(link, star);
+  return card;
+}
+
+function renderPagination(total) {
+  for (const nav of K.paginationHosts(library)) {
+    nav.hidden = total <= 1;
+    nav.replaceChildren();
+    if (nav.hidden) continue;
+    const pages = Array.from({ length: total }, (_, index) => [String(index + 1), index + 1]);
+    for (const [label, target] of [['‹', page - 1], ...pages, ['›', page + 1]]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'grid-page-btn' + (target === page ? ' on' : '');
+      button.textContent = label;
+      button.disabled = target < 1 || target > total;
+      if (target === page) button.setAttribute('aria-current', 'page');
+      button.onclick = () => {
+        page = target;
+        renderLibrary();
+        library.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      nav.append(button);
+    }
+  }
+}
+
 function renderLibrary() {
   const query = search.value.trim().toLocaleLowerCase();
-  const matches = models.filter(model =>
+  const stars = starredIds();
+  const matches = models.filter(model => (!favoritesOnly || stars.has(model.id)) &&
     [model.name, model.id, model.prefab].join(' ').toLocaleLowerCase().includes(query));
+  if (sort.value === 'name') matches.sort((a, b) => nameOrder.compare(a.name, b.name));
+  if (descending) matches.reverse();
+  libraryMatches = matches;
+  const pageSize = K.libraryPageSize();
   const pages = Math.max(1, Math.ceil(matches.length / pageSize));
   page = Math.min(page, pages);
-  cards.replaceChildren();
-  $('count').textContent = matches.length ? matches.length + ' 套互动立绘' : '没有符合条件的立绘';
-  for (const model of matches.slice((page - 1) * pageSize, page * pageSize)) {
-    const link = document.createElement('a');
-    link.className = 'card';
-    link.href = modelURL(model.id);
-    const image = document.createElement('img');
-    image.src = K.thumbnailURL(model.thumbnail ? K.siteRoot() + 'thumbs/' + model.thumbnail : asset('thumbs/' + model.id + '.webp'));
-    image.alt = '';
-    image.loading = 'lazy';
-    const label = document.createElement('strong');
-    label.textContent = model.name;
-    link.append(image, label);
-    link.addEventListener('click', event => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      navigate(model.id);
-    });
-    cards.appendChild(link);
+  cards.replaceChildren(...matches.slice((page - 1) * pageSize, page * pageSize).map(model => libraryCard(model, stars.has(model.id))));
+  $('gridSub').textContent = matches.length + ' 个资源';
+  $('fated-star-count').textContent = String(models.filter(model => stars.has(model.id)).length);
+  libraryAll.classList.toggle('on', !favoritesOnly);
+  libraryStars.classList.toggle('on', favoritesOnly);
+  if (!matches.length) {
+    const empty = document.createElement('p');
+    empty.className = 'fated-library-empty';
+    empty.textContent = favoritesOnly && !query ? '暂无收藏资源' : '没有符合条件的立绘';
+    cards.append(empty);
   }
-  $('pages').hidden = pages <= 1;
-  $('page-label').textContent = page + ' / ' + pages;
-  $('previous').disabled = page <= 1;
-  $('next').disabled = page >= pages;
+  renderPagination(pages);
+  updateResourceNavigation();
 }
 
 function setMessage(text, retry = false) {
@@ -178,30 +258,52 @@ function dispose() {
   request?.abort();
   K.hideMenu();
   K.closeToolPopup();
+  closePanel();
   setImmersive(false);
   cancelInput();
   scene?.sound?.dispose();
   for (const extra of scene?.extraAtlases || []) if (extra !== scene.atlas) K.disposeAtlas(extra);
   K.disposeAtlas(scene?.atlas);
   scene = null;
-  tool.hidden = true;
-  soundControl.hidden = true;
+  activeModel = null;
+  $('fated-tool-field').hidden = true;
   scoreMeter.hidden = true;
-  hints.disabled = true;
-  more.disabled = true;
-  animationBrowser.hidden = true;
-  nextAnimation.hidden = true;
-  partsButton.hidden = true;
+  setStageReady(false);
+  animationStage.hidden = true;
+  animationStage.replaceChildren();
+  $('animFilter').value = '';
+  playbackUI.refreshAnimations();
   clearGuide();
   delete canvas.dataset.ready;
 }
 
-function showLibrary() {
-  dispose();
+function showLibrary(keepCurrent = false) {
+  if (keepCurrent && canvas.dataset.ready) {
+    closePanel();
+    K.hideMenu();
+    K.closeToolPopup();
+    cancelInput();
+    scene.sound?.setMode('off');
+  } else dispose();
   stage.hidden = true;
-  library.hidden = false;
+  library.classList.add('open');
+  K.setLibraryStageReady(Boolean(canvas.dataset.ready));
   document.title = '棕色尘埃 2 · 有缘之客 | ArtHub';
   renderLibrary();
+}
+
+function showStage(model) {
+  library.classList.remove('open');
+  K.closeThemePalette();
+  stage.hidden = false;
+  document.title = model.name + ' · 棕色尘埃 2 | ArtHub';
+  K.refreshStageUI?.();
+}
+
+function closeLibrary() {
+  if (!scene || !canvas.dataset.ready) return;
+  scene.sound?.setMode(soundMode, Boolean(scene.sound.context));
+  showStage(scene.model);
 }
 
 function updateTools() {
@@ -214,7 +316,7 @@ function updateTools() {
   }
   const selected = String(gestures.tool.id);
   if (tool.value !== selected) tool.value = selected;
-  tool.hidden = options.length <= 1;
+  $('fated-tool-field').hidden = options.length <= 1;
   tool.disabled = gestures.toolLocked;
 }
 
@@ -222,7 +324,7 @@ function resize() {
   if (!gl || stage.hidden || K.pngExporting || videoRecording?.capturing) return;
   K.resizeCanvas(canvas, gl.renderer);
   K.syncRendererSize(canvas, gl.mgl, gl.renderer);
-  fit();
+  fit(undefined, true);
 }
 
 function portraitFrame({ model, bounds, gestures, state }, forExport = false) {
@@ -234,18 +336,21 @@ function portraitFrame({ model, bounds, gestures, state }, forExport = false) {
 
 function fit(frame = scene && portraitFrame(scene), preserveView = false) {
   if (!scene || videoRecording?.capturing) return;
-  const { skeleton, displayFrame, fitScale } = scene;
+  const { skeleton, displayFrame, fitScale, viewArea } = scene;
+  const area = K.stageViewArea(canvas);
   const width = frame.maxX - frame.minX, height = frame.maxY - frame.minY;
-  const scale = Math.min(canvas.width * 0.93 / width, canvas.height * 0.91 / height);
-  const keep = preserveView && displayFrame && fitScale;
+  const scale = 0.97 * Math.min(area.pixelWidth / width, area.pixelHeight / height);
+  const keep = preserveView && displayFrame && fitScale && viewArea;
   const zoom = keep ? skeleton.scaleX / fitScale : 1;
-  const panX = keep ? skeleton.x + (displayFrame.minX + displayFrame.maxX) * skeleton.scaleX / 2 : 0;
-  const panY = keep ? skeleton.y + (displayFrame.minY + displayFrame.maxY) * skeleton.scaleY / 2 : 0;
+  const panX = keep ? skeleton.x + (displayFrame.minX + displayFrame.maxX) * skeleton.scaleX / 2 - viewArea.offsetX : 0;
+  const panY = keep ? skeleton.y + (displayFrame.minY + displayFrame.maxY) * skeleton.scaleY / 2 - viewArea.offsetY : 0;
   scene.fitScale = scale;
   scene.displayFrame = frame;
+  scene.viewArea = area;
   skeleton.scaleX = skeleton.scaleY = scale * zoom;
-  skeleton.x = panX - (frame.minX + frame.maxX) * skeleton.scaleX / 2;
-  skeleton.y = panY - (frame.minY + frame.maxY) * skeleton.scaleY / 2;
+  skeleton.x = area.offsetX + panX - (frame.minX + frame.maxX) * skeleton.scaleX / 2;
+  skeleton.y = area.offsetY + panY - (frame.minY + frame.maxY) * skeleton.scaleY / 2;
+  $('zPct').textContent = Math.round(zoom * 100) + '%';
 }
 
 function toWorld(clientX, clientY) {
@@ -273,11 +378,11 @@ function clearGuide() {
 }
 
 function updateGuide(t) {
-  if (!guideOn || t - lastGuideFrame < 34) return;
+  if (!guideOn || !interactive || t - lastGuideFrame < 34) return;
   lastGuideFrame = t;
   const rect = canvas.getBoundingClientRect();
-  const occlusions = [controls, $('back'), animationBrowser, nextAnimation, scoreMeter, recordingBar]
-    .filter(element => !element.hidden).map(element => element.getBoundingClientRect());
+  const occlusions = [...document.querySelectorAll('#rail, #toolStrip, #siteMobileDock, #playbar, #floatPanel.open, #status, #score-meter, #recording-bar')]
+    .map(element => element.getBoundingClientRect()).filter(box => box.width && box.height);
   const usable = ({ x, y }) => x >= rect.left + 14 && x <= rect.right - 14 &&
     y >= rect.top + 14 && y <= rect.bottom - 14 &&
     !occlusions.some(box => x >= box.left - 12 && x <= box.right + 12 && y >= box.top - 12 && y <= box.bottom + 12);
@@ -325,13 +430,16 @@ function zoom(factor, x, y) {
   skeleton.x = anchor.x + (skeleton.x - anchor.x) * scale / old;
   skeleton.y = anchor.y + (skeleton.y - anchor.y) * scale / old;
   skeleton.scaleX = skeleton.scaleY = scale;
+  $('zPct').textContent = Math.round(scale / fitScale * 100) + '%';
 }
 
 async function showModel(model) {
   dispose();
-  library.hidden = true;
-  stage.hidden = false;
-  document.title = model.name + ' · 棕色尘埃 2 | ArtHub';
+  activeModel = model;
+  playing = true;
+  $('status').textContent = model.name;
+  showStage(model);
+  updateResourceNavigation();
   canvas.setAttribute('aria-label', model.name + ' · 可点按、长按和拖动的互动立绘');
   setMessage('正在加载 ' + model.name);
   const controller = request = new AbortController();
@@ -373,7 +481,6 @@ async function showModel(model) {
       model, skeleton, state, gestures, bounds, atlas, sound, pma: Boolean(atlas.pages[0].pma),
       mattes: findFrameMattes(model, skeleton),
       partTarget: createPartTarget(skeleton, SP),
-      animationPicker: { group: '', query: '', scroll: 0 },
     };
     atlas = null;
     if (model.groupAssets) {
@@ -411,17 +518,24 @@ async function showModel(model) {
           for (const key of ['x','y','scaleX','scaleY']) target.skeleton[key] = activeScene.skeleton[key];
           target.gestures.enterGroup(next, transition);
           Object.assign(activeScene, target);
-          if (!partsDialog.hidden) partsPanel.refresh();
+          if (canvas.dataset.ready) setStageReady(true);
+          if (panel.classList.contains('open') && partsDialog.classList.contains('on')) partsPanel.refresh();
           return true;
         };
       }
     }
     scene.loadingVariants = false;
-    partsButton.hidden = !scene.partTarget.parts.length;
-    soundControl.hidden = !sound;
+    const groups = animationGroupsFor(scene);
+    scene.animationGroups = groups;
+    scene.animationClips = new Map(groups.flatMap(group => group.clips.map(clip => [clip.name, clip])));
+    animationStage.replaceChildren(new Option('全部阶段', ''),
+      ...groups.map(group => new Option(group.label, group.key)));
+    animationStage.hidden = groups.length < 2;
+    $('status').textContent = model.name + ' · ' + scene.animationClips.size + ' 个动作';
     soundControl.value = soundMode;
     resize();
     updateTools();
+    playbackUI.refreshAnimations();
   } catch (error) {
     if (!signal.aborted) setMessage('加载失败 · ' + error.message, true);
   } finally {
@@ -442,6 +556,10 @@ function renderRoute() {
 }
 
 function navigate(id) {
+  if (scene?.model.id === id && canvas.dataset.ready) {
+    if (library.classList.contains('open')) closeLibrary();
+    return;
+  }
   history.pushState(null, '', modelURL(id));
   renderRoute();
 }
@@ -497,10 +615,10 @@ function renderFrame(t) {
   const dt = lastFrame ? Math.min((t - lastFrame) / 1000, 0.1) : 0;
   lastFrame = t;
   if (!gl || document.hidden || stage.hidden || K.pngExporting || gl.mgl.gl.isContextLost()) return;
-  if (!scene) { drawPortrait(null); return; }
+  if (!scene || scene.loadingVariants) { drawPortrait(null); return; }
+  if (playing) scene.gestures.tick(t, dt);
   const { state, skeleton, gestures } = scene;
-  gestures.tick(t, dt);
-  state.update(dt);
+  if (playing) state.update(dt * playbackSpeed);
   state.apply(skeleton);
   const recording = videoRecording?.capturing;
   if (recording) syncVideoFrame(videoRecording);
@@ -511,7 +629,7 @@ function renderFrame(t) {
   const updateWorld = () => K.updateWorldTransform(skeleton, runtime.Physics?.update);
   updateWorld();
   gestures.applyOverrides(updateWorld);
-  gestures.updateDragDestination(t);
+  if (playing) gestures.updateDragDestination(t);
   if (!gestures.gesture?.dragging) delete canvas.dataset.gesture;
   if (!captureVideoFrame(t)) {
     drawPortrait(scene, !recording, recording ? videoRecording.clearColor : null);
@@ -529,13 +647,10 @@ function renderFrame(t) {
   }
   if (!canvas.dataset.ready) {
     canvas.dataset.ready = 'true';
-    hints.disabled = false;
-    animationBrowser.hidden = !gestures.animationGroups.length;
-    nextAnimation.hidden = animationBrowser.hidden;
-    nextAnimation.disabled = K.pngExporting || animationGroupsFor(scene).flatMap(group => group.clips).length < 2;
-    more.disabled = Boolean(videoRecording);
+    setStageReady(true);
     setMessage('');
   }
+  playbackUI.update();
   updateGuide(t);
 }
 
@@ -573,7 +688,7 @@ async function exportPortrait(quality, transparent, copy = false) {
   if (!scene || !canvas.dataset.ready || K.pngExporting || videoRecording) return;
   const picture = scene, { width, height } = canvas, { mgl, renderer } = gl;
   K.closeToolPopup();
-  more.focus({ preventScroll: true });
+  moreButton()?.focus({ preventScroll: true });
   try {
     const applyWorldPose = captureWorldPose(picture.skeleton);
     const pose = pngPose(quality);
@@ -612,6 +727,7 @@ function restoreVideoView(session) {
   clearTimeout(session.limitTimer);
   recordingBar.hidden = true;
   delete stage.dataset.videoRecording;
+  delete document.body.dataset.viewerExporting;
   stage.style.removeProperty('--video-aspect');
   if (scene !== session.picture) return;
   cancelInput();
@@ -651,7 +767,6 @@ async function completeVideoRecording(session) {
     restoreVideoView(session);
     session.audio?.release();
     videoRecording = null;
-    more.disabled = !canvas.dataset.ready;
   }
 }
 
@@ -693,13 +808,13 @@ async function recordPortrait(quality, withAudio) {
   const frame = portraitExportFrame(scene);
   const session = videoRecording = { picture: scene, frame, view, controller, clearColor, capturing: true };
   K.closeToolPopup();
-  more.disabled = true;
   try {
     const size = K.exportDimensions(frame, quality, 'video', 0);
     const applyWorldPose = captureWorldPose(skeleton);
     cancelInput();
     stage.style.setProperty('--video-aspect', String(size.width / size.height));
     stage.dataset.videoRecording = 'true';
+    document.body.dataset.viewerExporting = 'true';
     canvas.width = size.width;
     canvas.height = size.height;
     const raw = gl.mgl.gl;
@@ -733,7 +848,6 @@ async function recordPortrait(quality, withAudio) {
     restoreVideoView(session);
     session.audio?.release();
     videoRecording = null;
-    more.disabled = !canvas.dataset.ready;
     if (K.isAbort(error)) K.toast('已取消录制', 'info');
     else K.toast('无法开始录制 · ' + error.message, 'err');
   }
@@ -741,7 +855,7 @@ async function recordPortrait(quality, withAudio) {
 
 function mountVideoOptions(panel) {
   panel.innerHTML = '<div class="col video-options"><label for="video-quality">画质</label>'
-    + '<select class="action" id="video-quality"></select>'
+    + '<select class="ctl" id="video-quality"></select>'
     + '<label><input id="video-audio" type="checkbox"> 录入互动声音</label>'
     + '<p role="status">录制时可以点按、拖拽，最长 ' + VIDEO_LIMIT + ' 秒。</p>'
     + '<button class="record-start" type="button">开始录制</button></div>';
@@ -772,21 +886,12 @@ function mountVideoOptions(panel) {
   };
 }
 
-function openToolPanel(title, mount) {
-  const panel = document.createElement('div');
-  panel.className = 'stage-popup fated-tool-popup';
-  mount(panel);
-  document.body.append(panel);
-  K.attachPopupChrome(panel, { button: more, title, close: () => panel.remove() });
-}
-
 const partsPanel = K.mountPartsPanel({
   listEl: $('fated-parts-list'),
   filterEl: $('fated-part-filter'),
   allEl: $('fated-parts-show'),
   noneEl: $('fated-parts-hide'),
   invEl: $('fated-parts-invert'),
-  inlineActions: true,
   getTargets: () => scene ? [scene.partTarget] : [],
 });
 
@@ -817,191 +922,216 @@ function pickPart(clientX, clientY) {
   }
 }
 
-function openPartsPanel() {
-  if (!scene || !canvas.dataset.ready || scene.loadingVariants || K.pngExporting || videoRecording) return;
-  if (!partsDialog.hidden) { K.closeToolPopup(); return; }
-  partsPanel.refresh();
-  partsDialog.hidden = false;
-  partsButton.setAttribute('aria-expanded', 'true');
-  K.attachPopupChrome(partsDialog, {
-    button: partsButton,
-    title: '部件',
-    keepOpenOnPointer: target => partsButton.contains(target) || target === canvas && stage.hasAttribute('data-picking-parts'),
-    close() {
-      setPartPicking(false);
-      partsButton.setAttribute('aria-expanded', 'false');
-      partsDialog.hidden = true;
-      partsDialog.querySelector('.arthub-popup-head')?.remove();
-    },
-  });
+function closePanel() {
+  panel.classList.remove('open');
+  document.body.classList.remove('interaction-open');
+  if (stage.hasAttribute('data-picking-parts')) setPartPicking(false);
 }
 
-function openAnimationBrowser() {
-  if (!scene || !canvas.dataset.ready || K.pngExporting) return;
-  const picture = scene;
-  const { gestures, animationPicker } = picture;
-  const panel = $('animation-browser-template').content.firstElementChild.cloneNode(true);
-  const groupFilter = panel.querySelector('select');
-  const query = panel.querySelector('input');
-  const results = panel.querySelector('.animation-results');
-  const groups = animationGroupsFor(picture);
-  groupFilter.append(new Option('全部', ''),
-    ...groups.map(group => new Option(group.key === 'other' ? '其他' : group.label, group.key)));
-  groupFilter.value = animationPicker.group;
-  query.value = animationPicker.query;
-
-  function renderAnimations() {
-    const needle = query.value.trim().toLocaleLowerCase();
-    const fragment = document.createDocumentFragment();
-    for (const group of groups) {
-      if (groupFilter.value && groupFilter.value !== group.key) continue;
-      const clips = group.clips.filter(clip => `${clip.name} ${clip.label} ${group.label}`.toLocaleLowerCase().includes(needle));
-      if (!clips.length) continue;
-      const section = document.createElement('section');
-      section.className = 'animation-group';
-      const heading = document.createElement('h3');
-      heading.textContent = group.label;
-      section.append(heading);
-      for (const clip of clips) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'animation-option';
-        button.dataset.animation = clip.name;
-        button.setAttribute('aria-pressed', String(picture.gestures.last?.kind === 'preview' && picture.gestures.last.animation === clip.name));
-        const name = document.createElement('span');
-        name.className = 'animation-name';
-        name.textContent = clip.name;
-        const kind = document.createElement('span');
-        kind.className = 'animation-kind';
-        kind.textContent = clip.label;
-        button.append(name, kind);
-        button.onclick = () => {
-          if (scene !== picture || K.pngExporting) return;
-          cancelInput();
-          picture.sound?.unlock();
-          if (picture.variants) picture.gestures.enterGroup(clip.owner, false);
-          picture.gestures.previewAnimation(clip);
-          animationPicker.nextName = clip.name;
-          results.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed', 'false');
-          button.setAttribute('aria-pressed', 'true');
-          if (matchMedia('(max-width: 600px), (pointer: coarse)').matches) close(true);
-        };
-        section.append(button);
-      }
-      fragment.append(section);
-    }
-    if (!fragment.childElementCount) {
-      const empty = document.createElement('p');
-      empty.className = 'animation-empty';
-      empty.textContent = '没有匹配的动画';
-      fragment.append(empty);
-    }
-    results.replaceChildren(fragment);
-    results.scrollTop = 0;
+function setStageReady(ready) {
+  for (const button of [...zoomButtons, ...exportButtons, interactButton, $('btnAnimTab')]) button.disabled = !ready;
+  const available = {
+    anim: scene?.animationClips?.size,
+    parts: scene?.partTarget.parts.length,
+    interaction: Boolean(scene),
+    voice: Boolean(scene?.sound),
+  };
+  for (const tab of panelTabs) {
+    tab.disabled = !ready || !available[tab.dataset.panelTab];
+    tab.hidden = ready && !available[tab.dataset.panelTab];
   }
-
-  query.oninput = groupFilter.onchange = renderAnimations;
-  renderAnimations();
-  document.body.append(panel);
-  const close = K.attachPopupChrome(panel, {
-    button: animationBrowser,
-    title: '互动动画',
-    close: () => {
-      animationPicker.group = groupFilter.value;
-      animationPicker.query = query.value;
-      animationPicker.scroll = results.scrollTop;
-      animationBrowser.setAttribute('aria-expanded', 'false');
-      panel.remove();
-    },
-  });
-  animationBrowser.setAttribute('aria-expanded', 'true');
-  results.scrollTop = animationPicker.scroll;
 }
 
-function mountBackgroundOptions(panel) {
-  stageBackground.mount(panel);
-  const note = document.createElement('p');
-  note.className = 'fated-background-note';
-  note.textContent = '底色用于舞台留白和立绘透明区域。原画自带的场景会保留。';
-  panel.querySelector('.stage-background-options').prepend(note);
+function playbackTrack() {
+  const overlay = scene?.state.getCurrent(1);
+  return overlay && overlay.animationEnd > overlay.animationStart ? overlay : scene?.state.getCurrent(0);
+}
+
+function playbackCanEdit() {
+  const gestures = scene?.gestures;
+  return Boolean(gestures && !gestures.gesture && !gestures.switching &&
+    (!gestures.reaction || gestures.reaction.kind === 'preview'));
+}
+
+function setPlaying(enabled) {
+  if (!enabled) {
+    cancelInput();
+    scene?.sound?.stopReaction();
+  }
+  playing = enabled;
+}
+
+function animationOptions() {
+  const groups = scene?.animationGroups ?? [];
+  const listed = animationStage.value
+    ? groups.find(group => group.key === animationStage.value)?.clips ?? []
+    : [...(scene?.animationClips?.values() ?? [])];
+  return listed.map(clip => ({
+    name: clip.name,
+    duration: (scene.variants?.get(clip.owner)?.skeleton ?? scene.skeleton).data.findAnimation(clip.name)?.duration ?? 0,
+  }));
+}
+
+const playbackUI = window.createInteractionViewerUI({
+  canvas: () => canvas,
+  animations: animationOptions,
+  playback: () => {
+    const track = playbackTrack();
+    const canEdit = playbackCanEdit();
+    return {
+      key: scene?.model.id,
+      ready: Boolean(scene && canvas.dataset.ready),
+      name: track?.animation.name,
+      time: track ? track.getAnimationTime() - track.animationStart : 0,
+      duration: track ? track.animationEnd - track.animationStart : 0,
+      loop: track?.loop,
+      playing,
+      speed: playbackSpeed,
+      canSeek: canEdit,
+      canLoop: canEdit,
+    };
+  },
+  selectAnimation(name) {
+    const clip = scene?.animationClips?.get(name);
+    if (!clip || !canvas.dataset.ready || K.pngExporting || videoRecording) return;
+    cancelInput();
+    setPlaying(true);
+    scene.sound?.unlock();
+    if (scene.variants) scene.gestures.enterGroup(clip.owner, false);
+    scene.gestures.previewAnimation(clip);
+  },
+  setPlaying,
+  setSpeed: speed => { playbackSpeed = speed; },
+  setLoop(loop) {
+    const track = playbackTrack();
+    if (track && playbackCanEdit()) track.loop = loop;
+  },
+  seek(time) {
+    const track = playbackTrack();
+    if (!track || !playbackCanEdit()) return;
+    const duration = track.animationEnd - track.animationStart;
+    track.trackTime = Math.min(time, track.loop ? Math.max(0, duration - 0.000001) : duration);
+    track.trackLast = track.nextTrackLast = track.trackTime;
+    track.animationLast = track.nextAnimationLast = track.animationStart + track.trackTime;
+  },
+  onError: error => K.toast(error.message, 'err'),
+});
+
+function mountPngOptions(popup) {
+  popup.classList.add('viewer-tools-popup');
+  K.mountExportOptions(popup, {
+    kind: 'png',
+    quality: store.get('pngQuality', 'medium'),
+    transparent: stageBackground.get() === 'checker',
+    onChange: quality => store.set('pngQuality', quality),
+    getSize: quality => pngPose(quality).size,
+    getDetail: () => 'PNG · 当前互动姿势',
+    onExport: (quality, transparent) => exportPortrait(quality, transparent),
+    onCopy: (quality, transparent) => exportPortrait(quality, transparent, true),
+  });
+}
+
+function setInteractionMode(enabled) {
+  cancelInput();
+  interactive = enabled;
+  stage.dataset.panMode = enabled ? 'interact' : 'pan';
+  interactButton.classList.toggle('on', enabled);
+  interactButton.setAttribute('aria-pressed', String(enabled));
+  interactButton.title = enabled ? '关闭立绘互动' : '开启立绘互动';
+  if (!enabled) {
+    clearGuide();
+    delete canvas.dataset.hotspot;
+  }
 }
 
 function setImmersive(enabled) {
-  stage.toggleAttribute('data-immersive', enabled);
-  exitImmersive.hidden = !enabled;
+  document.body.classList.toggle('viewer-immersive', enabled);
+  immersiveExit.hidden = !enabled;
+  if (enabled) closePanel();
+  K.refreshStageUI?.();
 }
 
-K.setUiIcon(more, 'more', '更多');
-K.setUiIcon(animationBrowser, 'anim', '动画');
-animationBrowser.onclick = openAnimationBrowser;
-K.setUiIcon(partsButton, 'panel', '部件');
-partsButton.onclick = openPartsPanel;
-pickButton.onclick = () => setPartPicking(pickButton.getAttribute('aria-pressed') !== 'true');
-K.setUiIcon(nextAnimation, 'chevR', '下一动作');
-nextAnimation.onclick = () => {
-  if (!scene || !canvas.dataset.ready || K.pngExporting) return;
-  const clips = animationGroupsFor(scene).flatMap(group => group.clips);
-  if (clips.length < 2) return;
-  const current = scene.animationPicker.nextName || scene.gestures.last?.animation || scene.state.tracks[0]?.animation.name;
-  const clip = clips[(clips.findIndex(item => item.name === current) + 1) % clips.length];
-  cancelInput(); scene.sound?.unlock();
-  if (scene.variants) scene.gestures.enterGroup(clip.owner, false);
-  scene.gestures.previewAnimation(clip);
-  scene.animationPicker.nextName = clip.name;
+function refreshLibraryFilter() {
+  page = 1;
+  library.scrollTop = 0;
+  renderLibrary();
+}
+
+sort.value = store.get('sort', 'default');
+if (!sort.value) sort.value = 'default';
+if (descending) sortDirection.title = '当前降序，点击切换为升序';
+search.oninput = refreshLibraryFilter;
+sort.onchange = () => { store.set('sort', sort.value); refreshLibraryFilter(); };
+sortDirection.onclick = () => {
+  descending = !descending;
+  sortDirection.title = descending ? '当前降序，点击切换为升序' : '当前升序，点击切换为降序';
+  K.setUiIcon(sortDirection, descending ? 'down' : 'up');
+  store.set('descending', descending);
+  refreshLibraryFilter();
 };
-$('video-save').onclick = () => stopVideoRecording();
-$('video-cancel').onclick = () => stopVideoRecording(false);
-more.onclick = () => {
-  if (more.getAttribute('aria-expanded') === 'true') { K.hideMenu(); return; }
-  const rect = more.getBoundingClientRect();
-  const menu = K.showMenu([
-    { heading: '导出' },
-    { label: '导出立绘 PNG', fn: () => openToolPanel('导出 PNG', panel => K.mountExportOptions(panel, {
-      kind: 'png',
-      quality: store.get('pngQuality', 'medium'),
-      transparent: stageBackground.get() === 'checker',
-      onChange: quality => store.set('pngQuality', quality),
-      getSize: quality => pngPose(quality).size,
-      getDetail: () => 'PNG · 当前互动姿势',
-      onExport: (quality, transparent) => exportPortrait(quality, transparent),
-      onCopy: (quality, transparent) => exportPortrait(quality, transparent, true),
-    })) },
-    { label: '录制互动视频', fn: () => openToolPanel('录制互动视频', mountVideoOptions) },
-    { label: '音量调节', disabled: !scene?.sound, fn: () => openToolPanel('音量调节', panel =>
-      volume.mount(panel, value => scene?.sound?.setVolume(value))) },
-    { heading: '画面' },
-    { label: '背景颜色 / 预设', fn: () => openToolPanel('背景颜色 / 预设', mountBackgroundOptions) },
-    { label: '沉浸模式', fn: () => { setImmersive(true); exitImmersive.focus(); } },
-  ], rect.right, rect.bottom + 6, { title: '更多功能', owner: more, moreMenu: true });
-  menu.style.left = Math.max(8, rect.right - menu.offsetWidth) + 'px';
-  if (rect.bottom + 6 + menu.offsetHeight > innerHeight - 8) {
-    menu.style.top = Math.max(8, rect.top - menu.offsetHeight - 6) + 'px';
+libraryAll.onclick = () => { favoritesOnly = false; refreshLibraryFilter(); };
+libraryStars.onclick = () => { favoritesOnly = true; refreshLibraryFilter(); };
+starButton.onclick = () => { if (activeModel) toggleFavorite(activeModel.id); };
+$('railGrid').onclick = () => { if (!K.pngExporting && !videoRecording) showLibrary(true); };
+$('gridClose').onclick = closeLibrary;
+$('retry').onclick = renderRoute;
+
+$('btnAnimTab').onclick = () => panel.classList.add('open');
+$('panel-close').onclick = closePanel;
+for (const tab of panelTabs) {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.panelTab === 'parts') partsPanel.refresh();
+    else if (stage.hasAttribute('data-picking-parts')) setPartPicking(false);
+  });
+}
+animationStage.onchange = () => playbackUI.refreshAnimations();
+pickButton.onclick = () => setPartPicking(!stage.hasAttribute('data-picking-parts'));
+interactButton.onclick = () => {
+  setInteractionMode(!interactive);
+  if (interactive && scene) {
+    const { gestures, sound } = scene;
+    if (gestures.reaction?.kind === 'preview') {
+      sound?.stopReaction();
+      gestures.enterGroup(gestures.groupIndex, false);
+    }
+    setPlaying(true);
   }
 };
-exitImmersive.onclick = () => { setImmersive(false); more.focus(); };
-document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && !event.defaultPrevented && !exitImmersive.hidden) exitImmersive.click();
-});
-
-search.oninput = () => { page = 1; renderLibrary(); };
-$('previous').onclick = () => { page--; renderLibrary(); library.scrollTop = 0; };
-$('next').onclick = () => { page++; renderLibrary(); library.scrollTop = 0; };
-$('back').onclick = () => navigate(null);
-$('retry').onclick = renderRoute;
+K.setUiIcon(interactButton, 'interact', '互动');
+setInteractionMode(interactive);
 $('hints').onclick = () => {
   guideOn = !guideOn;
   hints.setAttribute('aria-pressed', String(guideOn));
-  if (!guideOn) clearGuide();
+  if (guideOn) setInteractionMode(true);
+  else clearGuide();
 };
-$('restart').onclick = () => { cancelInput(); scene?.gestures.restart(); };
-$('fit').onclick = fit;
-$('zoom-in').onclick = () => zoom(1.2);
-$('zoom-out').onclick = () => zoom(1 / 1.2);
+$('restart').onclick = () => { cancelInput(); setPlaying(true); scene?.gestures.restart(); };
+$('zPct').onclick = $('railThumb').onclick = () => fit();
+$('zIn').onclick = () => zoom(1.2);
+$('zOut').onclick = () => zoom(1 / 1.2);
 tool.onchange = () => scene?.gestures.chooseTool(Number(tool.value));
 soundControl.onchange = () => {
   soundMode = soundControl.value;
   scene?.sound?.setMode(soundMode);
 };
+volume.mount($('fated-voice-volume'), value => scene?.sound?.setVolume(value));
+
+K.makeStagePopup($('btnPng'), mountPngOptions);
+K.makeStagePopup($('btnGif'), popup => {
+  popup.classList.add('viewer-tools-popup');
+  mountVideoOptions(popup);
+});
+K.makeStagePopup($('btnBg'), stageBackground.mount);
+$('btnPresetImmersive').onclick = () => { setImmersive(true); immersiveExit.focus(); };
+immersiveExit.onclick = () => { setImmersive(false); moreButton()?.focus(); };
+$('video-save').onclick = () => stopVideoRecording();
+$('video-cancel').onclick = () => stopVideoRecording(false);
+
+K.initTheme(store);
+K.bindThemePalette($('btnTheme'), store);
+cards.dataset.density = store.get('density', 'standard');
+K.initStageUI({ canvas, refit: () => { if (!stage.hidden) resize(); } });
+matchMedia('(max-width: 720px)').addEventListener('change', () => { if (models.length) renderLibrary(); });
 window.addEventListener('popstate', renderRoute);
 window.addEventListener('blur', () => cancelInput());
 document.addEventListener('visibilitychange', () => {
@@ -1037,18 +1167,23 @@ canvas.addEventListener('pointerdown', event => {
     canvas.setPointerCapture(event.pointerId);
     return;
   }
-  scene.sound?.unlock();
-  if (scene.gestures.inputLocked) return;
   const { pointerId, clientX, clientY } = event;
   const screen = { x: clientX, y: clientY };
   const world = toWorld(clientX, clientY);
-  if (scene.gestures.start(pointerId, screen, world, performance.now())) {
-    // Some hotspots trigger before release. Keep the touch reserved until it ends.
-    if (event.pointerType === 'touch') interactionTouch = pointerId;
-  } else if (!videoRecording?.capturing) {
-    pan = { id: pointerId, world };
+  if (playing && interactive) {
+    scene.sound?.unlock();
+    if (scene.gestures.inputLocked) return;
+    if (scene.gestures.start(pointerId, screen, world, performance.now())) {
+      // Some hotspots trigger before release. Keep the touch reserved until it ends.
+      if (event.pointerType === 'touch') interactionTouch = pointerId;
+      canvas.setPointerCapture(pointerId);
+      return;
+    }
   }
-  canvas.setPointerCapture(pointerId);
+  if (!videoRecording?.capturing) {
+    pan = { id: pointerId, world };
+    canvas.setPointerCapture(pointerId);
+  }
 });
 canvas.addEventListener('pointermove', event => {
   if (!scene) return;
@@ -1065,13 +1200,13 @@ canvas.addEventListener('pointermove', event => {
     scene.skeleton.x += world.x - pan.world.x;
     scene.skeleton.y += world.y - pan.world.y;
     pan.world = world;
-  } else if (!picking) {
+  } else if (!picking && playing && interactive) {
     scene.gestures.move(pointerId, { x: clientX, y: clientY }, world, performance.now());
   }
   if (picking) return;
   if (scene.gestures.gesture?.dragging) canvas.dataset.gesture = 'drag';
   if (event.pointerType === 'mouse' && !event.buttons) {
-    canvas.dataset.hotspot = String(!scene.gestures.inputLocked && scene.gestures.match(world).length > 0);
+    canvas.dataset.hotspot = String(playing && interactive && !scene.gestures.inputLocked && scene.gestures.match(world).length > 0);
   }
 });
 canvas.addEventListener('pointerleave', () => { delete canvas.dataset.hotspot; });
@@ -1083,8 +1218,10 @@ canvas.addEventListener('pointerup', event => {
     cancelInput(event.pointerId);
     return;
   }
-  if (event.isPrimary) scene?.sound?.unlock();
-  scene?.gestures.finish(event.pointerId, toWorld(event.clientX, event.clientY), performance.now());
+  if (playing && interactive && scene) {
+    if (event.isPrimary) scene.sound?.unlock();
+    scene.gestures.finish(event.pointerId, toWorld(event.clientX, event.clientY), performance.now());
+  }
   cancelInput(event.pointerId);
 });
 canvas.addEventListener('pointercancel', event => cancelInput(event.pointerId));
@@ -1120,4 +1257,4 @@ async function start() {
   requestAnimationFrame(renderFrame);
 }
 
-start().catch(error => { $('count').textContent = error.message; });
+start().catch(error => { $('gridSub').textContent = error.message; });

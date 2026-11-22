@@ -25,7 +25,7 @@
       button.className = 'ctl';
       button.onclick = () => this.job ? this.stop() : this.play();
       panel.append(choose, button);
-      window.ArtHubBd2Volume.mount(panel, volume => {
+      window.ArtHubBd2Volume.mount(adapter.volumeHost, volume => {
         this.volume = volume;
         if (this.output) this.output.gain.value = volume;
       });

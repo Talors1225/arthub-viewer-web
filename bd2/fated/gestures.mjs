@@ -720,7 +720,7 @@ export class FatedGestures {
       this.state.setAnimation(0, this.group.idle, true);
     }
     const reaction = this.reaction;
-    if (!reaction?.entry.isComplete()) return;
+    if (!reaction?.entry.isComplete() || (reaction.kind === 'preview' && reaction.entry.loop)) return;
     this.reaction = null;
     if (reaction.previewHold) this.audio?.stopHold();
     const next = reaction.advance ? this.nextIndex(reaction.point) : -1;

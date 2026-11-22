@@ -1,0 +1,19 @@
+#floatPanel .bd2-volume {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 4ch;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  margin: 8px 0;
+  color: var(--text);
+}
+#floatPanel .bd2-volume input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+#floatPanel .bd2-volume span {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
