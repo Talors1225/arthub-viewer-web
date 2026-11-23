@@ -84,8 +84,23 @@
       this.button.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
       adapter.popup(this.button, popup => this.menu(popup));
       this.updateButton();
-      this.onGesture = () => this.unlock();
-      document.getElementById('stage').addEventListener('pointerdown', this.onGesture, { capture: true });
+      const stage = document.getElementById('stage');
+      this.gestureListeners = new AbortController();
+      const listen = {capture: true, passive: true, signal: this.gestureListeners.signal};
+      let tap = null;
+      stage.addEventListener('pointerdown', event => {
+        tap = event.isPrimary && event.button === 0 ? {id: event.pointerId, x: event.clientX, y: event.clientY} : null;
+      }, listen);
+      const moved = event => Math.abs(event.clientX - tap.x) + Math.abs(event.clientY - tap.y) > 3;
+      stage.addEventListener('pointermove', event => {
+        if (tap?.id === event.pointerId && moved(event)) tap = null;
+      }, listen);
+      stage.addEventListener('pointercancel', () => { tap = null; }, listen);
+      stage.addEventListener('pointerup', event => {
+        const activate = tap?.id === event.pointerId && !moved(event);
+        tap = null;
+        if (activate && this.prefs.enabled && this.volume > 0) void this.unlock();
+      }, listen);
       this.onVisibility = () => this.syncPause();
       document.addEventListener('visibilitychange', this.onVisibility);
       this.ready = fetch(adapter.indexURL).then(response => {
@@ -491,7 +506,7 @@
       this.reset(); this.disposed = true;
       for (const request of this.requests?.values() || []) request.abort();
       this.requests?.clear(); this.warmJob = null;
-      document.getElementById('stage').removeEventListener('pointerdown', this.onGesture, { capture: true });
+      this.gestureListeners.abort();
       document.removeEventListener('visibilitychange', this.onVisibility);
       if (this.onVolumeStorage) root.removeEventListener('storage', this.onVolumeStorage);
       this.context?.close().catch(() => {});

@@ -400,7 +400,7 @@
 <script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/stage-ui.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
-<script src="../../common/portrait-audio.js?v=20261122-game-audio"></script>
+<script src="../../common/portrait-audio.js?v=2301-tap"></script>
 <script>
 (() => {
   window.addEventListener('error', e => { window.__initErr = e.message + ' @' + e.lineno; });
@@ -738,25 +738,6 @@
       }
   let gridScroll = 0;
   function openGrid() {
-    // 截取当前画布帧作为缩略图 (必须在 grid 覆盖前)
-    if (curEntry && gl && layers.length && !libraryThumbnail(curEntry)) {
-      try {
-        const raw = gl.gl || gl;
-        const c = K.parseColor(getBg(), [0.09, 0.1, 0.13]);
-        raw.clearColor(c[0], c[1], c[2], getBg() === 'checker' ? 0 : 1);
-        raw.clear(raw.COLOR_BUFFER_BIT);
-        renderer.begin();
-        for (const L of layers) if (L.visible) renderer.drawSkeleton(L.skeleton, false);
-        renderer.end();
-        const url = canvas.toDataURL('image/png');
-        if (url && url.length > 100) {
-          ThumbStore.put('majsoul:' + curEntry.id, url);
-          // 直接更新卡片
-          const phEl = gridView.querySelector('.thumb-card[data-id="' + curEntry.id + '"] .ph');
-          if (phEl) phEl.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain">';
-        }
-      } catch {}
-    }
     stageMode = false;
     portraitVoice.reset();
     gridView.classList.add('open');
@@ -870,18 +851,10 @@
       loadingPreview.ready(loadSeq);
       if (!viewerUiReady) { viewerUiReady = true; K.setLibraryStageReady?.(true); }
     }
-    // 同步截取缩略图 (WebGL 需 flush 后才能 toDataURL)
-    if (capturePending && curEntry && !K.framing.original) {
-      try {
-        const raw2 = gl.gl || gl;
-        raw2.flush();
-        const url = canvas.toDataURL('image/png');
-        if (url && url.length > 100 && !url.includes('data:image/png;base64,AAAA')) {
-          const id = capturePending;
-          capturePending = null;
-          ThumbStore.put('majsoul:' + id, url);
-        }
-      } catch {}
+    if (capturePending && curEntry?.id === capturePending && layers.length && !K.framing.original) {
+      const id = capturePending;
+      capturePending = null;
+      saveMissingThumbnail(id);
     }
     } catch (error) {
       loadingPreview.fail(loadSeq, error.message);
@@ -1084,6 +1057,33 @@
     return webThumbs['majsoul:' + entry.id + ':' + variant] || webThumbs['majsoul:' + entry.id];
   }
 
+  // Snapshot within the rendered frame, then encode only the small fallback asynchronously.
+  function saveMissingThumbnail(id) {
+    const scale = Math.min(1, 240 / canvas.width, 192 / canvas.height);
+    const thumb = document.createElement('canvas');
+    thumb.width = Math.max(1, Math.round(canvas.width * scale));
+    thumb.height = Math.max(1, Math.round(canvas.height * scale));
+    try {
+      thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
+      thumb.toBlob(blob => {
+        if (!blob) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const url = reader.result;
+          ThumbStore.put('majsoul:' + id, url);
+          const card = gridView.querySelector('.thumb-card[data-id="' + CSS.escape(id) + '"] .ph');
+          if (card && !card.querySelector('img')) {
+            const img = new Image();
+            img.src = url;
+            img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+            card.replaceChildren(img);
+          }
+        };
+        reader.readAsDataURL(blob);
+      }, 'image/png');
+    } catch { /* Thumbnails are optional when the canvas cannot be read. */ }
+  }
+
   function stagePreviewPath(entry) {
     const variant = entry.composite ? 'layers' : /\.json$/i.test(entry.skel) ? 'json' : 'binary';
     return K.stagePosterPath('majsoul', entry.id, variant);
@@ -1092,6 +1092,7 @@
   async function loadSelection(entry) {
     portraitVoice.reset();
     const seq = ++loadSeq;
+    capturePending = null;
     viewerUiReady = false; K.setLibraryStageReady?.(false); K.clearToasts?.();
     selectionRequest?.abort();
     const request = selectionRequest = new AbortController();
@@ -1165,8 +1166,11 @@
       $('#railStar').classList.toggle('on', starredNow);
       $('#railStar').setAttribute('aria-pressed', String(starredNow));
       $('#railStar').title = starredNow ? '取消收藏 (S)' : '收藏 (S)';
-      // 在下一帧渲染循环里截取缩略图 (WebGL 需同步截取)
-      capturePending = K.framing.original ? null : entry.id;
+      if (!K.framing.original && !libraryThumbnail(entry)) {
+        ThumbStore.get('majsoul:' + entry.id).then(cached => {
+          if (!cached && seq === loadSeq && !K.framing.original) capturePending = entry.id;
+        });
+      }
       playerReady(seq);
     } catch (e) {
       request.abort(e);

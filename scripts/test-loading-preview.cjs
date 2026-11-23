@@ -143,7 +143,7 @@ for (const file of viewers) {
   const isMahjong = file.includes('majsoul');
   const ready = html.indexOf('loadingPreview.ready(');
   const start = html.lastIndexOf(isMahjong ? '    const raw = gl.gl || gl;' : '    if (mgl && renderer) {', ready);
-  const end = html.indexOf(isMahjong ? '    // 同步截取缩略图' : '    if (cut && playing) syncTimeline();', ready);
+  const end = html.indexOf(isMahjong ? '    if (capturePending &&' : '    if (cut && playing) syncTimeline();', ready);
   assert.ok(start >= 0 && ready > start && end > ready, file + ': test the actual first-draw boundary');
   const skillLayer = html.match(/function drawSkillLayer\([^)]*\) \{[\s\S]*?\n  \}/)?.[0] || '';
   const draw = new vm.Script(skillLayer + '\n' + html.slice(start, end), {filename: file});
