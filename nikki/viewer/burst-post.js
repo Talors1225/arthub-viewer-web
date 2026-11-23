@@ -163,7 +163,39 @@ function makePostProcess(gl, post) {
     });
     gl.activeTexture(gl.TEXTURE0);
   }
-  return { start, end };
+  let still, stillFbo, copy, stillW, stillH;
+  let unavailable=false;
+  function beginFrozen() {
+    if(unavailable) return false;
+    if(!still){
+      still=gl.createTexture(); stillFbo=gl.createFramebuffer();
+      try {
+        if(!still || !stillFbo) throw new Error('Framebuffer unavailable');
+        copy=program(gl,'uniform sampler2D u_still; void main(){gl_FragColor=texture2D(u_still,v_uv);}');
+      } catch { unavailable=true; disposeFrozen(); return false; }
+    }
+    if(stillW!==width || stillH!==height){
+      if(!target(stillFbo,still,width,height,hdr?half.HALF_FLOAT_OES:gl.UNSIGNED_BYTE)){
+        gl.bindFramebuffer(gl.FRAMEBUFFER,sceneFbo); unavailable=true; disposeFrozen(); return false;
+      }
+      stillW=width;stillH=height;
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER,stillFbo);
+    gl.clearColor(0,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT);
+    return true;
+  }
+  function drawFrozen() {
+    gl.disable(gl.BLEND);
+    draw(copy,sceneFbo,width,height,{u_still:still},{});
+    gl.enable(gl.BLEND);
+  }
+  function disposeFrozen(){
+    if(still)gl.deleteTexture(still);
+    if(stillFbo)gl.deleteFramebuffer(stillFbo);
+    if(copy)gl.deleteProgram(copy);
+    still=stillFbo=copy=null;
+  }
+  return { start, end, beginFrozen, drawFrozen, disposeFrozen };
 }
 
 function loadImage(url) {

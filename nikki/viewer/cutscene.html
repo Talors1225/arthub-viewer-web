@@ -669,13 +669,21 @@
     if (useSkillBackdrop() && skillBackdrop) return skillBackdrop;
     return cut?.artworkBackdrop?.motion === animSel.value ? cut.artworkBackdrop : null;
   }
-  function drawSkillBackdrop(renderer, skeleton, backdrop, texture, animationTime) {
+  function drawSkillBackdrop(renderer, skeleton, backdrop, texture, animationTime, livePlayback = false) {
     if (!backdrop) return;
     if (backdrop.composition) {
       const track = cut?.state.getCurrent(0);
       const edge = Math.max(512, Math.ceil(Math.max(renderer.camera.viewportWidth, renderer.camera.viewportHeight)));
-      backdrop.composition.update(track?.animation?.name, animationTime ?? track?.trackTime ?? 0, edge);
-      texture.update(false);
+      const name = track?.animation?.name, time = animationTime ?? track?.trackTime ?? 0;
+      const frame = Math.floor(time * backdrop.composition.fps);
+      if (!livePlayback || backdrop.lastFrame !== frame || backdrop.lastAnimation !== name || backdrop.lastEdge !== edge) {
+        if (backdrop.composition.update(name, time, edge)) {
+          texture.update(false);
+          backdrop.lastFrame = livePlayback ? frame : undefined;
+          backdrop.lastAnimation = name;
+          backdrop.lastEdge = edge;
+        }
+      }
     }
     const { minX, minY, maxX, maxY } = backdrop.bounds;
     const { x, y, scaleX, scaleY } = skeleton;
@@ -807,7 +815,7 @@
     if (intro) stage.dataset.skillBurst = 'loading';
     syncBurstUI();
     try {
-      const {openSkillBurst} = await import('./burst-inline.js?v=20261122-skill-v3');
+      const {openSkillBurst} = await import('./burst-inline.js?v=skill-stage3');
       signal.throwIfAborted();
       const session = await openSkillBurst({
         canvas, key: cur.burst.key, signal, assetsRoot: burstAssetsRoot(),
@@ -1467,6 +1475,7 @@
     onChange: () => { persistHidden(); updatePartsBadge(); burstSession?.redraw(); },
   });
   function persistHidden() {
+    if (skillBackdrop) skillBackdrop.lastFrame = undefined;
     if (!cur || !cut) return;
     const hm = store.get('hiddenMap', {});
     const key = cur.id + '/' + cut.variant;
@@ -1943,7 +1952,7 @@
       const clipped = clipArtworkFrame(raw, cv, cut?.frameView || cut?.skeleton, artworkFrame());
       try {
         renderer.begin();
-        if (backdrop && cut) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture);
+        if (backdrop && cut) drawSkillBackdrop(renderer, cut.skeleton, backdrop, backdrop.texture, undefined, true);
         if (cut) for (const layer of cut.drawLayers) if (layer.active !== false) drawSkillLayer(renderer, layer.skeleton, layer.pma, backdrop);
         if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
         if (cut && K.debugActive(debugFlags)) {

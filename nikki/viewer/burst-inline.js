@@ -1,5 +1,5 @@
 import {clamp} from './burst-math.js';
-import {createBurst} from './burst_scene.js?v=20261122-skill-v3';
+import {createBurst} from './burst_scene.js?v=skill-stage3';
 import {clockAt} from './timelines.js';
 
 // Last visible composition before the closing flash on the authored timeline.
@@ -7,6 +7,14 @@ const endingBackdrops = {
   'core-25956': { frame: 129 },
   'core-26015': { frame: 214, branch: 'c195_00_cut_scene/root/fx_root/back_loop/' },
   'core-26115': { frame: 223 },
+};
+
+// These are outputs of the existing ending-frame and pillarbox probes, in native timeline seconds.
+const reviewedIdle = {
+  'core-25937': {model:'catalog-c010_00_skillcut', animation:'Idle', digest:'d7dacba7a963458cfcc48a92d41776cafb44ac5ec5beb1bd78d47a2889a26568', aspect:.9690207913030021, time:1.7966666269302367},
+  'core-25970': {model:'c090_00_skillcut', digest:'a9f0d343ca7019f07ec7082afcddae23888d0138792380cf57c76b6fabe7fcc9', aspect:1, time:1.7966666269302367},
+  'core-26002': {model:'c170_00_skillcut', digest:'54f275f954850685aa4aa58c00e7d92258ed26947ba4727676fb448fbb2c7de7', aspect:.8700517031025963, time:1.6466666507720946},
+  'core-26021': {model:'c210_00_skillcut', digest:'48495300f8e58b6e53253a45f5352c63e625eab3090c6373ed32d01ed11e7068', aspect:.824638087994336, time:2.2133332538604735},
 };
 
 function findEndingTime(scene) {
@@ -61,18 +69,31 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     if(!response.ok) throw new Error('资源读取失败 ('+response.status+')');
     return response[method]();
   };
-  const scene=await read(objectURL('nikki/bursts/scenes/'+key+'.json'),'json');
+  const bytes=await read(objectURL('nikki/bursts/scenes/'+key+'.json'),'arrayBuffer');
+  const scene=JSON.parse(new TextDecoder().decode(bytes));
+  const hint=reviewedIdle[key];
+  let sceneDigest, previousFraming;
+  const framingKey='arthub-nikke-ending-v1:'+key;
+  if(globalThis.crypto?.subtle){
+    try {
+      const digest=await crypto.subtle.digest('SHA-256',bytes);
+      sceneDigest=Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join('');
+      previousFraming=JSON.parse(sessionStorage.getItem(framingKey));
+    } catch { /* Use the live framing probes if the digest is unavailable. */ }
+  }
   const asset=ref=>{
     const object=scene.storage[ref];
     if(!object) throw new Error('资源未匹配 '+ref);
     return objectURL(object);
   };
   const engine=await createBurst(canvas,scene,root,progress,asset,signal);
-  signal.throwIfAborted();
+  if(signal.aborted){engine.dispose();throw signal.reason;}
   const partTargets=engine.bindPartState(hiddenSlots);
   const duration=scene.duration;
   const endingBackdrop=endingBackdrops[key];
   let time=0, playing=false, starting=false, disposed=false, revision=0, dirty=true;
+  let drawnFrame=-1;
+  const playbackFps=scene.fps>0 ? scene.fps : 60;
   let speed=settings.speed, loop=false, volume=settings.volume, muted=settings.muted;
   let audio=null, mix=null, analyser=null, clock=null, sources=[], cues=[], counts={};
   const decoded=new Map();
@@ -82,6 +103,7 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
 
   function draw(){
     counts=engine.render(time);
+    drawnFrame=Math.floor(time*playbackFps);
     dirty=false;
   }
   function now(){
@@ -181,7 +203,13 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     if (!animation || !/idle|loop|stand/i.test(animation)) return null;
     const frame={width:Math.round(1024*Math.min(1,aspect)),height:Math.round(1024/Math.max(1,aspect))};
     let at = endingBackdrop ? endingBackdrop.frame / scene.fps : findEndingTime(scene);
-    if (!endingBackdrop) {
+    const reviewed=sceneDigest && !hiddenSlots.size && [hint,previousFraming].find(row=>
+      row && row.digest===sceneDigest && row.model===preferredModelName &&
+      (row.animation||'idle')===animation && Math.abs(row.aspect-aspect)<1e-7 &&
+      Number.isFinite(row.time) && row.time>=0 && row.time<=duration &&
+      (row.effectiveAspect===undefined || (row.effectiveAspect>=.65 && row.effectiveAspect<=aspect)));
+    if(reviewed) at=reviewed.time;
+    if (!reviewed && !endingBackdrop) {
       const probe = document.createElement('canvas');
       probe.width = probe.height = 24;
       const pctx = probe.getContext('2d', { willReadFrequently: true });
@@ -212,8 +240,8 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     }
     // Probe the rendered composition at requested aspect and trim pure-black outer pillarbox bars
     // (Unity burst scenes use vertical FOV; narrowing aspect removes empty black side voids cleanly).
-    let effectiveAspect = aspect;
-    if (aspect > 0.72) {
+    let effectiveAspect = reviewed?.effectiveAspect ?? aspect;
+    if (!reviewed && aspect > 0.72) {
       const pw = Math.max(32, Math.round(160 * Math.min(1, aspect)));
       const ph = Math.max(32, Math.round(160 / Math.max(1, aspect)));
       if (engine.renderComposition(at, animation, 0, { width: pw, height: ph }, preferredModelName, compositeLayers)) {
@@ -241,22 +269,21 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
         }
       }
     }
-    const image=document.createElement('canvas');
-    frame.width=Math.max(2,Math.round(1024*Math.min(1,effectiveAspect)));
-    frame.height=Math.max(2,Math.round(1024/Math.max(1,effectiveAspect)));
-    image.width=frame.width;image.height=frame.height;
-    const ctx=image.getContext('2d');
+    // Both stage and export textures can sample the just-rendered WebGL canvas directly.
     const update=(name,time,edge=1024)=>{
       frame.width=Math.max(2,Math.round(edge*Math.min(1,effectiveAspect)));
       frame.height=Math.max(2,Math.round(edge/Math.max(1,effectiveAspect)));
-      if(image.width!==frame.width || image.height!==frame.height){image.width=frame.width;image.height=frame.height;}
-      // The environment is the clean ending frame, not a fabricated loop.
+      // Hold the original environment at its ending frame.
       // Character motion remains live and the same sampler serves exports.
       if (!engine.renderComposition(at,name,time,frame,preferredModelName,compositeLayers)) return false;
-      ctx.clearRect(0,0,image.width,image.height);ctx.drawImage(canvas,0,0);
       return true;
     };
-    return update(animation,0) ? {image,update,at,aspect:effectiveAspect} : null;
+    if(!update(animation,0)) return null;
+    if(!reviewed && sceneDigest && !hiddenSlots.size){
+      previousFraming={digest:sceneDigest,model:preferredModelName,animation,aspect,effectiveAspect,time:at};
+      try { sessionStorage.setItem(framingKey,JSON.stringify(previousFraming)); } catch { /* Memory cache still applies. */ }
+    }
+    return {image:canvas,update,at,fps:playbackFps,aspect:effectiveAspect};
   }
   function buildBackdrop(aspect){
     if(backdrop) return backdropImage;
@@ -321,7 +348,8 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     get zoom(){return zoom;},
     tick(){
       if(!playing){if(dirty) draw(); return;}
-      time=now(); draw();
+      time=now();
+      if(dirty || drawnFrame!==Math.floor(time*playbackFps)) draw();
       if(time>=duration){stop();changed();if(loop) void start(0);else finished();}
     },
     toggle(){if(playing||starting) pause(); else void start(time>=duration ? 0 : time);},
@@ -355,6 +383,7 @@ export async function openSkillBurst({canvas,key,signal,assetsRoot,settings,hidd
     dispose(){
       if(disposed) return;
       disposed=true; stop(); observer.disconnect();
+      engine.dispose();
       mix?.disconnect(); analyser?.disconnect();
     },
   };

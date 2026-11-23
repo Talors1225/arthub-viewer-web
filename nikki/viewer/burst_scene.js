@@ -1,5 +1,5 @@
 import {clamp,rotate,point,mulRotation} from './burst-math.js';
-import {makePostProcess,loadImage} from './burst-post.js?v=20261109-skill-background';
+import {makePostProcess,loadImage} from './burst-post.js?v=skill-stage3';
 import {compileTimeline,clockAt} from './timelines.js';
 import {createParticles} from './burst_particles.js';
 import {spineParts,applyPartVisibility,pickSpinePart} from './burst-parts.js';
@@ -40,7 +40,23 @@ function selectedCamera(scene,poses,height) {
   function depth(world) {
     return rotate(world.map((x,i)=>x-position[i]),inverse)[2];
   }
-  return {project,depth,rotation};
+  // A flat Spine mesh needs only three camera-space basis vectors per draw.
+  function skeletonProjection(pose) {
+    const origin=rotate(pose.position.map((v,i)=>v-position[i]),inverse);
+    const axisX=rotate(rotate([pose.scale[0],0,0],pose.rotation),inverse);
+    const axisY=rotate(rotate([0,pose.scale[1],0],pose.rotation),inverse);
+    const orthoScale=ortho ? height/(2*ortho) : 0;
+    return (vertices,count,stride)=>{
+      for(let i=0;i<count;i+=stride){
+        const x=vertices[i],y=vertices[i+1],z=origin[2]+axisX[2]*x+axisY[2]*y;
+        if(z<near || z>far) continue;
+        const scale=orthoScale || focal/z;
+        vertices[i]=(origin[0]+axisX[0]*x+axisY[0]*y)*scale;
+        vertices[i+1]=(origin[1]+axisX[1]*x+axisY[1]*y)*scale;
+      }
+    };
+  }
+  return {project,skeletonProjection,depth,rotation};
 }
 
 function shade(material, tint, pose) {
@@ -257,12 +273,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     Kit.updateWorldTransform(skeleton,context.SP.Physics?.update);
     applyPartVisibility(model);
     begin(context.renderer);
-    context.renderer.drawSkeleton(skeleton,model.pma,-1,-1,modern?(vertices,count,stride)=>{
-      for(let i=0;i<count;i+=stride){
-        const projected=camera.project(point(pose,[vertices[i],vertices[i+1],0]));
-        if(projected){vertices[i]=projected[0];vertices[i+1]=projected[1];}
-      }
-    }:null);
+    context.renderer.drawSkeleton(skeleton,model.pma,-1,-1,modern?camera.skeletonProjection(pose):null);
     return true;
   }
   const drawnSpines=[];
@@ -297,13 +308,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     return queue.slice(0,character).filter(item=>!item.model && !foreground.test(path(item))
       && !/\/(?:cha_root|screen_root)\//i.test(path(item)));
   }
-  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, frame, extraBranch, override) {
-    resize(frame);
-    const t=clamp(time,0,scene.duration-1e-6);
-    const poses=timeline.sampleScene(t);
-    const camera=selectedCamera(scene,poses,height);
-    frameCamera=camera;
-    drawnSpines.length=0;
+  function buildQueue(t,poses,camera,includeSpine,includeFx,override) {
     const queue=[];
     for(const model of includeSpine ? models : []) {
       const pose=poses.get(model.node);
@@ -335,9 +340,37 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     const isLiveChar=override?.promoteCharacter ? (item=>Boolean(item.model && override.map?.has(item.model))) : null;
     queue.sort((a,b)=>(isLiveChar ? Number(isLiveChar(a))-Number(isLiveChar(b)) : 0)
       || Number(!!b.backdrop)-Number(!!a.backdrop) || a.layer-b.layer || a.order-b.order || b.depth-a.depth);
+    return queue;
+  }
+  let frozen;
+  function render(time, includeSpine=true, includeFx=true, backdropOnly=false, frame, extraBranch, override) {
+    resize(frame);
+    if(!override || frozen?.w!==width || frozen?.h!==height) frozen=null;
+    const t=clamp(time,0,scene.duration-1e-6);
+    // The finishing shot has a fixed camera, particles and non-character layers.
+    // Keep the pre-bloom color buffer so additive lighting still affects the moving character.
+    const reuse=override && frozen && frozen.map===override.map && frozen.w===width && frozen.h===height &&
+      frozen.hidden.length===(models[0]?.hiddenSlots.size||0) && frozen.hidden.every(s=>models[0].hiddenSlots.has(s));
+    const poses=override?.poses || timeline.sampleScene(t);
+    const camera=reuse?frozen.camera:selectedCamera(scene,poses,height);
+    frameCamera=camera;
+    drawnSpines.length=0;
+    const queue=reuse ? frozen.characters : buildQueue(t,poses,camera,includeSpine,includeFx,override);
     post.start(width,height,backdropOnly);
+    let capture=false;
+    if(reuse)post.drawFrozen();
+    else if(override && width*height<=4*1024*1024) {
+      frozen=null;
+      capture=post.beginFrozen();
+    }
     const counts={spine:0,background:0,effect:0,nodes:[]};
     for(const item of backdropOnly ? backdropItems(queue,extraBranch) : queue){
+      if(capture && item.model && override.map.has(item.model)){
+        currentRenderer?.end();currentRenderer=null;
+        post.drawFrozen();
+        frozen={map:override.map,w:width,h:height,camera,characters:queue.filter(i=>i.model&&override.map.has(i.model)),hidden:[...models[0].hiddenSlots]};
+        capture=false;
+      }
       let drawn;
       if(item.model) drawn=drawSpine(item,t,camera,override);
       else if(item.source.mesh && !item.trail) drawn=drawMesh(item,camera);
@@ -350,6 +383,7 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     }
     currentRenderer?.end();
     currentRenderer=null;
+    if(capture)post.drawFrozen();
     post.end(backdropOnly);
     return counts;
   }
@@ -390,7 +424,10 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
     }
     return has(requestedAnim) ? requestedAnim : null;
   }
+  let idlePlan;
   function renderComposition(time, animation, animationTime, frame, preferredModelName, compositeLayers) {
+    if(idlePlan && idlePlan.time===time && idlePlan.animation===animation && idlePlan.model===preferredModelName && idlePlan.layers===compositeLayers)
+      return render(time,true,true,false,frame,null,{map:idlePlan.map,poses:idlePlan.poses,time:animationTime,promoteCharacter:true});
     if (failedModels.length || !models.length) return null;
     const t = clamp(time, 0, Math.max(0, scene.duration - 1e-6));
     const poses = timeline.sampleScene(t);
@@ -424,7 +461,10 @@ export async function createBurst(canvas,scene,base,onProgress=()=>{},asset=(pat
       if (anim) map.set(m, anim);
     }
     if (!map.size) return null;
-    return render(time, true, true, false, frame, null, { map, animation, time: animationTime, promoteCharacter: true });
+    idlePlan={time,animation,model:preferredModelName,layers:compositeLayers,map,poses};
+    return render(time,true,true,false,frame,null,{map,poses,time:animationTime,promoteCharacter:true});
   }
-  return {render,renderComposition,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
+  return {render,renderComposition,renderBackdrop:(time,frame,extraBranch)=>render(time,true,true,true,frame,extraBranch),
+    dispose:()=>post.disposeFrozen(),
+    timeline,failedModels,failedTextures,partLayers,pickPart,bindPartState};
 }
