@@ -1354,6 +1354,52 @@ async function live2dPortrait(model,generation){
  };
  disposeRenderer=dispose;evidence.interaction.hitAreaChecks=model.interaction.hitAreas.map(h=>({id:h.id,exists:internal.getDrawableIndex(h.id)>=0}));return api;
 }
+// Texture density is measured in the authored setup pose. A 0.5-scale
+// character needs two output pixels per scene unit to retain its atlas detail.
+function portraitPngDensity(layers) {
+ const samples = [];
+ const twiceArea = (v,a,b,c) => Math.abs((v[b]-v[a])*(v[c+1]-v[a+1]) - (v[b+1]-v[a+1])*(v[c]-v[a]));
+ for (const layer of layers) {
+  const pose = new spine.Skeleton(layer.data);
+  if (layer.skeleton.skin) pose.setSkin(layer.skeleton.skin);
+  pose.setToSetupPose();
+  pose.scaleX = layer.skeleton.scaleX;
+  pose.scaleY = layer.skeleton.scaleY;
+  pose.updateWorldTransform();
+  for (const slot of pose.drawOrder) {
+   const art = slot.attachment, page = art?.region?.page;
+   if (!page || !art.uvs || !slot.color.a || !art.color.a) continue;
+   const mesh = art instanceof spine.MeshAttachment;
+   if (!mesh && !(art instanceof spine.RegionAttachment)) continue;
+   const points = new Float32Array(mesh ? art.worldVerticesLength : 8);
+   if (mesh) art.computeWorldVertices(slot, 0, points.length, points, 0, 2);
+   else art.computeWorldVertices(slot.bone, points, 0, 2);
+   const triangles = mesh ? art.triangles : [0, 1, 2, 0, 2, 3];
+   let sceneArea = 0, uvArea = 0;
+   for (let i = 0; i < triangles.length; i += 3) {
+    const a = triangles[i] * 2, b = triangles[i+1] * 2, c = triangles[i+2] * 2;
+    sceneArea += twiceArea(points,a,b,c);
+    uvArea += twiceArea(art.uvs,a,b,c);
+   }
+   const texels = uvArea * page.width * page.height;
+   const density = Math.sqrt(texels / sceneArea);
+   if (sceneArea > 0 && Number.isFinite(density) && density > 0) samples.push({density, texels});
+  }
+ }
+ // Small characters can use much finer textures than the background.
+ // Cover 95% of setup-pose texels without sizing the image for a stray sliver.
+ samples.sort((a,b) => a.density-b.density);
+ let remaining = samples.reduce((sum,x) => sum+x.texels, 0) * .95;
+ for (const sample of samples) {
+  remaining -= sample.texels;
+  if (remaining <= 0) {
+   const rounded = Math.round(sample.density);
+   return Math.max(1, Math.abs(rounded - sample.density) < .01 ? rounded : sample.density);
+  }
+ }
+ return 1;
+}
+
 async function spinePortrait(model,generation){
  // The setup skin for these portraits omits body attachments supplied by skin 1.
  if (portraitsWithSkinOne.has(model.id)) model.defaultSkin ||= '1';
@@ -1467,6 +1513,7 @@ async function spinePortrait(model,generation){
  let bounds=stageFrameCrop?stageBoundsForFrame(stageFrameCrop):framing.bounds;evidence.bounds=bounds;evidence.offscreenLayers=framing.excluded;const maxBuffer=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
  const project=(x,y)=>{const p=api.world(0,0),q=api.world(stage.clientWidth,stage.clientHeight);return {x:(x-p.x)/(q.x-p.x)*stage.clientWidth,y:(y-p.y)/(q.y-p.y)*stage.clientHeight};};
  editor=window.createInteractionSpineEditor({layers,ns:spine,project,unproject:api.world});
+ let pngPixelsPerUnit;
  api.capture = (animation, format) => {
   const original = K.framing.original;
   const artworkAperture = original ? null : apertureForMotion(animation.name);
@@ -1534,6 +1581,7 @@ async function spinePortrait(model,generation){
     }
    }
   }
+  if (!format || format === 'png') session.pngPixelsPerUnit = pngPixelsPerUnit ??= portraitPngDensity(layers);
   if (levelFrame || exportFrame) session.fixedFrame = levelFrame || exportFrame;
   else if (!original) {
    const frame = spinePortraitFrameBounds(model.id, layers, spine, hidden);

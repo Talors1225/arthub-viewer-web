@@ -1404,7 +1404,7 @@
   // ---------- 导出质量：图片三档、GIF 两档、视频三档 ----------
   K.exportPresets = Object.freeze([
     Object.freeze({ id: 'medium', label: '中等质量', pngEdge: 1024, gifEdge: 768, fps: 25, videoEdge: 1280, videoFps: 30, videoBitrate: 5000000 }),
-    Object.freeze({ id: 'high', label: '高等质量', pngEdge: 2048, gifEdge: 1280, fps: 50, videoEdge: 1920, videoFps: 60, videoBitrate: 12000000 }),
+    Object.freeze({ id: 'high', label: '高等质量', pngEdge: 4096, gifEdge: 1280, fps: 50, videoEdge: 1920, videoFps: 60, videoBitrate: 12000000 }),
     Object.freeze({ id: 'lossless', label: '无损质量', pngEdge: 0, gifEdge: 0, fps: 0 }),
   ]);
   K.exportPreset = value => K.exportPresets.find(p => p.id === (value?.id || value)) || K.exportPresets[1];
@@ -1437,7 +1437,10 @@
     const nativeW = spanW + padding * 2, nativeH = spanH + padding * 2;
     const edge = kind === 'video' ? preset.videoEdge : kind === 'gif' ? preset.gifEdge
       : Number.isSafeInteger(quality?.pngEdge) && quality.pngEdge >= 0 ? quality.pngEdge : preset.pngEdge;
-    const scale = edge ? edge / Math.max(nativeW, nativeH) : 1;
+    const nativeScale = kind === 'png' ? quality?.pngPixelsPerUnit || 1 : 1;
+    const requestedScale = edge ? edge / Math.max(nativeW, nativeH) : nativeScale;
+    const scale = kind === 'png' && preset.id === 'high' && quality?.pngMode !== 'custom'
+      ? Math.min(nativeScale, requestedScale) : requestedScale;
     let width = Math.max(1, Math.ceil(nativeW * scale - 1e-7));
     let height = Math.max(1, Math.ceil(nativeH * scale - 1e-7));
     if (kind === 'video') { width += width % 2; height += height % 2; }
@@ -1582,6 +1585,9 @@
     }, quality, kind, 0);
   };
   K.illustrationExportSize = (session, quality, kind = 'png') => {
+    if (kind === 'png' && session.pngPixelsPerUnit) {
+      quality = { ...K.exportPreset(quality), ...(typeof quality === 'object' ? quality : {}), pngPixelsPerUnit: session.pngPixelsPerUnit };
+    }
     if (session.fixedFrame) {
       return { ...K.exportDimensions(session.fixedFrame, quality, kind, 0), fullFrame: true, tiled: kind === 'png' };
     }
@@ -1727,7 +1733,7 @@
       + '<div class="export-choices" role="radiogroup" aria-label="导出质量">'
       + presets.map(p => {
         const detail = animation ? ''
-          : 'PNG · ' + (p.pngEdge ? '长边 ' + p.pngEdge + ' 像素' : '原始尺寸');
+          : 'PNG · ' + (p.pngEdge ? (p.id === 'high' ? '长边最多 ' : '长边 ') + p.pngEdge + ' 像素' : '原始尺寸');
         return '<button type="button" class="export-choice" role="radio" data-quality="' + p.id + '"><strong>'
           + p.label + '</strong><small>' + detail + '</small></button>';
       }).join('') + '</div><div class="export-detail" role="status"></div>'
@@ -2088,7 +2094,7 @@
     centerX: size.centerX + (tile.x + tile.width / 2 - size.width / 2) / size.scale,
     centerY: size.centerY + (yUp ? -1 : 1) * (tile.y + tile.height / 2 - size.height / 2) / size.scale,
   });
-  K.encodePNGFrame = async ({ size, request, drawTile, onSize, background, signal, onProgress, copy = false }) => {
+  K.encodePNGFrame = async ({ size, request, drawTile, onSize, background, signal, onProgress, copy = false, sourceDensity = 0 }) => {
     const codec = await K.awaitExportTask(K.loadPNGEncoder(), signal);
     const check = () => { if (signal?.aborted) throw new DOMException('已取消导出', 'AbortError'); };
     const scratch = document.createElement('canvas');
@@ -2099,13 +2105,20 @@
       while (true) {
         check(); onSize?.(current);
         try {
-          const result = await codec.encodePNG({ width: current.width, height: current.height, tileEdge: edges[edgeIndex], signal,
+          // Sample minified artwork on a 2x grid before reducing each tile.
+          // Integer tile coordinates keep the filter aligned across tile boundaries.
+          const samples = sourceDensity > current.scale * 1.25 ? 2 : 1;
+          const frame = samples === 1 ? current : { ...current, width: current.width * samples,
+            height: current.height * samples, scale: current.scale * samples };
+          const result = await codec.encodePNG({ width: current.width, height: current.height, tileEdge: edges[edgeIndex] / samples, signal,
             onProgress: onProgress ? value => onProgress(value, current) : undefined,
             readTile: tile => {
               check();
-              const source = drawTile(tile, current);
+              const renderTile = samples === 1 ? tile : { x: tile.x * samples, y: tile.y * samples,
+                width: tile.width * samples, height: tile.height * samples };
+              const source = drawTile(renderTile, frame);
               const gl = source.getContext('webgl2') || source.getContext('webgl');
-              if (source.width !== tile.width || source.height !== tile.height || gl && (gl.isContextLost() || gl.drawingBufferWidth !== tile.width || gl.drawingBufferHeight !== tile.height)) {
+              if (source.width !== renderTile.width || source.height !== renderTile.height || gl && (gl.isContextLost() || gl.drawingBufferWidth !== renderTile.width || gl.drawingBufferHeight !== renderTile.height)) {
                 throw Object.assign(new Error('设备无法分配 PNG 绘图区域'), { code: 'PNG_ALLOCATION_FAILED' });
               }
               scratch.width = tile.width; scratch.height = tile.height;

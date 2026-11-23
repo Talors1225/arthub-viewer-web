@@ -493,7 +493,7 @@
       const key = currentKey(); if (identity === key && editor === cfg.editor()) return;
       setMode(''); if (poseTools) { poseLocked = false; $('poseLock').setAttribute('aria-pressed', 'false'); $('poseLock').classList.remove('on'); } identity = key; editor = cfg.editor(); selectedPart = null; refresh();
     }
-    function dimensions(quality) { const session = cfg.capture(driver.playback()); try { return session.pngSize(quality); } finally { session.dispose(); } }
+    function dimensions(quality) { const session = cfg.capture(driver.playback(), 'png', quality); try { return K.illustrationExportSize(session, quality); } finally { session.dispose(); } }
     const exportDuration = (state, format) => format === 'video' ? cfg.videoDuration?.(state) ?? state.duration : state.duration;
     async function exportFile(quality, transparent, format = 'png', copy = false) {
       requireEditor(); if (exporting) return; closePopup();
@@ -514,7 +514,7 @@
         const draw = time => { const source = session.draw(time, size, null); K.paintExportBackground(ctx, size.width, size.height, exportBackground === 'checker' && format === 'gif' ? null : exportBackground); ctx.drawImage(source, 0, 0, size.width, size.height); };
         let blob, extension = format;
         if (format === 'png') {
-          const result = await K.encodePNGFrame({ size, request: quality, background: transparent ? null : exportBackground, signal: job.signal, copy,
+          const result = await K.encodePNGFrame({ size, request: quality, sourceDensity: session.pngPixelsPerUnit, background: transparent ? null : exportBackground, signal: job.signal, copy,
             onProgress: (value, frame) => job.update(value, `分块编码 PNG · ${frame.width}×${frame.height}${frame.adapted ? ' · 适配尺寸' : ''} · ${Math.round(value * 100)}%`),
             drawTile: (tile, frame) => session.draw(null, K.pngTileSize(frame, tile, session.pixelYUp !== false), null),
           });
@@ -562,7 +562,8 @@
       let nativeSize;
       const previewSize = quality => {
         nativeSize ||= dimensions('lossless');
-        const edge = quality.pngEdge, factor = edge ? edge / Math.max(nativeSize.width, nativeSize.height) : 1;
+        const edge = quality.pngEdge, requested = edge ? edge / Math.max(nativeSize.width, nativeSize.height) : 1;
+        const factor = quality.id === 'high' && quality.pngMode !== 'custom' ? Math.min(1, requested) : requested;
         return { ...nativeSize, width: Math.max(1, Math.ceil(nativeSize.width * factor)), height: Math.max(1, Math.ceil(nativeSize.height * factor)), scale: nativeSize.scale * factor };
       };
       showPopup(button, animation ? '导出动画' : '导出 PNG', pop => K.mountExportOptions(pop, {
