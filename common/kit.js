@@ -1403,14 +1403,14 @@
 
   // ---------- 导出质量：图片三档、GIF 两档、视频三档 ----------
   K.exportPresets = Object.freeze([
-    Object.freeze({ id: 'medium', label: '中等质量', pngEdge: 1024, gifEdge: 768, fps: 25, videoEdge: 1280, videoFps: 30, videoBitrate: 5000000 }),
-    Object.freeze({ id: 'high', label: '高等质量', pngEdge: 4096, gifEdge: 1280, fps: 50, videoEdge: 1920, videoFps: 60, videoBitrate: 12000000 }),
+    Object.freeze({ id: 'medium', label: '中等质量', pngEdge: 1024, gifEdge: 768, fps: 25, videoEdge: 1920, videoFps: 60, videoBitrate: 12000000 }),
+    Object.freeze({ id: 'high', label: '高等质量', pngEdge: 4096, gifEdge: 1280, fps: 50, videoEdge: 2560, videoFps: 60, videoBitrate: 24000000 }),
     Object.freeze({ id: 'lossless', label: '无损质量', pngEdge: 0, gifEdge: 0, fps: 0 }),
   ]);
   K.exportPreset = value => K.exportPresets.find(p => p.id === (value?.id || value)) || K.exportPresets[1];
   K.animationExportPresets = Object.freeze(K.exportPresets.slice(0, 2));
   K.videoExportPresets = Object.freeze([...K.animationExportPresets,
-    Object.freeze({ id: 'ultra', label: '超清质量', videoOnly: true, gifEdge: 1280, fps: 50, videoEdge: 3840, videoFps: 60, videoBitrate: 40000000 }),
+    Object.freeze({ id: 'ultra', label: '超清质量', videoOnly: true, gifEdge: 1280, fps: 50, videoEdge: 3840, videoMaxPixels: 3840 * 2160, videoFps: 60, videoBitrate: 32000000 }),
   ]);
   // Old saved PNG-sequence selections now export a playable high-quality animation.
   K.animationExportPreset = value => K.videoExportPresets.find(p => p.id === (value?.id || value)) || K.animationExportPresets[1];
@@ -1438,12 +1438,18 @@
     const edge = kind === 'video' ? preset.videoEdge : kind === 'gif' ? preset.gifEdge
       : Number.isSafeInteger(quality?.pngEdge) && quality.pngEdge >= 0 ? quality.pngEdge : preset.pngEdge;
     const nativeScale = kind === 'png' ? quality?.pngPixelsPerUnit || 1 : 1;
-    const requestedScale = edge ? edge / Math.max(nativeW, nativeH) : nativeScale;
+    const pixelBudget = kind === 'video' ? preset.videoMaxPixels : 0;
+    const edgeScale = edge ? edge / Math.max(nativeW, nativeH) : nativeScale;
+    const requestedScale = pixelBudget ? Math.min(edgeScale, Math.sqrt(pixelBudget / nativeW / nativeH)) : edgeScale;
     const scale = kind === 'png' && preset.id === 'high' && quality?.pngMode !== 'custom'
       ? Math.min(nativeScale, requestedScale) : requestedScale;
     let width = Math.max(1, Math.ceil(nativeW * scale - 1e-7));
     let height = Math.max(1, Math.ceil(nativeH * scale - 1e-7));
     if (kind === 'video') { width += width % 2; height += height % 2; }
+    if (pixelBudget && width * height > pixelBudget) {
+      width = Math.max(2, 2 * Math.floor(nativeW * scale / 2));
+      height = Math.max(2, 2 * Math.floor(nativeH * scale / 2));
+    }
     if (![width, height].every(v => Number.isSafeInteger(v) && v > 0)) throw new Error('无法计算有效的原始尺寸');
     return { width, height, scale, centerX: (bounds.minX + bounds.maxX) / 2, centerY: (bounds.minY + bounds.maxY) / 2 };
   };
@@ -1759,7 +1765,7 @@
         button.classList.toggle('on', selected); button.setAttribute('aria-checked', String(selected)); button.tabIndex = preferred ? 0 : -1;
         if (animation) { const p = K.animationExportPreset(button.dataset.quality);
           button.querySelector('small').textContent = format === 'video'
-            ? '视频 · 长边 ' + p.videoEdge + ' · ' + p.videoFps + ' 帧/秒'
+            ? '视频 · 长边上限 ' + p.videoEdge + ' · ' + p.videoFps + ' 帧/秒'
             : 'GIF · 长边 ' + p.gifEdge + ' · ' + p.fps + ' 帧/秒'; }
       });
       formats.forEach(button => { const selected = button.dataset.format === format;
@@ -1874,10 +1880,9 @@
       check();
       const source = new CanvasSource(canvas, { codec: encoding.codec, quality: new Quality({ bitrate: preset.videoBitrate }),
         latencyMode: 'quality', hardwareAcceleration: encoding.hardwareAcceleration });
-      // Keep the sample timestamps. Snapping a fractional cycle to the nominal
-      // frame rate can put two frames at the same timestamp.
-      output.addVideoTrack(source); await output.start();
       const step = plan.duration / plan.frames;
+      // Match the actual sample spacing, including cycles with a fractional last frame.
+      output.addVideoTrack(source, { frameRate: 1 / step }); await output.start();
       // Every planned frame is encoded; timestamps come from the animation,
       // independent of device speed and the viewer's playback speed.
       for (let k = 0; k < plan.frames; k++) {

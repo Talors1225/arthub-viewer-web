@@ -580,7 +580,7 @@
         getDetail: (quality, format) => {
           requireEditor(); const state = driver.playback();
           if (animation && !state.duration) throw new Error('请先选择一个有时长的动画');
-          if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · 长边 ${format === 'video' ? preset.videoEdge : preset.gifEdge} 像素 · ${exportDuration(state, format).toFixed(2)} 秒 · 背景跟随舞台 · 无声${format === 'video' ? ' · ' + K.videoSizeEstimate(exportDuration(state, format), preset) : ''}`; }
+          if (animation) { const preset = K.animationExportPreset(quality); return `自适应立绘比例 · ${format === 'video' ? '长边上限 ' + preset.videoEdge : '长边 ' + preset.gifEdge} 像素 · ${exportDuration(state, format).toFixed(2)} 秒 · 背景跟随舞台 · 无声${format === 'video' ? ' · ' + K.videoSizeEstimate(exportDuration(state, format), preset) : ''}`; }
           requireEditor();
           const preset = K.exportPreset(quality);
           return `按立绘范围裁剪 · ${preset.pngEdge ? '长边 ' + preset.pngEdge + ' 像素' : '原始像素比例'} · 背景跟随舞台 · PNG 无损编码`;
