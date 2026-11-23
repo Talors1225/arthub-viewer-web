@@ -426,7 +426,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261122-framing-v4"></script>
+<script src="../../common/kit.js?v=20261123-original-export"></script>
 <script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/portrait-audio.js?v=2301-tap"></script>
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
@@ -2743,7 +2743,11 @@
       job.close(); animationExportRunning = false;
     }
   }
+  async function prepareOriginals() {
+    if (!cut) throw new Error('请先加载一个资源');
+  }
   makeStagePopup($('#btnGif'), pop => K.mountExportOptions(pop, {
+    prepareOriginals,
     kind: 'animation', quality: animationExportQuality, format: animationExportFormat,
     onChange: quality => { animationExportQuality = quality; store.set('animationExportQuality', quality); },
     onFormatChange: format => { animationExportFormat = format; store.set('animationExportFormat', format); },
@@ -2912,7 +2916,7 @@
   });
   makeStagePopup(btnPng, (pop) => {
     K.mountExportOptions(pop, {
-      kind: 'png', quality: exportQuality, transparent: getBg() === 'checker',
+      prepareOriginals,      kind: 'png', quality: exportQuality, transparent: getBg() === 'checker',
       onChange: quality => { exportQuality = quality; store.set('pngExportQuality', quality); },
       getSize: quality => pngPose(quality).size,
       getDetail: quality => 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码',

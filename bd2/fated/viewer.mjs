@@ -1047,11 +1047,16 @@ const playbackUI = window.createInteractionViewerUI({
   onError: error => K.toast(error.message, 'err'),
 });
 
+async function prepareOriginals() {
+  if (!scene) throw new Error('请先加载一个资源');
+}
+
 function mountPngOptions(popup) {
   popup.classList.add('viewer-tools-popup');
   K.mountExportOptions(popup, {
+    prepareOriginals,
     kind: 'png',
-    quality: store.get('pngQuality', 'medium'),
+    quality: store.get('pngQuality', 'high'),
     transparent: stageBackground.get() === 'checker',
     onChange: quality => store.set('pngQuality', quality),
     getSize: quality => pngPose(quality).size,
@@ -1149,7 +1154,7 @@ volume.mount($('fated-voice-volume'), value => scene?.sound?.setVolume(value));
 K.makeStagePopup($('btnPng'), mountPngOptions);
 K.makeStagePopup($('btnGif'), popup => {
   popup.classList.add('viewer-tools-popup');
-  mountVideoOptions(popup);
+  K.prepareExportMenu(popup, prepareOriginals, mountVideoOptions);
 });
 K.makeStagePopup($('btnBg'), stageBackground.mount);
 $('btnPresetImmersive').onclick = () => { setImmersive(true); immersiveExit.focus(); };

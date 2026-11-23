@@ -1684,7 +1684,36 @@
     const mb = Math.max(0, Number(duration) || 0) * preset.videoBitrate / 8 / 1024 / 1024;
     return `按目标码率估算约 ${mb.toFixed(1)} MB（实际随画面与编码器变化，兼容编码可能更大）`;
   };
+  K.prepareExportMenu = (pop, prepare, mount) => {
+    const body = document.createElement('div');
+    body.style.display = 'contents';
+    pop.append(body);
+    const open = () => body.isConnected && pop.style.display !== 'none';
+    async function load() {
+      const message = document.createElement('p');
+      message.setAttribute('role', 'status');
+      message.textContent = '正在准备导出用的原始贴图…';
+      body.replaceChildren(message);
+      try {
+        await prepare();
+        if (open()) mount(body);
+      } catch (error) {
+        if (!open()) return;
+        message.textContent = error.message || '原始贴图加载失败';
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.textContent = '重试';
+        retry.onclick = load;
+        body.replaceChildren(message, retry);
+      }
+    }
+    load();
+  };
   K.mountExportOptions = (pop, options) => {
+    if (options.prepareOriginals) {
+      return K.prepareExportMenu(pop, options.prepareOriginals, body =>
+        K.mountExportOptions(body, { ...options, prepareOriginals: null }));
+    }
     const animation = options.kind === 'animation';
     const presets = animation ? K.videoExportPresets : K.exportPresets;
     let quality = (animation ? K.animationExportPreset(options.quality) : K.exportPreset(options.quality)).id;
@@ -1694,6 +1723,7 @@
     const manualCamera = Number.isFinite(options.cameraAngle);
     pop.innerHTML = '<div class="col export-options"><div class="col-title">' + (animation ? '导出动画' : '导出 PNG') + '</div>'
       + (animation ? '<div class="export-formats" role="group" aria-label="动画文件格式"><button type="button" data-format="gif">GIF 动图</button><button type="button" data-format="video">视频</button></div>' : '')
+      + '<small class="muted">已使用原始贴图 · 请选择输出画质</small>'
       + '<div class="export-choices" role="radiogroup" aria-label="导出质量">'
       + presets.map(p => {
         const detail = animation ? ''
@@ -1717,10 +1747,10 @@
     const update = () => {
       clearTimeout(preparingTimer);
       if (animation && format !== 'video' && K.animationExportPreset(quality).videoOnly) { quality = 'high'; options.onChange?.(quality); }
-      buttons.forEach(button => { const selected = button.dataset.quality === quality;
+      buttons.forEach(button => { const preferred = button.dataset.quality === quality, selected = preferred && (animation || pngMode === 'preset');
         button.hidden = !!(animation && format !== 'video' && K.animationExportPreset(button.dataset.quality).videoOnly);
         button.style.display = button.hidden ? 'none' : '';
-        button.classList.toggle('on', selected); button.setAttribute('aria-checked', String(selected)); button.tabIndex = selected ? 0 : -1;
+        button.classList.toggle('on', selected); button.setAttribute('aria-checked', String(selected)); button.tabIndex = preferred ? 0 : -1;
         if (animation) { const p = K.animationExportPreset(button.dataset.quality);
           button.querySelector('small').textContent = format === 'video'
             ? '视频 · 长边 ' + p.videoEdge + ' · ' + p.videoFps + ' 帧/秒'
@@ -1732,6 +1762,7 @@
       if (modeSelect) pop.querySelector('.png-edge-row').hidden = pngMode !== 'custom';
       try { const request = animation ? K.animationExportPreset(quality) : pngRequest();
         detail.textContent = options.getDetail(request, format)
+        + (animation && format === 'gif' ? ' · GIF 每帧最多 256 色。' : '')
         + (animation && format === 'video' ? ' · 自动选择 MP4 / WebM 编码，保留所选分辨率。' : '')
         + (animation && quality === 'ultra' ? ' · 文件更大、导出更慢；清晰度受原贴图限制。' : '');
         if (!animation && options.getSize) {
@@ -1739,17 +1770,13 @@
           detail.textContent = `预计 ${size.width}×${size.height} 像素${size.adapted ? ' · 自动适配，已降低尺寸' : pngMode === 'custom' ? ' · 自定义尺寸' : quality === 'lossless' ? ' · 原始尺寸' : ''} · 按立绘范围裁剪 · PNG 无损编码`;
           if (copy && size.width * size.height > 64 * 1024 * 1024) { copy.disabled = true; detail.textContent += ' · 超大图片请下载文件'; } else if (copy) copy.disabled = false;
         } else if (copy) copy.disabled = false;
-        if (!animation) {
-          const selected = buttons.find(button => button.dataset.quality === quality);
-          selected.querySelector('small').textContent = pngMode === 'custom' ? 'PNG · 自定义长边 ' + pngEdge + ' 像素' : pngMode === 'auto' ? 'PNG · 自动适配设备' : 'PNG · ' + (request.pngEdge ? '长边 ' + request.pngEdge + ' 像素' : '原始尺寸');
-        }
         go.disabled = false; }
       catch (error) { detail.textContent = error.message; go.disabled = true; if (copy) copy.disabled = true;
         if (options.isPreparing?.()) preparingTimer = setTimeout(() => { if (pop.isConnected) update(); }, 150);
       }
     };
     buttons.forEach((button, index) => {
-      button.onclick = () => { quality = button.dataset.quality; if (modeSelect) { pngMode = modeSelect.value = 'preset'; pngPrefs?.set('sizeMode', pngMode); for (const item of buttons) { const p = K.exportPreset(item.dataset.quality); item.querySelector('small').textContent = 'PNG · ' + (p.pngEdge ? '长边 ' + p.pngEdge + ' 像素' : '原始尺寸'); } } options.onChange?.(quality); update(); };
+      button.onclick = () => { quality = button.dataset.quality; if (modeSelect) { pngMode = modeSelect.value = 'preset'; pngPrefs?.set('sizeMode', pngMode); } options.onChange?.(quality); update(); };
       button.onkeydown = event => {
         if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();

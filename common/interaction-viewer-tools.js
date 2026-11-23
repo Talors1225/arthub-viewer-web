@@ -566,6 +566,11 @@
         return { ...nativeSize, width: Math.max(1, Math.ceil(nativeSize.width * factor)), height: Math.max(1, Math.ceil(nativeSize.height * factor)), scale: nativeSize.scale * factor };
       };
       showPopup(button, animation ? '导出动画' : '导出 PNG', pop => K.mountExportOptions(pop, {
+        prepareOriginals: async () => {
+          const selected = currentKey(), active = requireEditor();
+          await cfg.beforeExport?.();
+          if (selected !== currentKey() || active !== cfg.editor()) throw new Error('资源已切换，请重新选择导出');
+        },
         kind: animation ? 'animation' : 'png', quality: 'high', transparent: background === 'checker',
         cameraLevel: cfg.cameraLevel?.(), onCameraLevel: value => { cfg.setCameraLevel?.(value); nativeSize = null; },
         cameraAngle: cfg.cameraAngle?.(), onCameraAngle: value => { cfg.setCameraAngle?.(value); nativeSize = null; },

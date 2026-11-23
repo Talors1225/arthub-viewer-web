@@ -396,7 +396,7 @@
 
 <script src="vendor/spine-webgl.js"></script>
 <script src="../../common/asset-display-overrides.js?v=20261104-unified-final"></script>
-<script src="../../common/kit.js?v=20261122-reviewed-frames"></script>
+<script src="../../common/kit.js?v=20261123-original-export"></script>
 <script src="../../common/asset-loader.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/stage-ui.js?v=20261122-reviewed-frames"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
@@ -1938,7 +1938,11 @@
       job.close(); animationExportRunning = false;
     }
   }
+  async function prepareOriginals() {
+    if (!layers.some(layer => layer.visible)) throw new Error('没有可导出的可见立绘');
+  }
   makeStagePopup($('#btnGif'), pop => K.mountExportOptions(pop, {
+    prepareOriginals,
     kind: 'animation', quality: store.get('animationExportQuality', 'high'), format: store.get('animationExportFormat', 'gif'),
     onChange: quality => store.set('animationExportQuality', quality),
     onFormatChange: format => store.set('animationExportFormat', format),
@@ -1968,7 +1972,7 @@
       return measureFramedArt(visible, () => K.pngExportPose(skeletons, quality, spine));
     };
     K.mountExportOptions(pop, {
-      kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: getBg() === 'checker',
+      prepareOriginals,      kind: 'png', quality: store.get('pngExportQuality', 'high'), transparent: getBg() === 'checker',
       onChange: quality => store.set('pngExportQuality', quality),
       getSize: quality => poseFor(quality).size,
       getDetail: quality => { poseFor(quality); return 'PNG · 按立绘范围裁剪 · ' + (quality.pngEdge ? '长边 ' + quality.pngEdge + ' 像素' : '原始像素比例') + ' · PNG 无损编码'; },
