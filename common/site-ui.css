@@ -180,14 +180,14 @@ html[data-site-ui="1"] body .site-more-menu .menu-heading { padding:8px 8px 3px;
 /* Every stage surface uses one fixed right edge; content never chooses its anchor. */
 @media(min-width:721px) {
  html[data-site-ui="1"] body :is(.stage-popup.arthub-tool-popup,.site-more-menu),
- html[data-site-ui="1"] body:not(:has(#gridView.open)) .ctx-menu {
+ html[data-site-ui="1"] body:not(:has(#gridView.open)) .ctx-menu:not(.part-pick-menu) {
    left:auto!important; right:16px!important; top:80px!important; bottom:auto!important;
    transform:none!important; max-height:calc(100dvh - 104px)!important;
  }
 }
 @media(max-width:720px) {
  html[data-site-ui="1"] body :is(.stage-popup.arthub-tool-popup,.site-more-menu) { left:auto!important; right:max(8px,env(safe-area-inset-right))!important; top:40px!important; bottom:auto!important; transform:none!important; width:clamp(160px,45vw,192px)!important; min-width:0!important; max-height:min(560px,calc(100dvh - 110px))!important; overflow:auto; padding:9px!important; }
- html[data-site-ui="1"] body:not(:has(#gridView.open)) .ctx-menu { left:auto!important; right:max(8px,env(safe-area-inset-right))!important; top:40px!important; width:clamp(160px,45vw,192px)!important; min-width:0!important; max-height:min(560px,calc(100dvh - 110px))!important; }
+ html[data-site-ui="1"] body:not(:has(#gridView.open)) .ctx-menu:not(.part-pick-menu) { left:auto!important; right:max(8px,env(safe-area-inset-right))!important; top:40px!important; width:clamp(160px,45vw,192px)!important; min-width:0!important; max-height:min(560px,calc(100dvh - 110px))!important; }
  html[data-site-ui="1"] body #floatPanel .rp-page { padding:8px!important; }
  html[data-site-ui="1"] body #floatPanel .parts-controls .parts-search-row { flex-wrap:wrap; gap:6px; }
  html[data-site-ui="1"] body #floatPanel .parts-controls .parts-search-row input.text-input { flex-basis:100%; width:100%; height:32px; min-height:32px; }

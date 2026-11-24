@@ -918,6 +918,11 @@ const partsPanel = K.mountPartsPanel({
 function setPartPicking(enabled) {
   cancelInput();
   if (!enabled) K.hideMenu();
+  else {
+    panel.classList.remove('open');
+    document.body.classList.remove('interaction-open');
+    K.toast('点击画面选择部件，再打开「部件」可退出点选。', 'info', 2400);
+  }
   stage.toggleAttribute('data-picking-parts', enabled);
   pickButton.setAttribute('aria-pressed', String(enabled));
   pickButton.textContent = enabled ? '结束点选' : '画面点选';
@@ -945,7 +950,7 @@ function pickPart(clientX, clientY) {
           if (scene?.partTarget === partTarget && stage.hasAttribute('data-picking-parts')) partsPanel.hide(name);
         } },
         { label: '取消' },
-      ], clientX, clientY);
+      ], clientX, clientY, { partPick: true });
     }
   } finally {
     for (const [slot, opacity] of muted) slot.color.a = opacity;
@@ -1263,6 +1268,11 @@ canvas.addEventListener('pointerup', event => {
       pendingPartPick = { x: event.clientX, y: event.clientY, target: scene?.partTarget };
     }
     cancelInput(event.pointerId);
+    if (pendingPartPick && event.pointerType === 'touch') {
+      const { x, y } = pendingPartPick;
+      pendingPartPick = null;
+      pickPart(x, y);
+    }
     return;
   }
   if (playing && interactive && scene) {

@@ -6,7 +6,7 @@ import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,autho
 import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261121-scene-fit';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
-import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261122-plymouth-forearm';
+import {installMotionCompatibility,configurePortraitMotions,configurePortraitRendering} from './portrait-motion.mjs?v=20261125-naples-joint2';
 const $=id=>document.getElementById(id),K=window.SpineKit,BASE='..';
 const stage=$('stage'),interactionHint=$('interaction-hint'),hintButton=$('show-hint');
 const hintNav=$('interaction-hint-nav'),hintCount=$('interaction-hint-count'),nextHintButton=$('next-hint');
@@ -935,7 +935,7 @@ async function live2dPortrait(model,generation){
  const lookParams=array(model.interaction.lookParameters).filter(p=>indexes.has(p.id));
  const manager=internal.motionManager,queue=manager.queueManager||manager.motionManager;
  configurePortraitMotions(manager,model,core.parameters);
- configurePortraitRendering(internal.renderer,core.drawables,model.id);
+ configurePortraitRendering(internal.renderer,core.drawables,model.id,()=>activeMotion);
  // A separate queue retains the Unity effect layer when the base motion changes.
  let effectLoad;
  const loadEffect = () => effectLoad ||= (async () => {

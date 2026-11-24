@@ -46,7 +46,65 @@ function closePlymouthArmSeam(vertices, shirtFold, originalFold, overlap) {
  }
 }
 
-export function configurePortraitRendering(renderer, drawables, id) {
+const naplesElbowEdge = [
+ [12, .7], [13, 1], [14, 1], [15, 1], [16, 1], [17, 1], [18, .65],
+ [44, .65], [45, 1], [46, 1], [47, 1], [48, 1], [49, .85], [50, .4],
+];
+
+// Outer edge vertices approach the matching point of the moving forearm cap.
+const naplesElbowJoin = [
+ [18, 24, .9], [19, 25, .85], [20, 0, .65],
+ [42, 49, .65], [43, 48, .8],
+];
+
+function configureNaplesElbow(renderer, drawables, currentMotion) {
+ const upperArm = drawables.ids.indexOf('ArtMesh499');
+ const forearm = drawables.ids.indexOf('ArtMesh498');
+ const upper = drawables.vertexPositions?.[upperArm];
+ const lower = drawables.vertexPositions?.[forearm];
+ if (upper?.length !== 132 || lower?.length !== 112) return;
+ const saved = upper.slice();
+ const draw = renderer.doDrawModel;
+ renderer.doDrawModel = function (...args) {
+  if (!/^idle(?:9|10|11|12)$/.test(currentMotion()) ||
+      drawables.opacities[upperArm] < .98 || drawables.opacities[forearm] < .98) return draw.apply(this, args);
+  // The upper-arm cap extends beyond the forearm in these bends and draws a
+  // second outline. Tuck only its lowest rows under the forearm's inner edge.
+  const x = lower[90], y = lower[91];
+  const tangentX = lower[94] - x, tangentY = lower[95] - y;
+  const length = Math.hypot(tangentX, tangentY);
+  if (length < 1e-6) return draw.apply(this, args);
+  let nx = -tangentY / length, ny = tangentX / length;
+  if ((lower[102] - x) * nx + (lower[103] - y) * ny < 0) { nx = -nx; ny = -ny; }
+  const outwardX = lower[48] - lower[102], outwardY = lower[49] - lower[103];
+  const outwardLength = Math.hypot(outwardX, outwardY);
+  if (outwardLength < 1e-6) return draw.apply(this, args);
+  const ox = outwardX / outwardLength, oy = outwardY / outwardLength;
+  saved.set(upper);
+  try {
+   // Keep the bend connected where the outer contour meets the forearm,
+   // without moving the shoulder or changing the original draw order.
+   for (const [vertex, reference, amount] of naplesElbowJoin) {
+    const i = vertex * 2, j = reference * 2;
+    const distance = (lower[j] - upper[i]) * ox + (lower[j + 1] - upper[i + 1]) * oy;
+    const shift = Math.max(0, Math.min(distance, outwardLength * .55)) * amount;
+    upper[i] += ox * shift;
+    upper[i + 1] += oy * shift;
+   }
+   for (const [vertex, weight] of naplesElbowEdge) {
+    const i = vertex * 2;
+    const distance = (x - upper[i]) * nx + (y - upper[i + 1]) * ny;
+    const shift = Math.max(0, Math.min(distance, length * .65)) * weight;
+    upper[i] += nx * shift;
+    upper[i + 1] += ny * shift;
+   }
+   return draw.apply(this, args);
+  } finally { upper.set(saved); }
+ };
+}
+
+export function configurePortraitRendering(renderer, drawables, id, currentMotion) {
+ if (id === 'nabulesi_3') return configureNaplesElbow(renderer, drawables, currentMotion);
  if (id !== 'pulimaosi_3') return;
  const [elbow, shirt, hand, upperArm, fold, forearm, forearmUnderlay] = [
   'ArtMesh552', 'ArtMesh237', 'ArtMesh550', 'ArtMesh395', 'ArtMesh231', 'ArtMesh392', 'ArtMesh242',

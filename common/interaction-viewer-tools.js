@@ -442,7 +442,13 @@
       $('exitPartEdit').setAttribute('aria-pressed', String(mode === 'parts'));
       $('partEditHint').textContent = mode === 'parts' ? '部件编辑已开启：点击画面选择部件，确认后隐藏。' : '部件列表可切换显示；开启编辑后可在画面点选。';
       if (poseTools) $('poseEditToggle').textContent = mode === 'pose' ? '结束姿势编辑' : '开启姿势编辑';
-      if (next) { const tab = next === 'parts' ? 'parts' : 'pose'; if ($('floatPanel').dataset.tab === tab) cfg.openPanel(true); else openTab(tab); }
+      if (next === 'parts') {
+        cfg.openPanel(false);
+        K.toast('点击画面选择部件，再打开「部件」可退出点选。', 'info', 2400);
+      } else if (next === 'pose') {
+        if ($('floatPanel').dataset.tab === 'pose') cfg.openPanel(true);
+        else openTab('pose');
+      }
     }
     function renderParts() {
       partsCtl.refresh();
@@ -658,6 +664,10 @@
         if (partPress?.id === event.pointerId) {
           partTap = type === 'pointerup' && !partPress.moved && Math.hypot(event.clientX - partPress.x, event.clientY - partPress.y) < 6 ? { x: event.clientX, y: event.clientY } : null;
           partPress = null;
+          if (partTap && event.pointerType === 'touch') {
+            const tap = partTap; partTap = null;
+            pickPartAt(tap);
+          }
         }
         dragBone = null;
       }
@@ -668,13 +678,16 @@
       const tap = partTap; partTap = null;
       if (mode !== 'parts' || exporting || !tap || !event.target.matches('canvas, svg')) return;
       event.preventDefault(); event.stopImmediatePropagation();
+      pickPartAt(tap);
+    }, true);
+    function pickPartAt(tap) {
       const rect = $('stage').getBoundingClientRect(), x = tap.x - rect.left, y = tap.y - rect.top;
       const candidates = editor.parts().slice().reverse();
       if (editor.type === 'live2d') candidates.sort((a, b) => cfg.drawableOrder(b) - cfg.drawableOrder(a));
       else if (editor.drawOrder) candidates.sort((a, b) => editor.drawOrder(b) - editor.drawOrder(a));
       const part = candidates.find(part => editor.pickable?.(part) !== false && partHit(x, y, editor.geometry(part)));
-      if (part) { partsCtl.focus(part.id); selectedPart = part; K.showMenu([{ heading: part.name }, { label: '隐藏此部件', fn: () => { partsCtl.hide(part.id); selectedPart = null; } }, { label: '取消', fn: () => { selectedPart = null; } }], tap.x, tap.y); }
-    }, true);
+      if (part) { partsCtl.focus(part.id); selectedPart = part; K.showMenu([{ heading: part.name }, { label: '隐藏此部件', fn: () => { partsCtl.hide(part.id); selectedPart = null; } }, { label: '取消', fn: () => { selectedPart = null; } }], tap.x, tap.y, { partPick: true }); }
+    }
     function drawOverlay() {
       const width = $('stage').clientWidth, height = $('stage').clientHeight, dpr = Math.min(devicePixelRatio || 1, 2);
       if (editOverlay.width !== Math.round(width * dpr) || editOverlay.height !== Math.round(height * dpr)) { editOverlay.width = Math.round(width * dpr); editOverlay.height = Math.round(height * dpr); }

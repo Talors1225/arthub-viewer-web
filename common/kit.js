@@ -2260,6 +2260,7 @@
       head.append(title, dismiss); menu.append(head);
     }
     if (options.moreMenu) menu.classList.add('site-more-menu');
+    if (options.partPick) menu.classList.add('part-pick-menu');
     for (const it of items) {
       if (it.sep) { const s = document.createElement('div'); s.className = 'sep'; menu.appendChild(s); continue; }
       if (it.heading) {
@@ -2288,8 +2289,9 @@
     options.owner?.setAttribute('aria-expanded', 'true');
     // The entrance animation scales getBoundingClientRect(); layout dimensions
     // keep the final menu and its last item inside small screens.
-    menu.style.left = Math.max(8, Math.min(x, window.innerWidth - menu.offsetWidth - 8)) + 'px';
-    menu.style.top = Math.max(8, Math.min(y, window.innerHeight - menu.offsetHeight - 8)) + 'px';
+    const offset = options.partPick ? 10 : 0;
+    menu.style.left = Math.max(8, Math.min(x + offset, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+    menu.style.top = Math.max(8, Math.min(y + offset, window.innerHeight - menu.offsetHeight - 8)) + 'px';
     const close = (event) => {
       // 菜单内部点击先交给菜单项自身处理，不能被“点击外部关闭”抢先移除。
       if (event?.type === 'click' && (menu.contains(event.target) || options.owner?.contains(event.target))) return;
