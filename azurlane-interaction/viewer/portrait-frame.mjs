@@ -462,6 +462,7 @@ for (const [id, groups] of reviewedIdleExportFrames) {
  live2dIdleExportVariants.set(id, groupedIdleFrames(groups));
 }
 const spineFrames = new Map([
+  ['keliaopeitela_3', frame(-2344, -1407, 2169, 1218)],
  ['aimudeng_5', frame(-2341, -1400, 2384, 1398)],
  ['aluomangshi_2', frame(-3267, -47, 3267, 3659)],
  ['antu_3', frame(-2983, -2536, 3157, 1320)],
@@ -479,6 +480,7 @@ for (const id of ['aimudeng_5', 'haichou_2', 'hu_2']) spineFrames.set(id + '_asm
 // Default browsing crops measured from the opaque illustration, excluding distant effects.
 // Export framing and per-motion authored anchors remain independent.
 const defaultStageFrames = new Map([
+  ['moluotuofu_2', frame(-1004, -648, 9365, 6139)],
  ['shuixinghao_2', frame(0, 0, 8000, 5500)], // Authored canvas excludes the oversized MB_blackbgjuxing matte.
  ['feiteliekaer_4', frame(0, 0, 9449, 5570)],
  ['jinjiang_2', frame(0, 0, 8000, 4712)],
@@ -858,6 +860,7 @@ export function authoredLive2DScreenEdges(id, motion) {
 
 // Game interface backdrops can paint over the standalone artwork.
 export function authoredLive2DInterfaceCovers(id, motion) {
+ if (id === 'moluotuofu_2') return ['ArtMesh680', 'ArtMesh681', 'ArtMesh682', 'ArtMesh683'];
  if (id === 'mojiaduoer_4') return mogadorInteractionCovers;
  if (id === 'mingji_2') return pirateCarMatte;
  if (id === 'anninvwang_2') {

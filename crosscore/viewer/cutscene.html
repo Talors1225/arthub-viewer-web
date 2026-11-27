@@ -277,7 +277,7 @@
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261122-game-audio"><script defer src="../../common/site-ui.js?v=20261122-framing-more"></script>
-  <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
+  <script src="../../arthub-cos-config.js?v=20261127-portraits"></script>
   <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 </head>
 <body class="crosscore-viewer">
@@ -2522,7 +2522,7 @@
 
   // ---------- 数据加载 ----------
   async function loadChars() {
-    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json?v=20261122-thumbs-v4')).then(td => {
+    const thumbnails = K.fetchJSON(K.thumbnailURL('../../thumbs/index.json?v=20261127-portraits')).then(td => {
       webThumbs = td.items || {};
       if (routeSource === 'crosscore' && cur) {
         const variant = cur.cutscenes[Number(variantSel.value)] || cur.cutscenes[0];
@@ -2926,7 +2926,7 @@
     // Other runtime versions load only when a selected model needs them.
     // bd2mod 分类: 预载原版索引供"⇋ 原版对比"配对
     if (routeSource === 'bd2mod') {
-      fetch('../../crosscore/crosscore_chars.json').then(r => (r.ok ? r.json() : null)).then(d => {
+      fetch('../../crosscore/crosscore_chars.json?v=20261127-portraits').then(r => (r.ok ? r.json() : null)).then(d => {
         if (!d || !d.characters) return;
         origByNum = {};
         for (const o of d.characters) origByNum[o.id] = o;

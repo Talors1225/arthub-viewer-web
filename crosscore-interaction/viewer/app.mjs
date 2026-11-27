@@ -8,7 +8,12 @@ const canvas = $('#scene'), overlay = $('#overlay'), stage = $('#stage'), paint 
 // The interaction prefab scales and offsets the same seashore artwork.
 const seashoreIdleFrame = { minX: -1334, minY: -679, maxX: 1346, maxY: 773 };
 const { interactionFrame } = window.CrossCoreSceneFraming;
+const closeupMattes = ['TX_BG_black10', 'TX_BG_black11', 'TX_BG_black12', 'TX_BG_black13'];
 const sceneApertures = new Map([
+  ['cg0088_wakeupfromadreama_spine', { slot: 'mengzhongxinlai_a_bh5', inset: 0, hideSlots: closeupMattes }],
+  ['cg0088_wakeupfromadreamb_spine', { slot: 'mengzhongxinlai_b_hopd4', inset: 0, hideSlots: closeupMattes }],
+  ['10340_skin_uluru03c_spine', { slot: 'bg', inset: 0, hideSlots: closeupMattes }],
+  ['60350_skin_ijensp04b_spine', { slot: 'bg_background', inset: 0, hideSlots: closeupMattes }],
   ['30180_skin_machairodus05b_spine', { slot: 'DQ_KKbb', corners: [4, 7, 5, 6] }],
   ['70400_skin_lycorisradiata03b_spine', { slot: 'heikuang', corners: [7, 4, 5, 6], hideMatte: true }],
 ]);
@@ -41,7 +46,7 @@ K.initTheme(libraryPrefs); K.bindThemePalette($('#btnTheme'), libraryPrefs);
 $('#thumbGrid').dataset.density = libraryPrefs.get('density', 'standard');
 $('#thumbGrid').dataset.kitDensityReady = '1';
 let sortMode = libraryPrefs.get('sortMode', 'name'), sortDirection = libraryPrefs.get('sortDirection', 'asc');
-const thumbnailManifest = await fetch(K.thumbnailURL('../../thumbs/index.json')).then(r => r.ok ? r.json() : null).catch(() => null);
+const thumbnailManifest = await fetch(K.thumbnailURL('../../thumbs/index.json?v=20261127-portraits')).then(r => r.ok ? r.json() : null).catch(() => null);
 const libraryThumbs = thumbnailManifest?.items || {};
 const thumbnailFor = row => {
   const path = libraryThumbs['crosscore-interaction:' + row.id];
@@ -442,6 +447,10 @@ function handleInteraction(result) {
   if (['action', 'segment', 'repeat'].includes(result.kind)) {
     const started = scene.play(result, now());
     if (started) { activeTrack = result.track; playAudio(result.audioIds, result.hideTxt); $('#feedback').textContent = result.kind === 'segment' ? `分段互动 · 第 ${result.phase} 步` : '已触发对应动作'; }
+    else if (result.kind === 'action' && model.playVoiceOnSceneChange && !result.name && result.content?.changerole) {
+      playAudio(result.audioIds, result.hideTxt);
+      $('#feedback').textContent = '已触发换场';
+    }
     else if (result.kind === 'repeat') $('#feedback').textContent = '已继续当前动作';
   }
   if (result.kind === 'restore-object') scene.restoreObject(result.content);

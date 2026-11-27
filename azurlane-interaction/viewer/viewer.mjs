@@ -2,7 +2,7 @@ import {linkedForm} from './dual-form.mjs?v=20261116-dual-form';
 import {Live2DController,SpineController,array,basicActions,motionCue,triangleContains,polygonContains,fitSceneBounds,voiceClip,highestFavor} from './controller.mjs?v=20261119-clip-capture';
 import {EffectTimeline} from './effect-timeline.mjs?v=20261120-effect-loop-catalog';
 import {effectControlPortraits,hasEffectControls} from './effect-controls.mjs?v=20261120-effect-speed';
-import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DOriginalCanvas,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261122-framing-fixes';
+import {portraitFrameBounds,spinePortraitFrameBounds,portraitSurroundNames,authoredLive2DFrame,authoredLive2DOriginalCanvas,authoredLive2DExportFrame,authoredLive2DExportHidden,authoredLive2DExportWindow,authoredLive2DLevelFrame,authoredLive2DInterfaceCovers,authoredLive2DScreenEdges,authoredSpineFrame,authoredSpineExportFrame,defaultPortraitStageFrame,authoredSceneExportCrop,authoredLive2DSceneAperture,authoredSpineSceneAperture} from './portrait-frame.mjs?v=20261127-portraits';
 import {automaticSceneAperture} from './auto-scene-apertures.mjs?v=20261121-scene-fit';
 import {readPortraitAsset,loadPortraitSpineAssets,prepareLive2DSettings} from './portrait-assets.mjs?v=20261109-portrait-frame1';
 import {decodePortraitAudio} from './portrait-audio-decode.mjs?v=20261113-az-audio';
@@ -403,7 +403,7 @@ function updateInteractionHint(){
  nextHintButton.hidden=candidates.length<2;
  hintNav.hidden=false;
 }
-const releasePortraits = new Set(['nabulesi_3', 'banerwei_4', 'xinaoerliang_3']);
+const releasePortraits = new Set(['nabulesi_3', 'banerwei_4', 'xinaoerliang_3', 'keliaopeitela_3', 'xinuopu_2', 'moluotuofu_2']);
 function localPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
 function cancelInteraction(){
  if(pointer)release(pointer.id,pointer,true);
@@ -1700,4 +1700,4 @@ function frame(now){
  if(previewPending&&view.frames>2&&!controller.state.motionPending&&now>=nextPreviewCheck){nextPreviewCheck=now+100;const gl=evidence.app?.renderer?.gl||canvas.getContext('webgl2')||canvas.getContext('webgl');if(gl&&!gl.isContextLost()&&canvas.width>1&&canvas.height>1){previewContext.clearRect(0,0,64,64);previewContext.drawImage(canvas,0,0,64,64);const pixels=previewContext.getImageData(0,0,64,64).data;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>8){loadingPreview.ready(loadGeneration);previewPending=false;break;}}}
  updateFormButton();viewerUI.update();if(now>=nextEvidence){record();nextEvidence=now+250;}}}catch(e){view.ready=evidence.ready=false;fail(e);}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
-try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json?v=20261120-scene-layers'),getJson(K.thumbnailURL(THUMB_INDEX),false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}
+try{const [listing,thumbData,retired]=await Promise.all([getJson(BASE+'/characters.json?v=20261127-portraits'),getJson(K.thumbnailURL(THUMB_INDEX),false).catch(()=>null),getJson('./retired-models.json')]);retiredModels=retired;allModels=listing.characters.filter(m=>!retiredModels[m.id]);libraryThumbs=thumbData?.items||{};evidence.catalog=allModels;$('counts').textContent=`${allModels.length} 项 · ${allModels.filter(m=>m.type==='live2d').length} Live2D / ${allModels.filter(m=>m.type==='spine').length} Spine`;K.setLibraryStageReady(false);populate();const id=new URL(location.href).searchParams.get('id'),initial=allModels.find(m=>m.id===canonicalModelId(id));if(initial)await loadModel(id);else setPanelOpen('library',true);}catch(e){fail(e);}

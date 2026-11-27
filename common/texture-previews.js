@@ -42,7 +42,8 @@
     try { key = decodeURIComponent(original.pathname.slice(new URL(base).pathname.length)); }
     catch { return null; }
     if (!roots.get(base).has(key.split('/', 1)[0])) return null;
-    const name = mapName(key);
+    const shard = mapName(key);
+    const name = key.includes('/updates/20261127-portraits/') ? '20261127-portraits/' + shard : shard;
     if (!indexes.has(name)) {
       const request = K.fetchJSON(new URL(name, mapsURL).href, {timeout: 6000}).catch(() => {
         indexes.delete(name);
