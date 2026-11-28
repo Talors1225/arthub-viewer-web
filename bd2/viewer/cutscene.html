@@ -283,7 +283,7 @@
   body.immersive .immersive-exit:hover { opacity: 1; }
 </style>
 <link rel="stylesheet" href="../../common/site-ui.css?v=20261104-unified-final"><script defer src="../../common/site-ui.js?v=20261122-framing-more"></script>
-  <script src="../../arthub-cos-config.js?v=20261121-voice-completion"></script>
+  <script src="../../arthub-cos-config.js?v=20261128-bd2-skills-4bcb208fda53"></script>
   <script src="../../arthub-cos.js?v=20261121-voice-completion"></script>
 <style>
   .bd2-voice-controls { position: fixed; z-index: 12; left: 16px; bottom: calc(66px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; align-items: center; gap: 5px; max-width: calc(100% - 32px); padding: 5px; border-radius: 12px; background: var(--panel); }
@@ -432,7 +432,8 @@
 <script src="../../common/stage-ui.js?v=93a59d25328a"></script>
 <script src="../../common/library-ui.js?v=20261104-unified-final"></script>
 <script src="../audio-volume.js?v=20261122-bd2-controls"></script>
-<script src="./voice.js?v=20261122-unified-viewer"></script>
+<script src="./native-skill.js?v=20261128-bd2-skills-4bcb208fda53"></script>
+<script src="./voice.js?v=20261128-bd2-skills-4bcb208fda53"></script>
 <script>
 
 (() => {
@@ -563,13 +564,14 @@
 
   // ---------- 图标初始化 ----------
   const setPlayBtn = () => {
-    pbPlay.innerHTML = playing ? I('pause', 15) : I('play', 15);
-    pbPlay.classList.toggle('active', playing);
+    const active = bd2Voice?.skillPlayback()?.playing ?? playing;
+    pbPlay.innerHTML = active ? I('pause', 15) : I('play', 15);
+    pbPlay.classList.toggle('active', active);
     portraitAudio?.playbackChanged();
   };
   const setLoopBtn = () => {
     pbLoop.innerHTML = I('loop', 14);
-    pbLoop.classList.toggle('active', loopAnim);
+    pbLoop.classList.toggle('active', bd2Voice?.skillPlayback()?.loop ?? loopAnim);
   };
   $('#railGrid').innerHTML = I('grid', 16);
   $('#btnPrev').innerHTML = I('chevL', 13);
@@ -1184,6 +1186,23 @@
   partPopup.addEventListener('wheel', e => e.stopPropagation());
 
   // ---------- 动画面板 ----------
+  function skillActions() {
+    if (cur?.resourceType !== 'cutscene' || !cut || !bd2Voice) return [];
+    return bd2Voice.skillActions(new Set(cut.data.animations.map(animation => animation.name)));
+  }
+
+  function selectSkill(index) {
+    if (K.pngExporting || !cut || !stageMode || cmpOn || boneEditMode || partEditMode || !skillActions().some(a => a.index === index)) return;
+    cut.animationRequest?.controller.abort();
+    playing = false;
+    status('正在加载技能演出…');
+    bd2Voice.playSkill(index, Number(pbSpeed.value) || 1);
+    if (matchMedia('(max-width: 720px)').matches) {
+      if (K.inWorkspace) $('#sitePlaybackClose')?.click();
+      else if (floatPanel.classList.contains('open') && floatPanel.dataset.tab === 'anim') setFloatPanel('anim');
+    }
+  }
+
   animCtl = (() => {
     const listEl = $('#animList'), filterEl = $('#animFilter');
     const refresh = () => {
@@ -1192,15 +1211,33 @@
       const q = filterEl.value.trim().toLowerCase();
       const curTrack = cut.state.getCurrent(0);
       const curName = curTrack ? curTrack.animation.name : '';
+      const skill = bd2Voice?.skillPlayback();
+      const actions = skillActions();
       let shown = 0;
-      for (const a of cut.data.animations) {
-        if (q && !a.name.toLowerCase().includes(q)) continue;
-        const b = document.createElement('button');
-        b.className = 'anim-row' + (a.name === curName ? ' on' : '');
-        b.innerHTML = '<span class="an">' + K.esc(a.name) + '</span><span class="ad">' + a.duration.toFixed(2) + 's</span>';
-        b.onclick = () => selectAnimation(a.name);
-        listEl.appendChild(b);
+      const add = (name, duration, current, select) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'anim-row' + (current ? ' on' : '');
+        button.setAttribute('aria-pressed', String(current));
+        button.innerHTML = '<span class="an">' + K.esc(name) + '</span><span class="ad">' + duration.toFixed(2) + 's</span>';
+        button.onclick = select;
+        listEl.appendChild(button);
         shown++;
+      };
+      for (const [order, action] of actions.entries()) {
+        let label = action.nativeTimeline ? '原版技能演出' : action.preview ? '多图层演出' : '完整技能演出';
+        if (actions.length > 1) {
+          label += ' · ' + action.name;
+          if (actions.filter(row => row.name === action.name).length > 1) label += ' ' + (order + 1);
+        }
+        if (!q || (label + ' ' + action.name + ' 连播').includes(q)) {
+          add(label, action.duration, skill?.index === action.index, () => selectSkill(action.index));
+        }
+      }
+      for (const animation of cut.data.animations) {
+        if (q && !animation.name.toLowerCase().includes(q)) continue;
+        add(animation.name, animation.duration, !skill && animation.name === curName,
+          () => selectAnimation(animation.name));
       }
       if (!shown) listEl.innerHTML = '<div class="empty-tip">无匹配动画</div>';
     };
@@ -1473,6 +1510,11 @@
   // ---------- 播放条 ----------
   const getTrack = () => { const t = cut && cut.state.getCurrent(0); return t && t.animation ? t : null; };
   function seekTo(ratio) {
+    const skill = bd2Voice?.skillPlayback();
+    if (skill) {
+      bd2Voice.setSkillPlayback({ time: ratio * skill.duration });
+      return;
+    }
     bd2Voice?.stop();
     const track = getTrack();
     if (!track) return;
@@ -1486,6 +1528,11 @@
     syncTimeline();
   }
   function stepFrame(dir) {
+    const skill = bd2Voice?.skillPlayback();
+    if (skill) {
+      bd2Voice.setSkillPlayback({ playing: false, time: skill.time + dir / 30 });
+      return;
+    }
     bd2Voice?.stop();
     const track = getTrack();
     if (!track) return;
@@ -1502,6 +1549,12 @@
     syncTimeline();
   }
   function syncTimeline() {
+    const skill = bd2Voice?.skillPlayback();
+    if (skill) {
+      pbRange.value = String(Math.round(skill.time / skill.duration * 1000));
+      pbTime.textContent = skill.time.toFixed(2) + ' / ' + skill.duration.toFixed(2) + 's';
+      return;
+    }
     const track = getTrack();
     if (!track) { pbTime.textContent = '0.00 / 0.00s'; return; }
     const dur = track.animation.duration || 0.0001;
@@ -1514,6 +1567,11 @@
   $('#pbStepB').addEventListener('click', () => stepFrame(-1));
   $('#pbStepF').addEventListener('click', () => stepFrame(1));
   pbLoop.addEventListener('click', () => {
+    const skill = bd2Voice?.skillPlayback();
+    if (skill) {
+      bd2Voice.setSkillPlayback({ loop: !skill.loop });
+      return;
+    }
     loopAnim = !loopAnim;
     setLoopBtn();
     store.set('loop', loopAnim);
@@ -1526,13 +1584,19 @@
     setPlayBtn();
   }
   pbPlay.addEventListener('click', () => {
+    const skill = bd2Voice?.skillPlayback();
+    if (skill) {
+      bd2Voice.setSkillPlayback({ playing: !skill.playing });
+      return;
+    }
     if (!playing) { resumePlayback(); return; }
     playing = false;
     bd2Voice?.stop();
     setPlayBtn();
   });
   pbSpeed.addEventListener('input', () => {
-    bd2Voice?.stop();
+    if (bd2Voice?.skillJob) bd2Voice.setSkillPlayback({ rate: Number(pbSpeed.value) });
+    else bd2Voice?.stop();
     pbSpeedVal.textContent = fmtSpeed(pbSpeed.value);
     store.set('speed', Number(pbSpeed.value));
     if (cut) for (const layer of cutLayers()) if (layer.state) layer.state.timeScale = Number(pbSpeed.value);
@@ -1545,18 +1609,19 @@
     requestAnimationFrame(loop);
     let dt = lastT ? Math.min((t - lastT) / 1000, 0.25) : 0;
     lastT = t;
+    if (K.pngExporting && bd2Voice?.skillJob) return;
     const voiceDrivesMotion = bd2Voice?.frame();
     if (K.pngExporting) return;
     if (document.hidden || (!embedded && !stageMode)) { portraitAudio?.syncPause(); return; }
     if (portraitAudio) dt = portraitAudio.animationDelta(dt);
     try {
-    if (cut) {
+    if (cut && !cut.nativeSkill) {
       for (const layer of cutLayers()) {
         if (layer.active === false) continue;
         if (playing && layer.state && !voiceDrivesMotion) layer.state.update(dt);
         if (layer.state && !boneEditMode) layer.state.apply(layer.skeleton);
         if (poseLocked && !boneEditMode && layer === cutLayers()[0]) applyPoseToSkeleton(layer.skeleton, poseLocked);
-        placeScenePrimary(cut, layer);
+        placeAnimatedSceneLayer(cut, layer);
         K.updateWorldTransform(layer.skeleton);
         K.applyHiddenSlots(layer.skeleton, cut.hiddenSlots);
       }
@@ -1587,7 +1652,7 @@
       }
       setSceneCamera(renderer, clip, cut?.view?.x, cut?.view?.y);
       renderer.begin();
-      if (cut) for (const layer of drawCutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+      if (cut) for (const layer of drawCutLayers()) ArtHubBd2SkillTimeline.drawLayer(renderer, layer, raw);
       if (cmpOn && cmp) renderer.drawSkeleton(cmp.skeleton, cmp.pma);
       if (cut && K.debugActive(debugFlags)) {
         K.applyDebugFlags(renderer, debugFlags);
@@ -1629,6 +1694,7 @@
     ['067491', { minX: -1430, minY: -1730, maxX: 1400, maxY: 750 }],
   ]);
   function stageFrame() {
+    if (!cmpOn && cut?.nativeSkill) return cut.nativeSkill.frame;
     return !K.framing.original && !cmpOn && (artworkExportFrame(animSel.value) || (animSel.value === 'loop' && loopStageFrames.get(cur?.id)));
   }
 
@@ -1667,7 +1733,8 @@
     const a = poses[start], b = poses[end];
     const mix = a === b ? 0 : Math.max(0, Math.min(1, (time - a[0]) / (b[0] - a[0])));
     const value = index => a[index] + (b[index] - a[index]) * mix;
-    return { scaleX: value(1), scaleY: value(2), x: value(3), y: value(4) };
+    return { scaleX: value(1), scaleY: value(2), x: value(3), y: value(4),
+      rgba: a.length === 9 ? [value(5), value(6), value(7), value(8)] : null };
   }
   function placeSceneLayer(layer, scale, x, y, placement = layer.source?.scenePlacement) {
     const skeleton = layer.skeleton;
@@ -1675,7 +1742,8 @@
     skeleton.scaleY = scale * (placement?.scaleY ?? 1);
     skeleton.x = x + scale * (placement?.x ?? 0);
     skeleton.y = y + scale * (placement?.y ?? 0);
-    if (placement?.color) skeleton.color.setFromString(placement.color);
+    if (placement?.rgba) skeleton.color.set(...placement.rgba);
+    else if (placement?.color) skeleton.color.setFromString(placement.color);
   }
   function applyView() {
     if (!cut) return;
@@ -1683,9 +1751,12 @@
     const x = panX + cut.centerX * scale + (fitMode ? cut.fitOffsetX || 0 : 0) - (cmpOn && cmp ? cmp.sepMain * scale : 0);
     const y = panY + cut.centerY * scale + (fitMode ? cut.fitOffsetY || 0 : 0);
     cut.view = { scale, x, y };
-    const pose = placementAt(cut.scene?.primaryMotion, getTrack()?.getAnimationTime() ?? 0);
-    for (const layer of cutLayers()) {
-      placeSceneLayer(layer, scale, x, y, layer.skeleton === cut.skeleton ? pose : undefined);
+    if (cut.nativeSkill) sampleNativeSkill(cut.nativeSkill.time);
+    else {
+      const time = getTrack()?.getAnimationTime() ?? 0;
+      for (const layer of cutLayers()) {
+        placeSceneLayer(layer, scale, x, y, placementAt(scenePlacementFrames(cut, layer), time));
+      }
     }
     if (cmpOn && cmp) {
       cmp.skeleton.scaleX = scale;
@@ -1822,7 +1893,7 @@
     if (animCtl) animCtl.refresh();
     if (fitMode && !options.keepView) refit();
     else applyView();
-    pbLoop.classList.toggle('active', options.loop ?? loopAnim);
+    pbLoop.classList.toggle('active', bd2Voice?.skillPlayback()?.loop ?? options.loop ?? loopAnim);
     syncTimeline();
     syncUrl(name);
   }
@@ -2064,6 +2135,9 @@
   function ensureGL() {
     const key = curVerKey();
     if (mgl && mglKey === key) return true;
+    if (!mgl && routeSource === 'bd2') {
+      cv.getContext('webgl', { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true, stencil: true });
+    }
     const g = K.createGL(cv, K.getSpine(cur && cur.spineVersion));
     if (!g) return false;
     mgl = g.mgl; renderer = g.renderer; mglKey = key;
@@ -2075,7 +2149,7 @@
   }
   function cutLayers(target = cut) {
     if (!target) return [];
-    return Array.isArray(target.layers) && target.layers.length ? target.layers : [target];
+    return target.nativeSkill?.layers || (target.layers?.length ? target.layers : [target]);
   }
   function drawCutLayers() {
     return [...cutLayers()].sort((a,b)=>(a.source.renderOrder || 0)-(b.source.renderOrder || 0));
@@ -2097,11 +2171,15 @@
     if (source.static) return true;
     return !!layerAnimationName(layer, name);
   }
-  function placeScenePrimary(target, layer) {
-    if (!target.scene?.primaryMotion || !target.view || layer.skeleton !== target.skeleton) return;
+  function scenePlacementFrames(target, layer) {
+    return layer.source?.scenePlacementFrames || (layer.skeleton === target.skeleton ? target.scene?.primaryMotion : null);
+  }
+  function placeAnimatedSceneLayer(target, layer) {
+    const frames = scenePlacementFrames(target, layer);
+    if (!frames || !target.view) return;
     const { scale, x, y } = target.view;
-    const time = layer.state.getCurrent(0)?.getAnimationTime() ?? 0;
-    placeSceneLayer(layer, scale, x, y, placementAt(target.scene.primaryMotion, time));
+    const time = target.state.getCurrent(0)?.getAnimationTime() ?? 0;
+    placeSceneLayer(layer, scale, x, y, placementAt(frames, time));
   }
   function applyCutHidden(target = cut) {
     for (const layer of cutLayers(target)) {
@@ -2109,12 +2187,16 @@
     }
   }
   function applyCutLayerStates(target = cut) {
+    if (target?.nativeSkill) {
+      sampleNativeSkill(target.nativeSkill.time);
+      return;
+    }
     for (const layer of cutLayers(target)) {
       if (!layer || layer.active === false) continue;
       // Scene layers with only geometry and color curves do not restore hidden attachments.
       if (layer.source?.originalBackground || layer.source?.static) layer.skeleton.setSlotsToSetupPose();
       if (layer.state) layer.state.apply(layer.skeleton);
-      placeScenePrimary(target, layer);
+      placeAnimatedSceneLayer(target, layer);
       K.updateWorldTransform(layer.skeleton);
       if (layer.hiddenSlots) K.applyHiddenSlots(layer.skeleton, layer.hiddenSlots);
     }
@@ -2271,11 +2353,18 @@
         ? new SP.SkeletonJson(loader).readSkeletonData(json)
         : new SP.SkeletonBinary(loader).readSkeletonData(files.bytes));
       const skeleton = new SP.Skeleton(data);
+      if (entry.sceneBlend === 'additive') {
+        for (const slot of skeleton.slots) {
+          const slotData = Object.create(slot.data);
+          slotData.blendMode = SP.BlendMode.Additive;
+          slot.data = slotData;
+        }
+      }
       skeleton.setToSetupPose();
       const stateData = new SP.AnimationStateData(data);
       stateData.defaultMix = 0.15;
       const state = new SP.AnimationState(stateData);
-      K.updateWorldTransform(skeleton);
+      K.updateWorldTransform(skeleton, SP.Physics?.pose);
       return { source: entry, skeleton, data, state, atlas, bounds: K.measureBounds(skeleton, SP),
         pma: !!atlas.pages[0]?.pma, active: true, primaryMotion: json?.artHubPlacement };
     } catch (error) { if (!reuse) K.disposeAtlas(atlas); throw error; }
@@ -2288,36 +2377,40 @@
     }
   }
 
-  async function loadAnimationScene(target, name, signal) {
-    if (target.scene?.name === name && !target.scene.failed) return target.scene;
-    let entries = target.originalScene?.compositeLayers.filter(layer => layer.activeWhen.includes(name)) || [];
-    let frame = target.originalScene?.frames?.[name];
+  async function loadAnimationScene(target, name, signal, sceneKey = name) {
+    if (target.scene?.key === sceneKey && !target.scene.failed) return target.scene;
+    const authored = sceneKey !== name;
+    const original = authored ? null : target.originalScene;
+    let entries = original?.compositeLayers.filter(layer => layer.activeWhen.includes(name)) || [];
+    let frame = original?.frames?.[name];
     let skill = false;
     if (!entries.length && target.skillIndex && target.sceneId) {
-      const scene = (await target.skillIndex)?.[target.sceneId]?.[target.variant]?.[name];
+      const scene = (await target.skillIndex)?.[target.sceneId]?.[target.variant]?.[sceneKey];
       entries = scene?.layers || [];
       frame = scene?.frame;
       skill = Boolean(scene);
     }
     if (signal.aborted) return null;
+    if (authored && !skill) throw new Error('技能演出场景未找到 · ' + name);
     const results = await Promise.allSettled(entries.map(entry =>
       loadCompositeLayer(entry, target.SP, target.seq, signal, target.baseLayers[0])));
     const layers = results.filter(result => result.status === 'fulfilled').map(result => result.value);
     const failed = results.some(result => result.status === 'rejected');
     if (signal.aborted || failed) {
       disposeSceneLayers(target, layers);
-      return signal.aborted ? null : { name, layers: [], failed };
+      return signal.aborted ? null : { key: sceneKey, name, layers: [], failed };
     }
-    return { name, layers, frame, skill, primaryMotion: layers.find(layer => layer.primaryMotion)?.primaryMotion };
+    return { key: sceneKey, name, layers, frame, skill, primaryMotion: layers.find(layer => layer.primaryMotion)?.primaryMotion };
   }
 
   function useAnimationScene(target, scene) {
     if (target.scene === scene) return;
-    if (target.scene && target.voiceScenes?.get(target.scene.name) !== target.scene) {
+    if (target.scene && target.voiceScenes?.get(target.scene.key) !== target.scene) {
       disposeSceneLayers(target, target.scene.layers);
     }
     target.scene = scene;
-    target.layers = [...target.baseLayers, ...scene.layers];
+    const base = scene.key === scene.name ? target.baseLayers : target.baseLayers.slice(0, 1);
+    target.layers = [...base, ...scene.layers];
     for (const layer of scene.layers) {
       layer.hiddenSlots = target.hiddenSlots;
       if (target.originalBackgroundHidden && layer.source.originalBackground) {
@@ -2326,17 +2419,62 @@
     }
   }
 
-  async function prepareVoiceMotion(motions, signal) {
+  async function prepareNativeSkill(path, signal) {
     const target = cut;
-    if (!target || !motions.length) return;
-    const names = [...new Set(motions.map(clip => clip.animation))]
-      .filter(name => target.data.animations.some(anim => anim.name === name));
-    const scenes = await Promise.all(names.map(name => loadAnimationScene(target, name, signal)));
-    if (signal.aborted || target !== cut) {
-      disposeSceneLayers(target, scenes.filter(scene => scene && scene !== target.scene).flatMap(scene => scene.layers));
+    const scene = await ArtHubBd2SkillTimeline.load({
+      path, K, SP: target.SP, signal,
+      loadModel: entry => loadCompositeLayer(entry, target.SP, target.seq, signal, target.baseLayers[0]),
+      disposeModels: layers => disposeSceneLayers(target, layers),
+    });
+    if (signal.aborted || cut !== target) {
+      scene.dispose();
       return;
     }
-    target.voiceScenes = new Map(scenes.filter(Boolean).map(scene => [scene.name, scene]));
+    target.nativeSkill = scene;
+    status((cur.name || cur.id) + ' · 技能演出');
+    refit();
+    syncBackgroundButton();
+    if (scene.warning) K.toast(scene.warning, 'info', 5600, 'voice');
+  }
+
+  function sampleNativeSkill(time) {
+    const scene = cut?.nativeSkill;
+    if (!scene || !cut.view) return;
+    scene.sample(time, cut.view, cut.hiddenSlots, cut.originalBackgroundHidden);
+    syncTimeline();
+  }
+
+  function releaseNativeSkill() {
+    if (!cut?.nativeSkill) return;
+    const scene = cut.nativeSkill;
+    cut.nativeSkill = null;
+    scene.dispose();
+    status((cur.name || cur.id) + ' · ' + cut.data.animations.length + ' 动作');
+    refit();
+    syncBackgroundButton();
+  }
+
+  async function prepareVoiceMotion(motions, signal, strict = false) {
+    const target = cut;
+    if (!target || !motions.length) return;
+    const shots = new Map();
+    for (const clip of motions) {
+      if (target.data.animations.some(anim => anim.name === clip.animation)) {
+        shots.set(clip.sceneKey ?? clip.animation, clip.animation);
+      }
+    }
+    const results = await Promise.allSettled([...shots].map(([key, name]) =>
+      loadAnimationScene(target, name, signal, key)));
+    const scenes = results.map(result => result.status === 'fulfilled' ? result.value : null);
+    const failed = results.find(result => result.status === 'rejected');
+    const missingScene = strict ? scenes.findIndex(scene => !scene || scene.failed) : -1;
+    if (signal.aborted || target !== cut || failed || missingScene >= 0) {
+      disposeSceneLayers(target, scenes.filter(scene => scene && scene !== target.scene).flatMap(scene => scene.layers));
+      if (signal.aborted || target !== cut) return;
+      if (failed) throw failed.reason;
+      throw new Error('技能演出场景读取失败 · ' + [...shots.values()][missingScene]);
+    }
+    target.voiceScenes = new Map(scenes.filter(Boolean).map(scene => [scene.key, scene]));
   }
 
   function releaseVoiceMotion() {
@@ -2353,10 +2491,11 @@
     target.animationRequest?.controller.abort();
     const request = { controller: new AbortController() };
     target.animationRequest = request;
-    if (target.scene?.name !== name && target.skillIndex) status('加载场景 · ' + name);
+    const sceneKey = options.sceneKey ?? name;
+    if (target.scene?.key !== sceneKey && target.skillIndex) status('加载场景 · ' + name);
     try {
-      const prepared = options.bd2VoiceTimeline && target.voiceScenes?.get(name);
-      const scene = prepared || await loadAnimationScene(target, name, request.controller.signal);
+      const prepared = options.bd2VoiceTimeline && target.voiceScenes?.get(sceneKey);
+      const scene = prepared || await loadAnimationScene(target, name, request.controller.signal, sceneKey);
       if (!scene || K.pngExporting || target !== cut || request !== target.animationRequest || (options.current && !options.current())) {
         if (scene && scene !== target.scene && !prepared) disposeSceneLayers(target, scene.layers);
         return false;
@@ -2556,6 +2695,7 @@
     if (bounds.maxX - bounds.minX > 10 * width && bounds.maxY - bounds.minY > 10 * height) return frame;
   }
   function artworkExportFrame(animation) {
+    if (cut?.nativeSkill) return cut.nativeSkill.frame;
     if (K.framing.original) return nativeBackdropFrame(animation);
     const cameraFrame = cut?.sourceVariant?.cameraFrames?.[animation];
     if (cameraFrame) return cameraFrame;
@@ -2577,6 +2717,7 @@
   // ---------- 动画导出：GIF 和视频均为两档 ----------
   async function exportAnimation(quality, format = 'gif') {
     if (animationExportRunning) { K.toast('动画正在导出，请等待或取消', 'info'); return; }
+    if (bd2Voice?.skillJob) { K.toast('请选择一个镜头再导出动画', 'info'); return; }
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     const animName = animSel.value;
     const anim = cut.data.animations.find(a => a.name === animName);
@@ -2844,6 +2985,10 @@
 
   // ---------- PNG 导出 ----------
   function exportFrame(transparent, mode, done, quality = exportQuality) {
+    const skill = bd2Voice?.skillPlayback();
+    if (skill && !skill.ready) { K.toast('技能演出正在加载，请稍候', 'info'); return; }
+    if (skill?.playing) bd2Voice.setSkillPlayback({ playing: false });
+
     if (!cut) { K.toast('没有可导出的模型', 'err'); return; }
     let pose;
     try { pose = pngPose(quality); }
@@ -2876,7 +3021,7 @@
         }
         raw.clear(raw.COLOR_BUFFER_BIT);
         renderer.begin();
-        for (const layer of drawCutLayers()) if (layer.active !== false) renderer.drawSkeleton(layer.skeleton, layer.pma);
+        for (const layer of drawCutLayers()) ArtHubBd2SkillTimeline.drawLayer(renderer, layer, raw);
         renderer.end();
       },
       restore() {
@@ -3203,16 +3348,26 @@
       bd2Voice = new ArtHubBd2Voice({
         root: voiceRoot,
         volumeHost: $('#bd2-voice-volume'),
-        active: () => Boolean(cut && stageMode && !boneEditMode && !partEditMode && !K.pngExporting && !document.hidden),
+        active: () => Boolean(cut && stageMode && !cmpOn && !boneEditMode && !partEditMode && !K.pngExporting && !document.hidden),
         error: message => K.toast(message, 'err', 3000, 'voice'),
         resume: () => { playing = true; setPlayBtn(); },
         prepareMotion: prepareVoiceMotion,
         releaseMotion: releaseVoiceMotion,
+        prepareTimeline: prepareNativeSkill,
+        sampleTimeline: sampleNativeSkill,
+        releaseTimeline: releaseNativeSkill,
+        skillListChanged: () => animCtl.refresh(),
+        skillStateChanged: () => {
+          setPlayBtn();
+          setLoopBtn();
+          syncTimeline();
+          animCtl.refresh();
+        },
         motion: (clip, time, changed) => {
           const job = bd2Voice.job;
           if (changed) {
             changeAnimation(clip.animation, {
-              loop: clip.loop, keepView: true, bd2VoiceTimeline: true,
+              loop: clip.loop, keepView: !job.skill, bd2VoiceTimeline: true, sceneKey: clip.sceneKey,
               current: () => bd2Voice.job === job,
             }).catch(error => K.toast(error.message, 'err'));
           }
